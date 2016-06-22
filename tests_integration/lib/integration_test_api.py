@@ -189,14 +189,14 @@ class KDIntegrationTestAPI(object):
             self.vagrant.destroy()
 
     def create_pod(self, image, name, kube_type="Standard", kubes=1,
-                   open_all_ports=True, restart_policy="Always",
+                   open_all_ports=True, restart_policy="Always", pvs=None,
                    start=True, wait_ports=True, healthcheck=True,
                    wait_for_status=None):
         assert_in(kube_type, ("Standard",))
         assert_in(restart_policy, ("Always", "Never", "OnFailure"))
 
         pod = self._create_pod_object(image, kube_type, kubes, name,
-                                      open_all_ports, restart_policy)
+                                      open_all_ports, restart_policy, pvs)
         if start:
             pod.start()
         if wait_for_status:
@@ -208,7 +208,7 @@ class KDIntegrationTestAPI(object):
         return pod
 
     def _create_pod_object(self, image, kube_type, kubes, name, open_all_ports,
-                           restart_policy):
+                           restart_policy, pvs):
         """
         Given an image name creates an instance of a corresponding pod class
         """
@@ -216,7 +216,7 @@ class KDIntegrationTestAPI(object):
 
         this_pod_class = pod_classes.get(image, KDPod)
         return this_pod_class(self, image, name, kube_type, kubes,
-                              open_all_ports, restart_policy)
+                              open_all_ports, restart_policy, pvs)
 
     def preload_docker_image(self, image, node=None):
         """
@@ -279,6 +279,19 @@ class KDIntegrationTestAPI(object):
     def _escape_command_arg(self, arg):
         return pipes.quote(arg)
 
+    def create_pv(self, kind, name, mount_path='/some_mnt_pth', size=1):
+        return PV(self, kind, name, mount_path, size)
+
+    def delete_all_pvs(self):
+        for pv in self.get_all_pvs():
+            name = self._escape_command_arg(pv['name'])
+            self.kcli('drives delete {0}'.format(name))
+
+    def get_all_pvs(self):
+        _, pvs, _ = self.kcli("drives list", out_as_dict=True)
+        return pvs
+
+
 
 class RESTMixin(object):
     # Expectations:
@@ -300,7 +313,7 @@ class KDPod(RESTMixin):
     SRC = None
 
     def __init__(self, cluster, image, name, kube_type, kubes,
-                 open_all_ports, restart_policy):
+                 open_all_ports, restart_policy, pvs):
         self.cluster = cluster
         self.name = name
         self.image = image
@@ -309,6 +322,13 @@ class KDPod(RESTMixin):
         self.restart_policy = restart_policy
         self.public_ip = None
         self.ports = self._get_ports(image)
+        self.pv_cmd = ''
+        if pvs is not None:
+            # TODO: when kcli allows using multiple PVs for single POD (AC-3722),
+            # update the way of pc_cmd creation
+            self.pv_cmd = "-s {} -p {} --mount-path {}".format(
+                pvs[0].size, pvs[0].name, pvs[0].mount_path)
+        pv_cmd = self.pv_cmd
         escaped_name = self.escaped_name
 
         ports_arg = ''
@@ -319,7 +339,7 @@ class KDPod(RESTMixin):
         self.cluster.kcli(
             "create -C {image} --kube-type {kube_type} "
             "--kubes {kubes} --restart-policy {restart_policy} {ports_arg} {"
-            "escaped_name}".format(
+            "pv_cmd} {escaped_name}".format(
                 **locals()))
         self.cluster.kcli("save {0}".format(self.escaped_name))
 
@@ -423,4 +443,71 @@ class KDPredefinedApp(KDPod):
 
 
 class VagrantIsAlreadyUpException(Exception):
+    pass
+
+
+class PV(object):
+    def __init__(self, cluster, kind, name, mount_path, size):
+        self.cluster = cluster
+        self.name = name
+        self.mount_path = mount_path
+        inits = {"new": self._create_new,
+                 "existing": self._load_existing,
+                 "dummy": self._create_dummy}
+        try:
+            inits[kind](size)
+        except KeyError:
+            raise AssertionError("Integration test API PV type not in {}"
+                                 .format(inits.keys()))
+
+    def _create_new(self, size):
+        """
+        Create new PV in Kuberdock.
+
+        Create Python object which models PV in Kuberdock
+        and also create new PV in the Kuberdock.
+        """
+        self.size = size
+        self.cluster.kcli("drives add --size {0} {1}".format(
+            self.size, self.name))
+
+    def _create_dummy(self, size):
+        """
+        Create Python object, which models PV.
+
+        Don't create PV in the Kuberdock. This object will be used
+        for creation of new PV in Kuberdock together with pod.
+        """
+        self.size = size
+
+    def _load_existing(self, size):
+        """
+        Find PV in Kuberdock.
+
+        Create Python obejct which models PV and link it to PV which
+        already exist in Kuberdock.
+        """
+        # TODO: Currently this method is never used. May be it will be
+        # TODO: in use, when we start testing PAs. If it will not
+        # TODO: it can be removed together with exception
+        pv = self._get_by_name(self.name)
+        if not pv:
+            raise DiskNotFoundException("Disk {0} doesn't exist".
+                                        format(self.name))
+        self.size = pv['size']
+
+    def _get_by_name(self, name):
+        _, pvs, _ = self.cluster.kcli('drives list', out_as_dict=True)
+        for pv in pvs:
+            if pv['name'] == name:
+                return pv
+
+    def delete(self):
+        self.cluster.kcli("drives delete {0}".format(self.name))
+
+    def exists(self):
+        return self._get_by_name(self.name) is not None
+
+
+class DiskNotFoundException(Exception):
     pass

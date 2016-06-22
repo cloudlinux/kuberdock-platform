@@ -10,6 +10,8 @@ from tests_integration.lib.integration_test_utils import pod_factory, \
     NonZeroRetCodeException, NO_FREE_IPS_ERR_MSG
 
 
+# TODO: to API add method, which creates IP pools via kdclt instead of manage.py
+# then use this method to manage IP pools inside this class
 class IntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -41,6 +43,7 @@ class IntegrationTests(unittest.TestCase):
     def _cleanup(self):
         self.cluster.delete_all_pods()
         self.cluster.forget_all_pods()
+        self.cluster.delete_all_pvs()
 
     def test_nginx(self):
         # It is possible to create an nginx pod with public IP
@@ -65,3 +68,56 @@ class IntegrationTests(unittest.TestCase):
                                 start=True, open_all_ports=False,
                                 healthcheck=False, wait_ports=False,
                                 wait_for_status='running')
+
+    def test_a_pv_created_together_with_pod(self):
+        pv1_name = "disk107"
+        mount_path = '/nginxpv'
+
+        # It is possible to create an nginx pod together with new PV
+        pv = self.cluster.create_pv("dummy", pv1_name, mount_path)
+        pod = self.cluster.create_pod("nginx", "test_nginx_pod_1", pvs=[pv],
+                                      start=True, wait_ports=True,
+                                      wait_for_status='running',
+                                      healthcheck=True)
+        self.assertTrue(pv.exists())
+        pod.delete()
+
+        # It is possible to create an nginx pod using existing PV
+        pod = self.cluster.create_pod("nginx", "test_nginx_pod_2", pvs=[pv],
+                                      start=True, wait_ports=True,
+                                      wait_for_status='running',
+                                      healthcheck=True)
+        pod.delete()
+
+        # It's possible to remove PV created together with pod
+        pv.delete()
+        self.assertFalse(pv.exists())
+
+    def test_a_pv_created_separately(self):
+        pv2_name = "disk207"
+        pv2_size = 2
+        mount_path = '/nginxpv'
+
+        # It is possible to create a separate PV
+        pv = self.cluster.create_pv("new", pv2_name, mount_path, pv2_size)
+        self.assertTrue(pv.exists())
+        self.assertEqual(pv.size, pv2_size)
+
+        # It's possible to use separately created PV for nginx pod
+        pod = self.cluster.create_pod("nginx", "test_nginx_pod_3", pvs=[pv],
+                                      start=True, wait_ports=False,
+                                      wait_for_status='running',
+                                      healthcheck=False)
+
+        # TODO: place correct exception and regexp to args of assertRaisesRegexp
+        # TODO: and uncomment the next block. Currently blocked by AC-3689
+        '''
+        # It's not possible to create pod using assigned PV
+        with self.assertRaisesRegexp(some_exception, some_regexp):
+            pod = self.cluster.create_pod("nginx", "test_nginx_pod_4",
+                                          start=True, wait_ports=False,
+                                          wait_for_status='running',
+                                          healthcheck=False, pv_size=pv.size,
+                                          pv_name=pv.name,
+                                          pv_mount_path='/nginxpv')
+        '''

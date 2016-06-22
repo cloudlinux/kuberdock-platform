@@ -24,7 +24,6 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
     data.DiffCollection = Backbone.Collection.extend({
         initialize: function(models, options){
-            this.compositeID = options.compositeID;
             this.before = options.before || new Backbone.Collection();
             this.after = options.after || new Backbone.Collection();
             this.modelType = options.modelType || Backbone.Model;
@@ -42,23 +41,21 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             });
 
             this.recalc();
+            this.listenTo(this.before, 'update reset', this.recalc);
+            this.listenTo(this.after, 'update reset', this.recalc);
             models.push.apply(models, this.models);
         },
         recalc: function(){
-            this.reset(this.after.map(function(modelA){
-                var compositeID = this.compositeID && modelA.pick.apply(modelA, this.compositeID),
-                    modelB = compositeID ? this.before.findWhere(compositeID) : this.before.get(modelA.id),
-                    id = compositeID ? JSON.stringify(compositeID) : modelA.id;
-                return {id: id, before: modelB, after: modelA};
-            }, this));
-            this.add(this.before.map(function(modelB){
-                var compositeID = this.compositeID && modelB.pick.apply(modelB, this.compositeID),
-                    modelA = compositeID ? this.after.findWhere(compositeID) : this.after.get(modelB.id),
-                    id = compositeID ? JSON.stringify(compositeID) : modelB.id;
-                return {id: id, before: modelB, after: modelA};
-            }, this));
-            this.listenToOnce(this.before, 'add remove reset', this.recalc);
-            this.listenToOnce(this.after, 'add remove reset', this.recalc);
+            this.reset([].concat(
+                // models "after" change, each with corresponding "before" model or undefined
+                this.after.chain().map(function(model){
+                    return {id: model.id, before: this.before.get(model.id), after: model};
+                }, this).value(),
+                // remaining models "before" change (that do not have corresponding "after-model")
+                this.before.chain().map(function(model){
+                    return {id: model.id, before: model, after: this.after.get(model.id)};
+                }, this).reject(_.property('after')).value()
+            ));
         },
     });
 
@@ -86,7 +83,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     var term = order[i],
                         aVal = this.pageableCollection.getForSort(a, term.key),
                         bVal = this.pageableCollection.getForSort(b, term.key);
-                    if (aVal == bVal) continue;
+                    if (aVal == bVal) continue;  // eslint-disable-line eqeqeq
                     return term.order * (aVal > bVal ? 1 : -1);
                 }
                 return 0;
@@ -112,7 +109,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
     });
 
-    data.VolumeMount = Backbone.Model.extend({
+    data.VolumeMount = Backbone.AssociatedModel.extend({
         idAttribute: 'mountPath',
         defaults: function(){
             return {name: this.generateName(this.get('mountPath')), mountPath: null};
@@ -127,17 +124,32 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
     });
 
-    data.Port = Backbone.Model.extend({
+    data.Port = Backbone.AssociatedModel.extend({
         defaults: {
             containerPort: null,
             hostPort: null,
             isPublic: false,
             protocol: "tcp",
         },
+        initialize: function(){
+            this.on('change', this.resetID);
+            this.resetID();
+        },
+        resetID: function(){
+            // modelId works well for collections.get(ID), but it doesn't
+            // set model.id attribute
+            this.id = data.Ports.prototype.modelId(this.attributes);
+        },
         getContainer: function(){ return getParentWithType(this.collection, data.Container); },
     });
+    data.Ports = Backbone.Collection.extend({
+        model: data.Port,
+        modelId: function(attrs){
+            return JSON.stringify(_.pick(attrs, 'containerPort', 'protocol'));
+        },
+    });
 
-    data.EnvVar = Backbone.Model.extend({
+    data.EnvVar = Backbone.AssociatedModel.extend({
         idAttribute: 'name',
         defaults: {
             name: 'not set',
@@ -151,7 +163,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         relations: [{
             type: Backbone.Many,
             key: 'ports',
-            relatedModel: data.Port,
+            collectionType: data.Ports,
         }, {
             type: Backbone.Many,
             key: 'volumeMounts',
@@ -356,18 +368,24 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         // if it's "edited_config" of some other pod, get that pod:
         // pod.editOf() === undefined || pod.editOf().get('edited_config') === pod
         editOf: function(){ return getParentWithType(this, data.Pod); },
+        deepClone: function(){ return new data.Pod(utils.deepClone(this.toJSON())); },
         getContainersDiffCollection: function(){
+            if (this._containersDiffCollection)
+                return this._containersDiffCollection;
             var before = this,
-                diffCollection = new data.DiffCollection(
-                    [], {modelType: data.Container, before: before.get('containers')}),
+                getAfter = function(){
+                    return before.get('edited_config') || before.deepClone();
+                },
+                diff = new data.DiffCollection(
+                    [], {modelType: data.Container, before: before.get('containers'),
+                         after: getAfter().get('containers')}),
                 resetDiff = function(){
-                    var after = before.get('edited_config');
-                    diffCollection.after = (after || before).get('containers');
-                    diffCollection.recalc();
+                    diff.after = getAfter().get('containers');
+                    diff.recalc();
                 };
-            diffCollection.listenTo(this, 'change:edited_config', resetDiff);
-            resetDiff();
-            return diffCollection;
+            diff.listenTo(this, 'change:edited_config', resetDiff);
+            this._containersDiffCollection = diff;
+            return this._containersDiffCollection;
         },
 
         command: function(cmd, commandOptions){

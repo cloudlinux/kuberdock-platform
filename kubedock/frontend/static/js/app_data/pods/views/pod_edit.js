@@ -909,6 +909,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             'click @ui.addItem'      : 'addItem',
             'click @ui.removeItem'   : 'removeItem',
             'click @ui.reset'        : 'resetFielsdsValue',
+
             'click @ui.next'         : 'finalStep',
             'click @ui.prev'         : 'prevStep',
             'click @ui.cancelEdit'   : 'cancelEdit',
@@ -921,7 +922,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         collectionEvents: {
-            'add remove reset': 'toggleTableVisibility',
+            'update reset': 'toggleTableVisibility',
         },
 
         initialize: function() {
@@ -1098,7 +1099,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             this.kubesLimit = options.kubesLimit;
 
             // TODO: package change, package-kube relationship change
-            this.listenTo(App.kubeTypeCollection, 'change add remove reset', this.pricingChanged);
+            this.listenTo(App.kubeTypeCollection, 'change update reset', this.pricingChanged);
             this.on('show', function(){ this.checkKubeTypes(/*ensureSelected*/false);});
         },
 

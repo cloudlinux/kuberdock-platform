@@ -1,34 +1,3 @@
-<div class="message-wrapper <%- changed ? 'editPod' : ''%>">
-    <% if (postDescription) { %>
-        <div class="message">
-            <h3>Congratulations!</h3>
-            <p><%= postDescription %></p>
-            <span class="close"></span>
-        </div>
-    <% } %>
-    <% if (changed) { %>
-        <div class="message">
-            <h3>
-              <span class="message-pod-canged-info-title-ico"></span>
-              <span>You have some changes that haven't been applied yet!</span>
-            </h3>
-            <p>
-                <% if (changesRequirePayment && fixedPrice){ %>
-                You need to pay <%- changesRequirePayment %> to re-deploy
-                pod with new containers and configuration.
-                <div class="buttons text-center">
-                    <button class="blue pay-and-apply" title="Pod will be restarted">Pay & apply changes</button>
-                <% } else { %>
-                You need to re-deploy pod with new containers and configuration.
-                <div class="buttons text-center">
-                    <button class="blue apply">Restart & apply changes</button>
-                <% } %>
-                    <button class="gray reset-changes">Reset changes</button>
-                </div>
-            </p>
-        </div>
-    <% } %>
-</div>
 <div class="status-line">
     <span class="status icon <%- status %>">Status: <%- status %></span>
     <% if (graphs) { %>

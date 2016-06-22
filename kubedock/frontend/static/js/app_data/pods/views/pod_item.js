@@ -28,9 +28,11 @@ define(['app_data/app', 'app_data/model',
     podItem.PodItemLayout = Backbone.Marionette.LayoutView.extend({
         template : layoutPodItemTpl,
 
+        // TODO: move nav, header, and messages out of here
         regions: {
             nav      : '#item-navbar',
             header   : '#item-header',
+            messages : '#messages-block',
             controls : '#item-controls',
             info     : '#item-info',
             contents : '#layout-contents'
@@ -130,19 +132,11 @@ define(['app_data/app', 'app_data/model',
 
     var ContainersTableBaseView = Backbone.Marionette.CompositeView.extend({
         childView: podItem.ContainersListItem,
-        childViewContainer: "tbody",
-        collectionEvents: {  // TODO: do not re-render whole layout
-            'add remove change reset': 'render',
+        childViewContainer: 'tbody',
+        collectionEvents: {
+            'update reset change': 'toggleVisibility',
         },
-        className: function(){
-            return this.collection.some(this.filter) ? '' : 'hidden';
-        },
-        onRender: function(){
-            if (this.collection.some(this.filter))
-                this.$el.removeClass('hidden');
-            else
-                this.$el.addClass('hidden');
-        },
+        onRender: function(){ this.toggleVisibility(); },
     });
 
     podItem.ChangedContainersView = ContainersTableBaseView.extend({
@@ -151,18 +145,23 @@ define(['app_data/app', 'app_data/model',
             return !model.get('before') || !model.get('after')
                 || model.get('before').isChanged(model.get('after'));
         },
+        toggleVisibility: function(){
+            this.$el.toggleClass('hidden', !this.collection.some(this.filter));
+        },
     });
 
     podItem.UnchangedContainersView = ContainersTableBaseView.extend({
         template: pageContainersUnchangedTpl,
+        ui: {
+            caption: 'caption',
+        },
         filter: function(model){
             return model.get('before') && model.get('after')
                 && !model.get('before').isChanged(model.get('after'));
         },
-        templateHelpers: function(){
-            return {
-                partial: this.collection.some(_.negate(this.filter)),
-            };
+        toggleVisibility: function(){
+            this.$el.toggleClass('hidden', !this.collection.some(this.filter));
+            this.ui.caption.toggleClass('hidden', this.collection.all(this.filter));
         },
     });
 
@@ -188,25 +187,14 @@ define(['app_data/app', 'app_data/model',
         className: 'pod-controls',
 
         ui: {
-            close : 'span.close',
             updateSsh: '.updateSsh',
-            message: '.message-wrapper'
         },
-        onShow: function(){
-            if (this.model.get('postDescription'))
-                this.ui.close.parents('.message-wrapper').slideDown();
-        },
-
         events: {
             'click .start-btn'        : 'startItem',
-            'click .pay-and-apply'    : 'applyChanges',
-            'click .apply'            : 'applyChanges',
-            'click .reset-changes'    : 'resetChanges',
             'click .pay-and-start-btn': 'payStartItem',
             'click .restart-btn'      : 'restartItem',
             'click .stop-btn'         : 'stopItem',
             'click .terminate-btn'    : 'terminateItem',
-            'click @ui.close'         : 'closeMessage',
             'click @ui.updateSsh'     : 'updateSshAccess'
         },
 
@@ -217,7 +205,6 @@ define(['app_data/app', 'app_data/model',
         initialize: function(options){
             this.graphs = !!options.graphs;
             this.upgrade = !!options.upgrade;
-            this.fixedPrice = !!options.fixedPrice;
         },
 
         templateHelpers: function(){
@@ -230,26 +217,14 @@ define(['app_data/app', 'app_data/model',
                 kubeType = App.kubeTypeCollection.get(kubeId),
                 hasPorts = this.model.get('containers').any(function(c) {
                     return c.get('ports') && c.get('ports').length;
-                }),
-                postDesc = this.model.get('postDescription'),
-                changed = this.model.isChanged(this.model.get('edited_config')),
-                changesRequirePayment;
+                });
 
             this.model.recalcInfo(pkg);
-
-            if (this.model.get('edited_config')){
+            if (this.model.get('edited_config'))
                 this.model.get('edited_config').recalcInfo(pkg);
-                var diff = this.model.get('edited_config').rawTotalPrice - this.model.rawTotalPrice;
-                if (diff > 0)
-                    changesRequirePayment = pkg.getFormattedPrice(diff);
-            }
 
             return {
-                changesRequirePayment: changesRequirePayment,
-                fixedPrice           : this.fixedPrice,
-                changed         : changed,
                 hasPorts        : hasPorts,
-                postDescription : this.preparePostDescription(postDesc),
                 publicIP        : this.model.get('public_ip'),
                 publicName      : publicName,
                 graphs          : this.graphs,
@@ -265,65 +240,11 @@ define(['app_data/app', 'app_data/model',
         },
 
         updateSshAccess : function() { this.model.updateSshAccess(); },
-        onDomRefresh: function(){
-            if (this.model.get('postDescription') || this.model.get('edited_config'))
-                this.ui.message.show();
-        },
-
-        closeMessage: function(){
-            var model = this.model;
-            this.ui.close.parents('.message-wrapper').slideUp({
-                complete: function(){
-                    model.unset('postDescription');
-                    model.command('set', {postDescription: null});
-                }
-            });
-        },
-
         startItem: function(){ this.model.cmdStart(); },
         payStartItem: function(){ this.model.cmdPayAndStart(); },
         restartItem: function(){ this.model.cmdRestart(); },
         stopItem: function(){ this.model.cmdStop(); },
         terminateItem: function(){ this.model.cmdDelete(); },
-        applyChanges: function(){
-            utils.preloader.show();
-            this.model.cmdApplyChanges()
-                .always(utils.preloader.hide)
-                .done(function(){
-                    utils.notifyWindow('Pod will be restarted with the new '
-                                       + 'configuration soon', 'success');
-                });
-        },
-        resetChanges: function(){
-            var model = this.model,
-                oldEdited = model.get('edited_config');
-            utils.modalDialog({
-                title: 'Are you sure?',
-                body: 'Reset all unapplied changes?',
-                small: true,
-                show: true,
-                footer: {
-                    buttonOk: function(){
-                        utils.preloader.show();
-                        model.set('edited_config', null).command('edit')
-                            .always(utils.preloader.hide)
-                            .fail(utils.notifyWindow,
-                                  function(){ model.set('edited_config', oldEdited); });
-                    },
-                    buttonCancel: true,
-                    buttonOkText: 'Reset',
-                }
-            });
-        },
-
-        preparePostDescription: function(val){
-            if (val == null)
-                return;
-            val = val.replace(/(%PUBLIC_ADDRESS%)/gi,
-                              this.model.get('public_ip') || '...');
-            var parser = new BBCodeParser(BBCodeParser.defaultTags());
-            return parser.parseString(val);
-        }
     });
 
     podItem.PodGraphItem = Backbone.Marionette.ItemView.extend({

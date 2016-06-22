@@ -95,8 +95,9 @@ define([
                 deferred = $.Deferred();
             require([
                 'app_data/pods/views/pod_item',
-                'app_data/pods/views/breadcrumbs'
-            ], function(Views, PodBreadcrumbs){
+                'app_data/pods/views/breadcrumbs',
+                'app_data/pods/views/messages',
+            ], function(Views, PodBreadcrumbs, PodMessages){
                 if (that.podPageData && that.podPageData.model.id === id) {
                     deferred.resolveWith(that, [that.podPageData]);
                     return;
@@ -116,6 +117,7 @@ define([
 
                     var itemLayout = new Views.PodItemLayout(),
                         navbar = new Menu.NavList({collection: App.menuCollection}),
+                        messagesLayout = new PodMessages.Layout(),
                         breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'podName']}),
                         fixedPrice = App.userPackage.get('count_type') === 'fixed'
                             && settings.byName('billing_type')
@@ -123,9 +125,18 @@ define([
 
                     that.listenTo(itemLayout, 'show', function(){
                         itemLayout.nav.show(navbar);
+
                         itemLayout.header.show(breadcrumbsLayout);
-                        breadcrumbsLayout.pods.show(new Breadcrumbs.Link({text: 'Pods', href: '#pods'}));
-                        breadcrumbsLayout.podName.show(new PodBreadcrumbs.EditableName({model: model}));
+                        breadcrumbsLayout.pods.show(
+                            new Breadcrumbs.Link({text: 'Pods', href: '#pods'}));
+                        breadcrumbsLayout.podName.show(
+                            new PodBreadcrumbs.EditableName({model: model}));
+
+                        itemLayout.messages.show(messagesLayout);
+                        messagesLayout.podHasChanges.show(
+                            new PodMessages.PodHasChanges({model: model}));
+                        messagesLayout.postDescription.show(
+                            new PodMessages.PostDescription({model: model}));
                     });
                     that.listenTo(itemLayout, 'before:destroy', function(){
                         delete this.podPageData;
@@ -222,7 +233,7 @@ define([
             });
         },
 
-        // TODO: rename views and events names
+        // TODO: rename views and events names; refactoring
         showPodContainer: function(id, name, tab){
             if (!this.checkPermissions(['User', 'TrialUser', 'LimitedUser']))
                 return;
@@ -230,14 +241,19 @@ define([
                 return App.navigate('pods/' + id + '/container/' + name + '/logs')
                     .controller.showPodContainer(id, name, 'logs');
             var that = this;
-            require(['app_data/pods/views/pod_container'], function(Views){
+            require([
+                'app_data/pods/views/pod_container',
+                'app_data/pods/views/messages',
+            ], function(Views, PodMessages){
                 App.getPodCollection().done(function(podCollection){
                     var wizardLayout = new Views.PodWizardLayout(),
                         pod = podCollection.fullCollection.get(id),
-                        model = pod.getContainersDiffCollection().get(name),
+                        diffCollection = pod.getContainersDiffCollection(),
+                        model = diffCollection.get(name),
                         navbar = new Menu.NavList({ collection: App.menuCollection }),
                         breadcrumbsLayout = new Breadcrumbs.Layout(
                             {points: ['pods', 'pod', 'container']}),
+                        messagesLayout = new PodMessages.Layout(),
                         tabViews = {
                             'logs': Views.WizardLogsSubView,
                             'stats': Views.WizardStatsSubView,
@@ -246,13 +262,14 @@ define([
                         };
 
                     if (!model || !_.contains(_.keys(tabViews), tab))
-                        return this.pageNotFound();
+                        return that.pageNotFound();
 
-                    that.listenTo(pod, 'remove destroy', function(){
+                    wizardLayout.listenTo(pod, 'remove destroy', function(){
                         App.navigate('pods', {trigger: true});
                     });
 
-                    var showTab = function(tab, changeURL){
+                    var showTab = function(newTab, changeURL){
+                        tab = newTab;
                         if (changeURL)
                             App.navigate('pods/' + id + '/container/' + name + '/' + tab);
                         if (tab === 'stats'){
@@ -277,6 +294,7 @@ define([
 
                     that.listenTo(wizardLayout, 'show', function(){
                         wizardLayout.nav.show(navbar);
+
                         wizardLayout.header.show(breadcrumbsLayout);
                         breadcrumbsLayout.pods.show(new Breadcrumbs.Link(
                             {text: 'Pods', href: '#pods'}));
@@ -286,7 +304,22 @@ define([
                             {text: (model.get('before') || model.get('after')).get('image')
                                 + ' (' + model.id + ')'}));
 
+                        wizardLayout.messages.show(messagesLayout);
+                        messagesLayout.podHasChanges.show(
+                            new PodMessages.PodHasChanges({model: pod}));
+
                         showTab(tab);
+                    });
+                    wizardLayout.listenTo(diffCollection, 'update reset', function(){
+                        var diff = diffCollection.get(name);
+                        if (!diff){
+                            App.navigate('pods/' + id, {trigger: true});
+                            return;
+                        }
+                        if (model !== diff){
+                            model = diff;
+                            wizardLayout.trigger('show');
+                        }
                     });
 
                     that.listenTo(wizardLayout, 'step:portconf', _.partial(showTab, 'general', true));
@@ -455,9 +488,21 @@ define([
                             options.layout.header.show(breadcrumbsLayout);
                             breadcrumbsLayout.pods.show(
                                 new Breadcrumbs.Link({text: 'Pods', href: '#pods'}));
-                            // we use original model, so changes name will be applied immediately
-                            breadcrumbsLayout.pod.show(new PodBreadcrumbs.EditableName(
-                                {model: pod.wizardState.flow === 'CREATE_POD' ? pod : pod.editOf()}));
+
+                            var editNameModel;
+                            if (pod.wizardState.flow === 'CREATE_POD'){
+                                editNameModel = pod;
+                            } else {
+                                // in case of pod edit, we use a copy of the original model
+                                var originalModelCopy = pod.editOf();
+                                editNameModel = podCollection.fullCollection.get(originalModelCopy);
+                                // so we need to update name in both models
+                                originalModelCopy.listenTo(editNameModel, 'change:name', function(){
+                                    this.set('name', editNameModel.get('name'));
+                                });
+                            }
+                            breadcrumbsLayout.pod.show(
+                                new PodBreadcrumbs.EditableName({model: editNameModel}));
                         });
                         that.listenTo(options.layout, 'before:destroy', function(){
                             if (that.podWizardData === options)
@@ -474,7 +519,8 @@ define([
                                 .done(function(){
                                     pod.editOf().cleanup();  // backbone-associations, prevent leak
                                     var url = 'pods/' + originalModel.id,
-                                        containerID = pod.wizardState.container.id;
+                                        containerID = pod.wizardState.container
+                                            && pod.wizardState.container.id;
                                     if (pod.wizardState.flow === 'EDIT_CONTAINER_GENERAL')
                                         url += '/container/' + containerID + '/general';
                                     else if (pod.wizardState.flow === 'EDIT_CONTAINER_ENV')

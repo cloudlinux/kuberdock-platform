@@ -1,4 +1,3 @@
-<!-- <td class="checkboxes"><label class="custom"><input type="checkbox"><span></span></label></td> -->
 <td>
     <a href="#pods/<%- pod.id %>/container/<%- id %><%- !before && after ? '/general' : '' %>"
         class="container-page-btn">
@@ -30,7 +29,6 @@
              title="This container will be modified after you apply changes."></span>
             <span class="diff">Modified</span>
         </span>
-        <% console.log(before, after); %>
     <% } %>
 </td>
 <td>

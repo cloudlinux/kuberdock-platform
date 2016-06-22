@@ -727,6 +727,7 @@ class PodCollection(object):
         db_config = db_config['edited_config']
         db_config['podIP'] = getattr(old_pod, 'podIP', None)
         db_config['service'] = getattr(old_pod, 'service', None)
+        db_config['postDescription'] = getattr(old_pod, 'postDescription', None)
 
         # re-check images, PDs, etc.
         db_config['volumes'] = db_config['volumes_public']

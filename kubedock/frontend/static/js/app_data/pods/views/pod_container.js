@@ -1,5 +1,5 @@
 define(['app_data/app', 'app_data/model', 'app_data/utils',
-        'tpl!app_data/pods/templates/layout_wizard.tpl',
+        'tpl!app_data/pods/templates/layout_container.tpl',
 
         'tpl!app_data/pods/templates/volume_mounts_table/empty.tpl',
         'tpl!app_data/pods/templates/volume_mounts_table/item.tpl',
@@ -56,10 +56,11 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             });
         },
         regions: {
-            // TODO: 1) move menu and breadcrumbs regions into App;
+            // TODO: 1) move menu, breadcrumbs and messages regions into App;
             //       2) pull common parts out of "steps" into separate regions;
             nav    : '#navbar-steps',
             header : '#header-steps',
+            messages: '#messages-block',
             steps  : '#steps',
         },
         onBeforeShow: utils.preloader.show,
@@ -157,18 +158,20 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         onShow: function() {
+            var before = this.model.get('before') || this.model.get('after'),
+                after = this.model.get('after') || this.model.get('before');
+
             var portsDiff = new Model.DiffCollection([], {
-                compositeID: ['containerPort', 'protocol'],
                 modelType: Model.Port,
-                before: this.model.get('before').get('ports'),
-                after: this.model.get('after').get('ports'),
+                before: before.get('ports'),
+                after: after.get('ports'),
             });
             this.ports.show(new views.PortsTableView({collection: portsDiff}));
 
             var volumeMountsDiff = new Model.DiffCollection([], {
                 modelType: Model.VolumeMount,
-                before: this.model.get('before').get('volumeMounts'),
-                after: this.model.get('after').get('volumeMounts'),
+                before: before.get('volumeMounts'),
+                after: after.get('volumeMounts'),
             });
             this.volumes.show(new views.VolumeMountsTableView(
                 {collection: volumeMountsDiff}));
@@ -218,6 +221,12 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         template: envTableRowTpl,
         tagName: 'tr',
         ui: { 'tooltip' : '[data-toggle="tooltip"]' },
+        modelEvents: {
+            'change': 'render',
+        },
+        initialize: function(){
+            this.model.addNestedChangeListener(this, this.render);
+        },
         onDomRefresh: function(){ this.ui.tooltip.tooltip(); }
     });
 
@@ -253,15 +262,16 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         initialize: function(options) {
-            var before = this.model.get('before');
-            this.podBefore = before ? before.getPod() : this.model.get('after').getPod().editOf();
+            var before = this.model.get('before'),
+                after = this.model.get('after');
+            this.podBefore = before ? before.getPod() : after.getPod().editOf();
             this.podAfter = this.podBefore.get('edited_config') || this.podBefore;
             this.model.addNestedChangeListener(this, this.render);
 
             this.collection = new Model.DiffCollection([], {
                 modelType: Model.EnvVar,
-                before: this.model.get('before').get('env'),
-                after: this.model.get('after').get('env'),
+                before: (before || after).get('env'),
+                after: (after || before).get('env'),
             });
         },
 
@@ -518,7 +528,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             delete this.model.get('before').kubeVal;
             delete this.model.get('before').editKubesQty;
             this.destroyed = true;
-            clearTimeout(this.model.get('before').get('timeout'));
+            clearTimeout(this.model.get('before').logsTimeout);
             if (this.niceScroll !== undefined)
                 this.niceScroll.remove();
         },
@@ -528,7 +538,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             this.model.get('before').getLogs(/*size=*/100).always(function(){
                 // callbacks are called with model as a context
                 if (!that.destroyed) {
-                    this.set('timeout', setTimeout(that.getLogs, 10000));
+                    this.logsTimeout = setTimeout(that.getLogs, 10000);
                     that.render();
                 }
             });

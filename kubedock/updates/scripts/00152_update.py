@@ -1,5 +1,3 @@
-import re
-import shutil
 from time import sleep
 
 import requests
@@ -22,7 +20,7 @@ def _restore_backup_remote(filename):
 
 
 def _replace_str_in_file_remote(filename, old_re, new):
-    helpers.run("sed -ir 's/%s/%s/g' %s" % (old_re, new, filename))
+    helpers.run("sed -i -r 's/%s/%s/g' %s" % (old_re, new, filename))
 
     
 class InfluxUpdate(object):
@@ -109,7 +107,10 @@ class KubeletUpdate(object):
 
         _replace_str_in_file_remote(
             KubeletUpdate.KUBELET_CONFIG_FILE,
-            '--cadvisor-port=\d+', '')
+            '--cadvisor_port=\S+', '')
+        _replace_str_in_file_remote(
+            KubeletUpdate.KUBELET_CONFIG_FILE,
+            'KUBELET_ADDRESS=".*"', 'KUBELET_ADDRESS="0.0.0.0"')
         helpers.run('systemctl restart kubelet')
 
     @staticmethod

@@ -4,12 +4,15 @@ from datetime import timedelta
 import requests
 import json
 from urllib2 import urlparse
+import logging
 
 from celery.schedules import crontab
 
 DEFAULT_TIMEZONE = 'UTC'
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+LOG = logging.getLogger(__name__)
 
 
 def is_production_pkg():
@@ -60,7 +63,7 @@ def get_sentry_settings():
             enable = remote_settings.get('enable', True)
             dsn = remote_settings.get('dsn', "")
         except Exception as e:
-            print "Error while configure Sentry: {}".format(repr(e))
+            LOG.info("Error while configure Sentry: {}".format(repr(e)))
 
         return enable, dsn
 
@@ -73,20 +76,20 @@ def get_sentry_settings():
     if enable or local_force_enable:
         remote_enable, sentry_dsn = _get_remote_sentry_settings()
 
-    if not sentry_dsn:
-        print "Sentry DSN is not provided, disabling Sentry"
-        return False, ""
+        if not sentry_dsn:
+            LOG.info("Sentry DSN was not retrieved, disabling Sentry")
+            return False, ""
 
     if local_force_enable:
-        print "Sentry enabled through host SENTRY_ENABLE env"
+        LOG.info("Sentry enabled through host SENTRY_ENABLE env")
         return True, sentry_dsn
 
     if local_force_disable:
-        print "Sentry disabled through host SENTRY_ENABLE env"
+        LOG.info("Sentry disabled through host SENTRY_ENABLE env")
         return False, ""
 
     if not remote_enable:
-        print "Sentry disabled through remote setting"
+        LOG.info("Sentry disabled through remote setting")
         return False, ""
 
     return enable, sentry_dsn

@@ -5,7 +5,7 @@ KD_SCRIPTS_PATH = '/var/lib/kuberdock/scripts/'
 
 SSHD_CONFIG_CMD =\
 """\
-printf 'Match group kddockersshuser
+printf '\\nMatch group kddockersshuser
   PasswordAuthentication yes
   X11Forwarding no
   AllowTcpForwarding no
@@ -39,9 +39,9 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
 
     upd.print_log('Configure sshd and cron...')
     run('groupadd kddockersshuser')
-    run("echo '%kddockersshuser ALL=(ALL) NOPASSWD: "
+    run("echo -e '\\n%kddockersshuser ALL=(ALL) NOPASSWD: "
         "/var/lib/kuberdock/scripts/kd-docker-exec.sh' >> /etc/sudoers")
-    run("echo 'Defaults:%kddockersshuser !requiretty' >> /etc/sudoers")
+    run("echo -e '\\nDefaults:%kddockersshuser !requiretty' >> /etc/sudoers")
     run(SSHD_CONFIG_CMD)
     run(ADD_CRON_CMD)
 

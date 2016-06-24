@@ -9,6 +9,15 @@ WEBAPP_USER=nginx
 DEPLOY_LOG_FILE=/var/log/kuberdock_master_deploy.log
 EXIT_MESSAGE="Installation error. Install log saved to $DEPLOY_LOG_FILE"
 
+# Back up old logs
+if [ -f $DEPLOY_LOG_FILE ]; then
+    TIMESTAMP=$(stat --format=%Y $DEPLOY_LOG_FILE)
+    DATE_TIME=$(date -d @$TIMESTAMP +'%Y%m%d%H%M%S')
+    DEPLOY_LOG_FILE_NAME=$(stat --format=%n $DEPLOY_LOG_FILE | cut -f1 -d'.')
+    DEPLOY_LOG_FILE_SUFFIX=$(stat --format=%n $DEPLOY_LOG_FILE | cut -f2 -d'.')
+    OLD_LOG=$DEPLOY_LOG_FILE_NAME$DATE_TIME.$DEPLOY_LOG_FILE_SUFFIX
+    mv $DEPLOY_LOG_FILE $OLD_LOG
+fi
 #####################
 # Fail log delivery #
 #####################

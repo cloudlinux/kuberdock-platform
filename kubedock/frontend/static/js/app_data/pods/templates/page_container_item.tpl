@@ -9,8 +9,10 @@
 </td>
 <td><span class="<%- state %>"><%- state %></span></td>
 <td>
-    <span class="copy-ssh-link" data-toggle="tooltip" data-placement="top" title="Copy SSH link to clipboard"></span>
-    <span class="copy-ssh-password" data-toggle="tooltip" data-placement="top" title="Copy SSH password to clipboard"></span>
+    <% if (state == 'running' )  { %>
+        <span class="copy-ssh-link" data-toggle="tooltip" data-placement="top" title="Copy SSH link to clipboard"></span>
+        <span class="copy-ssh-password" data-toggle="tooltip" data-placement="top" title="Copy SSH password to clipboard"></span>
+    <% } %>
 </td>
 <td><span><%- kubes ? kubes : 'unknown' %></span></td>
 <td><span><%- startedAt ? startedAt : '' %></span></td>

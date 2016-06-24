@@ -12,6 +12,15 @@
   notify:
     - restart nginx
 
+- name: Update nginx root
+  replace:
+    dest: /etc/nginx/conf.d/kuberdock-ssl.conf
+    regexp: "root /var/opt/kuberdock/kubedock/frontend/;"
+    replace: "root /vagrant/kubedock/frontend/;"
+    backup: yes
+  notify:
+    - restart nginx
+
 - name: Copy CEPH settings
   file: src=/var/opt/kuberdock/kubedock/ceph_settings.py dest=/vagrant/kubedock/ceph_settings.py state=link
   when: use_ceph

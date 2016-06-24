@@ -44,7 +44,6 @@ chmod 4755 %{buildroot}%{_libexecdir}/suidwrap
 %clean
 rm -rf %{buildroot}
 
-
 %files
 %defattr(-,root,root,-)
 %{_bindir}/kcli
@@ -52,6 +51,8 @@ rm -rf %{buildroot}
 %{_sysconfdir}/kubecli.conf
 %{_libexecdir}/suidwrap
 %{python_sitelib}/kubecli/*
+
+%config(noreplace) %{_sysconfdir}/kubecli.conf
 
 %changelog
 

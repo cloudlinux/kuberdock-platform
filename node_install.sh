@@ -485,10 +485,10 @@ check_status
 
 # For direct ssh feature
 groupadd kddockersshuser
-echo '%kddockersshuser ALL=(ALL) NOPASSWD: /var/lib/kuberdock/scripts/kd-docker-exec.sh' >> /etc/sudoers
-echo 'Defaults:%kddockersshuser !requiretty' >> /etc/sudoers
+echo -e '\n%kddockersshuser ALL=(ALL) NOPASSWD: /var/lib/kuberdock/scripts/kd-docker-exec.sh' >> /etc/sudoers
+echo -e '\nDefaults:%kddockersshuser !requiretty' >> /etc/sudoers
 
-printf 'Match group kddockersshuser
+printf '\nMatch group kddockersshuser
   PasswordAuthentication yes
   X11Forwarding no
   AllowTcpForwarding no

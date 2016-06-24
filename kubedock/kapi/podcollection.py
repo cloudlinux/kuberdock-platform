@@ -34,6 +34,7 @@ from ..utils import POD_STATUSES, atomic, update_dict, send_event_to_user
 from ..utils import (
     send_pod_status_update,
     retry)
+from .node_utils import get_external_node_ip
 
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
 UNKNOWN_ADDRESS = 'Unknown'
@@ -762,6 +763,8 @@ class PodCollection(object):
 
         orig_pass = randstr(30, secure=True)
         crypt_pass = crypt(orig_pass, randstr(2, secure=True))
+        node_external_ip = get_external_node_ip(
+            node, ssh, APIError(DIRECT_SSH_ERROR))
 
         clinks = {}
         for c in k8s_pod.containers:
@@ -772,7 +775,7 @@ class PodCollection(object):
                 continue
             cid = cid[:DIRECT_SSH_USERNAME_LEN]
             self._try_update_ssh_user(ssh, cid, crypt_pass)
-            clinks[cname] = '{}@{}'.format(cid, node)
+            clinks[cname] = '{}@{}'.format(cid, node_external_ip)
         return {'links': clinks, 'auth': orig_pass}
 
     @staticmethod

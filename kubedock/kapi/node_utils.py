@@ -9,7 +9,7 @@ from ..utils import from_binunit, from_siunit, get_api_url
 from ..billing.models import Kube
 from ..core import db
 from ..exceptions import APIError
-from ..settings import NODE_INSTALL_LOG_FILE
+from ..settings import NODE_INSTALL_LOG_FILE, AWS
 
 
 def get_nodes_collection():
@@ -301,3 +301,42 @@ def divide_on_multipliers(resources):
             resources['memory'] /= memory_multiplier
     except:
         current_app.logger.exception("Can't divide on multipliers")
+
+
+def get_external_node_ip(node_ip, ssh_to_node, raise_on_error):
+    """Returns IP v4 address of the node which is accessible from external
+    network.
+    Now only works for AWS, because there are explicit API to get this.
+    Also, kubernetes may return ExternalIP in api/v1/nodes response, may be it
+    is a better way to retrieve external IP.
+    TODO: Also there are must be a way to get proper IP for generic KD
+    installations.
+    https://cloudlinux.atlassian.net/browse/AC-3704
+    :param node_ip: Some node IP address which will be returned back if it is
+        not an AWS cluster
+    :param ssh_to_node: ssh connection to the node
+    :param raise_on_error: exception which must be raised on errors
+
+    """
+    if not AWS:
+        return node_ip
+
+    aws_external_ipv4_endpoint = \
+        'http://169.254.169.254/latest/meta-data/public-ipv4'
+    try:
+        _, o, e = ssh_to_node.exec_command(
+            'curl {}'.format(aws_external_ipv4_endpoint),
+            timeout=20)
+        exit_status = o.channel.recv_exit_status()
+    except Exception:
+        # May happens in case of connection lost during operation
+        current_app.logger.exception(
+            'Failed to get external IP for AWS node: %s', node_ip)
+        raise raise_on_error
+    if exit_status != 0:
+        current_app.logger.error(
+            "Can't get AWS external ip for node %s. Exit code: %s. "
+            "Error message: %s",
+            node_ip, exit_status, e.read())
+        raise raise_on_error
+    return o.read().strip('\n')

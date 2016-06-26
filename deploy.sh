@@ -1,4 +1,4 @@
-#!/bin/bash
+# --fail!/bin/bash
 
 KUBERDOCK_DIR=/var/opt/kuberdock
 KUBERDOCK_LIB_DIR=/var/lib/kuberdock
@@ -64,17 +64,23 @@ isInstalledRpmNotSigned(){
 }
 
 sentryWrapper() {
-     # AC-3591 Do not send anything if package not signed
-     package=$(ls -1 | awk '/^kuberdock.*\.rpm$/ {print $1; exit}')
-     if [ ! -z $package ];then
-         if isRpmFileNotSigned $package; then
-             return 0
-         fi
-     else
-         if isInstalledRpmNotSigned; then
-             return 0
-         fi
+     if [ "$SENTRY_ENABLE" == "n" ];then
+        return 0
      fi
+
+     if [ "$SENTRY_ENABLE" != "y" ];then
+         # AC-3591 Do not send anything if package not signed
+         package=$(ls -1 | awk '/^kuberdock.*\.rpm$/ {print $1; exit}')
+         if [ ! -z $package ];then
+             if isRpmFileNotSigned $package; then
+                 return 0
+             fi
+         else
+             if isInstalledRpmNotSigned; then
+                 return 0
+             fi
+         fi
+    fi
 
      eventid=$(cat /proc/sys/kernel/random/uuid | tr -d "-")
      printf "We have a problem during deployment of KuberDock master on your server. Let us help you to fix a problem. We have collected all information we need into $DEPLOY_LOG_FILE. \n"

@@ -6,6 +6,10 @@
       - epel-release
       - git
       - tmux
+      - haveged
+
+- name: start haveged
+  service: name=haveged state=started
 
 - include: dev_predeploy.yml
   when: is_dev_install

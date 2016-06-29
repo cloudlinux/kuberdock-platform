@@ -15,7 +15,6 @@ APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 LOG = logging.getLogger(__name__)
 
 
-
 def is_production_pkg():
     """
     Checks that current Kuberdock package is one of stable KD releases based
@@ -246,25 +245,26 @@ NONFLOATING_PUBLIC_IPS = False
 
 
 cp = ConfigParser.ConfigParser()
-if cp.read(KUBERDOCK_SETTINGS_FILE):
-    if cp.has_section('main'):
-        if cp.has_option('main', 'DB_USER'):
-            DB_USER = cp.get('main', 'DB_USER')
-        if cp.has_option('main', 'DB_PASSWORD'):
-            DB_PASSWORD = cp.get('main', 'DB_PASSWORD')
-        if cp.has_option('main', 'DB_NAME'):
-            DB_NAME = cp.get('main', 'DB_NAME')
-        if cp.has_option('main', 'MASTER_IP'):
-            MASTER_IP = cp.get('main', 'MASTER_IP')
-        if cp.has_option('main', 'MASTER_TOBIND_FLANNEL'):
-            MASTER_TOBIND_FLANNEL = cp.get('main', 'MASTER_TOBIND_FLANNEL')
-        if cp.has_option('main', 'NODE_TOBIND_EXTERNAL_IPS'):
-            NODE_TOBIND_EXTERNAL_IPS = cp.get('main',
-                                              'NODE_TOBIND_EXTERNAL_IPS')
-        if cp.has_option('main', 'NODE_TOBIND_FLANNEL'):
-            NODE_TOBIND_FLANNEL = cp.get('main', 'NODE_TOBIND_FLANNEL')
-        if cp.has_option('main', 'PD_NAMESPACE'):
-            PD_NAMESPACE = cp.get('main', 'PD_NAMESPACE')
+if cp.read(KUBERDOCK_SETTINGS_FILE) and cp.has_section('main'):
+    if cp.has_option('main', 'DB_USER'):
+        DB_USER = cp.get('main', 'DB_USER')
+    if cp.has_option('main', 'DB_PASSWORD'):
+        DB_PASSWORD = cp.get('main', 'DB_PASSWORD')
+    if cp.has_option('main', 'DB_NAME'):
+        DB_NAME = cp.get('main', 'DB_NAME')
+    if cp.has_option('main', 'MASTER_IP'):
+        MASTER_IP = cp.get('main', 'MASTER_IP')
+    if cp.has_option('main', 'MASTER_TOBIND_FLANNEL'):
+        MASTER_TOBIND_FLANNEL = cp.get('main', 'MASTER_TOBIND_FLANNEL')
+    if cp.has_option('main', 'NODE_TOBIND_EXTERNAL_IPS'):
+        NODE_TOBIND_EXTERNAL_IPS = cp.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
+    if cp.has_option('main', 'NODE_TOBIND_FLANNEL'):
+        NODE_TOBIND_FLANNEL = cp.get('main', 'NODE_TOBIND_FLANNEL')
+    if cp.has_option('main', 'PD_NAMESPACE'):
+        PD_NAMESPACE = cp.get('main', 'PD_NAMESPACE')
+    if cp.has_option('main', 'NONFLOATING_PUBLIC_IPS'):
+        NONFLOATING_PUBLIC_IPS = cp.getboolean(
+            'main', 'NONFLOATING_PUBLIC_IPS')
 
 
 # Import local settings

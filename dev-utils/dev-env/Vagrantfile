@@ -99,8 +99,12 @@ Vagrant.configure(2) do |config|
             "testing_repo" => true, #ENV['KD_TESTING_REPO'],
             "public_ips" => ENV['KD_ONE_PUB_IPS'],
             "non_floating_ips" => ENV['KD_NONFLOATING_PUBLIC_IPS'],
+
+            "use_ceph" => ENV['KD_CEPH'],
+            "ceph_user" => ENV['KD_CEPH_USER'],
+            "ceph_config" => ENV['KD_CEPH_CONFIG'],
+            "ceph_user_keyring" => ENV['KD_CEPH_USER_KEYRING'],
             "pd_namespace" => ENV['KD_PD_NAMESPACE'],
-            "kcli_rpm_url" => ENV['KD_KCLI_RPM_URL'],
         }
 
         # Clean undefined vars

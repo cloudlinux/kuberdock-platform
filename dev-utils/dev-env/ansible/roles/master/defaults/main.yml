@@ -4,5 +4,3 @@ no_wsgi: false
 git_ref: ""
 public_ips: "200,201,202"
 non_floating_ips: False
-
-kcli_rpm_url: http://repo.cloudlinux.com/kuberdock-client/7/x86_64/kuberdock-cli-1.0-0.el7.rc.2.cloudlinux.x86_64.rpm

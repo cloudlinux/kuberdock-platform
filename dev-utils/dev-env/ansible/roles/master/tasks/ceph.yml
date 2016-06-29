@@ -11,7 +11,8 @@
   when: ceph_user_keyring != ""
   tags:
       - ceph
-        
+
 - set_fact:
     ceph_params: "{{ pd_namespace_param }} --ceph-user \"{{ ceph_user }}\" --ceph-config \"{{ ceph_config_dest }}\" --ceph-user-keyring \"{{ ceph_user_keyring_dest }}\""
-
+  tags:
+      - ceph

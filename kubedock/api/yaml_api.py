@@ -37,7 +37,7 @@ class YamlAPI(KubeUtils, MethodView):
         except yaml.YAMLError as e:
             raise APIError('Incorrect yaml, parsing failed: "{0}"'.format(e))
         new_pod = dispatch_kind(parsed_data)
-        check_new_pod_data(new_pod, user)
+        new_pod = check_new_pod_data(new_pod, user)
 
         if user.role.rolename == 'LimitedUser':
             template_id = new_pod.get('kuberdock_template_id')

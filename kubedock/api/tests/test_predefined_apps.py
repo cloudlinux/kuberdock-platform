@@ -6,12 +6,12 @@ from kubedock.validation import V
 
 
 response_validator = V({
-    'status': {'type': str, 'required': True, 'allowed': ['OK', 'error']},
-    'data': {'type': dict, 'required': True, 'schema': {
-        'id': {'type': int, 'required': True},
-        'user_id': {'type': int, 'required': True},
-        'name': {'type': str, 'required': True},
-        'template': {'type': str, 'required': True}}}})
+    'status': {'type': 'string', 'required': True, 'allowed': ['OK', 'error']},
+    'data': {'type': 'dict', 'required': True, 'schema': {
+        'id': {'type': 'integer', 'required': True},
+        'user_id': {'type': 'integer', 'required': True},
+        'name': {'type': 'string', 'required': True},
+        'template': {'type': 'string', 'required': True}}}})
 
 
 class PredefinedAppsTestCase(APITestCase):

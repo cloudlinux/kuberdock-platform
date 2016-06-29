@@ -9,63 +9,67 @@ from ipaddress import ip_address
 
 from kubedock.validation import V
 from kubedock.usage.models import IpState, PersistentDiskState
-from kubedock.users.models import User
 from kubedock.pods.models import Pod
 
 usage_per_user_schema = {
     'pods_usage': {
-        'type': list, 'required': False,
+        'type': 'list', 'required': False,
         'schema': {
-            'type': dict, 'required': True,
+            'type': 'dict', 'required': True,
             'schema': {
-                'id': {'type': str, 'required': True, 'empty': False},
-                'kube_id': {'type': int, 'required': True},
-                'kubes': {'type': int, 'required': True},
-                'name': {'type': str, 'required': True, 'empty': False},
+                'id': {'type': 'string', 'required': True, 'empty': False},
+                'kube_id': {'type': 'integer', 'required': True},
+                'kubes': {'type': 'integer', 'required': True},
+                'name': {'type': 'string', 'required': True, 'empty': False},
                 'time': {
-                    'type': dict, 'required': True,
-                    'propertyschema': {'type': str, 'empty': False},
+                    'type': 'dict', 'required': True,
+                    'propertyschema': {'type': 'string', 'empty': False},
                     'valueschema': {
-                        'type': list, 'required': True,
+                        'type': 'list', 'required': True,
                         'schema': {
-                            'type': dict, 'required': True,
+                            'type': 'dict', 'required': True,
                             'schema': {
-                                'start': {'type': int, 'required': True},
-                                'end': {'type': int, 'required': True},
-                                'kubes': {'type': int, 'required': True
+                                'start': {'type': 'integer', 'required': True},
+                                'end': {'type': 'integer', 'required': True},
+                                'kubes': {'type': 'integer', 'required': True
                                           }}}}}}}},
     'pd_usage': {
-        'type': list, 'required': False,
+        'type': 'list', 'required': False,
         'schema': {
-            'type': dict, 'required': True,
+            'type': 'dict', 'required': True,
             'schema': {
-                'start': {'type': int, 'required': True},
-                'end': {'type': int, 'required': True},
-                'pd_name': {'type': str, 'required': True, 'empty': False},
-                'size': {'type': int, 'required': True}}}},
+                'start': {'type': 'integer', 'required': True},
+                'end': {'type': 'integer', 'required': True},
+                'pd_name': {'type': 'string', 'required': True,
+                            'empty': False},
+                'size': {'type': 'integer', 'required': True}}}},
     'ip_usage': {
-        'type': list, 'required': False,
+        'type': 'list', 'required': False,
         'schema': {
-            'type': dict, 'required': True,
+            'type': 'dict', 'required': True,
             'schema': {
-                'start': {'type': int, 'required': True},
-                'end': {'type': int, 'required': True},
-                'ip_address': {'type': str, 'required': True, 'empty': False},
-                'pod_id': {'type': str, 'required': True, 'empty': False}}}}}
+                'start': {'type': 'integer', 'required': True},
+                'end': {'type': 'integer', 'required': True},
+                'ip_address': {'type': 'string', 'required': True,
+                               'empty': False},
+                'pod_id': {'type': 'string', 'required': True,
+                           'empty': False}}}}}
 
 
 class UsageResponseValidator(V):
     """Validator for testing usage api"""
     get_schema = {
-        'status': {'type': str, 'required': True, 'allowed': ['OK', 'error']},
-        'data': {'type': dict, 'required': True,
+        'status': {'type': 'string', 'required': True,
+                   'allowed': ['OK', 'error']},
+        'data': {'type': 'dict', 'required': True,
                  'schema': usage_per_user_schema}
     }
     get_list_schema = {
-        'status': {'type': str, 'required': True, 'allowed': ['OK', 'error']},
-        'data': {'type': dict, 'required': True,
-                 'propertyschema': {'type': str, 'empty': False},
-                 'valueschema': {'type': dict, 'required': True,
+        'status': {'type': 'string', 'required': True,
+                   'allowed': ['OK', 'error']},
+        'data': {'type': 'dict', 'required': True,
+                 'propertyschema': {'type': 'string', 'empty': False},
+                 'valueschema': {'type': 'dict', 'required': True,
                                  'schema': usage_per_user_schema}}}
 
     def validate_get(self, data):

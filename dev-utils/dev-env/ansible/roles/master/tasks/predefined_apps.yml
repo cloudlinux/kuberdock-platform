@@ -6,14 +6,16 @@
   tags:
   - predefined_apps
 
-- name: Find all apps 
+- name: Find all apps
   find: paths="{{ predefined_apps_dest }}" patterns=*.yaml
   register: predefined_apps
   tags:
   - predefined_apps
 
 - name: Add predefined apps
-  shell: python "{{ src_prefix }}/manage.py" add-predefined-app --name "{{ item.path | basename | splitext | first }}" -t "{{ item.path }}"
-  with_items: "{{ predefined_apps.files }}"
+  shell: for i in {{ predefined_apps_dest }}/*.yaml; do name=$(basename "$i"); python /vagrant/manage.py add-predefined-app --name "$name" -t "$i"; done
+  async: 3600
+  poll: 0
+  register: pa_async_results
   tags:
   - predefined_apps

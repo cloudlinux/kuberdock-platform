@@ -989,8 +989,9 @@ systemctl daemon-reload
 
 if [ "$NONFLOATING_PUBLIC_IPS" = true ]; then
     sed -i 's/^KUBE_SCHEDULER_ARGS.*/KUBE_SCHEDULER_ARGS="--enable-non-floating-ip=true"/' $KUBERNETES_CONF_DIR/scheduler
-    sed -i 's/NONFLOATING_PUBLIC_IPS = False/NONFLOATING_PUBLIC_IPS = True/' \
-     $KUBERDOCK_DIR/kubedock/settings.py
+    echo "NONFLOATING_PUBLIC_IPS=yes" >> $KUBERDOCK_MAIN_CONFIG
+else
+    echo "NONFLOATING_PUBLIC_IPS=no" >> $KUBERDOCK_MAIN_CONFIG
 fi
 
 log_it echo "Starting kubernetes..."

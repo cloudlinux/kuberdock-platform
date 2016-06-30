@@ -60,6 +60,25 @@ class InternalAPIError(APIError):
     """
     __metaclass__ = ABCMeta
     status_code = 500
+    response_message = 'Internal error, please contact administrator'
+
+    def __init__(self, message=None, status_code=None, type=None,
+                 details=None, response_message=None):
+        """Here is one additional parameter 'response_message'.
+        If it is defined, then APIError will contain this message, instead
+        of one defined on class level.
+        """
+        if response_message:
+            self.response_message = response_message
+        super(InternalAPIError, self).__init__(
+            message=message, status_code=status_code, type=type,
+            details=details)
+
+
+class SubsystemtIsNotReadyError(InternalAPIError):
+    """Raise this exception if some subsystemt did not properly configured.
+    """
+    pass
 
 
 class PermissionDenied(APIError):
@@ -121,3 +140,13 @@ class BillingExc(object):
 
     class InternalBillingError(InternalAPIError):
         message_template = 'An internal error occurred: {message}'
+
+
+class AlreadyExistsError(APIError):
+    message_template = 'Resource already exists'
+    status_code = 409
+
+
+class CannotBeDeletedError(APIError):
+    message_template = 'Resource cannot be deleted'
+    status_code = 409

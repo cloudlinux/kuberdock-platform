@@ -4,6 +4,7 @@ from copy import deepcopy
 import pytz
 
 from kubedock.users import User
+from kubedock.constants import DOMAINNAME_LENGTH
 from .coerce import extbool, get_user
 
 PATH_LENGTH = 512
@@ -60,6 +61,17 @@ hostname_schema = {
         'message': 'invalid hostname'
     },
     'resolvable': True,
+}
+
+domain_schema = {
+    'type': 'string',
+    'empty': False,
+    'required': False,
+    'maxlength': DOMAINNAME_LENGTH,
+    'regex': {
+        'regex': hostname_regex,
+        'message': 'invalid domain'
+    },
 }
 
 email_local_regex = re.compile(
@@ -186,16 +198,47 @@ user_schema = {
 }
 
 args_list_schema = {'type': 'list', 'schema': {'type': 'string'}}
-env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
-    'name': {
-        'type': 'string',
-        'required': True,
-        'empty': False,
-        'maxlength': 255,
-        'regex': envvar_name_regex
+env_schema = {'type': 'list', 'schema': {'type': 'dict', 'anyof': [
+    {
+        'schema': {
+            'name': {
+                'type': 'string',
+                'required': True,
+                'empty': False,
+                'maxlength': 255,
+                'regex': envvar_name_regex
+            },
+            'value': {'type': 'string', 'coerce': str, 'required': True},
+        }
     },
-    'value': {'type': 'string', 'coerce': str, 'required': True},
-}}}
+    {
+        'schema': {
+            'name': {
+                'type': 'string',
+                'required': True,
+                'empty': False,
+                'maxlength': 255,
+                'regex': envvar_name_regex
+            },
+            # TODO: The following is potentially insecure place.
+            # it can expose to user ALL of the pod's fields, even those used
+            # for our internal usage.
+            'valueFrom': {
+                'type': 'dict', 'schema': {
+                    'fieldRef': {
+                        'type': 'dict', 'schema': {
+                            'fieldPath': {
+                                'type': 'string',
+                                'coerce': str,
+                                'required': True
+                            },
+                        }
+                    }
+                }
+            }
+        }
+    },
+]}}
 path_schema = {'type': 'string', 'maxlength': PATH_LENGTH}
 protocol_schema = {'type': 'string', 'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
 kubes_qty_schema = {'type': 'integer', 'min': 1,
@@ -212,7 +255,7 @@ restart_policy_schema = {'type': 'string',
                          'allowed': ['Always', 'OnFailure', 'Never']}
 pod_resolve_schema = {'type': 'list', 'schema': {'type': 'string'}}
 
-edited_pod_config_schema = {
+base_pod_config_schema = {
     'podIP': {
         'type': 'ipv4',
         'nullable': True,
@@ -354,7 +397,6 @@ edited_pod_config_schema = {
                     }
                 },
                 'workingDir': path_schema,
-                "readinessProbe": {'type': 'dict'},
                 "livenessProbe": {'type': 'dict'},
                 "terminationMessagePath": {
                     'type': 'string',
@@ -371,11 +413,19 @@ edited_pod_config_schema = {
                 }
             }
         }
-    }
+    },
+    'serviceAccount': {
+        'type': 'boolean',
+        'required': False,
+        'internal_only': True,
+    },
 }
+edited_pod_config_schema = deepcopy(base_pod_config_schema)
+edited_pod_config_schema.update({
+    'domain': domain_schema,
+})
 
-
-new_pod_schema = deepcopy(edited_pod_config_schema)
+new_pod_schema = deepcopy(base_pod_config_schema)
 new_pod_schema.update({
     'name': dict(pod_name_schema, required=True),
     'postDescription': {
@@ -400,6 +450,7 @@ new_pod_schema.update({
         'type': 'string', 'required': False,
         'allowed': ['stopped', 'unpaid']
     },
+    'domain': domain_schema,
 })
 
 

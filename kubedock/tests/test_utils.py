@@ -24,7 +24,8 @@ from ..utils import (
     update_allowed,
     from_siunit,
     get_version,
-    nested_dict_utils
+    nested_dict_utils,
+    domainize,
 )
 
 
@@ -682,6 +683,21 @@ class TestDictUtils(unittest.TestCase):
         d = {'x': 2}
         with self.assertRaises(nested_dict_utils.StructureError):
             nested_dict_utils.delete(d, 'x.y')
+
+
+class TestDomainize(unittest.TestCase):
+    testing_pairs = [
+        ('simple', 'simple'),
+        ('example-with_special"symbols', 'examplewithspecialsymbols'),
+        ('CamelCase', 'camelcase'),
+        ('-with-starting-and-ending-hyphen-', 'withstartingandendinghyphen'),
+        (u'\u044e\u043d\u0438\u043a\u043e\u0434unicode', 'unicode'),
+    ]
+
+    def test_domainize(self):
+        for i, o in self.testing_pairs:
+            r = domainize(i)
+            self.assertEqual(r, o)
 
 
 if __name__ == '__main__':

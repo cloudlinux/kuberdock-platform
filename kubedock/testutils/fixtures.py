@@ -1,5 +1,4 @@
-from string import ascii_letters, digits
-from random import choice, randint
+from random import randint
 from uuid import uuid4
 import json
 import socket
@@ -85,8 +84,10 @@ def pod(**kwargs):
             'args': ['curl', 'httpbin.org/get'],
             'volumeMounts': [],
             'sourceUrl': 'hub.docker.com/r/appropriate/curl',
-            'env': [{'name': 'PATH', 'value': '/usr/local/sbin:/usr/local/bin:'
-                                              '/usr/sbin:/usr/bin:/sbin:/bin'
+            'env': [{
+                'name': 'PATH',
+                'value': '/usr/local/sbin:/usr/local/bin:'
+                         '/usr/sbin:/usr/bin:/sbin:/bin'
             }],
             'ports': []}]}))
     return Pod(**kwargs).save()
@@ -102,16 +103,14 @@ def node(hostname=None, ip=None, kube_id=None, owner=None):
     if hostname is None:
         hostname = randstr()
 
-    return Node(ip=ip, hostname=hostname, kube_id=kube_id.id, state=NODE_STATUSES.pending)
+    return Node(
+        ip=ip, hostname=hostname, kube_id=kube_id.id,
+        state=NODE_STATUSES.pending)
 
 
 def kube_type(**kwargs):
     return Kube(**dict(
         kwargs, name=randstr(), cpu=.25, memory=64, disk_space=1)).save()
-
-
-def randstr(length=8, symbols=ascii_letters + digits):
-    return ''.join(choice(symbols) for _ in range(length))
 
 
 def random_ip():

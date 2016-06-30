@@ -22,6 +22,8 @@ fi
 LOG_FILE="$PLUGIN_DIR/kuberdock.log"
 LOG_ENABLED="1"
 
+INGRESS_SERVICE_IP="10.254.0.100"
+
 function log {
   if [ "$LOG_ENABLED" == "1" ];then
     if [ $(wc -l < "$LOG_FILE") -ge 100 ];then    # limit log to 100 lines
@@ -76,6 +78,16 @@ function rule_reject_service {
 }
 
 
+function rule_ingress_input {
+  iptables -w -"$1" KUBERDOCK -t filter -d "$2" -m set --match-set kuberdock_ingress src -j ACCEPT
+}
+
+
+function rule_ingress_output {
+  iptables -w -"$1" KUBERDOCK -t filter -s "$2" -m set --match-set kuberdock_ingress dst -j ACCEPT
+}
+
+
 function get_setname {
   echo "kuberdock_user_$1"
 }
@@ -84,7 +96,7 @@ function get_setname {
 # TODO comment all input '$1' params
 function add_rules {
   set=$(get_setname $2)
-  ipset create $set hash:ip  # workaround for non-existent ip set
+  ipset -exist create $set hash:ip  # workaround for non-existent ip set
   if ! rule_reject_pod_local_input C $1 $set
   then
     rule_reject_pod_local_input A $1 $set
@@ -151,12 +163,23 @@ function iptables_ {
 
 
 function teardown_pod {
-    log "Teardown Pod $POD_IP of user $USER_ID; PUBLIC_IP: \"$POD_PUBLIC_IP\""
+    log "Teardown Pod $POD_IP (Service $SERVICE_IP) of user $USER_ID; PUBLIC_IP: \"$POD_PUBLIC_IP\"; domain: \"$POD_DOMAIN\""
     del_rules "$POD_IP" "$USER_ID"
 
     if [ "$POD_PUBLIC_IP" != "" ];then
         MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" teardown $POD_PUBLIC_IP $POD_IP $IFACE $NAMESPACE $KUBERNETES_POD_ID $DATA_INFO $DATA_INFO-spec)
         log "$MSG"
+    fi
+
+    if [ "$SERVICE_IP" == "$INGRESS_SERVICE_IP" ];then
+        log "INGRESS-CONTROLLER teardown: $POD_IP"
+        rule_ingress_input D "$POD_IP"
+        rule_ingress_output D "$POD_IP"
+    fi
+
+    if [ "$POD_DOMAIN" != "" ];then
+        echo "INGRESS del: $POD_IP"
+        ipset del kuberdock_ingress "$POD_IP"
     fi
 
     etcd_ DELETE "$USER_ID" "$POD_IP"
@@ -286,6 +309,7 @@ case "$ACTION" in
     # reject outgoing not authorized smtp packets, to prevent spamming from containers
     iptables_ -I KUBERDOCK -t filter -p tcp --dport 25 -i docker0 -m set ! --match-set kuberdock_cluster dst -j REJECT
     protect_cluster_drop
+    ipset -exist create kuberdock_ingress hash:ip
     ;;
   "setup")
     # Workaround 1
@@ -322,11 +346,13 @@ case "$ACTION" in
     if_failed "Error while get POD_PUBLIC_IP"
     RESOLVE=$(echo "$POD_SPEC" | grep kuberdock_resolve | awk '{gsub(/,$/,""); for(i=2; i<=NF; ++i) print $i}' | tr -d \" | xargs echo)
     if_failed "Error while get RESOLVE"
+    POD_DOMAIN=$(echo "$POD_SPEC" | grep kuberdock-domain | awk '{gsub(/,$/,""); print $2}' | tr -d \")
 
-    log "Setup Pod $POD_IP (Service $SERVICE_IP) of user $USER_ID; PUBLIC_IP: \"$POD_PUBLIC_IP\"; resolve: \"$RESOLVE\""
+    log "Setup Pod $POD_IP (Service $SERVICE_IP) of user $USER_ID; PUBLIC_IP: \"$POD_PUBLIC_IP\"; resolve: \"$RESOLVE\"; domain: \"$POD_DOMAIN\""
 
     mkdir -p "$DATA_DIR"
     echo "POD_IP=$POD_IP" > "$DATA_INFO"
+    echo "SERVICE_IP=$SERVICE_IP" >> "$DATA_INFO"
     echo "USER_ID=$USER_ID" >> "$DATA_INFO"
     echo "$POD_SPEC" > "$DATA_INFO-spec"
 
@@ -339,7 +365,25 @@ case "$ACTION" in
       fi
       log "$MSG"
     fi
-    
+
+    if [ "$SERVICE_IP" == "$INGRESS_SERVICE_IP" ];then
+      log "INGRESS-CONTROLLER setup: $POD_IP"
+      if ! rule_ingress_output C "$POD_IP"
+      then
+        rule_ingress_output I "$POD_IP"
+      fi
+      if ! rule_ingress_input C "$POD_IP"
+      then
+        rule_ingress_input I "$POD_IP"
+      fi
+    fi
+
+    if [ "$POD_DOMAIN" != "" ];then
+      echo "POD_DOMAIN=$POD_DOMAIN" >> "$DATA_INFO"
+      log "INGRESS add: $POD_IP"
+      ipset add kuberdock_ingress "$POD_IP"
+    fi
+
     MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" initlocalstorage $DATA_INFO-spec 2>&1)
     if [ ! $? -eq 0 ]; then
      log "$MSG"

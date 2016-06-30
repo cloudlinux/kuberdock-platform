@@ -845,7 +845,7 @@ fi
 
 sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token-auth-file=$KNOWN_TOKENS_FILE --bind-address=$MASTER_IP --watch-cache=false --tls-cert-file=$K8S_TLS_CERT --tls-private-key-file=$K8S_TLS_PRIVATE_KEY --client-ca-file=$K8S_CA_CERT --service-account-key-file=$K8S_TLS_CERT $CLOUD_PROVIDER_OPT \"|}" $KUBERNETES_CONF_DIR/apiserver
 sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--service-account-private-key-file=$K8S_TLS_PRIVATE_KEY --root-ca-file=$K8S_CA_CERT $CLOUD_PROVIDER_OPT \"|}" $KUBERNETES_CONF_DIR/controller-manager
-sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota|--admission-control=NamespaceLifecycle,NamespaceExists|}" $KUBERNETES_CONF_DIR/apiserver
+sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota|--admission-control=NamespaceLifecycle,NamespaceExists,ServiceAccount|}" $KUBERNETES_CONF_DIR/apiserver
 
 
 #10. Create and populate DB

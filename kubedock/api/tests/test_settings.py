@@ -34,8 +34,8 @@ class TestSystemSettings(APITestCase):
         # check response format
         resp = self.open(auth=self.adminauth)
         self.assert200(resp)
-        # 9 default settings and 1 added in setUp
-        self.assertEqual(len(resp.json.get('data')), 10 + 1)
+        # 14 default settings and 1 added in setUp
+        self.assertEqual(len(resp.json.get('data')), 14 + 1)
         data = by_name(resp, 'test_setting')
         data.pop('id')  # do not know autoincremented ID
         self.assertEqual(

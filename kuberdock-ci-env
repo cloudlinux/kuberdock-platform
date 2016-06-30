@@ -1,0 +1,6 @@
+export VAGRANT_CWD=dev-utils/dev-env/
+export KD_LICENSE=patch
+export KD_ONE_PUB_IPS="203,204"
+export BUILD_CLUSTER=1
+export PATH=dev-utils:$PATH # enables docker-based vagrant
+export KD_NEBULA_TEMPLATE_ID=124 # enables SSD disks

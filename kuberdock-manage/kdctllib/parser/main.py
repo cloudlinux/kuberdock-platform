@@ -4,15 +4,23 @@ from utils import formatted
 from . import KDCtl
 
 
-@click.group(help='Kuberdock admin utilities.')
+@click.group(help='Kuberdock admin utilities.', context_settings={
+    'allow_interspersed_args': True,
+    'allow_extra_args': True,
+    'ignore_unknown_options': True,
+})
 @click.option(
     '-c', '--config-dir',
     type=click.Path(
         exists=True, dir_okay=True, writable=True,
         resolve_path=True, allow_dash=True),
     help='Config directory.')
+@click.option('-d', '--debug', is_flag=True, help='Turn on curl logging.')
 @click.pass_context
-def main(ctx, config_dir):
+def main(ctx, config_dir, debug):
+    if debug:
+        import logging
+        logging.getLogger('requests_logger').setLevel(logging.DEBUG)
     ctx.obj = KDCtl(config_dir)
     ctx.obj.update_config()
 

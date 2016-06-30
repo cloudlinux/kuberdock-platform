@@ -1,5 +1,6 @@
 from random import randint
 from uuid import uuid4
+import unittest
 
 import mock
 
@@ -129,3 +130,7 @@ class TestPodAPI(APITestCase):
 
         PodCollection().update_container.assert_called_once_with(
             pod_id, container_name)
+
+
+if __name__ == '__main__':
+    unittest.main()

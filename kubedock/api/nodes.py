@@ -8,6 +8,7 @@ from ..decorators import maintenance_protected
 from ..validation import check_int_id, check_node_data, check_hostname
 from ..kapi import nodes as kapi_nodes
 from ..kapi import node_utils
+from ..settings import WITH_TESTING, AWS, CEPH
 
 
 nodes = Blueprint('nodes', __name__, url_prefix='/nodes')
@@ -43,7 +44,18 @@ def create_item():
     if kube is None:
         raise APIError('Unknown kube type')
     hostname = data['hostname']
-    dbnode = kapi_nodes.create_node(None, hostname, kube.id)
+    devices = None
+    ebs_volume = None
+    if not CEPH:
+        if AWS:
+            ebs_volume = data.get('ebsvolume', None)
+        else:
+            devices = data.get('lsdevices', [])
+
+    dbnode = kapi_nodes.create_node(None, hostname, kube.id,
+                                    ls_devices=devices,
+                                    ebs_volume=ebs_volume,
+                                    with_testing=WITH_TESTING)
     data['id'] = dbnode.id
     return jsonify({'status': 'OK', 'data': data})
 

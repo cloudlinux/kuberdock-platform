@@ -8,6 +8,7 @@ from random import choice
 from datetime import datetime
 import json
 import subprocess
+import argparse
 
 from kubedock.api import create_app
 from kubedock.exceptions import APIError
@@ -25,7 +26,7 @@ from kubedock.rbac.models import Role
 from kubedock.system_settings.fixtures import add_system_settings
 from kubedock.notifications.fixtures import add_notifications
 from kubedock.static_pages.fixtures import generate_menu
-from kubedock.settings import NODE_CEPH_AWARE_KUBERDOCK_LABEL
+from kubedock.settings import NODE_CEPH_AWARE_KUBERDOCK_LABEL, WITH_TESTING
 from kubedock.updates.models import Updates
 from kubedock.nodes.models import Node, NodeFlag, NodeFlagNames
 from kubedock.updates.kuberdock_upgrade import get_available_updates
@@ -34,7 +35,8 @@ from kubedock import tasks
 from kubedock.kapi import licensing
 from kubedock.kapi.pstorage import check_namespace_exists
 from kubedock.kapi import ippool
-from kubedock.kapi.node_utils import get_one_node
+from kubedock.kapi.node_utils import (
+    get_one_node, extend_ls_volume, get_ls_info)
 
 from flask.ext.script import Manager, Shell, Command, Option, prompt_pass
 from flask.ext.script.commands import InvalidCommand
@@ -132,7 +134,7 @@ def wait_for_nodes(nodes_list, timeout):
 
 
 class NodeManager(Command):
-    option_list = (
+    option_list = [
         Option('--hostname', dest='hostname', required=True),
         Option('--kube-type', dest='kube_type', required=False),
         Option('--do-deploy', dest='do_deploy', action='store_true'),
@@ -140,10 +142,12 @@ class NodeManager(Command):
         Option('--timeout', dest='timeout', required=False, type=int),
         Option('-t', '--testing', dest='testing', action='store_true'),
         Option('--docker-options', dest='docker_options'),
-    )
+        Option('--ebs-volume', dest='ebs_volume', required=False),
+        Option('--localstorage-device', dest='ls_device', required=False),
+    ]
 
     def run(self, hostname, kube_type, do_deploy, wait, timeout, testing,
-            docker_options):
+            docker_options, ebs_volume, ls_device):
 
         if kube_type is None:
             kube_type_id = Kube.get_default_kube_type()
@@ -155,7 +159,7 @@ class NodeManager(Command):
             kube_type_id = kube_type.id
 
         options = None
-
+        testing = testing or WITH_TESTING
         if docker_options is not None:
             options = {'DOCKER': docker_options}
 
@@ -165,14 +169,16 @@ class NodeManager(Command):
             )
         try:
             check_node_data({'hostname': hostname, 'kube_type': kube_type_id})
+            if ls_device:
+                ls_device = [ls_device]
             res = create_node(None, hostname, kube_type_id, do_deploy, testing,
-                              options=options)
+                              options=options,
+                              ls_devices=ls_device, ebs_volume=ebs_volume)
             print(res.to_dict())
             if wait:
                 wait_for_nodes([hostname, ], timeout)
         except Exception as e:
-            print("Node management error: {0}".format(e))
-            exit(1)
+            raise InvalidCommand("Node management error: {0}".format(e))
 
 
 class DeleteNodeCmd(Command):
@@ -418,6 +424,76 @@ class AddPredefinedApp(Command):
         )
         print(result)
 
+
+node_ls_manager = Manager()
+
+
+def _positive_int_checker(value):
+    """Type checker for argparse. Accepts only positive integers."""
+    ivalue = int(value)
+    if ivalue <= 0:
+        raise argparse.ArgumentTypeError(
+            '{} is not positive integer'.format(value)
+        )
+    return ivalue
+
+
+class NodeLSAddVolume(Command):
+    """Adds a volume to node's locastorage"""
+    option_list = [
+        Option('--hostname', dest='hostname', required=True),
+        Option(
+            '--ebs-volume', dest='ebs_volume', required=False,
+            help='Name of existing EBS volume (only for AWS-clusters)'
+        ),
+        Option(
+            '--size', dest='size', required=False, type=_positive_int_checker,
+            help='Size (GB) for new EBS volume (only for AWS-clusters)'
+        ),
+        Option(
+            '--devices', dest='devices', required=False,
+            help='Comma separated list of block devices already attached to '
+                 'the node'
+        ),
+    ]
+
+    def run(self, hostname, ebs_volume, size, devices):
+        if get_maintenance():
+            raise InvalidCommand(
+                'Kuberdock is in maintenance mode. Operation canceled'
+            )
+        if size is not None and size <= 0:
+            raise InvalidCommand(
+                'Invalid size value (must be > 0): {}'.format(size)
+            )
+        if devices:
+            devices = devices.split(',')
+        ok, message = extend_ls_volume(
+            hostname, devices=devices, ebs_volume=ebs_volume, size=size
+        )
+        if not ok:
+            raise InvalidCommand(u'Failed to extend LS: {}'.format(message))
+        print 'Operation performed successfully'
+
+
+class NodeLSGetInfo(Command):
+    """Returns information about local storage on a node"""
+    option_list = [
+        Option('--hostname', dest='hostname', required=True),
+    ]
+
+    def run(self, hostname):
+        try:
+            result = get_ls_info(hostname, raise_on_error=True)
+        except APIError as err:
+            raise InvalidCommand(str(err))
+        print json.dumps(result)
+
+
+node_ls_manager.add_command('add-volume', NodeLSAddVolume)
+node_ls_manager.add_command('get-info', NodeLSGetInfo)
+
+
 app = create_app(fake_sessions=True)
 manager = Manager(app, with_default_commands=False)
 directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -446,6 +522,7 @@ manager.add_command('delete-ip-pool', DeleteIPPool())
 manager.add_command('list-ip-pools', ListIPPool())
 manager.add_command('create-user', CreateUser())
 manager.add_command('add-predefined-app', AddPredefinedApp())
+manager.add_command('node-storage', node_ls_manager)
 
 
 if __name__ == '__main__':

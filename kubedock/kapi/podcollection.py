@@ -34,12 +34,14 @@ from ..utils import POD_STATUSES, atomic, update_dict, send_event_to_user
 from ..utils import (
     send_pod_status_update,
     retry)
+from .node_utils import get_external_node_ip
 
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
 UNKNOWN_ADDRESS = 'Unknown'
 
 # We use only 30 because useradd limits name to 32, and ssh client
-# limits name only to 30 (may be this is configurable) so we use lowest possible
+# limits name only to 30 (may be this is configurable) so we use lowest
+# possible
 # This value is hardcoded in a few ssh-feature related scripts because they
 # will be copied to each node at deploy stage
 DIRECT_SSH_USERNAME_LEN = 30
@@ -56,7 +58,6 @@ class PodNotFound(APIError):
 
 
 class PodCollection(object):
-
     def __init__(self, owner=None):
         """
         :param owner: User model instance
@@ -473,7 +474,7 @@ class PodCollection(object):
                 "kind": "Namespace",
                 "apiVersion": KUBE_API_VERSION,
                 "metadata": {"name": namespace}}
-            rv = self.k8squery.post(
+            self.k8squery.post(
                 ['namespaces'], json.dumps(config), rest=True, ns=False)
             # TODO where raise ?
             # current_app.logger.debug(rv)
@@ -564,8 +565,8 @@ class PodCollection(object):
                     'replicaSelector': item['desiredState']['replicaSelector'],
                     'name': item['labels']['kuberdock-pod-uid']}
 
-                if name is not None and \
-                        replica_item['replicaSelector'] != name:
+                if name is not None \
+                        and replica_item['replicaSelector'] != name:
                     continue
                 replicas.append(replica_item)
             except KeyError:
@@ -748,13 +749,17 @@ class PodCollection(object):
         return pod, db_pod.get_dbconfig()
 
     def _start_pod(self, pod, data=None):
+        if data is None:
+            data = {}
+        async_pod_create = data.get('async-pod-create', True)
+
         if pod.status == POD_STATUSES.unpaid:
             raise APIError("Pod is unpaid, we can't run it")
         if pod.status in (POD_STATUSES.running, POD_STATUSES.pending,
                           POD_STATUSES.preparing):
             raise APIError("Pod is not stopped, we can't run it")
-        if pod.status == POD_STATUSES.succeeded or \
-           pod.status == POD_STATUSES.failed:
+        if pod.status == POD_STATUSES.succeeded \
+                or pod.status == POD_STATUSES.failed:
             self._stop_pod(pod, block=True)
         self._make_namespace(pod.namespace)
 
@@ -767,7 +772,10 @@ class PodCollection(object):
 
         pod.set_status(POD_STATUSES.preparing)
 
-        prepare_and_run_pod_task.delay(pod)
+        if async_pod_create:
+            prepare_and_run_pod_task.delay(pod)
+        else:
+            prepare_and_run_pod(pod)
         return pod.as_dict()
 
     def _stop_pod(self, pod, data=None, raise_=True, block=False):
@@ -865,26 +873,29 @@ class PodCollection(object):
         by cron script on the node (hourly)
         :param pod_id: Id of desired running pod
         :return: dict with key "auth" which contain generated password and key
-                 key "links" with dict of "container_name" : "user_name@node_ip"
+                 key "links" with dict of "container_name":"user_name@node_ip"
         """
         k8s_pod = self._get_by_id(pod_id)
         if k8s_pod.status != POD_STATUSES.running:
             raise APIError('Pod is not running. SSH access is impossible')
         node = k8s_pod.hostIP
         if not node:
-            raise APIError('Pod is not assigned to node yet, please try later. '
-                           'SSH access is impossible')
+            raise APIError(
+                'Pod is not assigned to node yet, please try later. '
+                'SSH access is impossible')
 
         ssh, err = ssh_connect(node)
         if err:
             # Level is not error because it's maybe temporary problem on the
-            # cluster (node reboot) and we don't want to receive all such events
-            # in Sentry
+            # cluster (node reboot) and we don't want to receive all such
+            # events in Sentry
             current_app.logger.warning("Can't connect to node")
             raise APIError(DIRECT_SSH_ERROR)
 
         orig_pass = randstr(30, secure=True)
         crypt_pass = crypt(orig_pass, randstr(2, secure=True))
+        node_external_ip = get_external_node_ip(
+            node, ssh, APIError(DIRECT_SSH_ERROR))
 
         clinks = {}
         for c in k8s_pod.containers:
@@ -895,14 +906,14 @@ class PodCollection(object):
                 continue
             cid = cid[:DIRECT_SSH_USERNAME_LEN]
             self._try_update_ssh_user(ssh, cid, crypt_pass)
-            clinks[cname] = '{}@{}'.format(cid, node)
+            clinks[cname] = '{}@{}'.format(cid, node_external_ip)
         return {'links': clinks, 'auth': orig_pass}
 
     @staticmethod
     def _try_update_ssh_user(ssh_to_node, user, passwd):
         """
-        Tries to update ssh-related unix user on then node. Creates this user if
-        not exists
+        Tries to update ssh-related unix user on then node. Creates this user
+        if not exists
         :param ssh_to_node: already connected to node ssh object
         :param user: unix user name which is for now truncated container_id
         :param passwd: crypted password
@@ -983,6 +994,7 @@ class PodCollection(object):
 
 def wait_pod_status(pod_id, wait_status, interval=1, max_retries=10):
     """Keeps polling k8s api until pod status becomes as given"""
+
     def check_status():
         pod = PodCollection()._get_by_id(pod_id)
         if pod.status == wait_status:
@@ -1135,8 +1147,7 @@ def fix_relative_mount_paths(containers):
                 path.join('/', mount['mountPath']))
 
 
-@celery.task(ignore_results=True)
-def prepare_and_run_pod_task(pod):
+def prepare_and_run_pod(pod):
     db_pod = DBPod.query.get(pod.id)
     db_config = db_pod.get_dbconfig()
     try:
@@ -1186,6 +1197,11 @@ def prepare_and_run_pod_task(pod):
     return pod.as_dict()
 
 
+@celery.task(ignore_results=True)
+def prepare_and_run_pod_task(pod):
+    return prepare_and_run_pod(pod)
+
+
 def run_service(pod):
     ports = []
     public_ports = []
@@ -1215,7 +1231,7 @@ def run_service(pod):
             'selector': {'kuberdock-pod-uid': pod.id},
             'ports': ports,
             'type': 'ClusterIP',
-            'sessionAffinity': 'None'   # may be ClientIP is better
+            'sessionAffinity': 'None'  # may be ClientIP is better
         }
     }
     if hasattr(pod, 'podIP') and pod.podIP:
@@ -1321,12 +1337,14 @@ def _process_persistent_volumes(pod, volumes):
     try:
         if taken_by_another_pod:
             free_on_exit = True
+
+            def make_msg(item):
+                return 'PD: {0}, Pod: {1}'.format(item.name, item.pod.name)
+
             raise APIError(
                 u'For now two pods cannot share one Persistent Disk. '
-                u'{0}. Stop these pods before starting this one.'
-                .format('; '.join('PD: {0}, Pod: {1}'.format(
-                                  item.name, item.pod.name)
-                        for item in taken_by_another_pod))
+                u'{0}. Stop these pods before starting this one.'.format(
+                    '; '.join(make_msg(item) for item in taken_by_another_pod))
             )
 
         # prepare drives
@@ -1345,7 +1363,7 @@ def _process_persistent_volumes(pod, volumes):
             raise
     finally:
         if free_on_exit and now_taken:
-            PersistentDisk.free_drives(now_taken)
+            PersistentDisk.free_drives([d.drive_name for d in now_taken])
 
 
 def get_replicationcontroller(namespace, name):

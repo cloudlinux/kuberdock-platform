@@ -113,3 +113,7 @@ class TestServices(unittest.TestCase):
         services.get_by_user(3)
         mock_get.assert_called_once_with(
             [helpers.LABEL_SELECTOR_PODS.format('pod_id')])
+
+
+if __name__ == '__main__':
+    unittest.main()

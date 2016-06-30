@@ -32,7 +32,7 @@
     <% } %>
 </td>
 <td>
-    <% if (before) { %>
+    <% if (before && before.state == 'running') { %>
         <span class="copy-ssh-link" data-toggle="tooltip" data-placement="top" title="Copy SSH link to clipboard"></span>
         <span class="copy-ssh-password" data-toggle="tooltip" data-placement="top" title="Copy SSH password to clipboard"></span>
     <% } %>

@@ -8,7 +8,7 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
 from . import pstorage
-from .node_utils import add_node_to_db, delete_node_from_db
+from .node_utils import add_node_to_db, delete_node_from_db, remove_ls_volume
 from .podcollection import PodCollection
 from .. import tasks
 from ..billing import kubes_to_limits
@@ -34,7 +34,9 @@ def get_kuberdock_logs_pod_name(node):
 
 
 def create_node(ip, hostname, kube_id,
-                do_deploy=True, with_testing=False, options=None):
+                do_deploy=True, with_testing=False,
+                ls_devices=None, ebs_volume=None,
+                options=None):
     """Creates new node in database, kubernetes. Deploys all needed packages
     and settings on the new node, if do_deploy is specified.
     :param ip: optional IP address for the node. If it's not specified, then
@@ -43,6 +45,12 @@ def create_node(ip, hostname, kube_id,
     :param kube_id: kube type identifier for the new node
     :param do_deploy: flag switches on deployment process on the node host
     :param with_testing: enables/disables testing repository for deployment
+    :param ls_devices: list of block device names which should be used for
+        local storage on the node (not works on CEPH-enabled cluster)
+    :param ebs_volume: EBS volume name. Use existing Amazon EBS volume for
+        node's local storage. Works only on AWS-clusters. If it is not
+        defined on AWS cluster, then a new EBS volume will be created
+        with some random name.
     :return: database entity for created node
     """
     # Store all hostnames in lowercase
@@ -71,7 +79,8 @@ def create_node(ip, hostname, kube_id,
         pass
 
     node = add_node_to_db(node)
-    _deploy_node(node, do_deploy, with_testing, options)
+    _deploy_node(node, do_deploy, with_testing,
+                 ls_devices=ls_devices, ebs_volume=ebs_volume, options=options)
 
     ku = User.query.filter(User.username == KUBERDOCK_INTERNAL_USER).first()
 
@@ -206,6 +215,7 @@ def delete_node(node_id=None, node=None, force=False):
     except Exception as e:
         raise APIError(u'Failed to delete node from DB: {}'.format(e))
 
+    ls_clean_error = remove_ls_volume(hostname, raise_on_error=False)
     res = tasks.remove_node_by_host(hostname)
     if res['status'] == 'Failure' and res['code'] != 404:
         raise APIError('Failed to delete node in k8s: {0}, code: {1}. \n'
@@ -215,9 +225,16 @@ def delete_node(node_id=None, node=None, force=False):
         os.remove(NODE_INSTALL_LOG_FILE.format(hostname))
     except OSError:
         pass
+    message = 'Node successfully deleted.'
+    if ls_clean_error:
+        message += \
+            '\nWarning: Failed to clean Local storage volumes on the node.\n'\
+            'You have to clean it manually if needed:\n{}'.format(
+                ls_clean_error)
+        current_app.logger.warning(message)
     send_event_to_role('node:deleted', {
         'id': node_id,
-        'message': 'Node successfully deleted'
+        'message': message
     }, 'Admin')
 
 
@@ -289,13 +306,19 @@ def _check_node_hostname(ip, hostname):
             hostname, uname_hostname))
 
 
-def _deploy_node(dbnode, do_deploy, with_testing, options=None):
+def _deploy_node(dbnode, do_deploy, with_testing,
+                 ls_devices=None, ebs_volume=None, options=None):
     if do_deploy:
-        tasks.add_new_node.apply_async((dbnode.id, with_testing),
-                                       deploy_options=options,
-                                       task_id=NODE_INSTALL_TASK_ID.format(
-                                           dbnode.hostname, dbnode.id
-                                       ))
+        tasks.add_new_node.apply_async(
+            [dbnode.id],
+            dict(
+                with_testing=with_testing,
+                ls_devices=ls_devices,
+                ebs_volume=ebs_volume,
+                deploy_options=options,
+            ),
+            task_id=NODE_INSTALL_TASK_ID.format(dbnode.hostname, dbnode.id)
+        )
     else:
         is_ceph_installed = tasks.is_ceph_installed_on_node(dbnode.hostname)
         if is_ceph_installed:
@@ -422,7 +445,9 @@ def get_kuberdock_logs_config(node, name, kube_type,
 
 def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
     """Returns config of k8s DNS service pod."""
-    # Based on https://github.com/kubernetes/kubernetes/blob/release-1.2/cluster/addons/dns/skydns-rc.yaml.in  # noqa
+    # Based on
+    # https://github.com/kubernetes/kubernetes/blob/release-1.2/
+    #   cluster/addons/dns/skydns-rc.yaml.in
     # TODO AC-3377: migrate on yaml-based templates
     # TODO AC-3378: integrate exechealthz container
     return {

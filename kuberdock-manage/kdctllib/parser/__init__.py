@@ -31,7 +31,7 @@ class ConfigManager(object):
     CONFIG_FILE_NAME = 'config.yaml'
     DEFAULT_CONFIG_DIR = '~/.kuberdock-manage'
     DEFAULT_CONFIG = {
-        'url': 'http://127.0.0.1'
+        'url': 'https://127.0.0.1'
     }
 
     def __init__(self, config_dir=None):

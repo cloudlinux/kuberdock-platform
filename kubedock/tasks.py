@@ -37,13 +37,15 @@ from .system_settings.models import SystemSettings
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
     NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH,
-    KUBERDOCK_INTERNAL_USER, NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
+    KUBERDOCK_INTERNAL_USER, NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT,
+    NODE_LVM_MANAGE_SCRIPT)
 from .kapi.collect import collect, send
 from .kapi.pstorage import (
     delete_persistent_drives, remove_drives_marked_for_deletion,
     check_namespace_exists)
 from .kapi.usage import update_states
 from .kapi.node import Node as K8SNode
+from .kapi.node_utils import setup_lvm_to_aws_node, add_volume_to_node_ls
 
 from .kd_celery import celery, exclusive_task
 
@@ -137,8 +139,7 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
             'name': host,
             'labels': {
                 'kuberdock-node-hostname': host,
-                'kuberdock-kube-type':
-                    'type_' + str(kube_type)
+                'kuberdock-kube-type': 'type_' + str(kube_type)
             },
             'annotations': {
                 K8SNode.FREE_PUBLIC_IP_COUNTER_FIELD: '0'
@@ -157,7 +158,8 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
 
 @celery.task(bind=True, base=AddNodeTask)
 def add_new_node(self, node_id, with_testing=False, redeploy=False,
-                 deploy_options=None):
+                 ls_devices=None, ebs_volume=None, deploy_options=None):
+
     db_node = Node.get_by_id(node_id)
     admin_rid = Role.query.filter_by(rolename="Admin").one().id
     channels = [i.id for i in SessionData.query.filter_by(role_id=admin_rid)]
@@ -227,8 +229,11 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
         # TODO refactor to copy all folder ones, or make kdnode package
         sftp.put('node_scripts/kd-ssh-user.sh', '/kd-ssh-user.sh')
         sftp.put('node_scripts/kd-docker-exec.sh', '/kd-docker-exec.sh')
-        sftp.put('node_scripts/kd-ssh-user-update.sh', '/kd-ssh-user-update.sh')
+        sftp.put('node_scripts/kd-ssh-user-update.sh',
+                 '/kd-ssh-user-update.sh')
         sftp.put('node_scripts/kd-ssh-gc', '/kd-ssh-gc')
+
+        sftp.put(NODE_LVM_MANAGE_SCRIPT, '/' + NODE_LVM_MANAGE_SCRIPT)
 
         # TODO this is obsoleted, remove later:
         sftp.put('pd.sh', '/pd.sh')
@@ -323,10 +328,18 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
                     node_id, NodeFlagNames.CEPH_INSTALLED, "true"
                 )
                 check_namespace_exists(node_ip=host)
+            else:
+                send_logs(
+                    node_id, 'Setup persistent storage...', log_file, channels)
+                if not setup_lvm_to_node(ssh, node_id, ls_devices, ebs_volume,
+                                         channels):
+                    db_node.state = 'completed'
+                    db.session.commit()
+                    ssh.close()
+                    return 'Failed to setup LVM on node'
             send_logs(node_id, 'Rebooting node...', log_file, channels)
             ssh.exec_command(
                 'reboot', timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
-
             # Here we can wait some time before add node to k8s to prevent
             # "troubles" status if we know that reboot will take more then
             # 1 minute. For now delay will be just 2 seconds (fastest reboot)
@@ -356,6 +369,33 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
 
             # send update in common channel for all admins
             send_event('node:change', {'id': db_node.id})
+
+
+def setup_lvm_to_node(ssh, node_id, devices=None, ebs_volume=None,
+                      log_channels=None):
+    if AWS:
+        ok, message = setup_lvm_to_aws_node(
+            ssh, node_id, EBS_volume_name=ebs_volume
+        )
+        if not ok:
+            send_logs(node_id,
+                      'Failed to setup LVM to AWS node: {}'.format(message),
+                      log_channels)
+        return ok
+    else:
+        if not devices:
+            send_logs(
+                node_id,
+                'No devices defined to local storage. Skip LVM setup.',
+                log_channels)
+            return True
+        ok, message = add_volume_to_node_ls(ssh, node_id, devices)
+        if not ok:
+            send_logs(
+                node_id,
+                'Failed to setup LVM on the node: {}'.format(message),
+                log_channels)
+        return ok
 
 
 @celery.task()

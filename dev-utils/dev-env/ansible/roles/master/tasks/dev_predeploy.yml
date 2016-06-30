@@ -17,7 +17,7 @@
   environment:
     KDCLI_GIT_REF: "{{ git_ref | default('') }}"
 
-- name: Building KCTL RPM from source
+- name: Building KDCTL RPM from source
   command: bash /vagrant/dev-utils/build-kdctl-rpm.sh
   environment:
     KDCTL_GIT_REF: "{{ git_ref | default('') }}"

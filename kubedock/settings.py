@@ -1,13 +1,19 @@
 import os
 import ConfigParser
 from datetime import timedelta
+import requests
+import json
+from urllib2 import urlparse
+import logging
+
 from celery.schedules import crontab
 
 DEFAULT_TIMEZONE = 'UTC'
 
 APP_ROOT = os.path.dirname(os.path.abspath(__file__))
 
-CLOUDLINUX_SIG_KEY = '8c55a6628608cb71'
+LOG = logging.getLogger(__name__)
+
 
 def is_production_pkg():
     """
@@ -15,9 +21,8 @@ def is_production_pkg():
     on package signature (Any public release signed with key above)
     :return: Bool
     """
+    cloudlinux_sig_key = '8c55a6628608cb71'
     try:
-        if os.path.exists('/var/opt/kuberdock/dev-utils'):
-            return False
         import rpm
         from rpmUtils.miscutils import getSigInfo
         ts = rpm.ts()
@@ -25,39 +30,72 @@ def is_production_pkg():
         err, res = getSigInfo(hdr)
         if err:
             return False
-        if CLOUDLINUX_SIG_KEY not in res[2]:
+        if cloudlinux_sig_key not in res[2]:
             return False
     except Exception:
         return False
     return True
 
-IS_PRODUCTION_VERSION = is_production_pkg()
+IS_PRODUCTION_PKG = is_production_pkg()
 
-# Check environment variable 'SENTRY_ENABLE'(assume True if not exist), local
-# variable 'SENTRY_ENABLE' and then check remote variable 'sentry.enable'.
-# Also check if current package is production and turn on sentry only if true
-SENTRY_ENABLE = True and IS_PRODUCTION_VERSION
-REMOTE_SETTINGS = os.environ.get('REMOTE_SETTINGS',  '')
-if SENTRY_ENABLE and os.environ.get("SENTRY_ENABLE", True):
-    try:
-        import requests
-        import json
-        from urllib2 import urlparse
-        url = urlparse.urlparse(REMOTE_SETTINGS)
+
+def get_sentry_settings():
+    """Gets SENTRY_ENABLE and SENTRY_DSN variables according to settings"""
+
+    def _get_remote_sentry_settings():
+        remote_settings_url = os.environ.get(
+            'REMOTE_SETTINGS',
+            '')
         data = ''
-        if url.scheme == 'http':
-            res = requests.get(REMOTE_SETTINGS)
-            data = res.content
-        else:
-            with open(url.path) as f:
-                data = f.read()
-        remote_settings = json.loads(data)
-        sentry = remote_settings.get('sentry', {})
-        SENTRY_DSN = sentry.get('dsn', False)
-        SENTRY_ENABLE = SENTRY_DSN and sentry.get('enable', True)
-    except Exception as e:
-        print "Error while configure Sentry:{}".format(e)
-        SENTRY_ENABLE = False
+        enable = False
+        dsn = ""
+        try:
+            url = urlparse.urlparse(remote_settings_url)
+            # Support both Web & local paths
+            if url.scheme == 'http':
+                res = requests.get(remote_settings_url)
+                data = res.content
+            else:
+                with open(url.path) as f:
+                    data = f.read()
+
+            remote_settings = json.loads(data).get('sentry', {})
+            enable = remote_settings.get('enable', True)
+            dsn = remote_settings.get('dsn', "")
+        except Exception as e:
+            LOG.warning("Error while configure Sentry: {}".format(repr(e)))
+
+        return enable, dsn
+
+    enable = IS_PRODUCTION_PKG
+    _local_enable = os.environ.get("SENTRY_ENABLE")
+    local_force_enable = (_local_enable in ("y", "Y"))
+    local_force_disable = (_local_enable in ("n", "N"))
+
+    remote_enable, sentry_dsn = False, ""
+    if enable or local_force_enable:
+        remote_enable, sentry_dsn = _get_remote_sentry_settings()
+
+        if not sentry_dsn:
+            LOG.info("Sentry DSN was not retrieved, disabling Sentry")
+            return False, ""
+
+    if local_force_enable:
+        LOG.info("Sentry enabled through host SENTRY_ENABLE env")
+        return True, sentry_dsn
+
+    if local_force_disable:
+        LOG.info("Sentry disabled through host SENTRY_ENABLE env")
+        return False, ""
+
+    if not remote_enable:
+        LOG.info("Sentry disabled through remote setting")
+        return False, ""
+
+    return enable, sentry_dsn
+
+
+SENTRY_ENABLE, SENTRY_DSN = get_sentry_settings()
 
 DEBUG = True
 # With the following option turned on (by default) and in case of debug mode
@@ -186,6 +224,8 @@ UPDATES_RELOAD_LOCK_FILE = '/var/lib/kuberdock/updates-reload.lock'
 UPDATES_PATH = '/var/opt/kuberdock/kubedock/updates/scripts'
 KUBERDOCK_SERVICE = 'emperor.uwsgi'
 KUBERDOCK_SETTINGS_FILE = '/etc/sysconfig/kuberdock/kuberdock.conf'
+NODE_SCRIPT_DIR = '/var/lib/kuberdock/scripts'
+NODE_LVM_MANAGE_SCRIPT = 'node_lvm_manage.py'
 
 MASTER_IP = ''
 MASTER_TOBIND_FLANNEL = 'enp0s5'
@@ -205,25 +245,26 @@ NONFLOATING_PUBLIC_IPS = False
 
 
 cp = ConfigParser.ConfigParser()
-if cp.read(KUBERDOCK_SETTINGS_FILE):
-    if cp.has_section('main'):
-        if cp.has_option('main', 'DB_USER'):
-            DB_USER = cp.get('main', 'DB_USER')
-        if cp.has_option('main', 'DB_PASSWORD'):
-            DB_PASSWORD = cp.get('main', 'DB_PASSWORD')
-        if cp.has_option('main', 'DB_NAME'):
-            DB_NAME = cp.get('main', 'DB_NAME')
-        if cp.has_option('main', 'MASTER_IP'):
-            MASTER_IP = cp.get('main', 'MASTER_IP')
-        if cp.has_option('main', 'MASTER_TOBIND_FLANNEL'):
-            MASTER_TOBIND_FLANNEL = cp.get('main', 'MASTER_TOBIND_FLANNEL')
-        if cp.has_option('main', 'NODE_TOBIND_EXTERNAL_IPS'):
-            NODE_TOBIND_EXTERNAL_IPS = cp.get('main',
-                                              'NODE_TOBIND_EXTERNAL_IPS')
-        if cp.has_option('main', 'NODE_TOBIND_FLANNEL'):
-            NODE_TOBIND_FLANNEL = cp.get('main', 'NODE_TOBIND_FLANNEL')
-        if cp.has_option('main', 'PD_NAMESPACE'):
-            PD_NAMESPACE = cp.get('main', 'PD_NAMESPACE')
+if cp.read(KUBERDOCK_SETTINGS_FILE) and cp.has_section('main'):
+    if cp.has_option('main', 'DB_USER'):
+        DB_USER = cp.get('main', 'DB_USER')
+    if cp.has_option('main', 'DB_PASSWORD'):
+        DB_PASSWORD = cp.get('main', 'DB_PASSWORD')
+    if cp.has_option('main', 'DB_NAME'):
+        DB_NAME = cp.get('main', 'DB_NAME')
+    if cp.has_option('main', 'MASTER_IP'):
+        MASTER_IP = cp.get('main', 'MASTER_IP')
+    if cp.has_option('main', 'MASTER_TOBIND_FLANNEL'):
+        MASTER_TOBIND_FLANNEL = cp.get('main', 'MASTER_TOBIND_FLANNEL')
+    if cp.has_option('main', 'NODE_TOBIND_EXTERNAL_IPS'):
+        NODE_TOBIND_EXTERNAL_IPS = cp.get('main', 'NODE_TOBIND_EXTERNAL_IPS')
+    if cp.has_option('main', 'NODE_TOBIND_FLANNEL'):
+        NODE_TOBIND_FLANNEL = cp.get('main', 'NODE_TOBIND_FLANNEL')
+    if cp.has_option('main', 'PD_NAMESPACE'):
+        PD_NAMESPACE = cp.get('main', 'PD_NAMESPACE')
+    if cp.has_option('main', 'NONFLOATING_PUBLIC_IPS'):
+        NONFLOATING_PUBLIC_IPS = cp.getboolean(
+            'main', 'NONFLOATING_PUBLIC_IPS')
 
 
 # Import local settings
@@ -240,6 +281,10 @@ SQLALCHEMY_DATABASE_URI = '{0}://{1}'.format(DB_ENGINE, DB_CONNECT_STRING)
 
 
 AWS = False
+# Default size to extend persistent storage on AWS nodes (in GB)
+# TODO: replace with reasonable value. 1 GB size is for test purpose only.
+# TODO: https://cloudlinux.atlassian.net/browse/AC-3699
+AWS_EBS_EXTEND_STEP = 1
 try:
     from .amazon_settings import *  # noqa
 except ImportError:
@@ -258,3 +303,10 @@ except ImportError:
 
 if not CEPH:
     CELERYBEAT_SCHEDULE.pop('unmap-temp-mapped-drives', None)
+
+# Check if testing repo is enabled
+WITH_TESTING = False
+try:
+    from .deploy_settings import *  # noqa
+except ImportError:
+    pass

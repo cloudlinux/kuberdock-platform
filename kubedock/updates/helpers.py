@@ -6,13 +6,14 @@ scripts.
 import os
 import re
 import subprocess
+
 from fabric.api import run, env, output, local as fabric_local
+
 from kubedock import settings
 from kubedock.sessions import SessionData
 
 # For convenience to use in update scripts:
 from flask.ext.migrate import upgrade
-from flask.ext.migrate import downgrade as downgrade_db
 
 
 def upgrade_db(*args, **kwargs):
@@ -54,8 +55,7 @@ class UpgradeError(Exception):
 
 
 def local(*args, **kwargs):
-    if 'capture' not in kwargs:
-        kwargs['capture'] = True
+    kwargs.setdefault('capture', True)
     return fabric_local(*args, **kwargs)
 
 
@@ -87,6 +87,9 @@ def update_local_config_file(conf_file, new_vars):
         text = conf.read()
         for var, updates in new_vars.iteritems():
             for param, new_value in updates.iteritems():
+                assert not re.findall('\s+', param)
+                assert new_value is None \
+                       or not re.findall('\s+', new_value)
                 if new_value is None:
                     text = _unset_param(text, var, param)
                 else:
@@ -104,9 +107,10 @@ def _set_param(text, var, param, value):
         if m == '':
             return '{0}="{1}"'.format(var, res)
         if param in m:
-            return '{0}="{1}"'.format(var,
-                                      re.sub(r'(.*){0}(\w+)(.*)'.format(param),
-                                             r'\g<1>{0}\g<3>'.format(res), m))
+            return '{0}="{1}"'.format(
+                var,
+                re.sub(r'(.*){0}([^\s"]+)(.*)'.format(param),
+                       r'\g<1>{0}\g<3>'.format(res), m))
         return '{0}="{1} {2}"'.format(var, m, res)
 
     return re.sub(r'{0}="(.*?)"'.format(var), x, text, re.DOTALL)
@@ -118,8 +122,9 @@ def _unset_param(text, var, param):
         if m == '':
             return '{0}=""'.format(var)
         if param in m:
-            return '{0}="{1}"'.format(var,
-                                      re.sub('{0}(\w*)'.format(param), '', m))
+            return '{0}="{1}"'.format(
+                var,
+                re.sub('{0}([^\s"]*)'.format(param), '', m))
         return '{0}="{1}"'.format(var, m)
 
     return re.sub(r'{0}="(.*?)"'.format(var), x, text, re.DOTALL)

@@ -7,7 +7,6 @@ from sqlalchemy.exc import ResourceClosedError, IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # from flask import current_app
-#from flask.ext.login import UserMixin
 from ..login import UserMixin
 from ..core import db, login_manager
 from ..models_mixin import BaseModelMixin

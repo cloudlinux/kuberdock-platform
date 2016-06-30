@@ -5,7 +5,7 @@ from collections import namedtuple
 
 from ..settings import (
     PD_SEPARATOR_USERNAME, PD_SEPARATOR_USERID, PD_NAMESPACE, PD_NS_SEPARATOR,
-    CEPH, AWS)
+    CEPH)
 
 ParsedPDName = namedtuple('ParsedPDName', ('drive', 'uid', 'uname'))
 
@@ -18,12 +18,13 @@ def compose_pdname(drive, user):
     :param user: User object or user id
     """
     user_id = getattr(user, 'id', user)
-    is_localstorage_backend = not (CEPH or AWS)
+    # Note that AWS backend also works as localstorage
+    is_localstorage_backend = not CEPH
     if is_localstorage_backend:
         drivename = os.path.join(str(user_id), drive)
     else:
         drivename = PD_SEPARATOR_USERID.join((drive, str(user_id)))
-    if PD_NAMESPACE and (CEPH or AWS):
+    if PD_NAMESPACE and CEPH:
         # do not use namespace for localstorage backend
         return PD_NS_SEPARATOR.join([
             PD_NAMESPACE, drivename

@@ -1,6 +1,6 @@
 ---
 
-- find: paths=/vagrant/ patterns="kuberdock*.rpm" 
+- find: paths=/vagrant/ patterns="kuberdock*.rpm"
   register: rpm_exist
 
 - name: Check existing packages
@@ -16,15 +16,12 @@
 - name: Update global environment variables
   lineinfile:
       dest: "/etc/environment"
-      line: "SENTRY_ENABLE="
+      line: "SENTRY_ENABLE=n"
       state: present
 
 - name: RPM proxy configure
   include: rpm_proxy.yml
   when: is_nebula
-
-- name: upgrade all packages
-  yum: name=* state=latest
 
 - include: vbox_patch.yml
   when : ansible_default_ipv4.address=="10.0.2.15"

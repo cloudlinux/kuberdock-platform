@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 
 import os
 import re
@@ -176,7 +176,7 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
     else:
         nodes = db.session.query(Node).all()
 
-    db_upd.status == UPDATE_STATUSES.nodes_started
+    db_upd.status = UPDATE_STATUSES.nodes_started
     db_upd.print_log('Started nodes upgrade. {0} nodes will be upgraded...'
                      .format(len(nodes)))
     for node in nodes:

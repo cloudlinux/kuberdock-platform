@@ -1082,35 +1082,21 @@ define([
                 return;
             var that = this;
             require(['app_data/ippool/views'], function(Views){
-                var layoutView = new Views.NetworksLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var layoutView = new Views.IppoolLayoutView(),
+                    navbar = new Menu.NavList({collection: App.menuCollection}),
+                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['subnets']}),
+                    button = {id: 'create_network', href: '#ippool/create', title: 'Add subnet'},
+                    breadcrumbsControls = new Breadcrumbs.Controls({ button: button});
                 that.listenTo(layoutView, 'show', function(){
-                    App.getIPPoolCollection().done(function(ippoolCollection){
-                        layoutView.nav.show(navbar);
-                        layoutView.main.show(new Views.BreadcrumbView());
-                        layoutView.aside.show(new Views.AsideView());
-                        layoutView.left.show(new Views.LeftView({
-                            collection: ippoolCollection
-                        }));
-                        layoutView.right.show(new Views.RightView({
-                            collection: new Model.NetworkCollection()
-                        }));
-                    });
-                });
-                that.listenTo(layoutView, 'ippool:network:picked', function(id){
-                    App.getIPPoolCollection().done(function(ippoolCollection){
-                        var item = ippoolCollection.findWhere({id: id});
-                        layoutView.nav.show(navbar);
-                        layoutView.main.show(new Views.BreadcrumbView());
-                        layoutView.aside.show(new Views.AsideView());
-                        ippoolCollection.each(function(m){
-                            m.checked = false;
-                        });
-                        item.checked = true;
-                        layoutView.left.show(new Views.LeftView({collection: ippoolCollection}));
-                        layoutView.right.show(new Views.RightView({
-                            collection: new Model.NetworkCollection(item)
-                        }));
+                    layoutView.nav.show(navbar);
+                    layoutView.breadcrumb.show(breadcrumbsLayout);
+                    breadcrumbsLayout.subnets.show(new Breadcrumbs.Text({text: 'IP Pool'}));
+                    breadcrumbsLayout.controls.show(breadcrumbsControls);
+                    $.when(App.getIppoolMode(),App.getIPPoolCollection()).done(function(ipPoolMode, ippoolCollection){
+                        ippoolCollection.ipPoolMode = ipPoolMode;
+                        var view = new Views.SubnetsListView({ collection: ippoolCollection });
+                        layoutView.main.show(view);
+                        layoutView.pager.show(new Pager.PaginatorView({view: view}));
                     });
                 });
                 App.contents.show(layoutView);
@@ -1122,11 +1108,44 @@ define([
                 return;
             var that = this;
             require(['app_data/ippool/views'], function(Views){
-                var layoutView = new Views.NetworksLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var layoutView = new Views.IppoolLayoutView(),
+                    navbar = new Menu.NavList({collection: App.menuCollection}),
+                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['subnets', 'create']});
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
-                    layoutView.main.show(new Views.NetworkCreateView());
+                    layoutView.breadcrumb.show(breadcrumbsLayout);
+                    breadcrumbsLayout.subnets.show(new Breadcrumbs.Link({text: 'IP Pool', href:'#ippool'}));
+                    breadcrumbsLayout.create.show(new Breadcrumbs.Text({text: 'Add subnet'}));
+                    $.when(App.getIppoolMode(), App.getNodeCollection()).done(function(ipPoolMode, nodeCollection){
+                        var nodelist = _.map(nodeCollection.fullCollection.models,
+                            function(model){ return model.get('hostname'); });
+                        layoutView.main.show(new Views.IppoolCreateSubnetworkView({ipPoolMode : ipPoolMode, nodelist : nodelist}));
+                    });
+                });
+                App.contents.show(layoutView);
+            });
+        },
+
+        showSubnetIps: function(id){
+            if (!this.checkPermissions(['Admin']))
+                return;
+            var that = this;
+            require(['app_data/ippool/views'], function(Views){
+                var layoutView = new Views.IppoolLayoutView(),
+                    navbar = new Menu.NavList({collection: App.menuCollection}),
+                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['subnets', 'subnetName']});
+                that.listenTo(layoutView, 'show', function(){
+                    layoutView.nav.show(navbar);
+                    layoutView.breadcrumb.show(breadcrumbsLayout);
+                    breadcrumbsLayout.subnets.show(new Breadcrumbs.Link({text: 'IP Pool', href:'#ippool'}));
+                    breadcrumbsLayout.subnetName.show(new Breadcrumbs.Text({text: id}));
+                    App.getIPPoolCollection().done(function(ippoolCollection){
+                        var item = ippoolCollection.get(id),
+                            view = new Views.SubnetIpsListView(
+                                {model: item, collection: item.getIPs()});
+                        layoutView.main.show(view);
+                        layoutView.pager.show(new Pager.PaginatorView({view: view}));
+                    });
                 });
                 App.contents.show(layoutView);
             });

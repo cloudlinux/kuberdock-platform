@@ -1084,19 +1084,35 @@ define([
             require(['app_data/ippool/views'], function(Views){
                 var layoutView = new Views.IppoolLayoutView(),
                     navbar = new Menu.NavList({collection: App.menuCollection}),
-                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['subnets']}),
-                    button = {id: 'create_network', href: '#ippool/create', title: 'Add subnet'},
-                    breadcrumbsControls = new Breadcrumbs.Controls({ button: button});
+                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['subnets']});
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
                     layoutView.breadcrumb.show(breadcrumbsLayout);
-                    breadcrumbsLayout.subnets.show(new Breadcrumbs.Text({text: 'IP Pool'}));
-                    breadcrumbsLayout.controls.show(breadcrumbsControls);
-                    $.when(App.getIppoolMode(),App.getIPPoolCollection()).done(function(ipPoolMode,ippoolCollection){
-                        ippoolCollection.ipPoolMode = ipPoolMode;
-                        var view = new Views.SubnetsListView({ collection: ippoolCollection });
-                        layoutView.main.show(view);
-                        layoutView.pager.show(new Pager.PaginatorView({view: view}));
+                    $.when(App.getIppoolMode(), App.getIPPoolCollection())
+                        .done(function(ipPoolMode, ippoolCollection){
+                            var view, item, button, breadcrumbsControls;
+                            ippoolCollection.ipPoolMode = ipPoolMode;
+                            if (ipPoolMode === 'aws') {
+                                breadcrumbsControls = new Breadcrumbs.Controls({ button: {}});
+                                layoutView.breadcrumb.show(breadcrumbsLayout);
+                                breadcrumbsLayout.subnets.show(new Breadcrumbs.Text({text: 'DNS names'}));
+                                breadcrumbsLayout.controls.show(breadcrumbsControls);
+                                item = ippoolCollection.at(0);
+                                view = new Views.SubnetIpsListView({
+                                    model: item,
+                                    collection: item.getIPs()
+                                });
+                            }
+                            else {
+                                button = {id: 'create_network', href: '#ippool/create', title: 'Add subnet'},
+                                breadcrumbsControls = new Breadcrumbs.Controls({ button: button});
+                                layoutView.breadcrumb.show(breadcrumbsLayout);
+                                breadcrumbsLayout.subnets.show(new Breadcrumbs.Text({text: 'IP Pool'}));
+                                breadcrumbsLayout.controls.show(breadcrumbsControls);
+                                view = new Views.SubnetsListView({ collection: ippoolCollection });
+                            }
+                            layoutView.main.show(view);
+                            layoutView.pager.show(new Pager.PaginatorView({view: view}));
                     });
                 });
                 App.contents.show(layoutView);

@@ -23,12 +23,12 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 ippoolLayoutTpl){
     var views = {};
 
-    views.SubnetsListItemEmptyView = Backbone.Marionette.ItemView.extend({
+    views.SubnetsListItemEmptyView = Marionette.ItemView.extend({
         template: subnetsListItemTplEmptyTpl,
         tagName: 'tr',
     });
 
-    views.SubnetsListItemView = Backbone.Marionette.ItemView.extend({
+    views.SubnetsListItemView = Marionette.ItemView.extend({
         template: subnetsListItemTpl,
         tagName: 'tr',
 
@@ -43,6 +43,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         initialize: function(){
             this.isFloating = this.model.collection.ipPoolMode === 'floating';
+            this.isAWS = this.model.collection.ipPoolMode === 'aws';
         },
 
         templateHelpers: function(){
@@ -94,9 +95,13 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         },
     });
 
-    views.SubnetIpsListItemView = Backbone.Marionette.ItemView.extend({
+    views.SubnetIpsListItemView = Marionette.ItemView.extend({
         template: subnetIpsListItemTpl,
         tagName  : 'tr',
+
+        initialize: function(options){
+            this.isAWS = options.isAWS;
+        },
 
         ui: {
             block_ip    : '.block_ip',
@@ -120,11 +125,14 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 .fail(utils.notifyWindow);
         },
 
-        blockIP: function(){ this.commandIP('block', this.model.get('ip')); },
-        unblockIP: function(){ this.commandIP('unblock', this.model.get('ip')); }
+        blockIP: function(){ this.commandIP('block', this.model.get('ip')) },
+        unblockIP: function(){ this.commandIP('unblock', this.model.get('ip')); },
+        templateHelpers: function(){
+            return { isAWS: this.isAWS };
+        }
     });
 
-    views.IppoolCreateSubnetworkView = Backbone.Marionette.ItemView.extend({
+    views.IppoolCreateSubnetworkView = Marionette.ItemView.extend({
         template: ippoolCreateSubnetworkTpl,
         tagName: 'div',
 
@@ -247,7 +255,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         }
     });
 
-    views.SubnetsListView = Backbone.Marionette.CompositeView.extend({
+    views.SubnetsListView = Marionette.CompositeView.extend({
         template           : subnetsListTpl,
         childView          : views.SubnetsListItemView,
         emptyView          : views.SubnetsListItemEmptyView,
@@ -264,10 +272,19 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         }
     });
 
-    views.SubnetIpsListView = Backbone.Marionette.CompositeView.extend({
+    views.SubnetIpsListView = Marionette.CompositeView.extend({
         template: subnetIpsListTpl,
         childView: views.SubnetIpsListItemView,
         childViewContainer: "tbody",
+        initialize: function(){
+            this.isAWS = this.model.collection.ipPoolMode === 'aws';
+        },
+        childViewOptions: function(){
+            return { isAWS: this.isAWS };
+        },
+        templateHelpers: function(){
+            return { isAWS: this.isAWS };
+        }
     });
 
     views.IppoolLayoutView = Marionette.LayoutView.extend({

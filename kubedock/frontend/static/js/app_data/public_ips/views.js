@@ -28,6 +28,15 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         emptyView           : views.PublicIPsEmptyView,
         childViewContainer  : 'tbody',
 
+        templateHelpers: function(){
+            var hasIPs = !!this.collection.find(function(m){
+                    return /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:\/\d+)?/.test(m.id)
+                });
+            return {
+                resourceName: hasIPs ? 'Public IP' : 'Public Name'
+            };
+        },
+
         onShow: function(){
             utils.preloader.hide();
         }

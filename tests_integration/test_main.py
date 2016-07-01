@@ -1,10 +1,9 @@
 from tests_integration.lib.integration_test_utils import \
-    NonZeroRetCodeException, NO_FREE_IPS_ERR_MSG, assert_raises, assert_eq
+    NonZeroRetCodeException, NO_FREE_IPS_ERR_MSG, assert_raises,\
+    assert_eq, get_rnd_string
 from tests_integration.lib.pipelines import pipeline
 
 
-# TODO: to API add method, which creates IP pools via kdclt instead of
-# manage.py then use this method to manage IP pools inside this class
 @pipeline('main')
 def test_cadvisor_errors(cluster):
     """Check cadvisor error/warning appears in uwsgi (AC-3499)"""
@@ -19,8 +18,12 @@ def test_cadvisor_errors(cluster):
 
 
 @pipeline('main')
+@pipeline('ceph')
 def test_a_pv_created_together_with_pod(cluster):
-    pv_name = "disk107"
+    # We have issue related to using non-unique disk names within
+    # same CEPH pool (AC-3831). That is why name is randomized.
+    pv_name = _gen_rnd_name()
+
     mount_path = '/nginxpv'
 
     # It is possible to create an nginx pod together with new PV
@@ -45,8 +48,9 @@ def test_a_pv_created_together_with_pod(cluster):
 
 
 @pipeline('main')
+@pipeline('ceph')
 def test_a_pv_created_separately(cluster):
-    pv_name = "disk207"
+    pv_name = _gen_rnd_name()
     pv_size = 2
     mount_path = '/nginxpv'
 
@@ -106,3 +110,7 @@ def test_nginx(cluster):
                        start=True, open_all_ports=False,
                        healthcheck=False, wait_ports=False,
                        wait_for_status='running')
+
+
+def _gen_rnd_name(prefix="integr_test_disk_"):
+    return prefix + get_rnd_string()

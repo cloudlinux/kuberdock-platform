@@ -3,6 +3,8 @@
 - name: Adding routes for CEPH
   shell: ip route replace 192.168.101.0/24 via 192.168.33.40
   when: is_nebula and use_ceph
+  tags:
+    - route
 
 - name: Adding persistent routes for CEPH
   lineinfile:
@@ -11,4 +13,5 @@
       create: yes
       state: present
   when: is_nebula and use_ceph
-
+  tags:
+    - route

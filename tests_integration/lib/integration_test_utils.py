@@ -1,6 +1,8 @@
 import logging
+import random
 import re
 import socket
+import string
 import time
 from contextlib import contextmanager
 from itertools import count, islice
@@ -188,3 +190,8 @@ def retry(f, tries=3, interval=1, _raise=True, *f_args, **f_kwargs):
             else:
                 if _raise:
                     raise
+
+
+def get_rnd_string(length=10):
+    return ''.join(random.SystemRandom().choice(
+        string.ascii_uppercase + string.digits) for _ in range(length))

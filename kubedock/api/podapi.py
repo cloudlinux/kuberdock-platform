@@ -163,12 +163,12 @@ def update_container(pod_id, container_name, owner=None):
     return PodCollection(owner).update_container(pod_id, container_name)
 
 
-@podapi.route('/<pod_id>/direct_access', methods=['GET'],
+@podapi.route('/<pod_id>/reset_direct_access_pass', methods=['GET'],
               strict_slashes=False)
 @auth_required
 @KubeUtils.jsonwrap
 @use_kwargs(schema)
-def access_container(pod_id, owner=None):
+def reset_access_container(pod_id, owner=None):
     current_user = KubeUtils.get_current_user()
     owner = owner or current_user
 
@@ -177,5 +177,4 @@ def access_container(pod_id, owner=None):
         check_permission('get', 'pods').check()
     else:
         check_permission('get_non_owned', 'pods').check()
-
-    return PodCollection(owner).direct_access(pod_id)
+    return PodCollection(owner).reset_direct_access_pass(pod_id)

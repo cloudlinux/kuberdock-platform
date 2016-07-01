@@ -393,6 +393,17 @@ def process_pods_event_k8s(data, app):
         node = spec.get('nodeName')
         if not node or not pod:
             return
+        user = User.query.filter(User.id == pod.owner_id).first()
+        if user is None:
+            current_app.logger.warning('Unknown user for pod %s', pod_id)
+            return
+        pods = PodCollection(user)
+        if user.username != KUBERDOCK_INTERNAL_USER:
+            conditions = obj.get('status', {}).get('conditions', ())
+            for c in conditions:
+                if c['type'] == 'Ready' and c['status'] == 'True':
+                    pods.update_direct_access(pod)
+                    break
         pod_volumes = pod.get_dbconfig('volumes')
         if not has_local_storage(pod_volumes):
             return
@@ -412,7 +423,7 @@ def process_pods_event_k8s(data, app):
             return
 
         try:
-            PodCollection().update(
+            pods.update(
                 pod_id,
                 {'command': 'change_config', 'node': node}
             )

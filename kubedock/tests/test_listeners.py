@@ -105,14 +105,16 @@ class TestPodEventK8s(DBTestCase):
         listeners.process_pods_event_k8s(data, app)
         self.assertFalse(podcollection_mock.update.called)
 
+    @mock.patch('kubedock.listeners.User')
     @mock.patch('kubedock.listeners.Pod')
     @mock.patch('kubedock.listeners.PersistentDisk.bind_to_node')
     @mock.patch('kubedock.listeners.Node.get_by_name')
     def test_pin_pod_to_node(self, get_node_mock, bind_to_node_mock, pod_mock,
-                             podcollection_mock):
+                             user_mock, podcollection_mock):
         data = deepcopy(self._data)
         data['object']['spec']['volumes'] = self._local_storage
         app = mock.MagicMock()
+        user_mock.return_value = "some user"
 
         def get_db_config(param):
             if param == 'node':

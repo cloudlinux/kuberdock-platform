@@ -676,6 +676,7 @@ class PodCollection(object):
             pod.template_id = template_id
             pod.kube_type = db_pod.kube_id
             pod.db_status = db_pod.status
+            pod.direct_access = db_pod.direct_access
 
             if pod.db_status in (POD_STATUSES.preparing,
                                  POD_STATUSES.stopping,
@@ -861,15 +862,61 @@ class PodCollection(object):
         # return updated pod
         return PodCollection(owner=self.owner).get(pod.id, as_json=False)
 
-    def direct_access(self, pod_id):
+    def reset_direct_access_pass(self, pod_id, new_pass=None):
+        """Change ssh password to `new_pass` if set, or generate new one.
+
+        :param pod_id: id of pod
+        :param new_pass: new pass to set or None to generate new one
+        :return: direct_access dict. see :meth:`._direct_access`
+
+        """
+        pod = DBPod.filter_by(id=pod_id).first()
+        if not pod:
+            raise PodNotFound()
+        return self._store_direct_access(pod, new_pass)
+
+    def update_direct_access(self, pod):
+        """Update direct access attribute to new one.
+        Try to use exist password or generate new one.
+
+        :param pod: kapi/pod object
+        :return: direct_access dict. see :meth:`._direct_access`
+
+        """
+        origin_pass = None
+        try:
+            origin_pass = json.loads(pod.direct_access)['auth']
+        except:
+            pass
+        return self._store_direct_access(pod, origin_pass)
+
+    def _store_direct_access(self, pod, origin_pass=None):
+        """Store direct access attributes
+        Call :meth:`._direct_access` and store returned attributes.
+
+        :param pod: pod object
+        :type pod: kapi/pod object
+        :param origin_pass: pass this password to :meth:`._direct_access`
+        :return: direct_access dict. see :meth:`._direct_access`
+
+        """
+        direct_access = self._direct_access(pod.id, origin_pass)
+        pod.direct_access = json.dumps(direct_access)
+        pod.save()
+        return direct_access
+
+    def _direct_access(self, pod_id, orig_pass=None):
         """
         Setup direct ssh access to all pod containers via creating special unix
         users with randomly generated secure password(one for all containers
         and updated on each call). "Not needed" users will be garbage collected
         by cron script on the node (hourly)
+
         :param pod_id: Id of desired running pod
+        :param orig_pass: password to be used or None to generate new one
         :return: dict with key "auth" which contain generated password and key
                  key "links" with dict of "container_name":"user_name@node_ip"
+
         """
         k8s_pod = self._get_by_id(pod_id)
         if k8s_pod.status != POD_STATUSES.running:
@@ -879,7 +926,6 @@ class PodCollection(object):
             raise APIError(
                 'Pod is not assigned to node yet, please try later. '
                 'SSH access is impossible')
-
         ssh, err = ssh_connect(node)
         if err:
             # Level is not error because it's maybe temporary problem on the
@@ -888,7 +934,8 @@ class PodCollection(object):
             current_app.logger.warning("Can't connect to node")
             raise APIError(DIRECT_SSH_ERROR)
 
-        orig_pass = randstr(30, secure=True)
+        if not orig_pass:
+            orig_pass = randstr(30, secure=True)
         crypt_pass = crypt(orig_pass, randstr(2, secure=True))
         node_external_ip = get_external_node_ip(
             node, ssh, APIError(DIRECT_SSH_ERROR))

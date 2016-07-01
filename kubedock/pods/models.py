@@ -36,6 +36,7 @@ class Pod(BaseModelMixin, db.Model):
     # Not a foreignkey because templates may be deleted at any time
     template_id = db.Column(db.Integer, nullable=True)
     config = db.Column(db.Text)
+    direct_access = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(length=32), default='unknown')
 
     def __repr__(self):
@@ -155,7 +156,8 @@ class Pod(BaseModelMixin, db.Model):
             kube=self.kube.to_dict(),
             owner=self.owner.to_dict(),
             config=self.get_dbconfig(),
-            status=self.status)
+            status=self.status,
+            direct_acces=self.direct_access)
 
 
 class ImageCache(db.Model):

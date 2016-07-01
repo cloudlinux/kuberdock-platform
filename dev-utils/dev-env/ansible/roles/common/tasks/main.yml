@@ -23,6 +23,8 @@
   include: rpm_proxy.yml
   when: is_nebula
 
+- include: ceph.yml
+
 - include: vbox_patch.yml
   when : ansible_default_ipv4.address=="10.0.2.15"
 

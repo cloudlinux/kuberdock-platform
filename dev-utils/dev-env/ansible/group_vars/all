@@ -2,4 +2,5 @@ add_testing_repo: "{{ '-t' if (testing_repo is defined and testing_repo) else ''
 non_floating_ips_mode: "{{ '--nonfloating-ip' if (non_floating_ips is defined and non_floating_ips) else '' }}"
 src_prefix: /var/opt/kuberdock
 is_dev_install: false
+use_ceph: false
 pd_namespace_param: "{{ ('-n \"'+pd_namespace+'\"') if (pd_namespace is defined and pd_namespace) else ''}}"

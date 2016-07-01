@@ -261,6 +261,14 @@ class KDIntegrationTestAPI(object):
 
         return self.ssh_exec("master", "kcli kubectl {}".format(cmd))
 
+    def kdctl(self, cmd, out_as_dict=False):
+        if out_as_dict:
+            rc, out, err = self.ssh_exec(
+                "master", "kdctl {}".format(cmd))
+            return rc, json.loads(out), err
+
+        return self.ssh_exec("master", "kdctl {}".format(cmd))
+
     def docker(self, cmd, node="node1"):
         return self.ssh_exec(node, "docker {0}".format(cmd))
 
@@ -290,7 +298,6 @@ class KDIntegrationTestAPI(object):
     def get_all_pvs(self):
         _, pvs, _ = self.kcli("drives list", out_as_dict=True)
         return pvs
-
 
 
 class RESTMixin(object):
@@ -324,8 +331,8 @@ class KDPod(RESTMixin):
         self.ports = self._get_ports(image)
         self.pv_cmd = ''
         if pvs is not None:
-            # TODO: when kcli allows using multiple PVs for single POD (AC-3722),
-            # update the way of pc_cmd creation
+            # TODO: when kcli allows using multiple PVs for single POD
+            # (AC-3722), update the way of pc_cmd creation
             self.pv_cmd = "-s {} -p {} --mount-path {}".format(
                 pvs[0].size, pvs[0].name, pvs[0].mount_path)
         pv_cmd = self.pv_cmd

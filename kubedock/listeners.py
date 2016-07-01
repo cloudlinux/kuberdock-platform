@@ -227,10 +227,29 @@ def process_nodes_event(data, app):
             tasks.process_node_actions.delay(node_host=hostname)
 
 
+def mark_restore_as_finished(pod_id):
+    """
+    Removes backup related data from POD spec. Is called after a restored POD
+    successfully started which means that the restore process was successful.
+    """
+    data = {
+        'command': 'change_config',
+        'volumes_dir_url': '',
+        'template': {
+            'metadata': {
+                'annotations': {
+                    'kuberdock-volumes-backup-url': ''
+                }
+            }
+        }
+    }
+    PodCollection().update(pod_id, data)
+
+
 def process_events_event(data, app):
     """Process events from 'events' endpoint. At now only looks for
     involved object 'Pod' and reason 'failedScheduling' - we have to detect
-    situation when scheduler can't find a node for a pod. It may be occured,
+    situation when scheduler can't find a node for a pod. It may be occurred,
     for example, when there no nodes with enough resources.
     We will stop that pod and send notification for a user.
 
@@ -246,6 +265,11 @@ def process_events_event(data, app):
         return
     reason = event['reason']
     pod_id = obj.get('namespace')
+    if reason == 'Started':
+        with app.app_context():
+            mark_restore_as_finished(pod_id)
+        return
+
     if reason == 'FailedMount':
         # TODO: must be removed after Attach/Detach Controller
         # is added in k8s 1.3 version.

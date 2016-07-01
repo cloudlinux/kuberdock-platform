@@ -83,8 +83,15 @@ sentryWrapper() {
          release=$(rpm -q --queryformat "%{VERSION}-%{RELEASE}" kuberdock)
          data=$(eval echo $DATA_TEMPLATE)
          echo
-         curl -s -H "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\
-"?sentry_version=$SENTRYVERSION&sentry_client=test&sentry_key=$SENTRYKEY&sentry_secret=$SENTRYSECRET" > /dev/null && echo "Information about your problem has been sent to our support team."
+         curl -s -H --fail "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\
+"?sentry_version=$SENTRYVERSION&sentry_client=test&sentry_key=$SENTRYKEY&sentry_secret=$SENTRYSECRET" > /dev/null
+
+         RETURN_CODE=$?
+         if [ ${RETURN_CODE} != 0 ] ;then
+            echo "We could not automatically send logs. Please contact support."
+         else
+            echo "Information about your problem has been sent to our support team."
+         fi
      fi
      echo "Done."
 }

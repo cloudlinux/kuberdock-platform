@@ -955,10 +955,9 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 restart_policies : {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
                 restart_policy   : this.model.get('restartPolicy'),
                 image_name_id    : this.model.get('lastAddedImageNameId'),
-                period           : this.pkg.get('period'),
-                price_ip         : this.pkg.getFormattedPrice(this.pkg.get('price_ip')),
-                price_pstorage   : this.pkg.getFormattedPrice(this.pkg.get('price_pstorage')),
+                pkg              : this.pkg,
                 hasBilling       : this.hasBilling,
+                persistentDrives : this.model.persistentDrives,
                 payg             : this.payg    // Pay-As-You-Go billing method
             };
         },

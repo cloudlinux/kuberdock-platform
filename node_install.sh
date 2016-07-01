@@ -497,9 +497,13 @@ check_status
 
 # For direct ssh feature
 groupadd kddockersshuser
+# Config patching should be idempotent
+! grep -q 'kddockersshuser' /etc/sudoers && \
 echo -e '\n%kddockersshuser ALL=(ALL) NOPASSWD: /var/lib/kuberdock/scripts/kd-docker-exec.sh' >> /etc/sudoers
+! grep -q 'Defaults:%kddockersshuser' /etc/sudoers && \
 echo -e '\nDefaults:%kddockersshuser !requiretty' >> /etc/sudoers
 
+! grep -q 'kddockersshuser' /etc/ssh/sshd_config && \
 printf '\nMatch group kddockersshuser
   PasswordAuthentication yes
   X11Forwarding no

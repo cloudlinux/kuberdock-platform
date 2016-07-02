@@ -39,7 +39,7 @@
 - name: Up celery
   command: tmux new-window -t '{{ tmux_session_name }}' \; send-keys "{{ item }}" C-m chdir=/vagrant
   with_items:
-    - "sudo -u nginx /usr/bin/celery -A kubedock.tasks --autoscale=16,4 worker -Ofair"
+    - "sudo -u nginx /usr/bin/celery -A kubedock.tasks --autoscale=16,1 worker -Ofair"
     - "sudo /usr/bin/celery -A kubedock.tasks beat -s /tmp/celerybeat-schedule"
   tags:
       - tmux

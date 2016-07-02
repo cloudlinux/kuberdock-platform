@@ -71,20 +71,12 @@ def order_product():
 @KubeUtils.jsonwrap
 def order_edit():
     data = KubeUtils._get_params()
-    pod_id = data['pod']['id']
     data['pod'] = json.dumps(data['pod'])
     current_billing = SystemSettings.get_by_name('billing_type')
     if current_billing == 'No billing':
         raise APIError('Without billing', 404)
     billing = current_app.billing_factory.get_billing(current_billing)
-    result = billing.orderpodedit(**data)
-    if result['status'] == 'Paid':
-        user = KubeUtils._get_current_user()
-        pc = PodCollection(user)
-        status = pc._get_by_id(pod_id).status
-        cmd = 'start' if status == POD_STATUSES.stopped else 'redeploy'
-        pc.update(pod_id, {'command': cmd, 'commandOptions': {'applyEdit': True}})
-    return result
+    return billing.orderpodedit(**data)
 
 
 @billing.route('/orderKubes', methods=['POST'], strict_slashes=False)

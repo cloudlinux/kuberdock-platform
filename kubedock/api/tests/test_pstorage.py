@@ -194,12 +194,7 @@ class TestPStorageApiPost(APITestCase):
     def test_creation_fallen(self, save_mock):
         save_mock.side_effect = Exception('test exception')
         res = self.user_open(url, 'POST', self.devices[0])
-        self.assert400(res)
-        self.assertEqual(res.json, {
-            "data": "Couldn't save persistent disk.",
-            "status": "error",
-            "type": "APIError"
-        })
+        self.assertAPIError(res, 400, 'APIError')
 
 
 class TestPStorageApiDelete(APITestCase):
@@ -262,23 +257,13 @@ class TestPStorageApiDelete(APITestCase):
     def test_device_is_not_owned_by_current_user(self, mock_owner_id):
         mock_owner_id.return_value = 0
         res = self.user_open(self.item_url(self.free_pd.id), method='DELETE')
-        self.assert403(res)
-        self.assertEqual(res.json, {
-            "data": "Volume does not belong to current user",
-            "status": "error",
-            "type": "APIError"
-        })
+        self.assertAPIError(res, 403, 'APIError')
 
     @mock.patch('kubedock.kapi.pstorage.drive_can_be_deleted')
     def test_cannot_be_deleted(self, mock_can_be_deleted):
         mock_can_be_deleted.return_value = (False, 'Test description')
         res = self.user_open(self.item_url(self.free_pd.id), method='DELETE')
-        self.assert400(res)
-        self.assertEqual(res.json, {
-            "data": "Volume can not be deleted. Reason: Test description",
-            "status": "error",
-            "type": "APIError"
-        })
+        self.assertAPIError(res, 400, 'APIError')
 
     def test_not_allowed_without_args(self):
         self.assert405(self.open(method='DELETE', auth=self.userauth))

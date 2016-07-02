@@ -16,18 +16,21 @@ from ...validation import (V, args_list_schema, env_schema, path_schema,
 from ...testutils.testcases import DBTestCase, attr
 
 schema = {
-    'sourceUrl': {'type': str, 'required': True},
+    'sourceUrl': {'type': 'string', 'required': True},
     'args': dict(args_list_schema, required=True),
     'command': dict(args_list_schema, required=True),
     'env': dict(env_schema, required=True),
-    'image': {'type': str, 'required': True, 'empty': False},
-    'ports': {'type': list, 'required': True, 'schema': {'type': dict, 'schema': {
-        'number': dict(port_schema, required=True), 'protocol': protocol_schema}}},
-    'volumeMounts': {'type': list, 'required': True, 'schema': {'type': str}},
+    'image': {'type': 'string', 'required': True, 'empty': False},
+    'ports': {'type': 'list', 'required': True, 'schema': {
+        'type': 'dict', 'schema': {
+            'number': dict(port_schema, required=True),
+            'protocol': protocol_schema}}},
+    'volumeMounts': {'type': 'list', 'required': True,
+                     'schema': {'type': 'string'}},
     'workingDir': path_schema,
-    'secret': {'type': dict, 'schema': {
-        'username': {'type': str, 'required': True, 'empty': False},
-        'password': {'type': str, 'required': True, 'empty': False}}
+    'secret': {'type': 'dict', 'schema': {
+        'username': {'type': 'string', 'required': True, 'empty': False},
+        'password': {'type': 'string', 'required': True, 'empty': False}}
     },
 }
 
@@ -40,13 +43,15 @@ images.MIN_FAILED_LOGIN_PAUSE = 120
 # Accounts for repos testing. Create a new ones if these will failed on
 
 # dockerhub account
-DOCKERHUB_AUTH = DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD = 'wncm', 'mfhhh94kw02z'
+DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD = 'wncm', 'mfhhh94kw02z'
+DOCKERHUB_AUTH = DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD
 DOCKERHUB_PRIVATE_REPO = '{0}/test_private'.format(DOCKERHUB_USERNAME)
 DOCKERHUB_PUBLIC_REPO = '{0}/mynginx4'.format(DOCKERHUB_USERNAME)
 # quay account
 QUAY_USERNAME = 'sergey_gruntovsky'
 QUAY_ROBOT_NAME = 'sergey_gruntovsky+kd_test_private'
-QUAY_ROBOT_PASSWORD = 'IKTNTXDZPRG4YCVZ4N9RMRDHVK81SGRC56Z4J0T5C6IGXU5FTMVKDYTYAM0Y1GGY'
+QUAY_ROBOT_PASSWORD = \
+    'IKTNTXDZPRG4YCVZ4N9RMRDHVK81SGRC56Z4J0T5C6IGXU5FTMVKDYTYAM0Y1GGY'
 QUAY_ROBOT_AUTH = QUAY_ROBOT_NAME, QUAY_ROBOT_PASSWORD
 QUAY_PRIVATE_REPO = 'quay.io/{0}/test_private'.format(QUAY_USERNAME)
 QUAY_PUBLIC_REPO = 'quay.io/{0}/mynginx'.format(QUAY_USERNAME)
@@ -70,9 +75,8 @@ class RemoteRegistriesTestCase(VCRTestCase, DBTestCase):
         return os.path.join(APP_ROOT, "vcrpy_test_cassettes")
 
     def _get_cassette_name(self):
-        return '{0}.{1}.{2}.yaml'.format(self.__module__,
-                                       self.__class__.__name__,
-                                     self._testMethodName)
+        return '{0}.{1}.{2}.yaml'.format(
+            self.__module__, self.__class__.__name__, self._testMethodName)
 
     @staticmethod
     def match_uri_regardless_of_qs_order(r1, r2):
@@ -112,7 +116,8 @@ class TestGetContainerConfig(RemoteRegistriesTestCase):
     # @unittest.skip('')
     def test_get_container_config_public(self):
         self.validate(Image(DOCKERHUB_PUBLIC_REPO).get_container_config())
-        self.validate(Image(DOCKERHUB_PUBLIC_REPO + ':latest').get_container_config())
+        self.validate(
+            Image(DOCKERHUB_PUBLIC_REPO + ':latest').get_container_config())
 
     # @unittest.skip('')
     def test_get_container_config_private_dockerhub_repo(self):
@@ -139,7 +144,8 @@ class TestCheckContainers(RemoteRegistriesTestCase):
     # @unittest.skip('TODO: dockerhub too many failed login attempts')
     def test_default_registry_private(self):
         Image.check_containers(
-            [self._container('nginx'), self._container(DOCKERHUB_PRIVATE_REPO)],
+            [self._container('nginx'),
+             self._container(DOCKERHUB_PRIVATE_REPO)],
             [(DOCKERHUB_USERNAME, DOCKERHUB_PASSWORD, DEFAULT_REGISTRY)])
 
         # first failed login

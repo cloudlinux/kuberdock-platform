@@ -33,6 +33,7 @@ define(['marionette'], function(Marionette){
             'settings/profile'                : 'editProfileSettings',
             'ippool'                          : 'showNetworks',
             'ippool/create'                   : 'showCreateNetwork',
+            'ippool/:id'                      : 'showSubnetIps',
             'persistent-volumes'              : 'showPersistentVolumes',
             'persistent_volumes'              : 'showPersistentVolumes',
             'publicIPs'                       : 'showIPs',

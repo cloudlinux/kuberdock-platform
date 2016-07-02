@@ -60,47 +60,80 @@
                 <table id="pod-payment-table">
                     <thead>
                        <tr>
-                           <th class="col-xs-5 no-padding">Name</th>
-                           <th class="col-xs-3 no-padding">Number of Kubes</th>
-                           <th class="col-xs-3 no-padding">Price</th>
+                           <th class="col-xs-5 no-padding">Container name</th>
+                           <th class="col-xs-4 no-padding">Number of Kubes</th>
+                           <th class="col-xs-2 no-padding">Price / <%- pkg.get('period') %></th>
                            <th class="col-xs-1 no-padding"></th>
                        </tr>
                     </thead>
                     <tbody class="wizard-containers-list"></tbody>
+                </table>
+                <% if (isPerSorage) { %>
+                    <table>
+                        <thead>
+                           <tr>
+                               <th class="col-xs-5 no-padding">Storage name</th>
+                               <th class="col-xs-4 no-padding">Size</th>
+                               <th class="col-xs-2 no-padding"></th>
+                               <th class="col-xs-1 no-padding"></th>
+                           </tr>
+                        </thead>
+                        <tbody>
+                            <% _.each(persistentDrives.models, function(pd){ %>
+                                <tr>
+                                    <td><b><%- pd.get('name') %></b></td>
+                                    <td><%- pd.get('size') %> GB</td>
+                                    <td>
+                                        <span class="pstorage_price"><%= formatPrice( pkg.get('price_pstorage') * pd.get('size')) %></span>
+                                    </td>
+                                    <td class="actions text-right">
+                                        <% if (pd.get('size') !== 1) { %>
+                                            <span class="help" data-toggle="tooltip" data-placement="left" title="<%= formatPrice( pkg.get('price_pstorage') ) %> per 1 GB"></span>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        </tbody>
+                    </table>
+                <% } %>
+                <% if (isPublic) { %>
+                    <table>
+                        <thead>
+                           <tr>
+                               <th class="col-xs-5 no-padding">Public IP`s</th>
+                               <th class="col-xs-4 no-padding">Quantity</th>
+                               <th class="col-xs-2 no-padding"></th>
+                               <th class="col-xs-1 no-padding"></th>
+                           </tr>
+                        </thead>
+                        <tbody>
+                            <% if (isPublic) { %>
+                                <tr>
+                                    <td><b>IPv4 public IP</b></td>
+                                    <td>1</td>
+                                    <td><span id="ipaddress_price"><%= formatPrice( pkg.get('price_ip') ) %></td>
+                                    <td></td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                <% } %>
+                <table>
                     <tbody>
-                        <% if (isPublic) { %>
-                            <tr>
-                                <td><b>IP Address:</b></td>
-                                <td></td>
-                                <td><span id="ipaddress_price"><%- price_ip %> / <%- period %></td>
-                                <td></td>
-                            </tr>
-                        <% } %>
-                        <% if (isPerSorage) { %>
-                            <tr>
-                                <td><b>Persistent storage:</b></td>
-                                <td></td>
-                                <td colspan="2">
-                                    <span id="pstorage_price"><%- price_pstorage %> per 1 GB / <%- period %></span>
-                                </td>
-                            </tr>
+                        <% if (edited && diffTotalPrice > 0){ %>
+                            <tr><td class="total" colspan="3">
+                                Additional costs: <span id="total_price"><%- formatPrice(diffTotalPrice) %> / <%- pkg.get('period') %></span>
+                            </td></tr>
+                            <tr><td class="total" colspan="3">
+                                New total price: <span id="total_price"><%- formatPrice(totalPrice) %> / <%- pkg.get('period') %></span>
+                            </td></tr>
+                        <% } else { %>
+                            <tr><td class="total" colspan="3">
+                                Total price: <span id="total_price"><%- formatPrice(totalPrice) %> / <%- pkg.get('period') %></span>
+                            </td></tr>
                         <% } %>
                     </tbody>
                 </table>
-            </div>
-            <div class="col-md-12 no-padding payment-summary">
-                <% if (edited && diffTotalPrice > 0){ %>
-                    <div class="diff-total pull-left">
-                        <p>Additional costs: <span id="total_price"><%- formatPrice(diffTotalPrice) %> / <%- period %></span></p>
-                    </div>
-                    <div class="new-total pull-right">
-                        New total price: <span id="total_price"><%- formatPrice(totalPrice) %> / <%- period %></span>
-                    </div>
-                <% } else { %>
-                    <div class="total pull-right">
-                        Total price: <span id="total_price"><%- formatPrice(totalPrice) %> / <%- period %></span>
-                    </div>
-                <% } %>
             </div>
             <div class="buttons col-md-12 no-padding text-right">
                 <% if (edited){ %>

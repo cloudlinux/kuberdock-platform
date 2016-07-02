@@ -10,3 +10,8 @@
   yum: name=/vagrant/kdctl.rpm state=present
   tags:
    - kdctl
+
+- name: Login by kdctl
+  command: kdctl login --username admin --password admin
+  tags:
+   - kdctl

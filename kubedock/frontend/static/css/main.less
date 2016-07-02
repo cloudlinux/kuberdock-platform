@@ -442,9 +442,8 @@ body{
             > .control-group{
                 .clearfix;
                 float: right;
-                height: 34px;
+                padding: 8px 0;
                 position: relative;
-                padding: 8px 0 9px 0;
                 a, button{
                     &:focus{
                         text-decoration: none;
@@ -719,6 +718,12 @@ body{
             }
             &.hideButton{
                 display: none;
+            }
+            &.disabled{
+                .opacity(0.5);
+                &:hover{
+                    cursor: not-allowed;
+                }
             }
         }
         a{

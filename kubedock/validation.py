@@ -9,7 +9,7 @@ import pytz
 
 from .exceptions import APIError
 from .predefined_apps.models import PredefinedApp
-from .billing.models import Kube, Package, PackageKube
+from .billing.models import Kube, Package
 from .users.models import User
 from .rbac.models import Role
 from .system_settings.models import SystemSettings
@@ -62,14 +62,14 @@ image_search_schema = {
 }
 
 ascii_string = {
-    'type': str, 'regex': {
+    'type': 'string', 'regex': {
         'regex': re.compile(ur'^[\u0000-\u007f]*$'),  # ascii range
         'message': 'must be an ascii string'}}
 
 image_request_schema = {
     'image': dict(ascii_string, empty=False, required=True),
     'auth': {
-        'type': dict,
+        'type': 'dict',
         'required': False,
         'nullable': True,
         'schema': {
@@ -235,7 +235,7 @@ env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
         'maxlength': 255,
         'regex': envvar_name_regex
     },
-    'value': {'type': 'string', 'required': True},
+    'value': {'type': 'string', 'coerce': str, 'required': True},
 }}}
 path_schema = {'type': 'string', 'maxlength': PATH_LENGTH}
 protocol_schema = {'type': 'string', 'allowed': ['TCP', 'tcp', 'UDP', 'udp']}
@@ -249,6 +249,9 @@ pdname_schema = {'type': 'string', 'required': True, 'empty': False,
 kube_type_schema = {'type': 'integer', 'coerce': int, 'kube_type_in_db': True}
 volume_name_schema = {'type': 'string', 'coerce': str, 'empty': False,
                       'maxlength': 255}
+restart_policy_schema = {'type': 'string',
+                         'allowed': ['Always', 'OnFailure', 'Never']}
+pod_resolve_schema = {'type': 'list', 'schema': {'type': 'string'}}
 
 edited_pod_config_schema = {
     'podIP': {
@@ -259,22 +262,19 @@ edited_pod_config_schema = {
     'replicas': {'type': 'integer', 'min': 0, 'max': 1},
     'kube_type': dict(kube_type_schema, kube_type_in_user_package=True,
                       kube_type_exists=True, required=True),
-    'kuberdock_resolve': {'type': 'list', 'schema': {'type': 'string'}},
+    'kuberdock_resolve': pod_resolve_schema,
     'node': {
         'type': 'string',
         'nullable': True,
         'internal_only': True,
     },
-    'restartPolicy': {
-        'type': 'string', 'required': True,
-        'allowed': ['Always', 'OnFailure', 'Never']
-    },
+    'restartPolicy': dict(restart_policy_schema, required=True),
     'volumes': {
         'type': 'list',
         'schema': {
             'type': 'dict',
             'schema': {
-                'name': dict(volume_name_schema, volume_type_required=False),
+                'name': dict(volume_name_schema),
                 'persistentDisk': {
                     'type': 'dict',
                     'nullable': True,
@@ -290,23 +290,18 @@ edited_pod_config_schema = {
                 },
                 'localStorage': {
                     'nullable': True,
-                    'anyof': [
-                        # {'type': 'boolean'},
-                        {
-                            'type': 'dict',
-                            'schema': {
-                                'path': {
-                                    'type': 'string',
-                                    'required': False,
-                                    'nullable': False,
-                                    'empty': False,
-                                    'maxlength': PATH_LENGTH,
-                                    # allowed only for kuberdock-internal
-                                    'internal_only': True,
-                                }
-                            }
+                    'type': 'dict',
+                    'schema': {
+                        'path': {
+                            'type': 'string',
+                            'required': False,
+                            'nullable': False,
+                            'empty': False,
+                            'maxlength': PATH_LENGTH,
+                            # allowed only for kuberdock-internal
+                            'internal_only': True,
                         }
-                    ]
+                    }
                 },
                 # 'emptyDir': {
                 #     'type': 'dict',
@@ -371,8 +366,12 @@ edited_pod_config_schema = {
                         'type': 'dict',
                         'schema': {
                             'containerPort': dict(port_schema, required=True),
+
                             # null if not public
+                            # "hostPort" is deprecated, use "podPort"
                             'hostPort': dict(port_schema, nullable=True),
+                            'podPort': dict(port_schema, nullable=True),
+
                             'isPublic': {'type': 'boolean'},
                             'protocol': protocol_schema,
                         }
@@ -386,9 +385,11 @@ edited_pod_config_schema = {
                             'mountPath': {
                                 'type': 'string',
                                 'maxlength': PATH_LENGTH,
+                                'required': True,
                             },
                             'name': {
                                 'type': 'string',
+                                'required': True,
                             },
                         },
                     }
@@ -615,14 +616,62 @@ predefined_apps_kuberdock_schema = {
             'type': 'dict',
             'schema': app_package_schema,
         },
-    }
+    },
+    'resolve': pod_resolve_schema,
+}
+predefined_apps_spec_schema = {
+    'restartPolicy': restart_policy_schema,
+    'resolve': pod_resolve_schema,
+    'containers': new_pod_schema['containers'],
+    'volumes': new_pod_schema['volumes'],
 }
 predefined_app_schema = {
+    'apiVersion': {
+        'type': 'string',
+        'allowed': ['v1'],
+    },
+    'metadata': {
+        'type': 'dict',
+        'required': True,
+        'schema': {
+            'name': {
+                'type': 'string',
+                'required': True,
+            },
+        },
+    },
     'kuberdock': {
         'type': 'dict',
         'required': True,
         'schema': predefined_apps_kuberdock_schema,
-    }
+    },
+    'kind': {
+        'type': 'string',
+        'allowed': ['ReplicationController', 'Pod'],
+    },
+    'spec': {
+        'type': 'dict',
+        'anyof': [{
+            'match_volumes': True,
+            'schema': dict(predefined_apps_spec_schema, **{
+                'replicas': {'type': 'integer', 'min': 1, 'max': 1},
+            }),
+        }, {
+            'schema': {
+                'template': {
+                    'type': 'dict',
+                    'schema': {
+                        'replicas': {'type': 'integer', 'min': 1, 'max': 1},
+                        'spec': {
+                            'type': 'dict',
+                            'match_volumes': True,
+                            'schema': predefined_apps_spec_schema,
+                        },
+                    },
+                },
+            },
+        }],
+    },
 }
 
 
@@ -660,37 +709,10 @@ class V(cerberus.Validator):
     implement any new here.
     """
     # TODO: add readable error messages for regexps in old schemas
-    type_map = {str: 'string',
-                int: 'integer',
-                float: 'float',
-                bool: 'boolean',
-                dict: 'dict',
-                list: 'list',
-                # None: 'string'  # you can use `None` to set the default type
-                set: 'set'}
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.get('user')
         super(V, self).__init__(*args, **kwargs)
-
-    def validate_schema(self, schema):
-        """
-        Little hack to allow us to use sandard python types
-        (or anything at all) for type validation.
-        Just map it to some string in self.type_map
-        """
-        for value in schema.itervalues():
-            vtype = value.get('type')
-            if not vtype:
-                continue
-            if isinstance(vtype, (list, tuple)):
-                value['type'] = [
-                    self.type_map.get(typeentry, typeentry)
-                    for typeentry in vtype
-                ]
-            else:
-                value['type'] = self.type_map.get(vtype, vtype)
-        return super(V, self).validate_schema(schema)
 
     def _api_validation(self, data, schema, **kwargs):
         validated = self.validated(data, schema, **kwargs)
@@ -779,12 +801,12 @@ class V(cerberus.Validator):
         if exists:
             kube = Kube.query.get(value)
             if kube is None:
-                self._error(field, 'Pod can\'t be created, because cluster has '
-                                   'no kube type with id "{0}", please contact '
-                                   'administrator.'.format(value))
+                self._error(field, 'Pod can\'t be created, because cluster '
+                                   'has no kube type with id "{0}", please '
+                                   'contact administrator.'.format(value))
             elif not kube.available:
-                self._error(field, 'Pod can\'t be created, because cluster has '
-                                   'no nodes with "{0}" kube type, please '
+                self._error(field, 'Pod can\'t be created, because cluster '
+                                   'has no nodes with "{0}" kube type, please '
                                    'contact administrator.'.format(kube.name))
 
     def _validate_kube_type_in_user_package(self, exists, field, value):
@@ -833,24 +855,11 @@ class V(cerberus.Validator):
                             "Check /etc/hosts file for correct Node records")
 
     def _validate_match_volumes(self, match_volumes, field, value):
-        """Used in pod spec root to check volumeMounts and volumes"""
+        """Used in pod spec root to check that volumeMounts match volumes"""
         if match_volumes:
             volumes_mismatch = check_volumes_match(value)
             if volumes_mismatch:
                 self._error(field, volumes_mismatch)
-
-    def _validate_volume_type_required(self, vtr, field, value):
-        # Used in volumes list
-        if vtr:
-            for vol in self.document['volumes']:
-                if vol.keys() == ['name']:
-                    self._error(field, 'Volume type is required for volume '
-                                       '"{0}"'.format(value))
-                    return
-                for k in vol.keys():
-                    if k not in SUPPORTED_VOLUME_TYPES + ['name']:
-                        self._error(field,
-                                    'Unsupported volume type "{0}"'.format(k))
 
     def _validate_pd_size_max(self, exists, field, value):
         if exists:
@@ -934,12 +943,25 @@ def check_change_pod_data(data):
 
 
 def check_new_pod_data(data, user=None):
+    # FIXME: in cerberus 0.9.1 "corece" in nested fields doesn't work right:
+    # .validated({'a': 123, 'b': {'a': 456}},
+    #            {'a': {}, 'b': {'type': 'dict',
+    #                            'schema': {'a': {'coerce': str}}}})
+    # -> {'a': '456', 'b': {'a': 456}}
+    # use normalisation only after upgrade to Cerberus 1.0 ...
     validator = V(user=None if user is None else user.username)
     if not validator.validate(data, new_pod_schema):
-        raise APIError(validator.errors)
+        raise ValidationError(validator.errors)
+
+    # TODO: with cerberus 1.0 use "rename" normalization rule
+    for container in data['containers']:
+        for port in container.get('ports') or []:
+            if port.get('podPort'):
+                port['hostPort'] = port.pop('podPort')
     volumes_mismatch = check_volumes_match(data)
     if volumes_mismatch:
-        raise APIError(volumes_mismatch)
+        raise ValidationError(volumes_mismatch)
+    return data
 
 
 def check_internal_pod_data(data, user=None):
@@ -1050,10 +1072,11 @@ def check_pricing_api(data, schema, *args, **kwargs):
 
 
 def check_volumes_match(pod_config):
-    vol_names = {v.get('name', '') for v in pod_config.get('volumes') or []}
+    names = {v.get('name', '') for v in pod_config.get('volumes') or []}
 
     for container in pod_config.get('containers') or []:
         for volume_mount in container.get('volumeMounts') or []:
-            if volume_mount.get('name') not in vol_names:
-                return ('Volume "{0}" is not defined in volumes list'
-                        .format(volume_mount.get('name')))
+            if 'name' in volume_mount and volume_mount['name'] not in names:
+                return ('Volume "{0}" ({1}) is not defined in volumes list'
+                        .format(volume_mount.get('name'),
+                                volume_mount.get('mountPath')))

@@ -1,3 +1,4 @@
+from kubedock.exceptions import APIError
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.users import User
 
@@ -18,6 +19,12 @@ def _extract_needed_information(full_pod_config):
         }
 
 
+def _filter_persistent_volumes(pod_spec):
+    def is_local_storage(x):
+        return bool(x.get('persistentDisk', {}).get('pdName'))
+    return [v for v in pod_spec['volumes'] if is_local_storage(v)]
+
+
 def restore(pod_data, owner, volumes_dir_url=None):
     """
     Restore pod from backup.
@@ -35,20 +42,21 @@ def restore(pod_data, owner, volumes_dir_url=None):
         Expected that pod_config contains full information
         got from postgres.
     """
-    # restore
     pod_collection = PodCollection(owner=owner)
-    restored_pod_dict = pod_collection.add(
-        _extract_needed_information(pod_data)
-    )
-    pod_id = restored_pod_dict.get('id')
-    assert pod_id
+    pod_spec = _extract_needed_information(pod_data)
+
+    if len(_filter_persistent_volumes(pod_spec)) > 0:
+        if not volumes_dir_url:
+            raise APIError(
+                'POD spec contains persistent volumes but volumes dir URL was '
+                'not specified')
+        pod_spec['volumes_dir_url'] = volumes_dir_url
+
+    restored_pod_dict = pod_collection.add(pod_spec)
 
     if pod_data['status'] == 'running':
         pod_collection = PodCollection(owner=owner)
         restored_pod_dict = pod_collection.update(
-            pod_id=pod_id,
-            data={'command': 'start'}
+            pod_id=restored_pod_dict['id'], data={'command': 'start'}
         )
-    # todo: add restore volumes
-
     return restored_pod_dict

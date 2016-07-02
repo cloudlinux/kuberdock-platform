@@ -5,11 +5,6 @@ src_prefix: /var/opt/kuberdock
 predefined_apps_repo: https://github.com/cloudlinux/kuberdock_predefined_apps.git
 predefined_apps_dest: /tmp/kuberdock_predefined_apps
 
-use_ceph: "{{ lookup('env','KD_CEPH') }}"
-ceph_user: "{{ lookup('env','KD_CEPH_USER') }}"
-ceph_config: "{{ lookup('env','KD_CEPH_CONFIG') }}"
-ceph_user_keyring: "{{ lookup('env','KD_CEPH_USER_KEYRING') }}"
-
 ceph_config_dest: "/tmp/ceph.conf"
 ceph_user_keyring_dest: "/tmp/ceph.keyring"
 

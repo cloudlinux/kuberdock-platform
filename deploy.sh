@@ -1,4 +1,4 @@
-#!/bin/bash
+# --fail!/bin/bash
 
 KUBERDOCK_DIR=/var/opt/kuberdock
 KUBERDOCK_LIB_DIR=/var/lib/kuberdock
@@ -9,6 +9,15 @@ WEBAPP_USER=nginx
 DEPLOY_LOG_FILE=/var/log/kuberdock_master_deploy.log
 EXIT_MESSAGE="Installation error. Install log saved to $DEPLOY_LOG_FILE"
 
+# Back up old logs
+if [ -f $DEPLOY_LOG_FILE ]; then
+    TIMESTAMP=$(stat --format=%Y $DEPLOY_LOG_FILE)
+    DATE_TIME=$(date -d @$TIMESTAMP +'%Y%m%d%H%M%S')
+    DEPLOY_LOG_FILE_NAME=$(stat --format=%n $DEPLOY_LOG_FILE | cut -f1 -d'.')
+    DEPLOY_LOG_FILE_SUFFIX=$(stat --format=%n $DEPLOY_LOG_FILE | cut -f2 -d'.')
+    OLD_LOG=$DEPLOY_LOG_FILE_NAME$DATE_TIME.$DEPLOY_LOG_FILE_SUFFIX
+    mv $DEPLOY_LOG_FILE $OLD_LOG
+fi
 #####################
 # Fail log delivery #
 #####################
@@ -55,17 +64,23 @@ isInstalledRpmNotSigned(){
 }
 
 sentryWrapper() {
-     # AC-3591 Do not send anything if package not signed
-     package=$(ls -1 | awk '/^kuberdock.*\.rpm$/ {print $1; exit}')
-     if [ ! -z $package ];then
-         if isRpmFileNotSigned $package; then
-             return 0
-         fi
-     else
-         if isInstalledRpmNotSigned; then
-             return 0
-         fi
+     if [ "$SENTRY_ENABLE" == "n" ];then
+        return 0
      fi
+
+     if [ "$SENTRY_ENABLE" != "y" ];then
+         # AC-3591 Do not send anything if package not signed
+         package=$(ls -1 | awk '/^kuberdock.*\.rpm$/ {print $1; exit}')
+         if [ ! -z $package ];then
+             if isRpmFileNotSigned $package; then
+                 return 0
+             fi
+         else
+             if isInstalledRpmNotSigned; then
+                 return 0
+             fi
+         fi
+    fi
 
      eventid=$(cat /proc/sys/kernel/random/uuid | tr -d "-")
      printf "We have a problem during deployment of KuberDock master on your server. Let us help you to fix a problem. We have collected all information we need into $DEPLOY_LOG_FILE. \n"
@@ -83,8 +98,15 @@ sentryWrapper() {
          release=$(rpm -q --queryformat "%{VERSION}-%{RELEASE}" kuberdock)
          data=$(eval echo $DATA_TEMPLATE)
          echo
-         curl -s -H "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\
-"?sentry_version=$SENTRYVERSION&sentry_client=test&sentry_key=$SENTRYKEY&sentry_secret=$SENTRYSECRET" > /dev/null && echo "Information about your problem has been sent to our support team."
+         curl -s -H --fail "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\
+"?sentry_version=$SENTRYVERSION&sentry_client=test&sentry_key=$SENTRYKEY&sentry_secret=$SENTRYSECRET" > /dev/null
+
+         RETURN_CODE=$?
+         if [ ${RETURN_CODE} != 0 ] ;then
+            echo "We could not automatically send logs. Please contact support."
+         else
+            echo "Information about your problem has been sent to our support team."
+         fi
      fi
      echo "Done."
 }

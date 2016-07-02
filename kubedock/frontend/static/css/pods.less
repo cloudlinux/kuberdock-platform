@@ -233,12 +233,25 @@
                     border-bottom: none;
                     .total-wrapper{
                         position: relative;
-                        padding: 14px 20px;
-                        margin-bottom: 20px;
+                        margin-bottom: 52px;
                         background-color: #fff;
                         border: 1px solid #e5e5e5;
+                        padding: 14px 20px 4px 20px;
+                        &:before{
+                            .rotate(180deg);
+                            right: 0;
+                            top: -41px;
+                            color: #b5bbc1;
+                            max-width: 55px;
+                            content: 'attach_file';
+                            display: inline-block;
+                            vertical-align: middle;
+                            position: absolute;
+                            font: normal normal normal 55px/55px @materials;
+                        }
                         table{
                             width: 100%;
+                            margin-bottom: 10px;
                             thead{
                                 tr{
                                     th{
@@ -294,6 +307,12 @@
                         margin-bottom: 15px;
                         display: inline-block;
                         vertical-align: middle;
+                    }
+                    table{
+                        .help{
+                            margin-left: 0;
+                            margin-bottom: 0;
+                        }
                     }
                     select{
                         &.kube-quantity{

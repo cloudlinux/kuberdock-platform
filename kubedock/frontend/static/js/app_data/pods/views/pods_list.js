@@ -27,13 +27,8 @@ define(['app_data/app',
             });
         },
 
-        onBeforeShow: function(){
-            utils.preloader.show();
-        },
-
-        clearPager: function(){
-            this.trigger('pager:clear');
-        },
+        onBeforeShow: function(){ utils.preloader.show(); },
+        clearPager: function(){ this.trigger('pager:clear'); },
     });
 
     podList.PodListEmpty = Backbone.Marionette.ItemView.extend({

@@ -148,6 +148,8 @@ url = $KD_URL
 [defaults]
 # token to talk to kuberdock
 token = $TOKEN
+# default registry to pull docker images from
+registry = registry.hub.docker.com
 EOF
     chmod 0600 $KCLI_CONFIG_PATH
 else

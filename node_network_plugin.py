@@ -3,18 +3,23 @@
 from __future__ import print_function
 
 import os
+import socket
 import sys
+import tarfile
 import time
 import json
 import subprocess
 from ConfigParser import ConfigParser
 from StringIO import StringIO
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from contextlib import contextmanager
+from tempfile import NamedTemporaryFile
 
 import ipaddress
 import requests
+import shutil
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 FSLIMIT_PATH = '/var/lib/kuberdock/scripts/fslimit.py'
@@ -28,9 +33,8 @@ PUBLIC_IP_MANGLE_RULE = \
     'iptables -w -{0} KUBERDOCK-PUBLIC-IP -t mangle -d {1} ' \
     '-p {2} --dport {3} -j MARK --set-mark 2'
 
-PUBLIC_IP_POSTROUTING_RULE = 'iptables -w -{0} KUBERDOCK-PUBLIC-IP-SNAT '\
+PUBLIC_IP_POSTROUTING_RULE = 'iptables -w -{0} KUBERDOCK-PUBLIC-IP-SNAT ' \
                              '-t nat -s {1} -o {2} -j SNAT --to-source {3}'
-
 
 # MARKS:
 # 1 - traffic to reject/drop
@@ -106,9 +110,6 @@ class ETCD(object):
                 users.append(int(user))
             except ValueError as e:
                 glog('Error while try to convert user_id to int: {}'.format(e))
-        return users
-
-
         return users
 
     def delete_user(self, user, pod):
@@ -205,7 +206,8 @@ def modify_ip(cmd, ip, iface):
         raise PluginException(
             'Error {0} ip: {1} on iface: {2}'.format(cmd, ip, iface))
     if cmd == 'add':
-        subprocess.call(['arping', '-I', iface, '-A', ip, '-c', '10', '-w', '1'])
+        subprocess.call(
+            ['arping', '-I', iface, '-A', ip, '-c', '10', '-w', '1'])
     return 0
 
 
@@ -288,7 +290,7 @@ def handle_public_ip(
 
 
 def is_nonfloating_ip_mode_enabled():
-    enabled_options = ('1','on', 't', 'true', 'y', 'yes')
+    enabled_options = ('1', 'on', 't', 'true', 'y', 'yes')
     config = get_config(INI_PATH)
     return config['nonfloating_public_ips'].lower() in enabled_options
 
@@ -336,7 +338,8 @@ def init():
     config_subnet = config['flannel_subnet']
     _update_ipset('kuberdock_flannel', [config_network], set_type='hash:net')
     _update_ipset('kuberdock_nodes', [])
-    _update_ipset('kuberdock_cluster', ['kuberdock_flannel', 'kuberdock_nodes'],
+    _update_ipset('kuberdock_cluster',
+                  ['kuberdock_flannel', 'kuberdock_nodes'],
                   set_type='list:set')
     network = ipaddress.ip_network(unicode(config_network))
     subnet = ipaddress.ip_network(unicode(config_subnet), strict=False)
@@ -393,44 +396,157 @@ def handle_ex_status(action, namespace=None, k8s_pod=None, status=None):
         remove_feedback(namespace, k8s_pod)
 
 
-def init_local_storage(pod_spec_file):
-    spec = get_pod_spec(pod_spec_file)
-    vol_annotations = spec.get('metadata', {}).get('annotations', {}).get(
-        'kuberdock-volume-annotations', None
-    )
-    if not vol_annotations:
-        return
-    try:
-        vol_annotations = json.loads(vol_annotations)
-    except (TypeError, ValueError, KeyError) as e:
-        raise PluginException(
-            'Error loading volume annotations from spec "{0}" '
-            'Skip call.'.format(e)
-        )
-    limits = {}
-    for annotation in vol_annotations:
-        if not isinstance(annotation, dict):
-            continue
-        ls = annotation.get('localStorage')
-        if not ls:
-            continue
-        path = ls['path']
-        if os.path.exists(path):
-            continue
-        glog("Making directory for local storage: {}".format(annotation))
+class VolumeRestoreException(Exception):
+    pass
+
+
+class Volume(object):
+    def __init__(self, path, size, name):
+        self.path, self.size, self.name = path, size, name
+
+    def restore(self, backup_url, user_id):
+        """
+        Downloads the backup archive from a given base URL and extracts it
+        into a volume path
+
+        :param backup_url: URL which contains backup archives. It is expected
+        that the particular volume backup is found at:
+                        base_url/backups/<user_id>/<volume_name>
+        :param user_id: user ID which is used to construct the final URL to
+        the backup archive
+        """
+        archive_name = '{}.tar.gz'.format(self.name)
+        url = '/'.join([backup_url, 'backups', user_id, archive_name])
+
         try:
-            os.makedirs(path)
-            subprocess.call(['chcon', '-Rt', 'svirt_sandbox_file_t', path])
+            r = requests.get(url, stream=True, verify=False)
+            r.raise_for_status()
+
+            with NamedTemporaryFile('w+b') as f:
+                for chunk in r.iter_content(chunk_size=1024):
+                    if chunk:
+                        f.write(chunk)
+
+                f.seek(0)
+                self._extract_archive(f)
+
+        except (requests.exceptions.RequestException, socket.timeout):
+            raise VolumeRestoreException(
+                'Connection failure while downloading backup from {}'.format(
+                    url))
+        except tarfile.TarError:
+            raise VolumeRestoreException(
+                'An error occurred while extracting {}'.format(archive_name))
+
+    def create(self):
+        """
+        Creates a folder for the volume and sets correct SELinux type on it
+        """
+        try:
+            os.makedirs(self.path)
+            subprocess.call(
+                ['chcon', '-Rt', 'svirt_sandbox_file_t', self.path])
         except os.error:
             raise PluginException(
-                'Failed to create local storage dir "{}"'.format(path)
+                'Failed to create local storage dir "{}"'.format(self.path)
             )
-        limits[path] = '{}g'.format(ls.get('size', 1))
-    if limits:
+
+    def remove(self):
+        """
+        Physically removes directory
+        """
+        shutil.rmtree(self.path, True)
+
+    def _extract_archive(self, file_obj):
+        with tarfile.open(fileobj=file_obj, mode='r:gz') as archive:
+            archive.extractall(self.path)
+
+
+class LocalStorage(object):
+    @classmethod
+    def init(cls, pod_spec_file):
+        annotations, metadata, vol_annotations = cls._parse_pod_spec(
+            pod_spec_file)
+
+        volumes = [cls.create_volume(a) for a in vol_annotations
+                   if cls.check_annotation(a)]
+
+        backup_url = annotations.get('kuberdock-volumes-backup-url')
+        try:
+            if backup_url:
+                cls.restore_backup(backup_url, volumes, metadata)
+        except VolumeRestoreException:
+            cls._cleanup(volumes)
+            raise
+
+        cls.set_xfs_volume_size_limits(volumes)
+
+    @classmethod
+    def set_xfs_volume_size_limits(cls, volumes):
+        if not volumes:
+            return
         subprocess.call(
             ['/usr/bin/env', 'python2', FSLIMIT_PATH, 'storage'] +
-            ['{0}={1}'.format(key, value) for key, value in limits.iteritems()]
+            ['{0}={1}'.format(v.path, v.size) for v in volumes]
         )
+
+    @classmethod
+    def restore_backup(cls, backup_url, volumes, metadata):
+        user_id = metadata['labels']['kuberdock-user-uid']
+
+        for v in volumes:
+            v.restore(backup_url, user_id)
+
+    @staticmethod
+    def check_annotation(annotation):
+        """
+        Verifies if POD's annotation has all necessary information for local
+        storage creation and if storage directory was already created
+
+        :param annotation: dictionary containing POD's annotations
+        :return: True if annotations are good and False otherwise
+        """
+        try:
+            if os.path.exists(annotation['localStorage']['path']):
+                return False
+        except (KeyError, TypeError):
+            return False
+        return True
+
+    @classmethod
+    def create_volume(cls, annotation):
+        """
+        Instantiates a Volume object given volume annotation and creates a
+        volume
+        :param annotation: POD's volume annotation
+        :return: Volume object
+        """
+        ls = annotation['localStorage']
+        path, size, name = ls['path'], ls.get('size', 1), ls['name']
+        v = Volume(path=path, size='{}g'.format(size), name=name)
+
+        glog("Making directory for local storage: {}".format(annotation))
+        v.create()
+        return v
+
+    @classmethod
+    def _cleanup(cls, volumes):
+        for v in volumes:
+            v.remove()
+
+    @classmethod
+    def _parse_pod_spec(cls, pod_spec_file):
+        try:
+            metadata = get_pod_spec(pod_spec_file)['metadata']
+            annotations = metadata['annotations']
+            vol_annotations = json.loads(
+                annotations.get('kuberdock-volume-annotations', '[]'))
+        except (TypeError, ValueError, KeyError) as e:
+            raise PluginException(
+                'Error loading volume annotations from spec "{0}" '
+                'Skip call.'.format(e)
+            )
+        return annotations, metadata, vol_annotations
 
 
 def main(action, *args):
@@ -441,7 +557,7 @@ def main(action, *args):
     elif action == 'setup':
         handle_public_ip('add', *args)
     elif action == 'initlocalstorage':
-        init_local_storage(*args)
+        LocalStorage.init(*args)
     elif action == 'teardown':
         handle_public_ip('del', *args)
     elif action == 'update':

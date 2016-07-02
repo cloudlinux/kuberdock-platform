@@ -47,9 +47,9 @@ from sqlalchemy.orm.exc import NoResultFound
 
 logging.getLogger("requests").setLevel(logging.WARNING)
 
-WAIT_TIMEOUT = 1200  # seconds
-WAIT_TROUBLE_TIMEOUT = 300  # seconds
-WAIT_RETRY_DELAY = 5
+WAIT_TIMEOUT = 10 * 60  # 10 minutes
+WAIT_TROUBLE_TIMEOUT = 3 * 60  # 3 minutes
+WAIT_RETRY_DELAY = 5  # seconds
 
 
 class Creator(Command):
@@ -107,30 +107,50 @@ class WaitTroubleException(Exception):
     pass
 
 
-def wait_for_nodes(nodes_list, timeout):
-    _timeout = time.time() + (timeout or WAIT_TIMEOUT)
-    host_list = set(nodes_list)
+def wait_for_nodes(nodes_list, timeout, verbose=False):
+    timeout = timeout or WAIT_TIMEOUT
+
+    def _print(msg):
+        if verbose:
+            print msg
+
+    wait_end = time.time() + timeout
+    host_list = list(set(nodes_list))
     nodes_in_trouble = {}
 
     while host_list:
-        if time.time() > _timeout:
-            raise WaitTimeoutException()
+        if time.time() > wait_end:
+            remaining_nodes = [Node.get_by_name(nhost) for nhost in nodes_list]
+            raise WaitTimeoutException(
+                "These nodes did not become 'running' in a given timeout {}s:\n"
+                "{}".format(timeout, remaining_nodes))
 
         time.sleep(WAIT_RETRY_DELAY)
 
-        for nhost in nodes_list:
-            node = Node.get_by_name(nhost)
-            if node is None:
+        db.session.expire_all()
+        for nhost in host_list[:]:  # Do not modify list while iterating it
+            db_node = Node.get_by_name(nhost)
+            if db_node is None:
                 raise WaitTimeoutException("Node `%s` was not found." % nhost)
-            status = get_one_node(node.id)['status']
-            if status == 'troubles' and nhost not in nodes_in_trouble:
-                nodes_in_trouble[nhost] = time.time() + WAIT_TROUBLE_TIMEOUT
-            elif status == 'troubles' and time.time() > nodes_in_trouble[nhost]:
-                raise WaitTroubleException(
-                    "Node `%s` went into trouble and still in troubles state "
-                    "after %d seconds." % (nhost, WAIT_TROUBLE_TIMEOUT))
-            elif status == 'running' and nhost in host_list:
+            k8s_node = get_one_node(db_node.id)
+            state = k8s_node['status']
+            if state == 'troubles':
+                if nhost not in nodes_in_trouble:
+                    nodes_in_trouble[nhost] = time.time() + WAIT_TROUBLE_TIMEOUT
+                if time.time() > nodes_in_trouble[nhost]:
+                    raise WaitTroubleException(
+                        "Node '{}' went into troubles and still in troubles "
+                        "state after '{}' seconds.".format(
+                            nhost, WAIT_TROUBLE_TIMEOUT))
+                else:
+                    _print("Node '{}' state is 'troubles' but acceptable "
+                           "troubles timeout '{}'s is not reached yet..".format(
+                            nhost, WAIT_TROUBLE_TIMEOUT))
+            elif state == 'running':
                 host_list.remove(nhost)
+            else:
+                _print("Node '{}' state is '{}', continue waiting..".format(
+                    nhost, state))
 
 
 class NodeManager(Command):
@@ -144,10 +164,12 @@ class NodeManager(Command):
         Option('--docker-options', dest='docker_options'),
         Option('--ebs-volume', dest='ebs_volume', required=False),
         Option('--localstorage-device', dest='ls_device', required=False),
+        Option('--verbose', dest='verbose', required=False,
+               action='store_true'),
     ]
 
     def run(self, hostname, kube_type, do_deploy, wait, timeout, testing,
-            docker_options, ebs_volume, ls_device):
+            docker_options, ebs_volume, ls_device, verbose):
 
         if kube_type is None:
             kube_type_id = Kube.get_default_kube_type()
@@ -176,7 +198,7 @@ class NodeManager(Command):
                               ls_devices=ls_device, ebs_volume=ebs_volume)
             print(res.to_dict())
             if wait:
-                wait_for_nodes([hostname, ], timeout)
+                wait_for_nodes([hostname, ], timeout, verbose)
         except Exception as e:
             raise InvalidCommand("Node management error: {0}".format(e))
 
@@ -202,11 +224,13 @@ class WaitForNodes(Command):
     option_list = (
         Option('--nodes', dest='nodes', required=True),
         Option('--timeout', dest='timeout', required=False, type=int),
+        Option('--verbose', dest='verbose', required=False,
+               action='store_true'),
     )
 
-    def run(self, nodes, timeout):
+    def run(self, nodes, timeout, verbose):
         nodes_list = nodes.split(',')
-        wait_for_nodes(nodes_list, timeout)
+        wait_for_nodes(nodes_list, timeout, verbose)
 
 
 def generate_new_pass():

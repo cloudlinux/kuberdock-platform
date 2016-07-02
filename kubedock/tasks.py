@@ -1,5 +1,4 @@
 import os
-import ipaddress
 import json
 import re
 import socket
@@ -11,7 +10,6 @@ from datetime import datetime, timedelta
 import ipaddress
 import requests
 from sqlalchemy import event
-from celery.exceptions import SoftTimeLimitExceeded
 
 # requests .json() errors handling workaround.
 # requests module uses simplejson as json by default
@@ -50,6 +48,10 @@ from .kapi.node_utils import setup_lvm_to_aws_node, add_volume_to_node_ls
 from .kd_celery import celery, exclusive_task
 
 
+class NodeInstallException(Exception):
+    pass
+
+
 class AddNodeTask(celery.Task):
     abstract = True
 
@@ -59,18 +61,7 @@ class AddNodeTask(celery.Task):
             db_node = Node.get_by_id(node_id)
             db_node.state = 'troubles'
             db.session.commit()
-
-    def _handle_timeout_failure(self, ssh, channels, log_file, node_id):
-        err = 'Timeout during install. Installation has failed.'
-        send_logs(node_id, err, log_file, channels)
-        try:
-            _, o, _ = ssh.exec_command(
-                'rm /node_install.sh',
-                timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
-            o.channel.recv_exit_status()
-        except socket.timeout:
-            # Ignore timeout because we are reporting a failure anyway
-            pass
+            send_event('node:change', {'id': db_node.id})
 
 
 def get_pods_nodelay(pod_id=None, namespace=None):
@@ -159,7 +150,6 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
 @celery.task(bind=True, base=AddNodeTask)
 def add_new_node(self, node_id, with_testing=False, redeploy=False,
                  ls_devices=None, ebs_volume=None, deploy_options=None):
-
     db_node = Node.get_by_id(node_id)
     admin_rid = Role.query.filter_by(rolename="Admin").one().id
     channels = [i.id for i in SessionData.query.filter_by(role_id=admin_rid)]
@@ -172,26 +162,22 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
     token = ku.get_token() if ku else ''
     with open(NODE_INSTALL_LOG_FILE.format(host), 'w') as log_file:
         try:
-            current_master_kubernetes = subprocess.check_output(
+            current_master_kubernetes_rpm = subprocess.check_output(
                 ['rpm', '-q', 'kubernetes-master']).strip()
         except subprocess.CalledProcessError as e:
-            mes = 'Kuberdock needs correctly installed kubernetes' \
+            err = 'KuberDock has incorrectly installed kubernetes' \
                   ' on master. {0}'.format(e.output)
-            send_logs(node_id, mes, log_file, channels)
-            db_node.state = 'completed'
-            db.session.commit()
-            return mes
-        except OSError:  # no rpm
-            current_master_kubernetes = 'kubernetes-master'
-        current_master_kubernetes = current_master_kubernetes.replace(
+            raise NodeInstallException(err)
+
+        node_kubernetes_rpm = current_master_kubernetes_rpm.replace(
             'master', 'node')
 
         try:
             timezone = get_timezone()
         except OSError as e:
             timezone = 'UTC'
-            error_message = '{0}. Using "{1}"'.format(e, timezone)
-            send_logs(node_id, error_message, log_file, channels)
+            err = '{0}. Using "{1}"'.format(e, timezone)
+            raise NodeInstallException(err)
 
         if redeploy:
             send_logs(node_id, 'Redeploy.', log_file, channels)
@@ -201,19 +187,21 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
             send_logs(node_id, json.dumps(result, indent=2), log_file,
                       channels)
 
-        send_logs(node_id, 'Node kubernetes package will be'
-                           ' "{0}" (same version as master kubernetes)'
-                  .format(current_master_kubernetes), log_file, channels)
+        send_logs(
+            node_id,
+            'Node kubernetes package will be "{0}" (same version '
+            'as master kubernetes)'.format(node_kubernetes_rpm),
+            log_file, channels)
 
-        send_logs(node_id, 'Connecting to {0} with ssh with user "root" ...'
-                  .format(host), log_file, channels)
-        # If we want to got reed of color codes in output we have to use vt220
-        ssh, error_message = ssh_connect(host)
-        if error_message:
-            send_logs(node_id, error_message, log_file, channels)
-            db_node.state = 'completed'
-            db.session.commit()
-            return error_message
+        send_logs(
+            node_id,
+            'Connecting to {0} with ssh with user "root" ...'.format(host),
+            log_file, channels)
+
+        # If we want to get rid of color codes in output we have to use vt220
+        ssh, err = ssh_connect(host)
+        if err:
+            raise NodeInstallException(err)
 
         i, o, e = ssh.exec_command('ip -o -4 address show',
                                    timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
@@ -261,7 +249,8 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
             )
 
         sftp.close()
-        deploy_cmd = 'AWS={0} CUR_MASTER_KUBERNETES={1} MASTER_IP={2} '\
+
+        deploy_cmd = 'AWS={0} NODE_KUBERNETES={1} MASTER_IP={2} '\
                      'FLANNEL_IFACE={3} TZ={4} NODENAME={5} '\
                      'CPU_MULTIPLIER={6} MEMORY_MULTIPLIER={7} ' \
                      'NONFLOATING_PUBLIC_IPS={8} TOKEN="{9}" '\
@@ -269,7 +258,7 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
         if CEPH:
             deploy_cmd = 'CEPH_CONF={} '.format(
                 TEMP_CEPH_CONF_PATH) + deploy_cmd
-        # we pass ports and hosts to let the node know which hosts are allowed
+
         if with_testing:
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
 
@@ -281,16 +270,15 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
                 deploy_cmd = new_param + deploy_cmd
 
         s_time = time.time()
-        cmd = deploy_cmd.format(AWS,
-                                current_master_kubernetes,
+        cmd = deploy_cmd.format(AWS, node_kubernetes_rpm,
                                 MASTER_IP, node_interface, timezone,
                                 host, cpu_multiplier, memory_multiplier,
                                 current_app.config[
                                     'NONFLOATING_PUBLIC_IPS'], token)
+
         i, o, e = ssh.exec_command(cmd,
                                    timeout=NODE_INSTALL_TIMEOUT_SEC,
                                    get_pty=True)
-
         try:
             while not o.channel.exit_status_ready():
                 data = o.channel.recv(1024)
@@ -307,95 +295,82 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
                         raise socket.timeout()
                 time.sleep(0.2)
         except socket.timeout:
-            self._handle_timeout_failure(ssh, channels, log_file, node_id)
-            raise
+            raise NodeInstallException(
+                "Timeout hit during node install {} cmd".format(cmd))
 
-        try:
-            # this raises an exception in case of a lost ssh connection
-            # and node is in 'pending' state instead of 'troubles'
-            s = o.channel.recv_exit_status()
-            ssh.exec_command('rm /node_install.sh',
-                             timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
-        except Exception as e:
-            send_logs(node_id, 'Error: {}\n'.format(e), log_file)
+        ret_code = o.channel.recv_exit_status()
+        if ret_code != 0:
+            raise NodeInstallException(
+                "Node install failed cmd {} with retcode {}".format(
+                    cmd, ret_code))
 
-        if s != 0:
-            res = 'Installation script error. Exit status: {0}.'.format(s)
-            send_logs(node_id, res, log_file, channels)
+        ssh.exec_command('rm /node_install.sh',
+                         timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
+
+        if CEPH:
+            NodeFlag.save_flag(
+                node_id, NodeFlagNames.CEPH_INSTALLED, "true"
+            )
+            check_namespace_exists(node_ip=host)
         else:
-            if CEPH:
-                NodeFlag.save_flag(
-                    node_id, NodeFlagNames.CEPH_INSTALLED, "true"
-                )
-                check_namespace_exists(node_ip=host)
-            else:
-                send_logs(
-                    node_id, 'Setup persistent storage...', log_file, channels)
-                if not setup_lvm_to_node(ssh, node_id, ls_devices, ebs_volume,
-                                         channels):
-                    db_node.state = 'completed'
-                    db.session.commit()
-                    ssh.close()
-                    return 'Failed to setup LVM on node'
-            send_logs(node_id, 'Rebooting node...', log_file, channels)
-            ssh.exec_command(
-                'reboot', timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
-            # Here we can wait some time before add node to k8s to prevent
-            # "troubles" status if we know that reboot will take more then
-            # 1 minute. For now delay will be just 2 seconds (fastest reboot)
-            time.sleep(2)
-            err = add_node_to_k8s(host, kube_type, CEPH)
-            if err:
-                send_logs(node_id, 'ERROR adding node.', log_file, channels)
-                send_logs(node_id, err, log_file, channels)
-            else:
-                send_logs(node_id, 'Adding Node completed successful.',
-                          log_file, channels)
-                send_logs(node_id, '===================================',
-                          log_file, channels)
-                send_logs(node_id, '*** During reboot node may have status '
-                                   '"troubles" and it will be changed '
-                                   'automatically right after node reboot, '
-                                   'when kubelet.service posts live status to '
-                                   'master(if all works fine) and '
-                                   'it\'s usually takes few minutes ***',
-                          log_file, channels)
+            send_logs(node_id, 'Setup persistent storage...', log_file,
+                      channels)
+            setup_lvm_to_node(ssh, node_id, ls_devices, ebs_volume,
+                              channels)
+
+        send_logs(node_id, 'Rebooting node...', log_file, channels)
+        ssh.exec_command(
+            'reboot', timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
+
+        # Here we can wait some time before add node to k8s to prevent
+        # "troubles" status if we know that reboot will take more then
+        # 1 minute. For now delay will be just 2 seconds (fastest reboot)
+        time.sleep(2)
+
+        err = add_node_to_k8s(host, kube_type, CEPH)
+        if err:
+            raise NodeInstallException('ERROR adding node.', log_file, channels)
+
+        send_logs(node_id, 'Adding Node completed successful.',
+                  log_file, channels)
+        send_logs(node_id, '===================================',
+                  log_file, channels)
+        send_logs(node_id, '*** During reboot node may have status '
+                           '"troubles" and it will be changed '
+                           'automatically right after node reboot, '
+                           'when kubelet.service posts live status to '
+                           'master(if all works fine) and '
+                           'it\'s usually takes few minutes ***',
+                  log_file, channels)
+
         ssh.close()
+        
         db_node.state = 'completed'
         db.session.commit()
-        if s != 0:
-            # Until node has been rebooted we try to delay update
-            # status on front. So we update it only in error case
-
-            # send update in common channel for all admins
-            send_event('node:change', {'id': db_node.id})
+        send_event('node:change', {'id': db_node.id})
 
 
 def setup_lvm_to_node(ssh, node_id, devices=None, ebs_volume=None,
                       log_channels=None):
     if AWS:
-        ok, message = setup_lvm_to_aws_node(
+        res, message = setup_lvm_to_aws_node(
             ssh, node_id, EBS_volume_name=ebs_volume
         )
-        if not ok:
-            send_logs(node_id,
-                      'Failed to setup LVM to AWS node: {}'.format(message),
-                      log_channels)
-        return ok
-    else:
-        if not devices:
-            send_logs(
-                node_id,
-                'No devices defined to local storage. Skip LVM setup.',
-                log_channels)
-            return True
-        ok, message = add_volume_to_node_ls(ssh, node_id, devices)
-        if not ok:
-            send_logs(
-                node_id,
-                'Failed to setup LVM on the node: {}'.format(message),
-                log_channels)
-        return ok
+        if not res:
+            raise NodeInstallException(
+                'Failed to setup LVM to AWS node: {}'.format(message))
+        return
+
+    if not devices:
+        send_logs(node_id,
+                  'No devices defined to local storage. Skip LVM setup.',
+                  log_channels)
+        return
+
+    res, message = add_volume_to_node_ls(ssh, node_id, devices)
+    if not res:
+        raise NodeInstallException(
+            'Failed to setup LVM on the node: {}'.format(message))
 
 
 @celery.task()

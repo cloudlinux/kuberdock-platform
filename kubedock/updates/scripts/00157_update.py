@@ -1,10 +1,11 @@
-from fabric.operations import put, run
+from fabric.operations import put, run, local
 
 KD_SCRIPTS_PATH_SRC = '/var/opt/kuberdock/node_scripts/'
 KD_SCRIPTS_PATH = '/var/lib/kuberdock/scripts/'
 
 SSHD_CONFIG_CMD =\
 """\
+! grep -q 'kddockersshuser' /etc/ssh/sshd_config && \
 printf '\\nMatch group kddockersshuser
   PasswordAuthentication yes
   X11Forwarding no
@@ -18,12 +19,16 @@ KD_SSH_GC_PATH="/var/lib/kuberdock/scripts/kd-ssh-gc"
 KD_SSH_GC_LOCK="/var/run/kuberdock-ssh-gc.lock"
 KD_SSH_GC_CMD="flock -n $KD_SSH_GC_LOCK -c '$KD_SSH_GC_PATH;rm $KD_SSH_GC_LOCK'"
 KD_SSH_GC_CRON="@hourly  $KD_SSH_GC_CMD >/dev/null 2>&1"
+! (crontab -l 2>/dev/null) | grep -q "$KD_SSH_GC_CRON" && \
 (crontab -l 2>/dev/null; echo "$KD_SSH_GC_CRON")| crontab -
 """
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
-    pass
+    # AC-3728
+    upd.print_log('Disable unneeded dnsmasq...')
+    local('systemctl stop dnsmasq')
+    local('systemctl disable dnsmasq')
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
@@ -39,9 +44,11 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
 
     upd.print_log('Configure sshd and cron...')
     run('groupadd kddockersshuser')
-    run("echo -e '\\n%kddockersshuser ALL=(ALL) NOPASSWD: "
+    run("! grep -q 'kddockersshuser' /etc/sudoers && "
+        "echo -e '\\n%kddockersshuser ALL=(ALL) NOPASSWD: "
         "/var/lib/kuberdock/scripts/kd-docker-exec.sh' >> /etc/sudoers")
-    run("echo -e '\\nDefaults:%kddockersshuser !requiretty' >> /etc/sudoers")
+    run("! grep -q 'Defaults:%kddockersshuser' /etc/sudoers && "
+        "echo -e '\\nDefaults:%kddockersshuser !requiretty' >> /etc/sudoers")
     run(SSHD_CONFIG_CMD)
     run(ADD_CRON_CMD)
 

@@ -663,9 +663,19 @@ define([
         podWizardStepGeneral: function(options){
             if (!this.checkPermissions(['User', 'TrialUser']))
                 return;
-            this.podWizardBase(options).done(function(options, Views){
+            $.when(
+                this.podWizardBase(options),
+                App.getSystemSettingsCollection()
+            ).done(_.bind(function(base, settingsCollection){
+                var options = base[0], Views = base[1];
                 var containerModel = options.podModel.wizardState.container,
-                    view = new Views.WizardPortsSubView({model: containerModel});
+                    billingType = settingsCollection.byName('billing_type').get('value'),
+                    payg = App.userPackage.get('count_type') === 'payg',
+                    view = new Views.WizardPortsSubView({
+                        model: containerModel,
+                        hasBilling: billingType.toLowerCase() !== 'no billing',
+                        payg: payg,
+                    });
 
                 this.listenTo(view, 'step:envconf', this.podWizardStepEnv);
                 this.listenTo(view, 'step:getimage', this.podWizardStepImage);
@@ -674,7 +684,7 @@ define([
                 this.addOriginalImage(containerModel).done(function(){
                     options.layout.steps.show(view);
                 });
-            });
+            }, this));
         },
 
         podWizardStepEnv: function(options){

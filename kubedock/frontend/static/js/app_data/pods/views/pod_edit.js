@@ -269,11 +269,13 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         initialize: function(options) {
             this.pod = this.model.getPod();
+            this.payg = options.payg;
+            this.hasBilling = options.hasBilling;
         },
 
         templateHelpers: function(){
             return {
-                flow: this.model.getPod().wizardState.flow,
+                flow: this.pod.wizardState.flow,
             };
         },
 
@@ -289,7 +291,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         cancelEdit: function(){
-            var podID = this.model.getPod().editOf().id,
+            var podID = this.pod.editOf().id,
                 id = this.model.id;
             utils.modalDialog({
                 title: 'Cancel edit?',
@@ -309,16 +311,25 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         editEntirePod: function(evt){
             evt.stopPropagation();
             if (this.validateAndNormalize()){
-                this.model.getPod().wizardState.flow = 'EDIT_ENTIRE_POD';
-                this.model.getPod().wizardState.container = null;
-                App.navigate('pods/' + this.model.getPod().editOf().id + '/edit');
+                this.pod.wizardState.flow = 'EDIT_ENTIRE_POD';
+                this.pod.wizardState.container = null;
+                App.navigate('pods/' + this.pod.editOf().id + '/edit');
                 this.trigger('step:complete');
             }
         },
         saveChanges: function(evt){
             evt.stopPropagation();
-            if (this.validateAndNormalize())
-                this.trigger('pod:save_changes');
+            if (!this.validateAndNormalize())
+                return;
+            if (this.hasBilling && !this.payg){
+                this.pod.recalcInfo(App.userPackage);
+                this.pod.editOf().recalcInfo(App.userPackage);
+                if (this.pod.rawTotalPrice > this.pod.editOf().rawTotalPrice){
+                    this.trigger('step:complete');
+                    return;
+                }
+            }
+            this.trigger('pod:save_changes');
         },
 
         removeError: function(evt){
@@ -1135,7 +1146,11 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 restart_policy   : this.model.get('restartPolicy'),
                 pkg              : this.pkg,
                 hasBilling       : this.hasBilling,
-                persistentDrives : this.model.persistentDrives,
+                persistentDrives : _.chain(this.model.get('volumes'))
+                    .map(function(vol){
+                        return vol.persistentDisk && vol.persistentDisk.pdName
+                            && this.model.persistentDrives.findWhere({name: vol.persistentDisk.pdName});
+                    }, this).filter(_.identity).value(),
                 payg             : this.payg    // Pay-As-You-Go billing method
             };
         },
@@ -1208,7 +1223,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 else
                     Model.KubeType.noAvailableKubeTypes.notify();
                 return true;
-            } else if (this.model.get('kube_type') === undefined){
+            } else if (ensureSelected && this.model.get('kube_type') === undefined){
                 utils.notifyWindow('Please, select kube type.');
                 return true;
             }

@@ -475,7 +475,7 @@ define([
                         else
                             Model.KubeType.noAvailableKubeTypes.notify();
                         return true;
-                    } else if (model.get('kube_type') === undefined){
+                    } else if (ensureSelected && model.get('kube_type') === undefined){
                         utils.notifyWindow('Please, select kube type.');
                         return true;
                     }

@@ -957,7 +957,11 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 image_name_id    : this.model.get('lastAddedImageNameId'),
                 pkg              : this.pkg,
                 hasBilling       : this.hasBilling,
-                persistentDrives : this.model.persistentDrives,
+                persistentDrives : _.chain(this.model.get('volumes'))
+                    .map(function(vol){
+                        return vol.persistentDisk && vol.persistentDisk.pdName
+                            && this.model.persistentDrives.findWhere({name: vol.persistentDisk.pdName});
+                    }, this).filter(_.identity).value(),
                 payg             : this.payg    // Pay-As-You-Go billing method
             };
         },

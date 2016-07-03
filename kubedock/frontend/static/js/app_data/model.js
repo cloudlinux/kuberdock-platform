@@ -293,7 +293,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
         /**
          * Add to kubeTypes info about conflicts with pod's PDs.
-         * Also, if pod's kubeType conflicts with some of pod's PDs, change it.
+         * Also, if pod's kubeType conflicts with some of pod's PDs, reset it.
          */
         solveKubeTypeConflicts: function(){
             var kubeTypes = App.userPackage.getKubeTypes();
@@ -319,10 +319,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 function(kt){ return kt.get('available') && !kt.conflicts.length; }));
 
             if (!kubeTypes.get(this.get('kube_type'))){
-                var kubeType = kubeTypes.findWhere({is_default: true})
-                               || kubeTypes.at(0)
-                               || data.KubeType.noAvailableKubeTypes;
-                this.set('kube_type', kubeType.id);
+                if (!kubeTypes.length)
+                    this.set('kube_type', data.KubeType.noAvailableKubeTypes.id);
+                else
+                    this.unset('kube_type');  // no longer available
             }
         },
 

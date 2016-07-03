@@ -100,7 +100,7 @@
                            </tr>
                         </thead>
                         <tbody>
-                            <% _.each(persistentDrives.models, function(pd){ %>
+                            <% _.each(persistentDrives, function(pd){ %>
                                 <tr>
                                     <td><b><%- pd.get('name') %></b></td>
                                     <td><%- pd.get('size') %> GB</td>

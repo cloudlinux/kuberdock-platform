@@ -1092,7 +1092,7 @@ define([
                     layoutView.breadcrumb.show(breadcrumbsLayout);
                     breadcrumbsLayout.subnets.show(new Breadcrumbs.Text({text: 'IP Pool'}));
                     breadcrumbsLayout.controls.show(breadcrumbsControls);
-                    $.when(App.getIppoolMode(),App.getIPPoolCollection()).done(function(ipPoolMode, ippoolCollection){
+                    $.when(App.getIppoolMode(),App.getIPPoolCollection()).done(function(ipPoolMode,ippoolCollection){
                         ippoolCollection.ipPoolMode = ipPoolMode;
                         var view = new Views.SubnetsListView({ collection: ippoolCollection });
                         layoutView.main.show(view);

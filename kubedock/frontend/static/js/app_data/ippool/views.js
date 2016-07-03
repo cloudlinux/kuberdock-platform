@@ -1,10 +1,10 @@
 define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         'tpl!app_data/ippool/templates/subnets/empty.tpl',
-        'tpl!app_data/ippool/templates/subnets/list_item.tpl',
+        'tpl!app_data/ippool/templates/subnets/item.tpl',
         'tpl!app_data/ippool/templates/subnets/list.tpl',
 
-        'tpl!app_data/ippool/templates/subnet_ips/list_item.tpl',
+        'tpl!app_data/ippool/templates/subnet_ips/item.tpl',
         'tpl!app_data/ippool/templates/subnet_ips/list.tpl',
 
         'tpl!app_data/ippool/templates/ippool_create_subnetwork.tpl',

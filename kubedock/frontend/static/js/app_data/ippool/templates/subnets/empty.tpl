@@ -1,1 +1,1 @@
-<td colspan="4" class="network">Subnets aren't specified</td>
+<td colspan="4" class="text-center disabled-color-text">Subnets aren't specified</td>

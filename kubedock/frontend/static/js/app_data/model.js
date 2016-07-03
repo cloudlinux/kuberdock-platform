@@ -277,18 +277,22 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
 
         ableTo: function(command){
-            // 'unpaid', 'stopped', 'waiting', 'pending', 'running', 'failed', 'succeeded'
+            // 'unpaid', 'stopped', 'stopping', 'waiting', 'pending',
+            // 'preparing', 'running', 'failed', 'succeeded'
             var status = this.get('status');
             if (command === 'start')
                 return _.contains(['stopped'], status);
             if (command === 'redeploy')
-                return _.contains(['waiting', 'pending', 'running', 'failed', 'succeeded', 'preparing'], status);
+                return _.contains(['stopping', 'waiting', 'pending', 'running',
+                                   'failed', 'succeeded', 'preparing'], status);
             if (command === 'stop' || command === 'restart')
-                return _.contains(['waiting', 'pending', 'running', 'failed', 'succeeded', 'preparing'], status);
+                return _.contains(['stopping', 'waiting', 'pending', 'running',
+                                   'failed', 'succeeded', 'preparing'], status);
             if (command === 'pay-and-start')
                 return _.contains(['unpaid'], status);
             if (command === 'delete')
-                return _.contains(['unpaid', 'stopped', 'waiting', 'running', 'failed', 'succeeded'], status);
+                return _.contains(['unpaid', 'stopped', 'stopping', 'waiting',
+                                   'running', 'failed', 'succeeded'], status);
         },
 
         /**

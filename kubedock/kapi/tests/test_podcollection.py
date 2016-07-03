@@ -24,7 +24,6 @@ from ...rbac.models import Role
 global_patchers = [
     mock.patch.object(podcollection, 'current_app'),
     mock.patch.object(podcollection, 'license_valid'),
-    # mock.patch.object(helpers, 'current_app'),
 ]
 
 
@@ -107,7 +106,8 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         podcollection.KUBERDOCK_INTERNAL_USER when forced
         """
         db_pod = self.fixtures.pod(owner=self.internal_user)
-        pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id)
+        pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id,
+                       use_parents=(mock.Mock,))
         get_pod_config.return_value = None
 
         # Monkey-patched podcollection.PodCollection methods
@@ -117,6 +117,8 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         self.app.delete(pod.id, force=True)
 
         mock_free_pd.assert_called_once_with(pod.id)
+        pod.set_status.assert_called_once_with(
+            POD_STATUSES.deleting, send_update=True, force=True)
         drop_namespace.assert_called_once_with(pod.namespace)
         mark_pod_as_deleted.assert_called_once_with(pod.id)
 
@@ -136,7 +138,8 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         Makes sure _del not called on sid-less pods (i.e pure kubernetes pods)
         """
         db_pod = self.fixtures.pod(owner=self.user)
-        pod = fake_pod(owner=db_pod.owner, id=db_pod.id)
+        pod = fake_pod(owner=db_pod.owner, id=db_pod.id,
+                       use_parents=(mock.Mock,))
         get_pod_config.return_value = None
 
         # Monkey-patched podcollection.PodCollection methods
@@ -166,8 +169,7 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         """
         db_pod = self.fixtures.pod(owner=self.user)
         pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id,
-                       public_ip=True)
-        # pod = fake_pod(sid='s', public_ip=True)
+                       public_ip=True, use_parents=(mock.Mock,))
         get_pod_config_mock.return_value = 'fs'
 
         # Monkey-patched podcollection.PodCollection methods
@@ -190,7 +192,8 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
 
         remove_ip_mock.reset_mock()
         db_pod = self.fixtures.pod(owner=self.user)
-        pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id)
+        pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id,
+                       set_status=lambda *a, **kw: None)
         pc_get_by_id_mock.return_value = pod
         self.app.delete(pod.id)
         self.assertFalse(remove_ip_mock.called)
@@ -371,9 +374,11 @@ class TestPodCollection(DBTestCase, TestCaseMixin):
         self.pods = [{'id': 1, 'name': 'Unnamed-1',
                       'namespace': 'Unnamed-1-namespace-md5',
                       'owner': self.user, 'containers': [],
+                      'k8s_status': None,
                       'volumes': []},
-                     {'id': 2, 'name': 'Unnamed-2', 'namespace':
-                         'Unnamed-2-namespace-md5',
+                     {'id': 2, 'name': 'Unnamed-2',
+                      'namespace': 'Unnamed-2-namespace-md5',
+                      'k8s_status': None,
                       'owner': self.user, 'containers': [], 'volumes': []}]
 
         self.pods_output = copy.deepcopy(self.pods)
@@ -441,7 +446,6 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
             }]
         )
 
-    @mock.patch.object(podcollection, 'send_pod_status_update')
     @mock.patch.object(podcollection.helpers, 'replace_pod_config')
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection, 'run_service')
@@ -451,8 +455,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
     def test_pod_prepare_and_run_task(
             self, post_mock,
             raise_if_failure_mock, get_rc_mock, run_service_mock,
-            dbpod_mock, replace_pod_config_mock,
-            send_pod_status_update_mock):
+            dbpod_mock, replace_pod_config_mock):
         """
         Test first _start_pod in usual case
         :type post_: mock.Mock
@@ -476,10 +479,9 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         self.assertTrue(raise_if_failure_mock.called)
         replace_pod_config_mock.assert_called_once_with(
             self.test_pod, dbpod.get_dbconfig.return_value)
-        self.test_pod.set_status.assert_called_with(POD_STATUSES.pending)
+        self.test_pod.set_status.assert_called_with(
+            POD_STATUSES.pending, send_update=True)
         self.assertEqual(res, self.test_pod.as_dict.return_value)
-        send_pod_status_update_mock.assert_called_once_with(
-            POD_STATUSES.pending, dbpod, 'MODIFIED')
 
     @mock.patch.object(podcollection.helpers, 'set_pod_status')
     @mock.patch.object(podcollection, 'prepare_and_run_pod_task')
@@ -606,14 +608,12 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         get_nodes_mock.assert_called_with(kube_type=pod.kube_type)
         self.assertFalse(res)
 
-    @mock.patch.object(podcollection, 'send_pod_status_update')
     @mock.patch.object(podcollection, 'run_service')
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection, 'get_replicationcontroller')
     @mock.patch.object(podcollection.KubeQuery, 'post')
     def test_pod_prepare_and_run_task_second_start(
-            self, post_, mk_get_rc, dbpod_mock, run_service_mock,
-            send_pod_status_update_mock):
+            self, post_, mk_get_rc, dbpod_mock, run_service_mock):
         """
         Test second _start_pod in usual case
         :type post_: mock.Mock
@@ -639,10 +639,9 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         post_.assert_called_once_with(
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
             ns=self.test_pod.namespace)
-        self.test_pod.set_status.assert_called_with(POD_STATUSES.pending)
+        self.test_pod.set_status.assert_called_with(
+            POD_STATUSES.pending, send_update=True)
         self.assertEqual(res, self.test_pod.as_dict.return_value)
-        send_pod_status_update_mock.assert_called_once_with(
-            POD_STATUSES.pending, dbpod, 'MODIFIED')
 
     def test_needs_public_ip(self):
         test_conf = {
@@ -693,12 +692,15 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         # Actual call
         res = self.pod_collection._stop_pod(pod)
 
-        pod.set_status.assert_called_once_with(POD_STATUSES.stopped)
+        pod.set_status.assert_called_once_with(
+            POD_STATUSES.stopping, send_update=True)
         mk_scale_rc.assert_called_once_with((pod.id,))
 
         free_pd_mock.assert_called_once_with(pod.id)
 
-        self.assertEqual(pod.containers[0]['state'], POD_STATUSES.stopped)
+        # pod is not "stopped" yet, only "stopping",
+        # so containers are still "running"
+        self.assertEqual(pod.containers[0]['state'], POD_STATUSES.running)
         self.assertEqual(res, pod.as_dict.return_value)
 
     # TODO: "Pod is already stopped" test
@@ -1155,6 +1157,7 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
             pod.__dict__.update(data)
             # pod.name = data['name']
             pod.containers = []
+            pod.k8s_status = None
             generated_pods.append(pod)
             return pod
         pod_mock.side_effect = pod_init_mock
@@ -1196,6 +1199,7 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
                 'sid': pod.name,
                 'name': pod.name,
                 'namespace': pod.namespace,
+                'k8s_status': None,
                 'containers': []
             })
             for pod in pod_model_instances

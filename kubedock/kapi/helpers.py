@@ -3,13 +3,12 @@ import random
 import string
 
 import requests
-from flask import current_app
 
 from ..core import db
 from ..exceptions import APIError
 from ..pods.models import Pod
 from ..users.models import User
-from ..utils import get_api_url
+from ..utils import get_api_url, send_pod_status_update
 
 
 class KubeQuery(object):
@@ -201,11 +200,14 @@ def check_pod_name(name, owner=None):
                        status_code=409)
 
 
-def set_pod_status(pod_id, status):
-    p = db.session.query(Pod).get(pod_id)
-    if p.status != status:
-        p.status = status
+def set_pod_status(pod_id, status, send_update=False):
+    # TODO refactor to dbPod level + separate event send
+    db_pod = db.session.query(Pod).get(pod_id)
+    if db_pod.status != status:
+        db_pod.status = status
         db.session.commit()
+        if send_update:
+            send_pod_status_update(status, db_pod, 'MODIFIED')
 
 
 def mark_pod_as_deleted(pod_id):

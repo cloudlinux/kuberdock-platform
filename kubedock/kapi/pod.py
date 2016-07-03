@@ -48,10 +48,14 @@ class Pod(object):
     volumes -
         before self.compose_persistent() -- see volumes_public
         after -- volumes spec prepared for k8s
+    k8s_status - current status in k8s or None
+    db_status - current status in db or None
+    status - common status composed from k8s_status and db_status
     ...
 
     """
     def __init__(self, data=None):
+        self.k8s_status = None
         owner = None
         if data is not None:
             for c in data['containers']:
@@ -93,6 +97,7 @@ class Pod(object):
         pod.id = pod.labels.get('kuberdock-pod-uid')
 
         pod.status = status.get('phase', POD_STATUSES.pending).lower()
+        pod.k8s_status = pod.status
         pod.hostIP = status.get('hostIP')
 
         # TODO why we call this "pod.host" instead of "pod.nodeName" ? rename it
@@ -147,12 +152,6 @@ class Pod(object):
         # unneeded fields in API output
         hide_fields = ['node', 'labels', 'namespace', 'secrets', 'owner']
         data = vars(self).copy()
-
-        # Temporary hack to hide unsupported statuses in frontend.
-        # TODO: remove it when frontend will support additional status
-        # 'preparing'
-        if data.get('status') == POD_STATUSES.preparing:
-            data['status'] = POD_STATUSES.pending
 
         data['volumes'] = data.pop('volumes_public', [])
         for container in data.get('containers', ()):
@@ -453,9 +452,14 @@ class Pod(object):
                            'Try another name.'.format(self.name),
                            status_code=409, type='PodNameConflict')
 
-    def set_status(self, status):
+    def set_status(self, status, send_update=False, force=False):
         """Updates pod status in database"""
-        helpers.set_pod_status(self.id, status)
+        if self.status == POD_STATUSES.unpaid and not force:
+            # TODO: remove  status "unpaid", use separate field/flag,
+            # then remove this block
+            raise APIError('Not allowed to change "unpaid" status.',
+                           type='NotAllowedToChangeUnpaidStatus')
+        helpers.set_pod_status(self.id, status, send_update=send_update)
         self.status = status
 
     def __repr__(self):

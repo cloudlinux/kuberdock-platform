@@ -224,8 +224,7 @@ user_schema = {
 }
 
 
-args_list_schema = {'type': 'list', 'schema': {'type': 'string',
-                                               'empty': False}}
+args_list_schema = {'type': 'list', 'schema': {'type': 'string'}}
 env_schema = {'type': 'list', 'schema': {'type': 'dict', 'schema': {
     'name': {
         'type': 'string',

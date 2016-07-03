@@ -31,10 +31,8 @@ from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
-from ..utils import POD_STATUSES, atomic, update_dict, send_event_to_user
-from ..utils import (
-    send_pod_status_update,
-    retry)
+from ..utils import (POD_STATUSES, atomic, update_dict, send_event_to_user,
+                     send_event_to_role, retry)
 from .node_utils import get_external_node_ip
 from ..nodes.models import Node
 
@@ -329,9 +327,6 @@ class PodCollection(object):
             'resize': self._resize_replicas,
             'change_config': self._change_pod_config,
             'set': self._set_entry,  # sets DB data, not pod config one
-            # 'container_start': self._container_start,
-            # 'container_stop': self._container_stop,
-            # 'container_delete': self._container_delete,
         }
         if command in dispatcher:
             return dispatcher[command](pod, data)
@@ -342,7 +337,7 @@ class PodCollection(object):
         if pod.owner.username == KUBERDOCK_INTERNAL_USER and not force:
             podutils.raise_('Service pod cannot be removed', 400)
 
-        DBPod.query.get(pod_id).mark_as_deleting()
+        pod.set_status(POD_STATUSES.deleting, send_update=True, force=True)
 
         PersistentDisk.free(pod.id)
         # we remove service also manually
@@ -576,18 +571,6 @@ class PodCollection(object):
             if (db_pod.id, namespace) not in self._collection:
                 pod = Pod(db_pod_config)
                 pod.id = db_pod.id
-                status = getattr(db_pod, 'status', POD_STATUSES.stopped)
-                # If the pod not exists in k8s, then status 'pending' in
-                # DB means that pod actually is stopped.
-                # 'pending' status in database is assigned before the pod will
-                # be run in k8s. After sending pod to k8s it's state in DB
-                # will not be updated. So when we have 'pending' pod in DB and
-                # the pod is absent in k8s it means the pod is stopped.
-                # It is a workaround for all complicated workflow of merging
-                # pods from DB and k8s and must be completely refactored.
-                if status == POD_STATUSES.pending:
-                    status = POD_STATUSES.stopped
-                pod.status = status
                 pod._forge_dockers()
                 self._collection[pod.id, namespace] = pod
             else:
@@ -614,11 +597,16 @@ class PodCollection(object):
             pod.set_owner(db_pod.owner)
             pod.template_id = template_id
             pod.kube_type = db_pod.kube_id
+            pod.db_status = db_pod.status
 
-            if db_pod.status == 'deleting':
-                pod.status = 'deleting'
-            elif not hasattr(pod, 'status'):
-                pod.status = POD_STATUSES.stopped
+            if pod.db_status in (POD_STATUSES.preparing,
+                                 POD_STATUSES.stopping,
+                                 POD_STATUSES.deleting):
+                # if we have one of those statuses in DB,
+                # use it as common status
+                pod.status = pod.db_status
+            else:  # otherwise status in k8s is more important
+                pod.status = pod.k8s_status or pod.db_status
 
             for container in pod.containers:
                 if container['state'] == 'terminated':
@@ -673,17 +661,17 @@ class PodCollection(object):
         # were not released, then it will free them. If PD's already free, then
         # this call will do nothing.
         PersistentDisk.free(pod.id)
-        if pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
+        if pod.status == POD_STATUSES.stopping and pod.k8s_status is None:
+            pod.set_status(POD_STATUSES.stopped, send_update=True)
+            return pod.as_dict()
+        elif pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
             if hasattr(pod, 'sid'):
+                pod.set_status(POD_STATUSES.stopping, send_update=True)
                 if block:
                     scale_replicationcontroller(pod.id)
                     wait_pod_status(pod.id, POD_STATUSES.stopped)
                 else:
                     scale_replicationcontroller_task.apply_async((pod.id,))
-                for container in pod.containers:
-                    # TODO: create CONTAINER_STATUSES
-                    container['state'] = POD_STATUSES.stopped
-                pod.set_status(POD_STATUSES.stopped)
                 return pod.as_dict()
         elif raise_:
             raise APIError('Pod is already stopped')
@@ -827,32 +815,6 @@ class PodCollection(object):
                 exit_status)
             raise APIError(DIRECT_SSH_ERROR)
 
-    # def _do_container_action(self, action, data):
-    #     host = data.get('nodeName')
-    #     if not host:
-    #         return
-    #     rv = {}
-    #     containers = data.get('containers', '').split(',')
-    #     for container in containers:
-    #         command = 'docker {0} {1}'.format(action, container)
-    #         status, message = run_ssh_command(host, command)
-    #         if status != 0:
-    #             podutils.raise_('Docker error: {0} ({1}).'.format(
-    #               message, status))
-    #         if action in ('start', 'stop'):
-    #             send_event('pull_pod_state', message)
-    #         rv[container] = message or 'OK'
-    #     return rv
-
-    # def _container_start(self, pod, data):
-    #     self._do_container_action('start', data)
-
-    # def _container_stop(self, pod, data):
-    #     self._do_container_action('stop', data)
-
-    # def _container_delete(self, pod, data):
-    #     self._do_container_action('rm', data)
-
     @staticmethod
     def _is_related(labels, selector):
         """
@@ -913,6 +875,8 @@ def wait_pod_status(pod_id, wait_status, interval=1, max_retries=10):
     """Keeps polling k8s api until pod status becomes as given"""
 
     def check_status():
+        # we need a fresh status
+        db.session.expire(DBPod.query.get(pod_id), ['status'])
         pod = PodCollection()._get_by_id(pod_id)
         if pod.status == wait_status:
             return pod
@@ -953,7 +917,13 @@ def finish_redeploy(self, pod_id, data, start=True):
     db_pod = DBPod.query.get(pod_id)
     pod_collection = PodCollection(db_pod.owner)
     pod = pod_collection._get_by_id(pod_id)
-    pod_collection._stop_pod(pod, block=True)
+    try:
+        pod_collection._stop_pod(pod, block=True)
+    except APIError as e:
+        send_event_to_user('notify:error', {'message': e.message},
+                           db_pod.owner_id)
+        send_event_to_role('notify:error', {'message': e.message}, 'Admin')
+        return
 
     command_options = data.get('commandOptions') or {}
     if command_options.get('wipeOut'):
@@ -1106,11 +1076,9 @@ def prepare_and_run_pod(pod):
         if isinstance(err, APIError):
             send_event_to_user('notify:error', {'message': err.message},
                                db_pod.owner_id)
-        pod.set_status(POD_STATUSES.stopped)
-        send_pod_status_update(pod.status, db_pod, 'DELETED')
+        pod.set_status(POD_STATUSES.stopped, send_update=True)
         raise
-    pod.set_status(POD_STATUSES.pending)
-    send_pod_status_update(POD_STATUSES.pending, db_pod, 'MODIFIED')
+    pod.set_status(POD_STATUSES.pending, send_update=True)
     return pod.as_dict()
 
 

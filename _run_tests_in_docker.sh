@@ -12,7 +12,7 @@ $compose run --rm appcloud /bin/bash -c \
  source /venv/bin/activate;
  pip install -r requirements.txt -r requirements-dev.txt;
  echo '######################## Run unit tests ########################';
- nosetests -v kubedock kuberdock-cli"
+ py.test -v kubedock kuberdock-cli"
 ret=$?
 
 $compose down --rmi local -v

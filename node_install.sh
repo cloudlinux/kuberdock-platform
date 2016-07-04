@@ -404,8 +404,15 @@ echo "server ${MASTER_IP} iburst minpoll 3 maxpoll 4" >> /etc/ntp.conf
 echo "tinker panic 0" >> /etc/ntp.conf
 systemctl daemon-reload
 systemctl stop ntpd
+
+for _retry in $(seq 5); do
+    echo "Attempt $_retry to run ntpd -gq.." && \
+    ntpd -gq && \
+    break || sleep 30;
+done
 ntpd -gq
 check_status
+
 systemctl start ntpd
 check_status
 systemctl reenable ntpd

@@ -89,9 +89,10 @@ class TestNodeUtils(DBTestCase):
         system_settings_mock.get_by_name = self.get_by_name
         res = node_utils.get_nodes_collection()
         get_all_nodes_mock.assert_called_once_with()
-        fix_missed_nodes_mock.assert_called_once_with(
-            [node1, node2, node3],
-            {x['metadata']['name']: x for x in get_all_nodes_mock.return_value})
+        # AC-3349 Fix. Not needed due to fix in 'get_nodes_collection'.
+        # fix_missed_nodes_mock.assert_called_once_with(
+        #     [node1, node2, node3],
+        #     {x['metadata']['name']: x for x in get_all_nodes_mock.return_value})
         self.assertEqual(len(res), 3)
         self.assertEqual(
             res[0],

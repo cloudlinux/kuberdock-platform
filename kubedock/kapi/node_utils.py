@@ -39,7 +39,9 @@ def get_nodes_collection(kube_type=None):
         nodes = Node.query.filter_by(kube_id=kube_type)
 
     kub_hosts = {x['metadata']['name']: x for x in get_all_nodes()}
-    nodes = _fix_missed_nodes(nodes, kub_hosts)
+    # AC-3349 Fix. The side effect described above was fixed in some previous
+    # patches and this part is not needed any more.
+    # nodes = _fix_missed_nodes(nodes, kub_hosts)
     nodes_list = []
     for node in nodes:
         node_status, node_reason = get_status(

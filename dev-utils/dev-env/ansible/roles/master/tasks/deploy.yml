@@ -1,0 +1,31 @@
+---
+
+- name: Deploy
+  shell: echo "{{ ansible_default_ipv4.address }}" | KD_OWNER_EMAIL=vagrant@dummy.com bash deploy.sh {{ add_testing_repo }} {{ non_floating_ips_mode }} {{ ceph_params|default("") }} chdir=/vagrant
+  no_log: True
+  register: deploy_result
+  ignore_errors: True
+  tags:
+      - deploy
+
+- name: Fetching deploy log
+  fetch: src={{ deploy_log_file }} dest={{ deploy_log_file_dst }} fail_on_missing=yes flat=yes
+  when: deploy_result|failed
+  tags:
+      - deploy
+
+- set_fact:
+    deploy_log: "{{ lookup('file', deploy_log_file_dst).split('\n') }}"
+  when: deploy_result|failed
+  tags:
+      - deploy
+
+- debug: var=deploy_log
+  when: deploy_result|failed
+  tags:
+    - deploy
+
+- fail: msg="=== Deploy failed ==="
+  when: deploy_result|failed
+  tags:
+    - deploy

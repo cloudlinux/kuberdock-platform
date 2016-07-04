@@ -22,31 +22,4 @@
 - name: Set enforce for SELinux
   command: setenforce 1
 
-- set_fact:
-    ntypes: "{{ ntypes | default({}) | combine( {item.split('=')[0]: item.split('=')[1]}) }}"
-  with_items: "{{ (node_types | default('')).split(',') }}"
-
-- set_fact:
-    kube_type: "--kube-type={{ ntypes[ansible_hostname] }}"
-  when:
-      ansible_hostname in ntypes
-
-- name: Add node to master
-  shell: python "{{ src_prefix }}/manage.py" add_node --hostname {{ ansible_hostname }} {{ kube_type | default("") }} --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}"
-  delegate_facts: True
-  delegate_to: "{{ groups['master'][0] }}"
-  tags:
-    - deploy
-
-- set_fact: _hostname={{ hostvars[item].ansible_hostname }}
-  with_items: "{{ groups['node'] }}"
-  register: _hostnames
-
-- set_fact: hostnames="{{ _hostnames.results|map(attribute='ansible_facts._hostname')|list|join(',')}}"
-
-- name: Wait for nodes
-  run_once: true
-  shell: python "{{ src_prefix }}/manage.py" wait-for-nodes --nodes "{{ hostnames }}" --timeout 600
-  delegate_facts: True
-  delegate_to: "{{ groups['master'][0] }}"
-  changed_when: False
+- include: deploy.yml

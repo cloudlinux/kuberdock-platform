@@ -1,0 +1,4 @@
+---
+
+node_deploy_log_file: /var/log/kuberdock/node-install-log-{{ ansible_hostname }}.log
+node_deploy_log_file_dst: /tmp/kd_node_{{ ansible_hostname }}_deploy.log

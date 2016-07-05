@@ -244,7 +244,7 @@ define([
                         breadcrumbsLayout.pod.show(new Breadcrumbs.Link(
                             {text: pod.get('name'), href: '#pods/' + pod.get('id')}));
                         breadcrumbsLayout.container.show(new Breadcrumbs.Text(
-                            {text: model.get('image') + ' (' + model.get('name') + ')'}));
+                            {text: model.get('image')}));
 
                         show(Views.WizardLogsSubView);
                     });

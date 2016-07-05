@@ -55,8 +55,10 @@ class POD_STATUSES:
     pending = 'pending'
     succeeded = 'succeeded'
     failed = 'failed'
-    unpaid = 'unpaid'
+    unpaid = 'unpaid'  # TODO make this dbpod flag, not status
     preparing = 'preparing'
+    stopping = 'stopping'
+    deleting = 'deleting'
 
 
 def get_channel_key(conn, key, size=100):

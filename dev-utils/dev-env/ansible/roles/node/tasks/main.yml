@@ -22,7 +22,6 @@
 - name: Set enforce for SELinux
   command: setenforce 1
 
-
 - name: Add node to master
   shell: python "{{ src_prefix }}/manage.py" add_node --hostname {{ ansible_hostname }} --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}"
   delegate_facts: True
@@ -38,8 +37,7 @@
 
 - name: Wait for nodes
   run_once: true
-  shell: python "{{ src_prefix }}/manage.py" wait-for-nodes --nodes "{{ hostnames }}" --timeout 2400
+  shell: python "{{ src_prefix }}/manage.py" wait-for-nodes --nodes "{{ hostnames }}" --timeout 600
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
   changed_when: False
-

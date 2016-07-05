@@ -265,6 +265,7 @@ yum_wrapper()
     else
         yum -d 1 --enablerepo=kube,kube-testing $@
     fi
+    check_status
 }
 
 
@@ -397,16 +398,23 @@ yum erase -y chrony
 # http://docs.openstack.org/juno/install-guide/install/yum/content/ch_basic_environment.html#basics-ntp
 # Decrease poll interval to be more closer to master time
 yum_wrapper install -y ntp
-check_status
 sed -i "/^server /d" /etc/ntp.conf
 sed -i "/^tinker /d" /etc/ntp.conf
 echo "server ${MASTER_IP} iburst minpoll 3 maxpoll 4" >> /etc/ntp.conf
 echo "tinker panic 0" >> /etc/ntp.conf
 systemctl daemon-reload
 systemctl stop ntpd
+
+for _retry in $(seq 5); do
+    echo "Attempt $_retry to run ntpd -gq.." && \
+    ntpd -gq && \
+    break || sleep 30;
+done
 ntpd -gq
 check_status
+
 systemctl start ntpd
+check_status
 systemctl reenable ntpd
 check_status
 ntpq -p
@@ -417,13 +425,10 @@ fi
 
 # 2. install components
 echo "Installing kubernetes..."
-yum_wrapper -y install ${CUR_MASTER_KUBERNETES}
-check_status
+yum_wrapper -y install ${NODE_KUBERNETES}
 yum_wrapper -y install docker-selinux-1.8.2-10.el7
 yum_wrapper -y install docker-1.8.2-10.el7
-check_status
 yum_wrapper -y install flannel-0.5.3
-check_status
 # TODO maybe not needed, make as dependency for kuberdock-node package
 yum_wrapper -y install python-requests
 yum_wrapper -y install python-ipaddress
@@ -431,26 +436,18 @@ yum_wrapper -y install ipset
 # tuned - daemon to set proper performance profile.
 # It is installed by default, but ensure it is here
 yum_wrapper -y install tuned
-check_status
 # kdtools - statically linked binaries to provide ssh access into containers
 yum_wrapper -y install kdtools
-check_status
 
 # 3. If amazon instance install aws-cli, epel and jq
 if [ "$AWS" = True ];then
     yum_wrapper -y install awscli
-    check_status
     # we need to install command-line json parser from epel
     rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-    check_status
     yum_wrapper -y install epel-release
-    check_status
     yum_wrapper -y install jq
-    check_status
     yum_wrapper -y install python2-botocore
-    check_status
     yum_wrapper -y install python2-boto
-    check_status
 fi
 
 
@@ -497,9 +494,13 @@ check_status
 
 # For direct ssh feature
 groupadd kddockersshuser
+# Config patching should be idempotent
+! grep -q 'kddockersshuser' /etc/sudoers && \
 echo -e '\n%kddockersshuser ALL=(ALL) NOPASSWD: /var/lib/kuberdock/scripts/kd-docker-exec.sh' >> /etc/sudoers
+! grep -q 'Defaults:%kddockersshuser' /etc/sudoers && \
 echo -e '\nDefaults:%kddockersshuser !requiretty' >> /etc/sudoers
 
+! grep -q 'kddockersshuser' /etc/ssh/sshd_config && \
 printf '\nMatch group kddockersshuser
   PasswordAuthentication yes
   X11Forwarding no
@@ -755,13 +756,9 @@ if [ "$check_kernel" == "True" ]
 then
     echo "Current kernel is $current_kernel, upgrading..."
     yum_wrapper -y install --disablerepo=kube kernel
-    check_status
     yum_wrapper -y install --disablerepo=kube kernel-tools
-    check_status
     yum_wrapper -y install --disablerepo=kube kernel-tools-libs
-    check_status
     yum_wrapper -y install --disablerepo=kube kernel-headers
-    check_status
     yum_wrapper -y install --disablerepo=kube kernel-devel
 fi
 
@@ -778,7 +775,6 @@ else
     # via LVM.
     # Python bindings to manage LVM
     yum_wrapper -y install lvm2-python-libs
-    check_status
 fi
 
 

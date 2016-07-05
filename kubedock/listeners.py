@@ -21,12 +21,13 @@ from .settings import (
 from .utils import (get_api_url, unregistered_pod_warning,
                     send_event_to_role, send_event_to_user,
                     pod_without_id_warning, k8s_json_object_hook,
-                    send_pod_status_update)
+                    send_pod_status_update, POD_STATUSES)
 from .kapi.usage import update_states
 from .kapi.pstorage import get_storage_class
 from .kapi.podcollection import PodCollection, set_public_address
 from .kapi.lbpoll import LoadBalanceService
 from .kapi.pstorage import get_storage_class_by_volume_info, LocalStorage
+from .kapi.helpers import set_pod_status
 from . import tasks
 
 
@@ -95,7 +96,10 @@ def process_pods_event(data, app, event_time=None, live=True):
 
     # if live, we need to send events to frontend
     if live:
-        send_pod_status_update(get_pod_state(pod), db_pod, event_type)
+        if db_pod.status == POD_STATUSES.stopping and event_type == 'DELETED':
+            set_pod_status(pod_id, POD_STATUSES.stopped, send_update=True)
+        else:
+            send_pod_status_update(get_pod_state(pod), db_pod, event_type)
 
     host = pod['spec'].get('nodeName')
 

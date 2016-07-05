@@ -138,8 +138,9 @@ define([
         preparePostDescription: function(val){
             if (val == null)
                 return;
-            val = val.replace(/(%PUBLIC_ADDRESS%)/gi,
-                              this.model.get('public_ip') || '...');
+            val = val.replace(
+                /(%PUBLIC_ADDRESS%)/gi,
+                this.model.get('public_ip') || this.model.get('public_aws') || '...');
             var parser = new BBCodeParser(BBCodeParser.defaultTags());
             return parser.parseString(val);
         },

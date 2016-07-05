@@ -13,7 +13,7 @@ from sqlalchemy.dialects import postgresql
 from ..core import db
 from ..kapi import pd_utils
 from ..models_mixin import BaseModelMixin
-from ..settings import DOCKER_IMG_CACHE_TIMEOUT
+from ..settings import DOCKER_IMG_CACHE_TIMEOUT, KUBERDOCK_INTERNAL_USER
 from ..users.models import User
 
 
@@ -50,7 +50,8 @@ class Pod(BaseModelMixin, db.Model):
 
     @property
     def kubes_detailed(self):
-        return {c.get('name'): c.get('kubes', 1) for c in self.get_dbconfig('containers')}
+        return {c.get('name'): c.get('kubes', 1)
+                for c in self.get_dbconfig('containers')}
 
     def get_limits(self, container=None):
         if container is None:
@@ -89,8 +90,47 @@ class Pod(BaseModelMixin, db.Model):
         return 'default'
 
     @property
+    def has_local_storage(self):
+        """
+        Check pod config for local storage
+
+        :returns: True or False
+        :rtype: bool
+        """
+        volumes = self.get_dbconfig('volumes', [])
+        if len(volumes) > 0:
+            return ('annotation' in volumes[0] and
+                    'localStorage' in volumes[0]['annotation'])
+        return False
+
+    @property
     def is_default_ns(self):
         return self.namespace == 'default'
+
+    @property
+    def is_service_pod(self):
+        return (self.owner.username == KUBERDOCK_INTERNAL_USER)
+
+    @property
+    def pinned_node(self):
+        """
+        Check if pod is pinned to a node (local storage or non-floating IP).
+
+        :returns: node hostname or None
+        :rtype: str or None
+        """
+        hostname = self.get_dbconfig('node', None)
+        if self.has_local_storage or self.has_nonfloating_public_ip:
+            # TODO: The initial idea was to return nodes.models.Node instance
+            # here. However this caused a problem with circular(cyclic)
+            # imports.
+            return hostname
+        return None
+
+    @property
+    def has_nonfloating_public_ip(self):
+        return (current_app.config['NONFLOATING_PUBLIC_IPS'] and
+                self.ip is not None)
 
     def delete(self):
         self.name += '__' + ''.join(random.sample(string.lowercase + string.digits, 8))
@@ -107,12 +147,6 @@ class Pod(BaseModelMixin, db.Model):
         if save:
             self.save()
         return self
-
-    def mark_as_deleting(self, commit=True):
-        self.status = 'deleting'
-        if commit:
-            db.session.add(self)
-            db.session.commit()
 
     def to_dict(self):
         return dict(

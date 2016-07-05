@@ -13,6 +13,8 @@ from ..utils import atomic
 from ..validation import ValidationError, V, ippool_schema
 from ..nodes.models import Node
 from ..kapi.node import Node as K8SNode, NodeException
+from .lbpoll import LoadBalanceService
+from ..settings import AWS, KUBERDOCK_INTERNAL_USER
 
 
 class IpAddrPool(object):
@@ -25,6 +27,23 @@ class IpAddrPool(object):
         :param page: optional page to restrict list of hosts in each selected
             network
         """
+        if AWS:
+            all_pods = Pod.query.filter(Pod.status != 'deleted').all()
+            pods_data = [(i.id, i.name, i.owner.username) for i in all_pods
+                         if i.owner.username != KUBERDOCK_INTERNAL_USER]
+            lbs = LoadBalanceService()
+            names = lbs.get_dns_by_pods([i[0] for i in pods_data])
+            allocation = [(names[i[0]], i[1], 'busy', i[2]) for i in pods_data
+                          if i[0] in names]
+            return {'allocation': allocation,
+                    'free_hosts': [],
+                    'blocked_list': [],
+                    'id': None,
+                    'network': None,
+                    'page': page or 1,
+                    'pages': 1,
+                    'ipv6': False,
+                    'node': None}
         if net is None:
             return [p.to_dict(page=page) for p in IPPool.all()]
         rv = IPPool.filter_by(network=net).first()
@@ -157,6 +176,13 @@ class IpAddrPool(object):
     def get_user_addresses(self, user):
         pods = {pod.id: pod.name
                 for pod in user.pods if pod.status != 'deleted'}
+
+        # AWS requires different processing because of ELB instead of IPs
+        if AWS:
+            elb_dict = LoadBalanceService().get_dns_by_user(user.id)
+            return [dict(id=v, pod=pods.get(k), pod_id=k)
+                    for k, v in elb_dict.items()]
+
         return [{
             'id': str(ipaddress.ip_address(i.ip_address)),
             'pod': pods[i.pod_id],
@@ -175,7 +201,8 @@ class IpAddrPool(object):
     def _delete_network(self, network, pool):
         free_ip_count = len(pool.free_hosts())
         IPPool.query.filter_by(network=network).delete()
-        if pool.node is not None and current_app.config['NONFLOATING_PUBLIC_IPS']:
+        if (pool.node is not None and
+                current_app.config['NONFLOATING_PUBLIC_IPS']):
             node = K8SNode(hostname=pool.node.hostname)
             node.increment_free_public_ip_count(-free_ip_count)
 
@@ -246,5 +273,8 @@ class IpAddrPool(object):
 
     @staticmethod
     def get_mode():
-        return ('non-floating' if current_app.config['NONFLOATING_PUBLIC_IPS']
-                else 'floating')
+        if AWS:
+            return 'aws'
+        if current_app.config['NONFLOATING_PUBLIC_IPS']:
+            return 'non-floating'
+        return 'floating'

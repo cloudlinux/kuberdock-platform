@@ -395,18 +395,22 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
 
         ableTo: function(command){
-            // 'unpaid', 'stopped', 'waiting', 'pending', 'running', 'failed', 'succeeded'
+            // 'unpaid', 'stopped', 'stopping', 'waiting', 'pending',
+            // 'preparing', 'running', 'failed', 'succeeded'
             var status = this.get('status');
             if (command === 'start')
                 return _.contains(['stopped'], status);
             if (command === 'redeploy')
-                return _.contains(['waiting', 'pending', 'running', 'failed', 'succeeded', 'preparing'], status);
+                return _.contains(['stopping', 'waiting', 'pending', 'running',
+                                   'failed', 'succeeded', 'preparing'], status);
             if (command === 'stop' || command === 'restart')
-                return _.contains(['waiting', 'pending', 'running', 'failed', 'succeeded', 'preparing'], status);
+                return _.contains(['stopping', 'waiting', 'pending', 'running',
+                                   'failed', 'succeeded', 'preparing'], status);
             if (command === 'pay-and-start')
                 return _.contains(['unpaid'], status);
             if (command === 'delete')
-                return _.contains(['unpaid', 'stopped', 'waiting', 'running', 'failed', 'succeeded'], status);
+                return _.contains(['unpaid', 'stopped', 'stopping', 'waiting',
+                                   'running', 'failed', 'succeeded'], status);
         },
 
         /**
@@ -1121,8 +1125,11 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         getIPs: function(){
             var subnet = this,
                 getRawIPs = function(){
-                    return _.map(subnet.get('allocation'),
-                                 _.partial(_.object, ['ip', 'podName', 'status']));
+                    var allocation = subnet.get('allocation'),
+                        names = allocation.length === 3
+                            ? ['ip', 'podName', 'status']
+                            : ['ip', 'podName', 'status', 'userName'];
+                    return _.map(allocation, _.partial(_.object, names));
                 },
                 IPsCollection = new data.IPsCollection(getRawIPs());
             IPsCollection.listenTo(this, 'change:allocation', function(){

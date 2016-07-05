@@ -939,11 +939,6 @@ do_and_log ifup br0
 
 
 
-do_and_log systemctl reenable dnsmasq
-do_and_log systemctl restart dnsmasq
-
-
-
 #14 Create k8s database
 # Only after influxdb is fully loaded
 influx -execute "create user root with password 'root' with all privileges"

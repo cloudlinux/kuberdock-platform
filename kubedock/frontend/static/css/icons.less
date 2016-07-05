@@ -86,14 +86,11 @@
     .icon{
         min-height: 21px;
         padding-left: 25px;
-        position: relative;
         &:before{
             top: 0;
             left: 6px;
             bottom: 0;
-            content: '';
             margin: auto;
-            position: absolute;
         }
         &.hover{
             &:hover,
@@ -104,96 +101,7 @@
                 text-decoration: none;
             }
         }
-        > span{
-            display: inline-block;
-            vertical-align: middle;
-        }
-        &.status{
-          text-transform: capitalize;
-        }
-        /* start statuses */
-        &.ok,
-        &.none,
-        &.active,
-        &.locked,
-        &.failed,
-        &.unknown,
-        &.running,
-        &.stopped,
-        &.expired,
-        &.troubles,
-        &.succeeded,
-        &.suspended,
-        &.terminated,
-        &.termination{
-            &:before{
-                .border-radius(50%);
-                width: 12px;
-                height: 12px;
-            }
-        }
-        &.ok,
-        &.active,
-        &.running{
-            &:before{
-                background-color: #97cd75;
-            }
-        }
-        &.none,
-        &.failed,
-        &.unknown,
-        &.succeeded,
-        &.terminated,
-        &.termination{
-            &:before{
-                background-color: #bac1c7;
-            }
-        }
-        &.locked,
-        &.stopped,
-        &.troubles{
-            &:before{
-                background-color: #f5544d;
-            }
-        }
-        &.expired,
-        &.suspended{
-            &:before{
-                background-color: #ffb704;
-            }
-        }
-        &.unpaid{
-            &:before{
-                left: 6px;
-                content: '$';
-                margin: auto;
-                height: 17px;
-                color: #F4544C;
-                font-size: 19px;
-                line-height: 17px;
-            }
-        }
-        &.pending,
-        &.waiting,
-        &.deletion,
-        &.preparing{
-            padding-left: 35px;
-            position: relative;
-            min-height: 20.8px;
-            &:before{
-                .border-radius(0);
-                top: 0;
-                left: 0;
-                bottom: 0;
-                width: 22px;
-                content: '';
-                margin: auto;
-                height: 22px;
-                position: absolute;
-                background: url('../img/pending.gif') 0 0 no-repeat;
-            }
-        }
-        /* end statuses */
+        .statuses();
     }
 }
 /* sidebar icons*/
@@ -233,6 +141,10 @@
 
 // table icons
 table{
+    /* statusses */
+    span{
+        .statuses();
+    }
     .deleteNode,
     .deleteUser,
     .remove-env,

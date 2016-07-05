@@ -1,0 +1,98 @@
+.statuses{
+    &.ok,
+    &.free,
+    &.busy,
+    &.none,
+    &.active,
+    &.locked,
+    &.failed,
+    &.unpaid,
+    &.unknown,
+    &.running,
+    &.stopped,
+    &.expired,
+    &.pending,
+    &.blocked,
+    &.waiting,
+    &.stopping,
+    &.troubles,
+    &.deletion,
+    &.succeeded,
+    &.suspended,
+    &.preparing,
+    &.terminated,
+    &.termination{
+        position: relative;
+        padding-left: 22px;
+        text-transform: capitalize;
+        &:before{
+            .border-radius(50%);
+            left: 2px;
+            width: 12px;
+            bottom: 2px;
+            content: '';
+            height: 12px;
+            position: absolute;
+        }
+    }
+    &.ok,
+    &.free,
+    &.active,
+    &.running{
+        &:before{
+            background-color: #97cd75;
+        }
+    }
+    &.none,
+    &.failed,
+    &.unknown,
+    &.succeeded,
+    &.terminated,
+    &.termination{
+        &:before{
+            background-color: #bac1c7;
+        }
+    }
+    &.locked,
+    &.blocked,
+    &.stopped,
+    &.troubles{
+        &:before{
+            background-color: #f5544d;
+        }
+    }
+    &.busy,
+    &.expired,
+    &.suspended{
+        &:before{
+            background-color: #ffb704;
+        }
+    }
+    &.pending,
+    &.waiting,
+    &.preparing{
+        &:before{
+            .animation(fadeinout, 1s, linear infinite);
+            background-color: #97cd75;
+        }
+    }
+    &.deletion,
+    &.stopping{
+        &:before{
+            .animation(fadeinout, 1s, linear infinite);
+            background-color: #f5544d;
+        }
+    }
+    &.unpaid{
+        &:before{
+            .border-radius(0);
+            left: 6px;
+            content: '$';
+            margin: auto;
+            height: 17px;
+            color: #F4544C;
+            font-size: 19px;
+            line-height: 17px;
+        }
+    }
+}

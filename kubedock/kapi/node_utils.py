@@ -16,8 +16,11 @@ from ..settings import (
     NODE_SCRIPT_DIR, NODE_LVM_MANAGE_SCRIPT)
 
 
-def get_nodes_collection():
+def get_nodes_collection(kube_type=None):
     """Returns information for all known nodes.
+
+    :param kube_type: If provided, nodes are filtered by this kube type.
+    :type kube_type: int
 
     Side effect: If some node exists in kubernetes, but is missed in DB, then
     it will be created in DB (see documentation for _fix_missed_nodes function)
@@ -30,7 +33,11 @@ def get_nodes_collection():
         'resources' info about node resources, will be retrieved from k8s
     :return: list of dicts
     """
-    nodes = Node.get_all()
+    if kube_type is None:
+        nodes = Node.get_all()
+    else:
+        nodes = Node.query.filter_by(kube_id=kube_type)
+
     kub_hosts = {x['metadata']['name']: x for x in get_all_nodes()}
     nodes = _fix_missed_nodes(nodes, kub_hosts)
     nodes_list = []
@@ -111,17 +118,17 @@ def get_status(node, k8s_node=None):
     if k8s_node is not None:
         if _node_is_active(k8s_node):
             if node.state == 'deletion':
-                node_status = 'deletion'
-                node_reason = 'Node marked as being deleting'
+                res_node_status = 'deletion'
+                node_status_message = 'Node marked as being deleting'
             else:
-                node_status = 'running'
-                node_reason = ''
+                res_node_status = 'running'
+                node_status_message = ''
         else:
-            node_status = 'troubles'
+            res_node_status = 'troubles'
             condition = _get_node_condition(k8s_node)
             if condition:
                 if condition['status'] == 'Unknown':
-                    node_reason = (
+                    node_status_message = (
                         'Node state is Unknown\n'
                         'K8s message: {0}\n'
                         'Possible reasons:\n'
@@ -132,7 +139,7 @@ def get_status(node, k8s_node=None):
                         )
                     )
                 else:
-                    node_reason = (
+                    node_status_message = (
                         'Node state is {0}\n'
                         'Reason: "{1}"\n'
                         'Last transition time: {2}\n'
@@ -149,8 +156,8 @@ def get_status(node, k8s_node=None):
                 # in 1m after adding to cluster k8s add "Unknown" condition
                 # to it with reason "NodeStatusNeverUpdated" that we display
                 # correctly as "troubles" with some possible reasons
-                node_status = 'pending'
-                node_reason = (
+                res_node_status = 'pending'
+                node_status_message = (
                     'Node is a member of KuberDock cluster but '
                     'does not provide information about its condition\n'
                     'Possible reasons:\n'
@@ -159,22 +166,28 @@ def get_status(node, k8s_node=None):
                 )
     else:
         if node.state == 'pending':
-            node_status = 'pending'
-            node_reason = (
+            res_node_status = 'pending'
+            node_status_message = (
                 'Node is not a member of KuberDock cluster\n'
                 'Possible reasons:\n'
                 'Node is in installation progress\n'
             )
         else:
-            node_status = 'troubles'
-            node_reason = (
+            res_node_status = 'troubles'
+            node_status_message = (
                 'Node is not a member of KuberDock cluster\n'
                 'Possible reasons:\n'
                 '1) error during node installation\n'
                 '2) no connection between node and master '
                 '(firewall, node reboot, etc.)\n'
             )
-    return node_status, node_reason
+
+    return res_node_status, node_status_message
+
+
+def node_status_running(k8snode):
+    k8snode_info = get_one_node(k8snode.id)
+    return k8snode_info['status'] == 'running'
 
 
 def add_node_to_db(node):

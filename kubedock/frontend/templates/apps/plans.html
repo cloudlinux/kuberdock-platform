@@ -619,6 +619,7 @@
                             // splice returns deleted param as ['key=value']
                             // let's split and return the last part
                             pars.splice(i, 1)[0].split('=')[1]
+                                .replace(/\+/g, '%20')
                         );
                     }
                 }

@@ -3,14 +3,14 @@
         <table class="table" id="publicIPs-table">
             <thead>
                 <tr>
-                    <th class="col-md-6">Public IP</th>
+                    <th class="col-md-6"><%- resourceName %></th>
                     <th class="col-md-6">Pod Name</th>
                 </tr>
             </thead>
             <tbody></tbody>
         </table>
         <div class="buttons clearfix">
-            <div class="description pull-left">* Unused Public IP billed as usual</div>
+            <div class="description pull-left">* Unused <%- resourceName %>s billed as usual</div>
         </div>
     </div>
 </div>

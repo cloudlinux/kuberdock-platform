@@ -944,8 +944,11 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         getIPs: function(){
             var subnet = this,
                 getRawIPs = function(){
-                    return _.map(subnet.get('allocation'),
-                                 _.partial(_.object, ['ip', 'podName', 'status']));
+                    var allocation = subnet.get('allocation'),
+                        names = allocation.length === 3
+                            ? ['ip', 'podName', 'status']
+                            : ['ip', 'podName', 'status', 'userName'];
+                    return _.map(allocation, _.partial(_.object, names));
                 },
                 IPsCollection = new data.IPsCollection(getRawIPs());
             IPsCollection.listenTo(this, 'change:allocation', function(){

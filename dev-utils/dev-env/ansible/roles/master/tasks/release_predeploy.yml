@@ -1,0 +1,11 @@
+---
+
+- get_url: url=http://repo.cloudlinux.com/kuberdock/deploy.sh dest=/vagrant/deploy.sh
+
+# TODO: AC-3861 Take release RPMs for kcli and kdctl for "release" build
+- name: Copy additional rpm packages
+  copy: src="{{ build_dir }}/{{ item }}.rpm" dest=/vagrant
+  with_items:
+    - kcli
+    - kdctl
+

@@ -53,10 +53,12 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # default: nothing
 #export KD_GIT_REF=kuberdock@1.1-1
 
-# Do additional tricks like build rpm from source, stop wsgi on master, 
-# run tmux on master and so on
-# default: 0
-#export KD_DEV_INSTALL=1
+# Type of cluster:
+#  - dev
+#  - qa
+#  - release
+# default: qa
+#export KD_INSTALL_TYPE=dev
 
 # All dotfiles will be copied from this folder before deploy
 # default: nothing
@@ -94,4 +96,4 @@ export VAGRANT_CWD=dev-utils/dev-env/
 
 # Uncomment to excpicitly define kube type for each mode
 # default: nothing
-#KD_NODE_TYPES='node1=standard,node2=tiny'
+#export KD_NODE_TYPES='node1=standard,node2=tiny'

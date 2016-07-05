@@ -54,7 +54,7 @@ class KDIntegrationTestAPI(object):
             "KD_ONE_USERNAME",
             "KD_ONE_PASSWORD",
             "KD_ONE_PUB_IPS",
-            "KD_DEV_INSTALL",
+            "KD_INSTALL_TYPE",
             "KD_CEPH",
             "KD_CEPH_USER",
             "KD_CEPH_CONFIG",
@@ -71,7 +71,7 @@ class KDIntegrationTestAPI(object):
         kd_env = {e: os.environ.get(e) for e in env_vars if os.environ.get(e)}
         kd_env = merge_dicts(defaults, kd_env, override_envs)
 
-        if kd_env.get('KD_DEV_INSTALL'):
+        if kd_env.get('KD_INSTALL_TYPE') == 'dev':
             self.kuberdock_root = '/vagrant'
         else:
             self.kuberdock_root = '/var/opt/kuberdock'

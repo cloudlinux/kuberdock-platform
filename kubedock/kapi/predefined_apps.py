@@ -135,7 +135,6 @@ def check_kuberdock_section(filled_template):
     if len([plan for plan in plans if plan.get('recommended')]) != 1:
         error('Exactly one appPackage must be recommended.')
 
-
     package_id = yml['kuberdock'].get('packageID')
     if package_id is None:
         package = Package.get_default()
@@ -233,7 +232,6 @@ def preprocess(template, raise_=True):
     # replace all escaped $$ with $ and all $fields$ with UIDs
     template = FIELD_PARSER.sub(replace, template)
 
-
     if raise_:
         # check for $VAR$ without full definition ($VAR|default:...$)
         for field in fields.itervalues():
@@ -316,7 +314,6 @@ def apply_package(target, pkg):
             kuberdock['kube_type'] = pod_plan.get('kubeType')
         elif kuberdock.get('kube_type') is None:
             kuberdock['kube_type'] = Kube.get_default_kube().id
-
 
         kubes_by_container = {c['name']: c.get('kubes')
                               for c in pod_plan.get('containers') or []}

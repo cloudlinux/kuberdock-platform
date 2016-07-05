@@ -28,7 +28,6 @@ class Node(object):
     K8S_CONFLICT_CODE = 409
     K8S_SUCCESS_CODE = 200
 
-
     def __init__(self, hostname, kube_type=None):
         self.hostname, self.kube_type = hostname, kube_type
         self._k8s_data = None

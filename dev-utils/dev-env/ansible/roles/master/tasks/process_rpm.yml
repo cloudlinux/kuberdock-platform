@@ -1,0 +1,22 @@
+---
+
+- find: paths=/vagrant/ patterns="{{ item }}*.rpm"
+  register: _rpm_exist
+  with_items: "{{ rpms_to_check }}"
+  tags:
+      - rpm_packages
+
+- set_fact:
+    result: "{{ result | default({}) | combine( {item.item: item}) }}"
+  with_items: "{{ _rpm_exist.results }}"
+  no_log: True
+
+- fail: msg="There is not any {{ item }}*.rpm file is not found."
+  when: (result.{{ item }}.matched <= 0)
+  with_items: "{{ rpms_to_check }}"
+  tags:
+      - rpm_packages
+      - deploy
+
+- name: Unpack deploy.sh
+  command: bash /vagrant/dev-utils/get_rpm_deploy_script.sh

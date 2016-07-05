@@ -4,6 +4,9 @@
   hosts: all
   become: yes
   any_errors_fatal: true
+  pre_tasks:
+      - debug: msg="Build directory {{ build_dir }}"
+      - debug: msg="Install type {{ install_type }}"
   roles:
       - common
 
@@ -24,7 +27,6 @@
 
 - hosts: master
   tasks:
-
     - name: Wait for async tasks
       async_status:
         jid: "{{ item.ansible_job_id }}"

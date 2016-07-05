@@ -52,7 +52,6 @@ class TestNodeEventListeners(DBTestCase):
         listeners.process_nodes_event(self._data, app)
         self.assertTrue(_t.called, "On node state change delayed task is expected to be called")
 
-
     def test_event_has_non_first_node_down_status(self, _ns, _t, _r, _s):
         app = mock.MagicMock()
         redis = mock.MagicMock()

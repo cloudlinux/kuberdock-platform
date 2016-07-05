@@ -1,0 +1,17 @@
+---
+
+- find: paths={{ build_dir }} patterns="{{ item }}*.rpm"
+  become: False
+  delegate_to: localhost
+  register: "_rpm_exist"
+  with_items: "{{ rpms_to_check }}"
+
+- set_fact:
+    result: "{{ result | default({}) | combine( {item.item: item}) }}"
+  with_items: "{{ _rpm_exist.results }}"
+  no_log: True
+
+- name: Check existing packages
+  fail: msg="You have extra {{ item }} RPM package in a repo, it is only allowed to have '{{ item }}.rpm'. Please remove an extra RPM and restart from scratch."
+  when: "result.{{ item }}.matched == 1 and (result.{{ item }}.files[0].path|basename) != '{{ item }}.rpm'"
+  with_items: "{{ rpms_to_check }}"

@@ -16,17 +16,12 @@
 - include: dev_predeploy.yml
   when: is_dev_install
 
-- find: paths=/vagrant/ patterns="kuberdock*.rpm"
-  register: rpm_exist
-  tags:
-      - deploy
+- include: qa_predeploy.yml
+  when: is_qa_install
 
-- fail: msg="There is not any kuberdock*.rpm files found."
-  when: rpm_exist.matched <= 0
+- include: release_predeploy.yml
+  when: is_release_install
 
-- name: Unpack deploy.sh
-  command: bash /vagrant/dev-utils/unpack-rpm.sh
-  when: deploy_extracted is not defined
 
 - name: Cleanup
   shell: echo "yes" | bash /vagrant/deploy.sh --cleanup
@@ -43,6 +38,12 @@
 
 - include: dev_postdeploy.yml
   when: is_dev_install
+
+- include: qa_postdeploy.yml
+  when: is_qa_install
+
+- include: release_postdeploy.yml
+  when: is_release_install
 
 - include: license.yml
   when: license_path is defined and license_path

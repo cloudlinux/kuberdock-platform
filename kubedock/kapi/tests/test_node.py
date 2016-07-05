@@ -16,7 +16,6 @@ class TestNode(DBTestCase):
         self.stubs.node_info_in_k8s_api(self.node.hostname)
         current_app.config['NONFLOATING_PUBLIC_IPS'] = True
 
-
     @responses.activate
     def test_public_ip_counter_update_sends_correct_request_to_api(self):
         self.stubs.node_info_update_in_k8s_api(self.node.hostname)

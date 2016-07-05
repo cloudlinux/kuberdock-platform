@@ -19,7 +19,8 @@
     &.deletion,
     &.succeeded,
     &.suspended,
-    &.preparing,
+    &.deploying,
+    &.preparing, // TODO remove preparing
     &.terminated,
     &.termination{
         position: relative;
@@ -73,7 +74,8 @@
     }
     &.pending,
     &.waiting,
-    &.preparing{
+    &.deploying,
+    &.preparing{ // TODO remove preparing
         &:before{
             .animation(fadeinout, 1s, linear infinite);
             background-color: #97cd75;

@@ -14,7 +14,11 @@
     </div>
 </div>
 <div class="status-line">
-    <span class="icon <%- status %>">Status: <%- status %></span>
+    <% if(status === 'preparing') { %>
+        <span class="icon deploying">Status: Deploying</span>
+    <% } else { %>
+        <span class="icon <%- status %>">Status: <%- status %></span>
+    <% } %>
     <% if (graphs) { %>
         <a class="list-btn" href="#pods/<%- id %>"><span>Data</span></a>
     <% } else { %>

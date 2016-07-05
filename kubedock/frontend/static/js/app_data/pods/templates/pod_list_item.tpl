@@ -21,7 +21,11 @@
     <% if (status === 'deleting') { %>
         <span class="pending">pending</span>
     <% } else if (status) { %>
-        <span class="<%- status %>"><%- status %></span>
+        <% if(status === 'preparing') { %>
+            <span class="deploying">deploying</span>
+        <% } else { %>
+            <span class="<%- status %>"><%- status %></span>
+        <% } %>
     <% } else { %>
         <span class="stopped">stopped</span>
     <% } %>

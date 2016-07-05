@@ -238,3 +238,19 @@
     90%  { .opacity(0); .transform(scale3d(0, 0, 0)); }
     100% { .opacity(1); .transform(scale3d(1, 1, 1)); }
 }
+
+
+/* fadeInOut */
+@-moz-keyframes fadeinout{
+    0%,100% { .opacity(0.5);}
+    50% { .opacity(1); }
+}
+@-webkit-keyframes fadeinout {
+    0%,100% { .opacity(0.5);}
+    50% { .opacity(1); }
+}
+
+@keyframes fadeinout {
+    0%,100% { .opacity(0.5);}
+    50% { .opacity(1); }
+}

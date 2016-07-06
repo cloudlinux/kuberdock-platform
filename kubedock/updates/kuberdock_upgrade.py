@@ -309,7 +309,7 @@ def do_cycle_updates(with_testing=False):
     last = get_applied_updates()
     if last:
         # Start from last failed update
-        to_apply = to_apply[to_apply.index(last[-1])+1:]
+        to_apply = to_apply[to_apply.index(last[-1]) + 1:]
     if not to_apply:
         helpers.restart_service(settings.KUBERDOCK_SERVICE)
         helpers.set_maintenance(False)
@@ -526,15 +526,15 @@ def concat_updates(first_update=None, last_update=None, new_update=None):
     if not last_update:
         last_update = updates[-1]
     if not new_update:
-        new_update = "%05d_update.py" % (int(updates[-1][:5])+1)
+        new_update = "%05d_update.py" % (int(updates[-1][:5]) + 1)
     new_update_file = os.path.join(settings.UPDATES_PATH, new_update)
     with open(new_update_file, 'w') as newf:
-        sb = updates[updates.index(first_update):updates.index(last_update)+1]
+        sb = updates[updates.index(first_update):updates.index(last_update) + 1]
         for update in sb:
             update_file = os.path.join(settings.UPDATES_PATH, update)
             with open(update_file) as f:
                 newf.write("# {update}{sep}".format(
-                    update=update, sep=2*os.linesep))
+                    update=update, sep=2 * os.linesep))
                 newf.write(f.read())
             os.remove(update_file)
             print "remove: {}".format(update)

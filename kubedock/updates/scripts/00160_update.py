@@ -2,6 +2,7 @@ from abc import ABCMeta
 from time import sleep
 
 import requests
+import ConfigParser
 from contextlib2 import suppress
 from fabric.operations import put, run, local
 
@@ -22,6 +23,7 @@ from kubedock.users import User
 from kubedock.utils import POD_STATUSES
 from kubedock.validation import check_internal_pod_data
 from node_network_plugin import PLUGIN_PATH
+from kubedock.settings import KUBERDOCK_SETTINGS_FILE
 
 
 class _Update(object):
@@ -526,6 +528,20 @@ class _U157(_Update):
 
         run('systemctl restart sshd.service')
 
+class _U162(_Update):
+    @classmethod
+    def upgrade(cls, upd, with_testing):
+        # AC-3371
+        if with_testing:
+            cp = ConfigParser.ConfigParser()
+            # Make option names case-sensitive
+            cp.optionxform = str
+            if cp.read(KUBERDOCK_SETTINGS_FILE) and cp.has_section('main'):
+                upd.print_log('Enabling testing repo...')
+                cp.set('main', 'WITH_TESTING', 'yes')
+                with open(KUBERDOCK_SETTINGS_FILE, 'wb') as configfile:
+                    cp.write(configfile)
+
 
 updates = [
     _PreU,
@@ -537,6 +553,7 @@ updates = [
     _U152,
     _U156,
     _U157,
+    _U162,
     _PostU
 ]
 

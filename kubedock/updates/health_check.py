@@ -109,7 +109,8 @@ def get_disk_usage(local=True):
     if local:
         rv = subprocess.check_output(['df', '--output=source,pcent,target'])
     else:
-        rv = run("df --output=source,pcent,target", quiet=True, timeout=SSH_TIMEOUT)
+        rv = run("df --output=source,pcent,target", quiet=True,
+                 timeout=SSH_TIMEOUT)
     lines = rv.splitlines()[1:]
     r = re.compile('((?!tmpfs|cdrom|SEPID).)*$')
     lines = filter(r.match, lines)

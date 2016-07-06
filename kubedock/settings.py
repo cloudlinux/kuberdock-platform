@@ -240,6 +240,7 @@ NODE_CEPH_AWARE_KUBERDOCK_LABEL = 'kuberdock-ceph-enabled'
 ETCD_REGISTERED_HOSTS = 'http://127.0.0.1:4001/' \
                         'v2/keys/kuberdock/network/plugin/registered_hosts'
 NONFLOATING_PUBLIC_IPS = False
+WITH_TESTING = False
 
 # Import hoster settings in update case
 
@@ -267,6 +268,8 @@ if cp.read(KUBERDOCK_SETTINGS_FILE) and cp.has_section('main'):
             'main', 'NONFLOATING_PUBLIC_IPS')
     if cp.has_option('main', 'SECRET_KEY'):
         SECRET_KEY = cp.get('main', 'SECRET_KEY')
+    if cp.has_option('main', 'WITH_TESTING'):
+        WITH_TESTING = cp.getboolean('main', 'WITH_TESTING')
 
 
 # Import local settings
@@ -305,10 +308,3 @@ except ImportError:
 
 if not CEPH:
     CELERYBEAT_SCHEDULE.pop('unmap-temp-mapped-drives', None)
-
-# Check if testing repo is enabled
-WITH_TESTING = False
-try:
-    from .deploy_settings import *  # noqa
-except ImportError:
-    pass

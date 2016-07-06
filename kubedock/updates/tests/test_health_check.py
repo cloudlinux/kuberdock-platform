@@ -5,6 +5,7 @@ import subprocess
 from kubedock.updates import health_check
 from kubedock.kapi import node_utils
 
+
 class TestHealthCheck(unittest.TestCase):
 
     @mock.patch.object(health_check, 'check_nodes')
@@ -111,7 +112,7 @@ class TestHealthCheck(unittest.TestCase):
         /dev/rbd1      8% /var/lib/kubelet/plugins/kubernetes.io/rbd/rbd/136.243.221.231-image-joomla_www_xvptye29__SEPID__4"""
         mock_check_output.return_value = df_output
         usage = health_check.get_disk_usage()
-        self.assertEqual(usage,[['/dev/sda3', '13%'], ['/dev/sda1', '34%']])
+        self.assertEqual(usage, [['/dev/sda3', '13%'], ['/dev/sda1', '34%']])
 
     @mock.patch.object(health_check, 'get_nodes_collection')
     @mock.patch.object(health_check, 'get_node_state')
@@ -122,7 +123,8 @@ class TestHealthCheck(unittest.TestCase):
             'disk': True,
             'running': True
         }
-        mock_node_utils.return_value = [{'hostname': 'node1'}, {'hostname': 'node2'}]
+        mock_node_utils.return_value = [{'hostname': 'node1'},
+                                        {'hostname': 'node2'}]
         nodes_state = health_check.get_nodes_state()
         self.assertEquals(len(nodes_state), 2)
         self.assertEquals(nodes_state['node1'], nodes_state['node2'])
@@ -135,11 +137,10 @@ class TestHealthCheck(unittest.TestCase):
         self.assertEquals(services_state['etcd'], services_state['ntpd'])
         self.assertEquals(services_state['etcd'], True)
 
-
     @mock.patch.object(subprocess, 'check_call')
     def test_get_service_state(self, mock_check_call):
         state = health_check.get_service_state('ntpd')
         self.assertTrue(state)
-        mock_check_call.side_effect = subprocess.CalledProcessError(1,'')
+        mock_check_call.side_effect = subprocess.CalledProcessError(1, '')
         state = health_check.get_service_state('ntpd')
         self.assertFalse(state)

@@ -116,7 +116,7 @@ class PodCollection(object):
 
         return params, secrets
 
-    def add(self, params, skip_check=False):  # TODO: celery
+    def add(self, params, skip_check=False, reuse_pv=True):  # TODO: celery
         params, secrets = self._preprocess_new_pod(
             params, skip_check=skip_check)
 
@@ -139,7 +139,7 @@ class PodCollection(object):
         # a single db transaction, i.e. if anything goes wrong - rollback.
         with atomic():
             # create PD models in db and change volumes schema in config
-            pod.compose_persistent()
+            pod.compose_persistent(reuse_pv=reuse_pv)
             set_public_ip = self.needs_public_ip(params)
             db_pod = self._save_pod(pod)
             if set_public_ip:

@@ -100,7 +100,7 @@ def get_dockerfile_data():
 
     secrets = None
     if pod_id:
-        pod_collection = PodCollection(KubeUtils._get_current_user())
+        pod_collection = PodCollection(KubeUtils.get_current_user())
         pod = pod_collection._get_by_id(pod_id)
         containers = pod.containers
         containers += (pod.edited_config or {}).get('containers') or []

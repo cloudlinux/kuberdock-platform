@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-
 import abc
 import time
 import argparse
@@ -34,7 +33,7 @@ ETCD_DATA = '/var/lib/etcd/default.etcd/member/'
 KNOWN_TOKENS = '/etc/kubernetes/known_tokens.csv'
 SSH_KEY = '/var/lib/nginx/.ssh/id_rsa'
 ETCD_PKI = '/etc/pki/etcd/'
-LICENSE='/var/opt/kuberdock/.license'
+LICENSE = '/var/opt/kuberdock/.license'
 
 
 class BackupError(Exception):
@@ -286,7 +285,7 @@ def do_backup(backup_dir, callback, skip_errors, **kwargs):
             if not skip_errors:
                 raise
 
-    result = os.path.join(backup_dir, timestamp+".zip")
+    result = os.path.join(backup_dir, timestamp + ".zip")
     with zipfile.ZipFile(result, 'w', zipfile.ZIP_DEFLATED) as zipf:
         zipdir(backup_dst, zipf)
 

@@ -15,6 +15,15 @@ def _get_response_message(response):
         return response.text
 
 
+def _raise(response_message):
+    if isinstance(response_message, dict):
+        raise APIError(response_message.get('data'),
+                       response_message.get('type'),
+                       response_message.get('details'))
+    else:
+        raise APIError(response_message)
+
+
 class ClientBase(object):
     endpoint = '/'
 
@@ -58,7 +67,7 @@ class Transport(object):
         if response.ok:
             return response_message
         else:
-            raise APIError(response_message)
+            _raise(response_message)
 
     def get(self, url, params=None):
         return self.request('GET', url, params=params)
@@ -92,8 +101,8 @@ class RequestsLogger(object):
             self.end = _do_nothing
 
     def log_curl_request(self, request):
-        self.logger.debug('#################### Request ####################\n')
-        curl = ['curl -i -X %s' % request.method]
+        self.logger.debug('#################### Request ####################')
+        curl = ['curl -i -L -X %s' % request.method]
 
         for (key, value) in request.headers.items():
             header = '-H \'%s: %s\'' % self._process_header(key, value)
@@ -111,18 +120,18 @@ class RequestsLogger(object):
         if request.body:
             curl.append('-d \'%s\'' % request.body)
 
-        curl.append(request.url)
+        curl.append('"%s"' % request.url)
         self.logger.debug(' '.join(curl))
 
     def log_http_response(self, resp):
-        self.logger.debug('#################### Response ###################\n')
+        self.logger.debug('#################### Response ###################')
         status = (resp.raw.version / 10.0, resp.status_code, resp.reason)
         dump = ['\nHTTP/%.1f %s %s' % status]
         dump.extend(['%s: %s' % (k, v) for k, v in resp.headers.items()])
         dump.append('')
         dump.extend([resp.text, ''])
         self.logger.debug('\n'.join(dump))
-        self.logger.debug('###################### End ######################\n')
+        self.logger.debug('###################### End ######################')
 
     @staticmethod
     def _process_header(name, value):

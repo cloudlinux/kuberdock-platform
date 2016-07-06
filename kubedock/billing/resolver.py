@@ -140,7 +140,7 @@ class Billing(object):
                 if key == 'kdServer':
                     _data['kdServer'] = self.master_url
                 elif key == 'client_id':
-                    current_user = KubeUtils._get_current_user()
+                    current_user = KubeUtils.get_current_user()
                     _data['client_id'] = getattr(
                         current_user, 'clientid', None)
             else:

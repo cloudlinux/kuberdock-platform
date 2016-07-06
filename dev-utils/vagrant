@@ -32,11 +32,15 @@ KD_DEPLOY_SKIP
 KD_RETRY_FROM_LAST_FAIL
 KD_DEPLOY_DEBUG
 ANSIBLE_LOG_PATH
+VAGRANT_DOTFILE_PATH
 "
 
 py_get_env_args="import sys, os;
 print '\n'.join(['%s=%s' % (k,os.environ.get(k)) for k in sys.argv[1:] if os.environ.get(k)])"
 env_cluster_settings=$(python -c "$py_get_env_args" $pass_env)
+
+VAGRANT_HOME=${VAGRANT_HOME:-"$HOME/.vagrant.d"}
+VAGRANT_DOTFILE_PATH=${VAGRANT_DOTFILE_PATH:-".vagrant"} # this is relative to Vagrantfile
 
 SSH_KEY=${KD_ONE_PRIVATE_KEY:-"$HOME/.ssh/id_rsa"}
 DOT_FILES=${KD_DOT_FILES:-"$HOME"}
@@ -70,8 +74,9 @@ if [ -n "$HOOK" ]
     env_hook=""
 fi
 
+mkdir -p dev-utils/dev-env/$VAGRANT_DOTFILE_PATH/
 # Env have to be passed through file due to possible special chars in vars.
-docker_env=dev-utils/.docker.env
+docker_env=dev-utils/dev-env/$VAGRANT_DOTFILE_PATH/.docker.env
 # Order matters - env_cluster_settings partially overriden below.
 echo "$env_cluster_settings" > $docker_env
 echo "KD_ONE_PRIVATE_KEY=/root/id_rsa" >> $docker_env

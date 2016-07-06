@@ -28,7 +28,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
     @maintenance_protected
     @check_permission('create', 'predefined_apps')
     def post(self):
-        user = self._get_current_user()
+        user = self.get_current_user()
         params = self._get_params()
         name = params.get('name')
         origin = params.get('origin')
@@ -50,7 +50,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
     @maintenance_protected
     @check_permission('edit', 'predefined_apps')
     def put(self, app_id):
-        user = self._get_current_user()
+        user = self.get_current_user()
         params = self._get_params()
         name = params.get('name')
         template = params.get('template')
@@ -63,7 +63,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
     @maintenance_protected
     @check_permission('delete', 'predefined_apps')
     def delete(self, app_id):
-        user = self._get_current_user()
+        user = self.get_current_user()
         return kapi_apps.PredefinedApps(user).delete(app_id)
 
 register_api(predefined_apps, PredefinedAppsAPI, 'predefined_apps', '/',

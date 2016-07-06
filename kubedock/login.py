@@ -1,13 +1,11 @@
-from flask import (current_app, g, request, abort, has_request_context,
+from flask import (current_app, g, request, has_request_context,
                    _request_ctx_stack, session)
 from functools import wraps
-from itsdangerous import (TimedJSONWebSignatureSerializer as Serializer,
-                          BadSignature, SignatureExpired)
 from hashlib import md5
 from uuid import uuid4
 from werkzeug.local import LocalProxy
 
-from .exceptions import APIError, PermissionDenied, NotAuthorized
+from .exceptions import PermissionDenied, NotAuthorized
 
 current_user = LocalProxy(lambda: _get_user())
 ID_ATTRIBUTE = 'get_id'
@@ -148,20 +146,23 @@ def logout_user(DB=True):
 
 def _get_user():
     if has_request_context() and not hasattr(_request_ctx_stack.top, 'user'):
-        current_app.login_manager._load_user()
+        current_app.login_manager.reload_user()
     return getattr(_request_ctx_stack.top, 'user', None)
 
 
-def get_user_role():
+def get_user_role(user=None):
     rolename = 'AnonymousUser'
-    try:
-        rolename = current_user.role.rolename
-    except AttributeError:
+    if user is not None:
+        rolename = user.role.rolename
+    else:
         try:
-            rolename = g.user.role.rolename
+            rolename = current_user.role.rolename
         except AttributeError:
-            pass
-    if rolename == 'AnonymousUser':
+            try:
+                rolename = g.user.role.rolename
+            except AttributeError:
+                pass
+    if rolename == 'AnonymousUser' and user is None:
         logout_user()
     return rolename
 

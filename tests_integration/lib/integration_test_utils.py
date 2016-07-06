@@ -1,7 +1,11 @@
+import logging
+import re
 import socket
 import time
-import logging
+from contextlib import contextmanager
+from functools import wraps
 from itertools import count, islice
+
 from colorama import Fore, Style
 
 NO_FREE_IPS_ERR_MSG = 'There are no free public IP-addresses, contact ' \
@@ -94,6 +98,14 @@ def assert_in(item, sequence):
         ))
 
 
+@contextmanager
+def assert_raises(exc, text):
+    try:
+        yield
+    except exc as e:
+        assert re.search(text, str(e)) is not None
+
+
 def merge_dicts(*dictionaries):
     """
     Merge a given number of dicts to the single one. If there are duplicate
@@ -106,7 +118,7 @@ def merge_dicts(*dictionaries):
     return result
 
 
-def pod_factory(cluster, image, **create_kwargs):
+def pod_factory(image, **create_kwargs):
     """
     A helper function which returns a factory function. It is then used to
     create a given amount of pods with unique names because POD names should be
@@ -122,7 +134,7 @@ def pod_factory(cluster, image, **create_kwargs):
     """
     name_generator = ('{}_{}'.format(image, i) for i in count())
 
-    def _factory(num=1, **override_kwargs):
+    def _factory(cluster, num=1, **override_kwargs):
         params = merge_dicts(create_kwargs, override_kwargs)
         names = islice(name_generator, num)
         return [cluster.create_pod(image, n, **params) for n in names]

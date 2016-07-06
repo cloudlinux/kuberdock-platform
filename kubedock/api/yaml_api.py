@@ -28,7 +28,7 @@ class YamlAPI(KubeUtils, MethodView):
 
     @maintenance_protected
     def post(self):
-        user = self._get_current_user()
+        user = self.get_current_user()
         data = self._get_params().get('data')
         if data is None:
             raise APIError('No "data" provided')

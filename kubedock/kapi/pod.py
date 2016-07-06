@@ -29,6 +29,17 @@ HOST_KDTOOLS_PATH = '/usr/lib/kdtools'
 PodOwnerTuple = namedtuple('PodOwnerTuple', ['id', 'username'])
 
 
+class VolumeExists(APIError):
+    message_template = 'Volume with name "{name}" already exists'
+    status_code = 409
+
+    def __init__(self, volume_name=None, volume_id=None):
+        message = self.message_template.format(name=volume_name)
+        details = {'name': volume_name, 'id': volume_id}
+        super(VolumeExists, self).__init__(
+            message=message, details=details)
+
+
 class Pod(object):
     """
     Represents related k8s resources: RC, Service and all replicas (Pods).
@@ -179,7 +190,7 @@ class Pod(object):
     def as_json(self):
         return json.dumps(self.as_dict())
 
-    def compose_persistent(self):
+    def compose_persistent(self, reuse_pv=True):
         if not getattr(self, 'volumes', False):
             self.volumes_public = []
             return
@@ -188,7 +199,7 @@ class Pod(object):
         clean_vols = set()
         for volume, volume_public in zip(self.volumes, self.volumes_public):
             if 'persistentDisk' in volume:
-                self._handle_persistent_storage(volume, volume_public)
+                self._handle_persistent_storage(volume, volume_public, reuse_pv)
             elif 'localStorage' in volume:
                 self._handle_local_storage(volume)
             else:
@@ -198,13 +209,15 @@ class Pod(object):
             self.volumes = [item for item in self.volumes
                             if item['name'] not in clean_vols]
 
-    def _handle_persistent_storage(self, volume, volume_public):
+    def _handle_persistent_storage(self, volume, volume_public, reuse_pv):
         """Prepare volume with persistent storage
 
-        :params volume: volume for k8s api
-            (storage specific attributes will be added)
-        :params volume_public: volume for kuberdock api
-            (all missing fields will be filled)
+        :param volume: volume for k8s api
+            (storage specific attributes will be added).
+        :param volume_public: volume for kuberdock api
+            (all missing fields will be filled).
+        :param reuse_pv: if True then reuse existed persistent volumes,
+            otherwise raise VolumeExists on name conflict.
         """
         pd = volume.pop('persistentDisk')
         name = pd.get('pdName')
@@ -218,6 +231,8 @@ class Pod(object):
         else:
             if persistent_disk.state == PersistentDiskStatuses.DELETED:
                 persistent_disk.size = pd.get('pdSize', 1)
+            elif not reuse_pv:
+                raise VolumeExists(persistent_disk.name, persistent_disk.id)
             persistent_disk.state = PersistentDiskStatuses.PENDING
         if volume_public['persistentDisk'].get('pdSize') is None:
             volume_public['persistentDisk']['pdSize'] = persistent_disk.size
@@ -451,9 +466,11 @@ class Pod(object):
                                  DBPod.owner_id == self.owner.id,
                                  DBPod.id != self.id).first()
         if pod:
-            raise APIError('Pod with name "{0}" already exists. '
-                           'Try another name.'.format(self.name),
-                           status_code=409, type='PodNameConflict')
+            raise APIError(
+                'Pod with name "{0}" already exists.'.format(self.name),
+                status_code=409, type='PodNameConflict',
+                details={'id': pod.id, 'name': pod.name}
+            )
 
     def set_status(self, status, send_update=False, force=False):
         """Updates pod status in database"""

@@ -3,14 +3,15 @@ from collections import Sequence
 from flask import Blueprint
 from flask.views import MethodView
 
+from kubedock.api.utils import use_kwargs
 from ..exceptions import APIError
-from ..login import auth_required
 from ..kapi import pstorage as ps
+from ..login import auth_required
 from ..nodes.models import Node
 from ..pods.models import PersistentDisk
 from ..rbac import check_permission
 from ..utils import KubeUtils, register_api
-from ..validation import V, pd_schema
+from ..validation.schemas import pd_schema, owner_optional_schema
 
 pstorage = Blueprint('pstorage', __name__, url_prefix='/pstorage')
 
@@ -24,40 +25,59 @@ class PDIsUsed(APIError):
     message = 'Persistent disk is used.'
 
 
+schema_with_owner = {
+    'owner': owner_optional_schema
+}
+
+schema_with_owner_and_data = dict(owner=owner_optional_schema, **pd_schema)
+
+
 class PersistentStorageAPI(KubeUtils, MethodView):
-    decorators = [KubeUtils.jsonwrap, check_permission('get', 'pods'),
-                  auth_required]
+    decorators = [KubeUtils.jsonwrap, auth_required]
 
     @staticmethod
     def _resolve_storage():
         storage_cls = ps.get_storage_class()
         return storage_cls or ps.PersistentStorage
 
-    def get(self, device_id):
-        params = self._get_params()
-        user = self._get_current_user()
+    @use_kwargs(schema_with_owner, allow_unknown=True)
+    def get(self, device_id, owner=None, **params):
+        current_user = self.get_current_user()
+        owner = owner or current_user
+
+        check_permission('get', 'pods', user=owner).check()
+        if owner != current_user:
+            check_permission('get_non_owned', 'pods').check()
+
         cls = self._resolve_storage()
-        if params.get('free-only') == 'true':
-            return add_kube_types(cls().get_user_unmapped_drives(user))
+        free_only = params.get('free-only')
+        if free_only == 'true' or free_only is True:
+            return add_kube_types(cls().get_user_unmapped_drives(owner))
         if device_id is None:
-            return add_kube_types(cls().get_by_user(user))
-        disks = cls().get_by_user(user, device_id)
+            return add_kube_types(cls().get_by_user(owner))
+        disks = cls().get_by_user(owner, device_id)
         if not disks:
             raise PDNotFound()
         return add_kube_types(disks)
 
-    def post(self):
-        user = self._get_current_user()
-        params = V()._api_validation(self._get_params(), pd_schema)
+    @use_kwargs(schema_with_owner_and_data)
+    def post(self, owner=None, **params):
+        current_user = self.get_current_user()
+        owner = owner or current_user
+
+        check_permission('get', 'pods', user=owner).check()
+        if owner != current_user:
+            check_permission('get_non_owned', 'pods').check()
+
         name, size = params['name'], params['size']
 
         pd = PersistentDisk.query.filter_by(name=name).first()
         if pd is not None:
             raise APIError('{0} already exists'.format(name), 406,
                            type='DuplicateName')
-        pd = PersistentDisk(size=size, owner=user, name=name)
-        Storage = self._resolve_storage()
-        data = Storage().create(pd)
+        pd = PersistentDisk(size=size, owner=owner, name=name)
+        storage_cls = self._resolve_storage()
+        data = storage_cls().create(pd)
         if data is None:
             raise APIError('Couldn\'t create drive.')
         try:
@@ -70,14 +90,22 @@ class PersistentStorageAPI(KubeUtils, MethodView):
     def put(self, device_id):
         pass
 
-    def delete(self, device_id):
+    @use_kwargs(schema_with_owner)
+    def delete(self, device_id, owner=None):
+        current_user = self.get_current_user()
+        owner = owner or current_user
+
+        check_permission('get', 'pods', user=owner).check()
+        if owner != current_user:
+            check_permission('get_non_owned', 'pods').check()
+
         pd = PersistentDisk.get_all_query().filter(
-            PersistentDisk.id == device_id
+            PersistentDisk.id == device_id,
+            # allow deletion owner's PDs only
+            PersistentDisk.owner_id == owner.id
         ).first()
         if pd is None:
             raise PDNotFound()
-        if pd.owner_id != self._get_current_user().id:
-            raise APIError('Volume does not belong to current user', 403)
         if pd.pod_id is not None:
             raise PDIsUsed()
         allow_flag, description = ps.drive_can_be_deleted(device_id)

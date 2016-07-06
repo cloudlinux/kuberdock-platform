@@ -628,11 +628,10 @@ def all_request_params():
 
 class KubeUtils(object):
     @staticmethod
-    def _get_current_user():
-        try:
-            current_user.username
+    def get_current_user():
+        if hasattr(current_user, 'username'):
             return current_user
-        except AttributeError:
+        else:
             return g.user
 
     @classmethod
@@ -650,7 +649,7 @@ class KubeUtils(object):
     def pod_start_permissions(cls, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-            user = cls._get_current_user()
+            user = cls.get_current_user()
             params = cls._get_params()
             if ('command' in params and params['command'] in ['start'] or
                     params) and user.suspended is True:

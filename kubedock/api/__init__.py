@@ -69,7 +69,8 @@ def pre_start_hook(app):
 def on_app_error(e):
     return jsonify({
         'status': 'error',
-        'data': e.message,
+        'data': e.message,  # left for backwards compatibility
+        'details': getattr(e, 'details'),
         'type': getattr(e, 'type', e.__class__.__name__)
     }), e.status_code
 

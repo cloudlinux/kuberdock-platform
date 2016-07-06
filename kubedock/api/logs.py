@@ -36,7 +36,7 @@ def api_get_container_logs(pod_id, container_id):
     TODO: add ordering parameter support.
 
     """
-    user = KubeUtils._get_current_user()
+    user = KubeUtils.get_current_user()
     starttime = gettime_parameter(request.args, 'starttime')
     endtime = gettime_parameter(request.args, 'endtime')
     try:
@@ -121,7 +121,7 @@ def api_get_pod_states(pod_id, depth):
     pod = Pod.query.filter(Pod.id == pod_id).first()
     if not pod:
         raise APIError(u'Unknown pod {}'.format(pod_id), 404)
-    user = KubeUtils._get_current_user()
+    user = KubeUtils.get_current_user()
     if not(user.is_administrator() or user.id == pod.owner_id):
         raise APIError(u'Forbidden for current user', 403)
     try:

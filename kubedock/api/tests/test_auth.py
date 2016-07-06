@@ -31,7 +31,8 @@ class AuthTestCase(APITestCase):
         self.assertNotEqual(response.json.get('token'), None)
 
     def test_auth_case_insensitive_login(self):
-        auth = (self.valid_credentials[0].swapcase(), self.valid_credentials[1])
+        auth = (self.valid_credentials[0].swapcase(),
+                self.valid_credentials[1])
         response = self._get_token(self.url, auth)
         self.assert200(response)
         self.assertEqual(response.json.get('status'), 'OK')

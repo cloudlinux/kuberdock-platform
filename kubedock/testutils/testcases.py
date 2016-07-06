@@ -1,15 +1,15 @@
-import unittest
-import os
 import logging
-import sqlalchemy
+import os
+import unittest
 from json import dumps as json_dumps
 
-from nose.plugins.attrib import attr
+import sqlalchemy
 from flask_testing import TestCase as FlaskBaseTestCase
+from nose.plugins.attrib import attr
 
-from . import create_app, fixtures
 from kubedock import utils
 from kubedock.core import db
+from . import create_app, fixtures
 
 
 def prepareDB():
@@ -141,10 +141,17 @@ class APITestCase(DBTestCase):
     def item_url(self, *args):
         return '/'.join(map(str, (self.url,) + args))
 
-    def assertAPIError(self, response, status, type):
+    def assertAPIError(self, response, status, type, details=None):
         self.assertStatus(response, status)
-        msg = 'Wrong response: {0} expected. Got: {1}'.format(type, response.json)
-        self.assertEqual(response.json.get('type'), type, msg)
+        type_got = response.json.get('type')
+        self.assertEqual(response.json.get('type'), type,
+                         'Wrong response type: Expected: {exp}. Got: {got}'
+                         .format(exp=type, got=type_got)
+                         )
+        details_got = response.json.get('details')
+        self.assertEqual(details_got, details,
+                         'Wrong response details: Expected: {exp}. Got: {got}'
+                         .format(exp=details, got=details_got))
 
     def user_open(self, *args, **kwargs):
         """Open as user with permission check"""

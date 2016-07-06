@@ -33,7 +33,6 @@ Vagrant.configure(2) do |config|
     one.password = onePassword
     one.template_id = nebulaTemplateId
     override.ssh.private_key_path = privateKey
-    override.ssh.pty = true
     config.vm.synced_folder "../../", "/vagrant", type: "rsync", rsync__exclude: ["*.pyc", ".git/", ".venv/", ".tox/", "ceph_settings.py", ".cache", ".idea"]
   end
 

@@ -63,7 +63,7 @@ class PackageInUse(APIError):
 @KubeUtils.jsonwrap
 @check_permission('get_own', 'pricing')
 def get_user_kube_types():
-    user = KubeUtils._get_current_user()
+    user = KubeUtils.get_current_user()
     user = User.query.filter_by(username=user.username).first()
     if user is None:
         raise APIError('No such user', 404, 'UserNotFound')
@@ -87,7 +87,7 @@ class PackagesAPI(KubeUtils, MethodView):
             return data.to_dict(with_kubes=with_kubes,
                                 with_internal=with_internal)
         elif check_permission('get_own', 'pricing'):
-            user = KubeUtils._get_current_user()
+            user = KubeUtils.get_current_user()
             if with_internal:
                 with_internal = user.username == KUBERDOCK_INTERNAL_USER
             if package_id is not None and package_id != user.package.id:
@@ -481,8 +481,6 @@ def process_collection(data):
         result[key] = lic.get(key)
 
     default_value = 'unlimited'
-    invalid = bool({'none', 'expired'} & {result.get(key) for key in
-                                            ('status', 'type')})
     invalid = any(result.get(key) in ('none', 'expired')
                   for key in ('status', 'type'))
 

@@ -4,16 +4,17 @@ import mock
 import random
 import string
 from functools import partial
-from .. import validation
+from kubedock import validation
+from kubedock.validation import validators
 
 
 global_patchers = [
-    mock.patch.object(validation, 'PredefinedApp'),
-    mock.patch.object(validation, 'Kube'),
-    mock.patch.object(validation, 'Package'),
-    mock.patch.object(validation, 'User'),
-    mock.patch.object(validation, 'Role'),
-    mock.patch.object(validation, 'strip_offset_from_timezone'),
+    mock.patch.object(validators, 'PredefinedApp'),
+    mock.patch.object(validators, 'Kube'),
+    mock.patch.object(validators, 'Package'),
+    mock.patch.object(validators, 'User'),
+    mock.patch.object(validators, 'Role'),
+    mock.patch.object(validators, 'strip_offset_from_timezone'),
 ]
 
 

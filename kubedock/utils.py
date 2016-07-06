@@ -24,7 +24,7 @@ from flask import (current_app, request, jsonify, g, has_app_context, Response,
 from sqlalchemy.exc import SQLAlchemyError, InvalidRequestError
 
 from .core import ssh_connect, db, ConnectionPool
-from .exceptions import APIError, PermissionDenied
+from .exceptions import APIError, PermissionDenied, NoFreeIPs, NoSuitableNode
 from .login import current_user
 from .pods import Pod
 from .rbac.models import Role
@@ -59,6 +59,36 @@ class POD_STATUSES:
     preparing = 'preparing'
     stopping = 'stopping'
     deleting = 'deleting'
+
+
+def catch_error(action, trigger):
+    """
+    The decorator catches exception if any and runs corresponding actions
+    :param action: string -> specifies action to be taken
+    :param trigger: string -> sets exceptions to act upon
+    """
+    triggers = {
+        'resources': (NoFreeIPs, NoSuitableNode)}
+
+    def outer(f):
+        @wraps(f)
+        def inner(*args, **kw):
+            try:
+                return f(*args, **kw)
+            except Exception, e:
+                if trigger == 'all' or isinstance(
+                        e, triggers.get(trigger, tuple())):
+                    if action == 'notify':
+                        err = re.sub(
+                            r'(?:,\s?)?contact kuberdock administrator',
+                            '', str(e), flags=re.IGNORECASE)
+                        msg = 'User {0} got error: {1}'.format(
+                            getattr(current_user, 'username', 'Unknown'), err)
+                        send_event_to_role(
+                            'notify:error', {'message': msg}, 'Admin')
+                raise
+        return inner
+    return outer
 
 
 def get_channel_key(conn, key, size=100):

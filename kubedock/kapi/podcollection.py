@@ -9,7 +9,7 @@ from uuid import uuid4
 import ipaddress
 from flask import current_app
 
-from kubedock.exceptions import NoFreeIPs
+from kubedock.exceptions import NoFreeIPs, NoSuitableNode
 from kubedock.utils import ssh_connect, randstr
 from . import helpers
 from . import podutils
@@ -754,8 +754,7 @@ class PodCollection(object):
                           POD_STATUSES.preparing):
             raise APIError("Pod is not stopped, we can't run it")
         if not self._node_available_for_pod(pod):
-            raise APIError("There are no suitable nodes for the pod. "
-                           "Please contact KD admin or try again later.")
+            raise NoSuitableNode()
         if pod.status == POD_STATUSES.succeeded \
                 or pod.status == POD_STATUSES.failed:
             self._stop_pod(pod, block=True)

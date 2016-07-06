@@ -41,3 +41,8 @@ class NotAuthorized(APIError):
 class NoFreeIPs(APIError):
     message = 'There are no free public IP-addresses, contact KuberDock ' \
               'administrator'
+
+
+class NoSuitableNode(APIError):
+    message = 'There are no suitable nodes for the pod. ' \
+              'Please try again later or contact KuberDock administrator'

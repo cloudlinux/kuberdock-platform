@@ -9,7 +9,7 @@ from ..login import auth_required
 from ..pods.models import Pod
 from ..rbac import check_permission
 from ..system_settings.models import SystemSettings
-from ..utils import KubeUtils, register_api
+from ..utils import KubeUtils, register_api, catch_error
 from ..validation import check_new_pod_data, check_change_pod_data, \
     owner_optional_schema
 
@@ -37,6 +37,7 @@ class PodsAPI(KubeUtils, MethodView):
         return PodCollection(owner).get(pod_id, as_json=False)
 
     @maintenance_protected
+    @catch_error(action='notify', trigger='resources')
     @use_kwargs(schema, allow_unknown=True)
     def post(self, owner=None, **params):
         current_user = self.get_current_user()

@@ -12,7 +12,7 @@ from uuid import uuid4
 from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
 from kubedock.testutils import create_app
 
-from ...exceptions import APIError
+from ...exceptions import APIError, NoSuitableNode
 from ..pod import Pod
 from ..images import Image
 from .. import podcollection
@@ -536,7 +536,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         node_available_mock.return_value = False
 
         with self.assertRaisesRegexp(
-                APIError,
+                NoSuitableNode,
                 "There are no suitable nodes for the pod.*"):
             # Actual call
             self.pod_collection._start_pod(pod)

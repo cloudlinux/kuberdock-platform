@@ -110,10 +110,10 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
     };
 
     /**
-     * Get user's auth data. If user is not logged in, show login view and
-     * return auth data as soon as user logs in.
+     * Get user's auth data from local storage.
+     * If user is not logged in, return nothing.
      *
-     * @returns {Promise} - promise of auth data
+     * @returns {Object|undefined} - auth data
      */
     App.getCurrentAuth = function(){
         var authData = this.storage.authData,
@@ -131,6 +131,13 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                 return authData;
         }
     };
+
+    /**
+     * Get user's auth data. If user is not logged in, show login view and
+     * return auth data as soon as user logs in.
+     *
+     * @returns {Promise} - promise of auth data
+     */
     App.getAuth = function(){
         var deferred = $.Deferred(),
             authData = this.getCurrentAuth();

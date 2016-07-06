@@ -193,7 +193,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
                 // TODO: move common parts out of those views
                 podID: this.podBefore.id,
-                state: before ? before.get('state') : 'new',
+                state: before ? before.getFakeState() : 'new',
                 image: (before || after).get('image'),
                 sourceUrl: (before || after).get('sourceUrl'),
                 kubes: (before || after).get('kubes'),
@@ -283,7 +283,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             return {
                 // TODO: move common parts out of those views
                 podID: this.podBefore.id,
-                state: before ? before.get('state') : 'new',
+                state: before ? before.getFakeState() : 'new',
                 image: (before || after).get('image'),
                 sourceUrl: (before || after).get('sourceUrl'),
                 kubes: (before || after).get('kubes'),
@@ -414,7 +414,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 kube_type: this.pod.getKubeType(),
                 limits: before.limits,
                 restart_policy: this.pod.get('restartPolicy'),
-                state: before.get('state'),
+                state: before.getFakeState(),
                 image: before.get('image'),
                 sourceUrl: before.get('sourceUrl'),
                 kubes: before.get('kubes'),
@@ -445,6 +445,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             changeKubeQty      : 'button.send',
             cancelChange       : 'button.cancel',
             kubeVal            : '.editForm input',
+            tooltip            : '[data-toggle="tooltip"]',
         },
 
         events: {
@@ -481,8 +482,9 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             return {
                 logs: before.logs,
                 logsError: before.logsError,
-                editKubesQty : before.editKubesQty,
-                kubeVal : before.kubeVal,
+                editKubesQty: before.editKubesQty,
+                kubeVal: before.kubeVal,
+                token: App.getCurrentAuth(),
 
                 // TODO: move common parts out of those views
                 updateIsAvailable: before.updateIsAvailable,
@@ -490,13 +492,14 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 kube_type: this.pod.getKubeType(),
                 limits: before.limits,
                 restart_policy: this.pod.get('restartPolicy'),
-                state: before.get('state'),
+                state: before.getFakeState(),
                 image: before.get('image'),
                 sourceUrl: before.get('sourceUrl'),
                 kubes: before.get('kubes'),
             };
         },
 
+        onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
         onBeforeRender: function () {
             var el = this.ui.textarea;
             if (typeof el !== 'object' || (el.scrollTop() + el.innerHeight()) === el[0].scrollHeight)

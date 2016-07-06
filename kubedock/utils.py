@@ -623,6 +623,7 @@ def all_request_params():
     if data is not None:
         params.update(data)
     params.pop('token', None)  # remove auth token from params if exists
+    params.pop('token2', None)
     return params
 
 

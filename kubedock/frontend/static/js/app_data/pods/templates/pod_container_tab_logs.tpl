@@ -21,7 +21,7 @@
                     <div class="status-line">
                         <span class="icon <%- state %>">Status: <span class="text-capitalize"><%- state %></span></span>
                         <% if (state == "running"){ %>
-                            <span id="stopContainer"><span>Stop</span></span>
+                            <span id="stopContainer"><span>Stop pod</span></span>
                             <% if (!updateIsAvailable) { %>
                                 <span class="check-for-update" title="Check <%- image %> for updates"><span>Check for updates</span></span>
                             <% } else { %>
@@ -30,7 +30,7 @@
                             <a class="upgrade-btn" href="#pods/<%- parentID %>/container/<%- id %>/upgrade"
                                     title="Change the amount of resources for <%- image %>"><span>Upgrade resources</span></a>
                         <% } else  if (state == "stopped"){ %>
-                            <span id="startContainer"><span>Start</span></span>
+                            <span id="startContainer"><span>Start pod</span></span>
                         <% } %>
                         <% if (sourceUrl !== undefined) { %>
                             <a class="hidden-sm hidden-xs pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank"><span>Learn more about this image</span></a>
@@ -70,7 +70,19 @@
                             <input type="radio" name="replica">
                             <span></span>Replica 3
                         </label> -->
-                        <a class="export-logs pull-right" title="Export container log to txt file" download="<%= parentID %>_<%= name %>_logs.txt" href="/api/logs/container/<%= parentID %>/<%= name %>?size=200&text=true">Export</a>
+                        <% if (logsError){ %>
+                            <a class="export-logs pull-right disabled"
+                                    data-toggle="tooltip" data-placement="top"
+                                    title="Export container log to txt file (currently not available: <%= logsError %>)">
+                                Export
+                            </a>
+                        <% } else{ %>
+                            <a class="export-logs pull-right" title="Export container log to txt file"
+                                    download="<%= parentID %>_<%= id %>_logs.txt" target="_blank"
+                                    href="/api/logs/container/<%= parentID %>/<%= id %>?size=200&text=true&token2=<%= token %>">
+                                Export
+                            </a>
+                        <% } %>
                     </div>
                     <div class="col-xs-12 no-padding container-logs-wrapper">
                         <div class="container-logs">

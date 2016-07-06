@@ -208,6 +208,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                         utils.notifyWindow('No updates found', 'success');
                 });
         },
+        getFakeState: function(){
+            var state = this.get('state'),
+                podStatus = this.getPod().get('status');
+            if (state === 'running' && podStatus === 'stopping')
+                return 'stopping';
+            else if (state === 'stopped' && podStatus === 'preparing')
+                return 'deploying';
+            return state;
+        },
         update: function(){
             var model = this;
             utils.modalDialog({

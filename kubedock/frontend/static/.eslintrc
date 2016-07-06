@@ -1,16 +1,25 @@
 {
+    "extends": "eslint:recommended",
     "rules": {
-        "indent": [0, 4],
-        "quotes": [0, "single"],
-        "semi": [1, "always"],
         "no-console": [1],
-        "linebreak-style": [2, "unix"],
-        "comma-dangle": [0],
         "no-unused-vars": [1, {"args": "none"}],
-        "eqeqeq": ["error", "smart"]
+        "no-use-before-define": [1, {"functions": false}],
+        "eqeqeq": ["error", "smart"],
+
+        "camelcase": [0, {"properties": "always"}],
+        "comma-dangle": [0],
+        "comma-spacing": [1, {"before": false, "after": true}],
+        "indent": [0, 4],
+        "linebreak-style": [2, "unix"],
+        "max-depth": [1, 8],
+        "max-len": [1, {"code": 120, "ignoreUrls": true}],
+        "no-trailing-spaces": [1],
+        "no-unneeded-ternary": [1],
+        "quotes": [0, "single", {"avoidEscape": true, "allowTemplateLiterals": true}],
+        "semi": [1, "always"],
+        "semi-spacing": [1, {"before": false, "after": true}]
     },
-    "plugins": [
-    ],
+    "plugins": [],
     "env": {
         "es6": false,
         "node": false,
@@ -24,6 +33,5 @@
         "Marionette": false,
         "BBCodeParser": false,
         "jsyaml": false
-    },
-    "extends": "eslint:recommended"
+    }
 }

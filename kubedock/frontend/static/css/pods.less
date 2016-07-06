@@ -850,6 +850,12 @@
                     position: absolute;
                     background: url('../img/export-ico.png') 0 0 no-repeat;
                 }
+                &.disabled{
+                    .opacity(0.5);
+                    &:hover{
+                        cursor: not-allowed;
+                    }
+                }
             }
             .container-logs-wrapper{
                 .clearfix();

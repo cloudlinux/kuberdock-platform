@@ -14,7 +14,7 @@
                     <div class="status-line">
                         <span class="icon <%- state %>">Status: <span class="text-capitalize"><%- state %></span></span>
                         <% if (state == "running"){ %>
-                            <span id="stopContainer"><span>Stop</span></span>
+                            <span id="stopContainer"><span>Stop pod</span></span>
                             <% if (!updateIsAvailable) { %>
                                 <span class="check-for-update" title="Check <%- image %> for updates"><span>Check for updates</span></span>
                             <% } else { %>
@@ -23,7 +23,7 @@
                             <a class="upgrade-btn" href="#pods/<%- podID %>/container/<%- id %>/upgrade"
                                     title="Change the amount of resources for <%- image %>"><span>Upgrade resources</span></a>
                         <% } else  if (state == "stopped"){ %>
-                            <span id="startContainer"><span>Start</span></span>
+                            <span id="startContainer"><span>Start pod</span></span>
                         <% } %>
                     </div>
                     <div class="control-icons col-md-10 col-md-offset-2 col-sm-12">

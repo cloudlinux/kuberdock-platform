@@ -301,8 +301,8 @@ define([
                         breadcrumbsLayout.pod.show(new Breadcrumbs.Link(
                             {text: pod.get('name'), href: '#pods/' + pod.get('id')}));
                         breadcrumbsLayout.container.show(new Breadcrumbs.Text(
-                            {text: (model.get('before') || model.get('after')).get('image')
-                                + ' (' + model.id + ')'}));
+                            {text: (model.get('before') ||
+                                    model.get('after')).get('image')}));
 
                         wizardLayout.messages.show(messagesLayout);
                         messagesLayout.podHasChanges.show(

@@ -19,12 +19,16 @@
     &.deletion,
     &.succeeded,
     &.suspended,
-    &.preparing,
+    &.deploying,
+    &.preparing, // TODO remove preparing
     &.terminated,
     &.termination{
         position: relative;
         padding-left: 22px;
-        text-transform: capitalize;
+        display: inline-block;
+        &:first-letter{
+            text-transform: uppercase;
+        }
         &:before{
             .border-radius(50%);
             left: 2px;
@@ -70,7 +74,8 @@
     }
     &.pending,
     &.waiting,
-    &.preparing{
+    &.deploying,
+    &.preparing{ // TODO remove preparing
         &:before{
             .animation(fadeinout, 1s, linear infinite);
             background-color: #97cd75;

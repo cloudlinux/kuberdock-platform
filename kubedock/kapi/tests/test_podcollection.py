@@ -594,14 +594,17 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         Test _node_available_for_pod: no pinned node
         """
         pod = mock.Mock()
+        pod.kube_type = 1
         db_pod = mock.Mock()
         db_pod.pinned_node = None
         db_pod.is_service_pod = False
         dbpod_mock.query.get.return_value = db_pod
 
-        nodes_collection = [{'id': str(uuid4()), 'status': 'deletion'},
-                            {'id': str(uuid4()), 'status': 'troubles'},
-                            {'id': str(uuid4()), 'status': 'running'}]
+        nodes_collection = [
+            {'id': str(uuid4()), 'status': 'deletion'},
+            {'id': str(uuid4()), 'status': 'troubles'},
+            {'id': str(uuid4()), 'status': 'running'}
+        ]
         get_nodes_mock.return_value = nodes_collection
 
         # Actual call #1
@@ -609,9 +612,11 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         get_nodes_mock.assert_called_with(kube_type=pod.kube_type)
         self.assertTrue(res)
 
-        nodes_collection = [{'id': str(uuid4()), 'status': 'deletion'},
-                            {'id': str(uuid4()), 'status': 'troubles'},
-                            {'id': str(uuid4()), 'status': 'troubles'}]
+        nodes_collection = [
+            {'id': str(uuid4()), 'status': 'deletion'},
+            {'id': str(uuid4()), 'status': 'troubles'},
+            {'id': str(uuid4()), 'status': 'troubles'}
+        ]
         get_nodes_mock.return_value = nodes_collection
 
         # Actual call #2

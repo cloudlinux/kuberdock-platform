@@ -177,14 +177,12 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             return {
                 image: null,
                 name: _.random(Math.pow(36, 8)).toString(36),
-                workingDir: null,
                 ports: [],
                 volumeMounts: [],
                 env: [],
                 args: [],
                 kubes: 1,
                 terminationMessagePath: null,
-                sourceUrl: null
             };
         },
         editableAttributes: [  // difference in other attributes won't be interpreted as "change"

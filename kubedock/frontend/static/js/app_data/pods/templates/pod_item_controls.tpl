@@ -1,5 +1,9 @@
 <div class="status-line">
-    <span class="status icon <%- status %>">Status: <%- status %></span>
+    <% if(status === 'preparing') { %>
+        <span class="icon deploying">Status: Deploying</span>
+    <% } else { %>
+        <span class="icon <%- status %>">Status: <%- status %></span>
+    <% } %>
     <% if (graphs) { %>
         <a class="list-btn" href="#pods/<%- id %>"><span>Data</span></a>
     <% } else { %>
@@ -31,7 +35,7 @@
 <div class="control-icons col-md-10 col-md-offset-2 col-sm-12 clearfix">
     <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 info">
         <% if (publicIP) { %>
-            <div>Public IP: <%- publicIP %></div>
+            <div>Public IP: <a class="" href="http://<%- publicIP %>/" target="_blank"><%- publicIP %></a></div>
         <% } %>
         <% if (publicName) { %>
             <div>Public name: <%- publicName %></div>

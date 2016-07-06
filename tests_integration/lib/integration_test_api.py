@@ -5,6 +5,7 @@ import pipes
 import sys
 import time
 import urllib2
+
 import paramiko
 import vagrant
 import yaml
@@ -26,7 +27,7 @@ LOG = logging.getLogger(__name__)
 class KDIntegrationTestAPI(object):
     def __init__(self, override_envs=None,
                  version='latest',
-                 upgrade_to='latest'):
+                 upgrade_to='latest', out_cm=None, err_cm=None):
         """
         API client for interaction with kuberdock cluster
 
@@ -73,7 +74,8 @@ class KDIntegrationTestAPI(object):
             self.kuberdock_root = '/var/opt/kuberdock'
 
         self.vagrant = vagrant.Vagrant(quiet_stdout=False, quiet_stderr=False,
-                                       env=kd_env)
+                                       env=kd_env, out_cm=out_cm,
+                                       err_cm=err_cm)
         self._ssh_connections = {}
 
     @property

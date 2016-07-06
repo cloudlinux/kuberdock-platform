@@ -63,7 +63,7 @@ class TestPodAPI(APITestCase):
     @mock.patch('kubedock.api.podapi.PodCollection')
     def test_put(self, PodCollection):
         PodCollection().update.return_value = {}
-        pod = self.fixtures.pod(status='unpaid')
+        pod = self.fixtures.pod(status='unpaid', owner=self.user)
         pod_config = pod.get_dbconfig()
 
         response = self.user_open(PodAPIUrl.put(pod.id), 'PUT', {})
@@ -82,7 +82,6 @@ class TestPodAPI(APITestCase):
             dict(c, kubes=c['kubes'] + 1) for c in pod_config['containers']]}
         response = self.admin_open(PodAPIUrl.put(pod.id), 'PUT', upgrade)
         self.assert200(response)
-
 
     @mock.patch('kubedock.api.podapi.PodCollection')
     def test_delete_not_found(self, PodCollection):

@@ -23,7 +23,7 @@ users = Blueprint('users', __name__, url_prefix='/users')
 @KubeUtils.jsonwrap
 def auth_another(uid=None):
     data = KubeUtils._get_params()
-    original_user = KubeUtils._get_current_user()
+    original_user = KubeUtils.get_current_user()
     uid = uid if uid else data['user_id']
     try:
         uid = int(uid)
@@ -55,7 +55,8 @@ def logout_another():
     if user is None:
         current_app.logger.warning(
             'User with Id {0} does not exist'.format(admin_user_id))
-        raise APIError("Could not deimpersonate the user: no such id: {0}".admin_user_id, 401)
+        raise APIError("Could not deimpersonate the user: no such id: {0}"
+                       .format(admin_user_id), 401)
     login_user(user, DB=False)
     user_logged_out_by_another.send((user_id, admin_user_id))
 
@@ -94,7 +95,7 @@ def get_user_activities(user):
     data = request.args
     data_from = data.get('date_from')
     date_to = data.get('date_to')
-    return UserCollection(KubeUtils._get_current_user()).get_activities(
+    return UserCollection(KubeUtils.get_current_user()).get_activities(
         user, data_from, date_to, to_dict=True)
 
 
@@ -127,24 +128,24 @@ class UsersAPI(KubeUtils, MethodView):
     def get(self, uid=None):
         full = not extbool(KubeUtils._get_params().get('short', False))
         with_deleted = request.args.get('with-deleted')
-        return UserCollection(KubeUtils._get_current_user()).get(
+        return UserCollection(KubeUtils.get_current_user()).get(
             user=uid, with_deleted=with_deleted, full=full)
 
     @check_permission('create', 'users')
     def post(self):
         data = KubeUtils._get_params()
-        return UserCollection(KubeUtils._get_current_user()).create(data)
+        return UserCollection(KubeUtils.get_current_user()).create(data)
 
     @check_permission('edit', 'users')
     def put(self, uid):
         data = KubeUtils._get_params()
-        return UserCollection(KubeUtils._get_current_user()).update(uid, data)
+        return UserCollection(KubeUtils.get_current_user()).update(uid, data)
     patch = put
 
     @check_permission('delete', 'users')
     def delete(self, uid):
         force = KubeUtils._get_params().get('force', False)
-        return UserCollection(KubeUtils._get_current_user()).delete(uid, force)
+        return UserCollection(KubeUtils.get_current_user()).delete(uid, force)
 register_api(users, UsersAPI, 'podapi', '/all/', 'uid', strict_slashes=False)
 
 
@@ -152,18 +153,19 @@ register_api(users, UsersAPI, 'podapi', '/all/', 'uid', strict_slashes=False)
 @auth_required
 @KubeUtils.jsonwrap
 def get_self():
-    user = KubeUtils._get_current_user().to_dict(for_profile=True)
+    user = KubeUtils.get_current_user().to_dict(for_profile=True)
     if session.get('auth_by_another') is not None:
         user['impersonated'] = True
     return user
+
 
 @users.route('/editself', methods=['PUT', 'PATCH'])
 @auth_required
 @KubeUtils.jsonwrap
 def edit_self():
-    uid = KubeUtils._get_current_user().id
+    uid = KubeUtils.get_current_user().id
     data = KubeUtils._get_params()
-    doer = KubeUtils._get_current_user()
+    doer = KubeUtils.get_current_user()
     return UserCollection(doer).update_profile(uid, data)
 
 
@@ -172,4 +174,4 @@ def edit_self():
 @check_permission('create', 'users')
 @KubeUtils.jsonwrap
 def undelete_item(uid):
-    return UserCollection(KubeUtils._get_current_user()).undelete(uid)
+    return UserCollection(KubeUtils.get_current_user()).undelete(uid)

@@ -2,6 +2,8 @@ from .auth import AuthClient
 from .backup import BackupClient
 from .ippool import IPPoolClient
 from .nodes import NodesClient
+from .pstorage import PStorageClient
+from .podapi import PodAPIClient
 from .predefined_apps import PredefinedAppsClient
 from .restore import RestoreClient
 from .system_settings import SystemSettingsClient
@@ -29,6 +31,8 @@ class KDClient(object):
         self.backup = BackupClient(self)
         self.ippool = IPPoolClient(self)
         self.nodes = NodesClient(self)
+        self.pstorage = PStorageClient(self)
+        self.pods = PodAPIClient(self)
         self.predefined_apps = PredefinedAppsClient(self)
         self.restore = RestoreClient(self)
         self.system_settings = SystemSettingsClient(self)

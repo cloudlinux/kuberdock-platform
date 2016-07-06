@@ -37,7 +37,7 @@ def get():
         return get_node_data(node, start, end)
     elif pod_id is not None:
         check_permission('get', 'pods').check()
-        user = KubeUtils._get_current_user()
+        user = KubeUtils.get_current_user()
         pod = Pod.filter(Pod.owner_id == user.id, Pod.id == pod_id).first()
         if pod is None:
             raise PodNotFoundError
@@ -59,11 +59,15 @@ def get_node_data(node_name, start, end):
     cpu_capacity = resources['cpu']
     memory_capacity = resources['memory']
     diagrams = [
-                   CpuDiagram(_get_cpu_points(data, cpu_capacity)).to_dict(),
-                   MemoryDiagram(_get_memory_points(data, memory_capacity)).to_dict(),
-                   NetworkDiagram(_get_network_points(data)).to_dict()
+                   CpuDiagram(
+                       _get_cpu_points(data, cpu_capacity)).to_dict(),
+                   MemoryDiagram(
+                       _get_memory_points(data, memory_capacity)).to_dict(),
+                   NetworkDiagram(
+                       _get_network_points(data)).to_dict()
                ] + [
-                   FsDiagram(fs_data['points'], title=fs_data['device']).to_dict()
+                   FsDiagram(
+                       fs_data['points'], title=fs_data['device']).to_dict()
                    for fs_data in _get_fs_points(data)
                    ]
     return diagrams

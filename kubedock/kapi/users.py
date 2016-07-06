@@ -1,24 +1,24 @@
-import requests
+from copy import deepcopy
+from hashlib import md5
 
+import requests
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
-from hashlib import md5
-from copy import deepcopy
+from .licensing import is_valid as license_valid
+from .podcollection import PodCollection, POD_STATUSES
+from .predefined_apps import generate
+from .pstorage import delete_persistent_drives_task, PersistentStorage
+from ..billing.models import Package
 from ..core import db
 from ..exceptions import APIError
-from ..utils import atomic
-from ..validation import UserValidator
-from ..billing.models import Package
 from ..pods.models import Pod
 from ..rbac.models import Role
-from ..users.models import User, UserActivity
-from ..system_settings.models import SystemSettings
-from ..users.utils import enrich_tz_with_offset
 from ..settings import KUBERDOCK_INTERNAL_USER
-from .podcollection import PodCollection, POD_STATUSES
-from .pstorage import delete_persistent_drives_task, PersistentStorage
-from .predefined_apps import generate
-from .licensing import is_valid as license_valid
+from ..system_settings.models import SystemSettings
+from ..users.models import User, UserActivity
+from ..users.utils import enrich_tz_with_offset
+from ..utils import atomic
+from ..validation import UserValidator
 
 
 class ResourceReleaseError(APIError):
@@ -55,7 +55,6 @@ class UserCollection(object):
     def __init__(self, doer=None):
         self.doer = doer
 
-
     def get(self, user=None, with_deleted=False, full=False):
         """Get user or list of users
 
@@ -74,7 +73,8 @@ class UserCollection(object):
         return dict(user.to_dict(full=full),
                     actions=self._get_applicability(user))
 
-    @atomic(APIError("Couldn't create user.", 500, 'UserCreateError'), nested=False)
+    @atomic(APIError("Couldn't create user.", 500, 'UserCreateError'),
+            nested=False)
     @enrich_tz_with_offset(['timezone'])
     def create(self, data, return_object=False):
         """Create user"""
@@ -95,7 +95,8 @@ class UserCollection(object):
             return user
         return user.to_dict()
 
-    @atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'), nested=False)
+    @atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'),
+            nested=False)
     @enrich_tz_with_offset(['timezone'])
     def update(self, user, data):
         """Update user
@@ -116,7 +117,8 @@ class UserCollection(object):
                     pods = [p for p in user.pods if not p.is_deleted]
                     if pods:
                         raise APIError('User with the "{0}" role '
-                                       'cannot have any pods'.format(r.rolename))
+                                       'cannot have any pods'.format(
+                            r.rolename))
                 data['role'] = r
             else:
                 data['role'] = Role.by_rolename('User')
@@ -124,15 +126,20 @@ class UserCollection(object):
             package = data['package']
             p = Package.by_name(package)
             old_package, new_package = user.package, p
-            kubes_in_old_only = (set(kube.kube_id for kube in old_package.kubes) -
-                                 set(kube.kube_id for kube in new_package.kubes))
+            kubes_in_old_only = (
+                set(kube.kube_id for kube in old_package.kubes) -
+                set(kube.kube_id for kube in new_package.kubes)
+            )
             if kubes_in_old_only:
-                if user.pods.filter(Pod.kube_id.in_(kubes_in_old_only)).first() is not None:
-                    raise APIError("New package doesn't have kube_types of some "
-                                   "of user's pods")
+                if user.pods.filter(Pod.kube_id.in_(
+                        kubes_in_old_only)).first() is not None:
+                    raise APIError(
+                        "New package doesn't have kube_types of some "
+                        "of user's pods")
             data['package'] = p
 
-        if 'suspended' in data and data['suspended'] != user.suspended and user.active:
+        if 'suspended' in data \
+                and data['suspended'] != user.suspended and user.active:
             if data['suspended']:
                 self._is_suspendable(user, raise_=True)
                 self._suspend_user(user)
@@ -154,7 +161,8 @@ class UserCollection(object):
         db.session.flush()
         return user.to_dict()
 
-    @atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'), nested=False)
+    @atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'),
+            nested=False)
     @enrich_tz_with_offset(['timezone'])
     def update_profile(self, user, data):
         """Update user's profile
@@ -210,7 +218,8 @@ class UserCollection(object):
             db.session.rollback()
             raise APIError('Cannot delete a user: {0}'.format(str(e)), 500)
 
-    @atomic(APIError("Couldn't undelete user.", 500, 'UserUndeleteError'), nested=False)
+    @atomic(APIError("Couldn't undelete user.", 500, 'UserUndeleteError'),
+            nested=False)
     def undelete(self, user):
         """Undelete user.
 
@@ -302,30 +311,32 @@ class UserCollection(object):
             return
         if SystemSettings.get_by_name('billing_type') == 'No billing':
             return
-        url, username, password = map(SystemSettings.get_by_name,
-                ('billing_url', 'billing_username', 'billing_password'))
+        url, username, password = map(
+            SystemSettings.get_by_name,
+            ('billing_url', 'billing_username', 'billing_password'))
         if not all((url, username, password)):
             raise APIError("Some billing parameters are missing or "
                            "not properly configured")
         args = {'verify': False}
         billing_data = deepcopy(data)
         billing_data.update({
-            'action'      : 'addclient',
-            'username'    : username,
-            'password'    : md5(password).hexdigest(),
-            'password2'   : generate(8), # password for a new user
-            'firstname'   : data.pop('first_name', 'kduser'),
-            'lastname'    : data.pop('last_name', 'kduser'),
-            'kduser'      : data.get('username', 'kduser'),
-            'address1'    : 'KuberDock',
-            'city'        : 'KuberDock',
-            'state'       : 'None',
-            'postcode'    : '12345',
-            'country'     : 'US',
-            'phonenumber' : '0000000',
-            'package_id'  : package.id,
+            'action': 'addclient',
+            'username': username,
+            'password': md5(password).hexdigest(),
+            'password2': generate(8),  # password for a new user
+            'firstname': data.pop('first_name', 'kduser'),
+            'lastname': data.pop('last_name', 'kduser'),
+            'kduser': data.get('username', 'kduser'),
+            'address1': 'KuberDock',
+            'city': 'KuberDock',
+            'state': 'None',
+            'postcode': '12345',
+            'country': 'US',
+            'phonenumber': '0000000',
+            'package_id': package.id,
             'responsetype': 'json'})
-        r = requests.post(url.strip('/ ') + '/includes/api.php', data=billing_data, **args)
+        r = requests.post(url.strip('/ ') + '/includes/api.php',
+                          data=billing_data, **args)
         if r.status_code != 200:
             raise APIError(
                 "Could not add user to billing. Make sure billing site "

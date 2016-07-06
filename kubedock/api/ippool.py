@@ -33,7 +33,7 @@ def get_ippool(network=None):
 @auth_required
 @KubeUtils.jsonwrap
 def get_user_address():
-    user = KubeUtils._get_current_user()
+    user = KubeUtils.get_current_user()
     return IpAddrPool().get_user_addresses(user)
 
 

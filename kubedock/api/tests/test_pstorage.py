@@ -257,7 +257,7 @@ class TestPStorageApiDelete(APITestCase):
     def test_device_is_not_owned_by_current_user(self, mock_owner_id):
         mock_owner_id.return_value = 0
         res = self.user_open(self.item_url(self.free_pd.id), method='DELETE')
-        self.assertAPIError(res, 403, 'APIError')
+        self.assertAPIError(res, 404, 'PDNotFound')
 
     @mock.patch('kubedock.kapi.pstorage.drive_can_be_deleted')
     def test_cannot_be_deleted(self, mock_can_be_deleted):

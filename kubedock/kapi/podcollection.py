@@ -71,7 +71,7 @@ class PodCollection(object):
         self._get_pods(namespaces)
         self._merge()
 
-    def add(self, params, skip_check=False):  # TODO: celery
+    def add(self, params, skip_check=False, reuse_pv=True):  # TODO: celery
         if not skip_check and not license_valid():
             raise APIError("Action forbidden. Please contact support.")
 
@@ -117,7 +117,7 @@ class PodCollection(object):
         # a single db transaction, i.e. if anything goes wrong - rollback.
         with atomic():
             # create PD models in db and change volumes schema in config
-            pod.compose_persistent()
+            pod.compose_persistent(reuse_pv=reuse_pv)
             set_public_ip = self.needs_public_ip(params)
             db_pod = self._save_pod(pod, set_public_ip)
             if set_public_ip:

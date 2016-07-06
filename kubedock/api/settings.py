@@ -33,7 +33,7 @@ def enrich_with_plugin_list(data):
 @auth_required
 @KubeUtils.jsonwrap
 def get_notifications():
-    return read_role_events(KubeUtils._get_current_user().role)
+    return read_role_events(KubeUtils.get_current_user().role)
 
 
 @settings.route('/menu', methods=['GET'])

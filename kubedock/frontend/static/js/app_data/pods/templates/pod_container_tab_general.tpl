@@ -2,8 +2,10 @@
     <div class="row">
         <div class="col-sm-12 col-md-2 sidebar">
             <ul class="nav nav-sidebar">
-                <li role="presentation" class="stats go-to-logs"><span>Logs</span></li>
-                <li role="presentation" class="monitoring go-to-stats"><span>Monitoring</span></li>
+                <% if (before){ %>
+                    <li role="presentation" class="stats go-to-logs"><span>Logs</span></li>
+                    <li role="presentation" class="monitoring go-to-stats"><span>Monitoring</span></li>
+                <% } %>
                 <li role="presentation" class="configuration active"><span>General</span></li>
                 <li role="presentation" class="variables go-to-envs"><span>Variables</span></li>
             </ul>
@@ -11,7 +13,7 @@
         <div id="details_content" class="col-md-10 col-sm-12 configuration-general-tab">
             <div id="tab-content">
                 <div class="status-line">
-                    <span class="icon <%- state %>"><span>Status: <%- state %></span></span>
+                    <span class="icon status <%- state %>"><span>Status: <%- state %></span></span>
                     <% if (state == "running"){ %>
                         <span id="stopContainer"><span>Stop</span></span>
                         <% if (!updateIsAvailable) { %>
@@ -19,11 +21,12 @@
                         <% } else { %>
                             <span class="container-update" title="Update <%- image %> container"><span>Update</span></span>
                         <% } %>
-                        <a class="upgrade-btn" href="#pods/<%- parentID %>/container/<%- name %>/upgrade"
+                        <a class="upgrade-btn" href="#pods/<%- podID %>/container/<%- id %>/upgrade"
                                 title="Change the amount of resources for <%- image %>"><span>Upgrade resources</span></a>
                     <% } else  if (state == "stopped"){ %>
                         <span id="startContainer"><span>Start</span></span>
                     <% } %>
+                    <a class="edit-container-general" href="#pods/<%- podID %>/container/<%- id %>/edit/general"><span>Edit</span></a>
                     <% if (sourceUrl !== undefined) { %>
                         <a class="hidden-sm hidden-xs pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank"><span>Learn more about this image</span></a>
                     <% } %>
@@ -42,70 +45,10 @@
                     </div>
                 </div>
                 <div class="col-xs-12 no-padding">
-                    <label>Ports:</label>
-                    <table id="ports-table" class="table">
-                        <thead>
-                            <tr>
-                                <th>Container port</th>
-                                <th>Protocol</th>
-                                <th>Pod port</th>
-                                <th>Public</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        <% if (ports && ports.length != 0) { %>
-                            <% _.each(ports, function(p){ %>
-                                <tr>
-                                    <td class="containerPort"><%- p.containerPort || 'none'%></td>
-                                    <td class="containerProtocol"><%- p.protocol || 'none' %></td>
-                                    <td class="hostPort"><%- p.hostPort || p.containerPort || 'none' %></td>
-                                    <td><%- p.isPublic ? 'yes' : 'no' %></td>
-                                </tr>
-                            <% }) %>
-                        <% } else { %>
-                            <tr>
-                                <td colspan="4" class="text-center disabled-color-text">Ports are not specified</td>
-                            </tr>
-                        <% } %>
-                        </tbody>
-                    </table>
+                    <div class="ports-table-wrapper"></div>
                     <div class="volumes">
-                        <label>Volumes:</label>
                         <div class="row">
-                            <div class="col-xs-12">
-                                <table class="table" id="volumes-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Container path</th>
-                                            <th>Persistent</th>
-                                            <th>Name</th>
-                                            <th>GB</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                    <% if (volumeMounts && volumeMounts.length != 0) { %>
-                                        <% _.each(volumeMounts, function(vm){ %>
-                                            <tr>
-                                                <td><%- vm.mountPath %></td>
-                                            <% var volume = _.findWhere(volumes, {name: vm.name}) %>
-                                            <% if(volume.persistentDisk) { %>
-                                                <td>yes</td>
-                                                <td><%- volume.persistentDisk.pdName %></td>
-                                                <td><%- volume.persistentDisk.pdSize || '' %></td>
-                                            <% } else { %>
-                                                <td>no</td>
-                                                <td></td>
-                                                <td></td>
-                                            </tr>
-                                        <% }}) %>
-                                    <% } else { %>
-                                        <tr>
-                                            <td colspan="4" class="text-center disabled-color-text">Volumes are not specified</td>
-                                        </tr>
-                                    <% } %>
-                                    </tbody>
-                                </table>
-                            </div>
+                            <div class="col-xs-12"></div>
                         </div>
                     </div>
                 </div>

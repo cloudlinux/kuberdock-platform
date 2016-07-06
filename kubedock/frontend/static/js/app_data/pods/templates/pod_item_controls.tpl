@@ -1,18 +1,3 @@
-<div class="message-wrapper">
-    <div class="message">
-        <h3>Congratulations!</h3>
-        <p>
-            <% if (postDescription) { %>
-                <%= postDescription %>
-            <% } else {%>
-                We just want to inform you that your application "<%- podName %>" now deploying and will be started in a few minutes. <br>
-                The application will be available via
-                that you have on top of the page. You can find app credential on application page in tab "General". You need to wait until application will obtain status "running" that will mean that you application is ready to use. You can find more information about how to use KuberDock in our documentation.
-            <% } %>
-        </p>
-        <span class="close"></span>
-    </div>
-</div>
 <div class="status-line">
     <% if(status === 'preparing') { %>
         <span class="icon deploying">Status: Deploying</span>
@@ -38,6 +23,7 @@
             </span>
         </span>
         <ul class="dropdown-menu" role="menu">
+        <li><a class="edit-btn" href="#pods/<%- id %>/edit"><span>Edit</span></a></li>
         <% if (ableTo('redeploy')) { %><li><span class="restart-btn"><span>Restart</span></span></li><% } %>
         <% if (ableTo('pay-and-start')) { %><li><span class="pay-and-start-btn"><span>Pay & start</span></span></li><% } %>
         <% if (ableTo('start')) { %><li><span class="start-btn"><span>Start</span></span></li><% } %>

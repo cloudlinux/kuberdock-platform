@@ -253,6 +253,15 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         return urlParts[0] + (pars.length > 0 ? '?' + pars.join('&') : "");
     };
 
+    utils.deepClone = function(obj) {
+        return (!obj || (typeof obj !== 'object')) ? obj :
+            _.isString(obj) ? String.prototype.slice.call(obj) :
+            _.isDate(obj) ? new Date(obj.valueOf()) :
+            _.isFunction(obj.clone) ? obj.clone() :
+            _.isArray(obj) ? _.map(obj, function(t){ return utils.deepClone(t); }) :
+            _.mapObject(obj, function(val) { return utils.deepClone(val); });
+    };
+
     utils.copyLink = function(text, successMessage, messageState){
         var link = text,
             $txa = $("<textarea />",{val:link,css:{position:"fixed"}}).appendTo("body").select();

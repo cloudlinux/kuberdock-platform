@@ -12,7 +12,7 @@
             <div id="details_content" class="col-md-10 col-sm-12 monitoring-tab">
                 <div id="tab-content">
                     <div class="status-line">
-                        <span class="icon <%- state %>"><span>Status: <%- state %></span></span>
+                        <span class="icon status <%- state %>"><span>Status: <%- state %></span></span>
                         <% if (state == "running"){ %>
                             <span id="stopContainer"><span>Stop</span></span>
                             <% if (!updateIsAvailable) { %>
@@ -20,7 +20,7 @@
                             <% } else { %>
                                 <span class="container-update" title="Update <%- image %> container"><span>Update</span></span>
                             <% } %>
-                            <a class="upgrade-btn" href="#pods/<%- parentID %>/container/<%- name %>/upgrade"
+                            <a class="upgrade-btn" href="#pods/<%- podID %>/container/<%- id %>/upgrade"
                                     title="Change the amount of resources for <%- image %>"><span>Upgrade resources</span></a>
                         <% } else  if (state == "stopped"){ %>
                             <span id="startContainer"><span>Start</span></span>

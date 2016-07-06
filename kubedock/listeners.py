@@ -24,7 +24,8 @@ from .utils import (get_api_url, unregistered_pod_warning,
                     send_pod_status_update, POD_STATUSES)
 from .kapi.usage import update_states
 from .kapi.pstorage import get_storage_class
-from .kapi.podcollection import PodCollection, update_public_address
+from .kapi.podcollection import PodCollection, set_public_address
+from .kapi.lbpoll import LoadBalanceService
 from .kapi.pstorage import get_storage_class_by_volume_info, LocalStorage
 from .kapi.helpers import set_pod_status
 from . import tasks
@@ -367,7 +368,9 @@ def process_service_event_k8s(data, app):
     if not pod_id:
         return
     with app.app_context():
-        update_public_address(service, pod_id, send=True)
+        hostname = LoadBalanceService.get_public_dns(service)
+        if hostname:
+            set_public_address(hostname, pod_id, send=True)
 
 
 def process_pods_event_k8s(data, app):

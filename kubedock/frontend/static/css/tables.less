@@ -1,7 +1,7 @@
 /* start all tables */
 .ip_table,
-.env-table,
 #env-table,
+#data-table,
 #ports-table,
 #volumes-table,
 #license-table,
@@ -17,10 +17,16 @@
 #users-online-table,
 #predefined-app-table,
 #user-profile-logs-table,
+#imagelist-changed-table,
 #persistent-volumes-table,
 #user-profile-general-table,
 #all-users-activities-table{
     .box-shadow-materials();
+    caption{
+      text-align: left;
+      font-weight: 800;
+      margin-bottom: 5px;
+    }
     thead{
         background-color: transparent;
         tr{
@@ -121,10 +127,12 @@
 #nodelist-table,
 #userslist-table,
 #publicIPs-table,
+#imagelist-table,
 #users-activities,
 #users-online-table,
 #predefined-app-table,
 #user-profile-logs-table,
+#imagelist-changed-table,
 #persistent-volumes-table,
 #user-profile-general-table,
 #all-users-activities-table{
@@ -156,6 +164,12 @@
                 .unmount{
                     background: url('../img/unmount.png') 0 0 no-repeat;
                 }
+                .diff-changed,
+                .diff-deleted{
+                    .diff{
+                        color: #8e8e8e;
+                    }
+                }
             }
         }
     }
@@ -166,10 +180,10 @@
 #podlist-table,
 #imagelist-table,
 #ports-table,
+#data-table,
 #volumes-table,
 .variables-table,
-#env-table,
-.env-table{
+#env-table{
     thead{
         &.min-opacity{
             .opacity(0);
@@ -420,6 +434,56 @@
                             cursor: pointer;
                         }
                     }
+                    &.path,
+                    &.name,
+                    &.containerPort{
+                        position: relative;;
+                        .added,
+                        .deleted,
+                        .changed{
+                            top: 0;
+                            bottom: 0;
+                            left: -24px;
+                            width: 24px;
+                            margin: auto;
+                            min-height: 50px;
+                            position: absolute;
+                            &::before{
+                                .border-radius(50%);
+                                top: 0;
+                                right: 0;
+                                left: 3px;
+                                bottom: 0;
+                                width: 7px;
+                                height: 7px;
+                                content: '';
+                                margin: auto;
+                                position: absolute;
+                            }
+                        }
+                        .added{
+                            &::before{
+                                background-color: #6295e5;
+                            }
+                        }
+                        .changed{
+                            &::before{
+                                background-color: #e45ce6;
+                            }
+                        }
+                        .deleted{
+                            &::before{
+                                content: 'x';
+                                color: #a8a9aa;
+                                font-size: 13px;
+                                line-height: 5px;
+                                text-align: center;
+                            }
+                        }
+                    }
+                    &.diff{
+                        color: #8e8e8e;
+                    }
                 }
                 .tooltip.bottom{
                     .opacity(1);
@@ -468,9 +532,11 @@
 #imagelist-table{
     margin-top: 10px;
 }
-#imagelist-table{
+#imagelist-table,
+#pod-payment-table{
     .inline-fix{
         font-size: 0;
+        .kubes,
         .upgrade-kubes{
             width: 52px;
             height: 35px;
@@ -481,20 +547,6 @@
             vertical-align: middle;
             border: 1px solid #ddd;
             -moz-appearance: textfield;
-        }
-        .upgrade-kubes-less,
-        .upgrade-kubes-more{
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            display: inline-block;
-            vertical-align: middle;
-        }
-        .upgrade-kubes-less{
-            background: url('../img/blue-minus.png') 0 0 no-repeat;
-        }
-        .upgrade-kubes-more{
-            background: url('../img/blue-plus.png') 0 0 no-repeat;
         }
         input[type=number]::-webkit-inner-spin-button,
         input[type=number]::-webkit-outer-spin-button {

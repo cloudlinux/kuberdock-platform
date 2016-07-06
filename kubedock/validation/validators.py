@@ -123,7 +123,7 @@ class V(cerberus.Validator):
     def _validate_kube_type_in_user_package(self, exists, field, value):
         if exists and self.user:
             if self.user == KUBERDOCK_INTERNAL_USER and \
-                            value == Kube.get_internal_service_kube_type():
+                    value == Kube.get_internal_service_kube_type():
                 return
             package = User.get(self.user).package
             if value not in [k.kube_id for k in package.kubes]:
@@ -244,9 +244,10 @@ def check_hostname(hostname):
 
 
 def check_change_pod_data(data):
-    data = V(allow_unknown=True)._api_validation(data, update_pod_schema)
+    data = V(allow_unknown=True)._api_validation(data, command_pod_schema)
     # TODO: with cerberus 0.10, just use "purge_unknown" option
     return {'command': data.get('command'),
+            'edited_config': data.get('edited_config'),
             'commandOptions': data.get('commandOptions') or {},
             'containers': [{'name': c.get('name'), 'kubes': c.get('kubes')}
                            for c in data.get('containers') or []]}

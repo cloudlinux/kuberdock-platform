@@ -77,12 +77,21 @@ class PodsAPI(KubeUtils, MethodView):
                 # and start pod directly, only through billing system
                 raise PermissionDenied(
                     'Direct requests are forbidden for fixed-price users.')
+
             kubes = db_pod.kubes_detailed
             for container in data.get('containers', []):
                 if container.get('kubes') is not None:
                     kubes[container['name']] = container['kubes']
             if command == 'redeploy' and db_pod.kubes != sum(kubes.values()):
                 # fix-price user is not allowed to upgrade pod
+                # directly, only through billing system
+                raise PermissionDenied(
+                    'Direct requests are forbidden for fixed-price users.')
+
+            edited = db_pod.get_dbconfig().get('edited_config') is not None
+            apply_edit = data['commandOptions'].get('applyEdit')
+            if command in ('start', 'redeploy') and edited and apply_edit:
+                # fix-price user is not allowed to apply changes in pod
                 # directly, only through billing system
                 raise PermissionDenied(
                     'Direct requests are forbidden for fixed-price users.')

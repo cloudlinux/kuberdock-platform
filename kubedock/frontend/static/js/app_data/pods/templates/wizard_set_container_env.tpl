@@ -26,21 +26,7 @@
                                 <th></th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <% _.each(env, function(e, index){ %>
-                            <tr class="col-sm-12 no-padding">
-                                <td class="col-sm-4 no-padding">
-                                    <input class="name change-input" type="text" value="<%- e.name ? e.name : '' %>" placeholder="Enter variable name">
-                                </td>
-                                <td  class="col-sm-4 col-sm-offset-2 no-padding">
-                                    <input class="value change-input" type="text" value="<%- e.value ? e.value : '' %>" placeholder="Enter value">
-                                </td>
-                                <td>
-                                    <div class="remove-env"></div>
-                                </td>
-                            </tr>
-                            <% }) %>
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
             </div>
@@ -48,17 +34,21 @@
             <div class="col-sm-12 no-padding">
                 <button type="button" class="add-env">Add fields</button>
             </div>
-            <% if (env.length != 0){ %>
             <div class="col-sm-12 no-padding reset">
                 <button type="button" class="reset-button">Reset values</button>
             </div>
-            <% } %>
         </div>
     </div>
 </div>
 <div class="container nav-buttons">
     <div class="buttons pull-right ">
-        <button class="go-to-ports gray">Back</button>
-        <button class="next-step">Next</button>
+        <% if (flow === 'EDIT_CONTAINER_ENV'){ %>
+            <button class="cancel-edit gray">Cancel</button>
+            <button class="edit-entire-pod gray">Edit entire pod</button>
+            <button class="save-changes blue">Save</button>
+        <% } else { %>
+            <button class="go-to-ports gray">Back</button>
+            <button class="next-step">Next</button>
+        <% } %>
     </div>
 </div>

@@ -49,7 +49,7 @@ class Pod(object):
     id - uuid4, id in db
     namespace - uuid4, for now it's the same as `id`
     name - kubedock.pods.models.Pod.name (name in UI)
-    owner - kubedock.users.models.User
+    owner - PodOwnerTuple()
     podIP - k8s.Service.spec.clusterIP (appears after first start)
     service - k8s.Service.metadata.name (appears after first start)
     sid - uuid4, k8s.ReplicationController.metadata.name
@@ -178,6 +178,9 @@ class Pod(object):
                     volume_mount['mountPath'] = mount_path[:-2]
                 new_volumes.append(volume_mount)
             container['volumeMounts'] = new_volumes
+
+        if data.get('edited_config') is not None:
+            data['edited_config'] = Pod(data['edited_config']).as_dict()
 
         for field in hide_fields:
             if field in data:
@@ -347,7 +350,7 @@ class Pod(object):
         if hasattr(self, 'node') and self.node:
             pod_config['spec']['nodeSelector']['kuberdock-node-hostname'] = \
                 self.node
-        if hasattr(self, 'public_ip'):
+        if hasattr(self, 'public_ip') and self.public_ip:
             pod_config['metadata']['labels']['kuberdock-public-ip'] = \
                 self.public_ip
         return config

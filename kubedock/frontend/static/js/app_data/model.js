@@ -22,6 +22,43 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                           function(parent){ return parent instanceof typeOfPatent; });
         };
 
+    data.DiffCollection = Backbone.Collection.extend({
+        initialize: function(models, options){
+            this.before = options.before || new Backbone.Collection();
+            this.after = options.after || new Backbone.Collection();
+            this.modelType = options.modelType || Backbone.Model;
+            this.model = Backbone.AssociatedModel.extend({
+                relations: [
+                    {type: Backbone.One, key: 'before', relatedModel: this.modelType},
+                    {type: Backbone.One, key: 'after', relatedModel: this.modelType}
+                ],
+                addNestedChangeListener: function(obj, callback){
+                    if (this.get('before'))
+                        obj.listenTo(this.get('before'), 'change', callback);
+                    if (this.get('after'))
+                        obj.listenTo(this.get('after'), 'change', callback);
+                },
+            });
+
+            this.recalc();
+            this.listenTo(this.before, 'update reset', this.recalc);
+            this.listenTo(this.after, 'update reset', this.recalc);
+            models.push.apply(models, this.models);
+        },
+        recalc: function(){
+            this.reset([].concat(
+                // models "after" change, each with corresponding "before" model or undefined
+                this.after.chain().map(function(model){
+                    return {id: model.id, before: this.before.get(model.id), after: model};
+                }, this).value(),
+                // remaining models "before" change (that do not have corresponding "after-model")
+                this.before.chain().map(function(model){
+                    return {id: model.id, before: model, after: this.after.get(model.id)};
+                }, this).reject(_.property('after')).value()
+            ));
+        },
+    });
+
     /**
      * Smart sorting for Backbone.PageableCollection
      */
@@ -46,7 +83,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     var term = order[i],
                         aVal = this.pageableCollection.getForSort(a, term.key),
                         bVal = this.pageableCollection.getForSort(b, term.key);
-                    if (aVal == bVal) continue;
+                    if (aVal == bVal) continue;  // eslint-disable-line eqeqeq
                     return term.order * (aVal > bVal ? 1 : -1);
                 }
                 return 0;
@@ -72,7 +109,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
     });
 
-    data.VolumeMount = Backbone.Model.extend({
+    data.VolumeMount = Backbone.AssociatedModel.extend({
         idAttribute: 'mountPath',
         defaults: function(){
             return {name: this.generateName(this.get('mountPath')), mountPath: null};
@@ -87,12 +124,36 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
     });
 
-    data.Port = Backbone.Model.extend({
+    data.Port = Backbone.AssociatedModel.extend({
         defaults: {
             containerPort: null,
             hostPort: null,
             isPublic: false,
             protocol: "tcp",
+        },
+        initialize: function(){
+            this.on('change', this.resetID);
+            this.resetID();
+        },
+        resetID: function(){
+            // modelId works well for collections.get(ID), but it doesn't
+            // set model.id attribute
+            this.id = data.Ports.prototype.modelId(this.attributes);
+        },
+        getContainer: function(){ return getParentWithType(this.collection, data.Container); },
+    });
+    data.Ports = Backbone.Collection.extend({
+        model: data.Port,
+        modelId: function(attrs){
+            return JSON.stringify(_.pick(attrs, 'containerPort', 'protocol'));
+        },
+    });
+
+    data.EnvVar = Backbone.AssociatedModel.extend({
+        idAttribute: 'name',
+        defaults: {
+            name: 'not set',
+            value: '',
         },
         getContainer: function(){ return getParentWithType(this.collection, data.Container); },
     });
@@ -102,25 +163,38 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         relations: [{
             type: Backbone.Many,
             key: 'ports',
-            relatedModel: data.Port,
+            collectionType: data.Ports,
         }, {
             type: Backbone.Many,
             key: 'volumeMounts',
             relatedModel: data.VolumeMount,
+        }, {
+            type: Backbone.Many,
+            key: 'env',
+            relatedModel: data.EnvVar,
         }],
         defaults: function(){
             return {
                 image: null,
                 name: _.random(Math.pow(36, 8)).toString(36),
-                workingDir: null,
                 ports: [],
                 volumeMounts: [],
                 env: [],
                 args: [],
                 kubes: 1,
                 terminationMessagePath: null,
-                sourceUrl: null
             };
+        },
+        editableAttributes: [  // difference in other attributes won't be interpreted as "change"
+            'args', 'command', 'env', 'image', 'kubes', 'ports', 'sourceUrl',
+            'volumeMounts', 'workingDir'
+        ],
+        isChanged: function(compareTo){
+            if (!compareTo)
+                return false;
+            var before = _.partial(_.pick, this.toJSON()).apply(_, this.editableAttributes),
+                after = _.partial(_.pick, compareTo.toJSON()).apply(_, this.editableAttributes);
+            return !_.isEqual(before, after);
         },
         getPod: function(){ return getParentWithType(this.collection, data.Pod); },
         checkForUpdate: function(){
@@ -188,19 +262,19 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
     }, {  // Class Methods
         fromImage: function(image){
-            var _data = _.clone(image instanceof data.Image ? image.attributes : image);
-            _data.ports = _.map(_data.ports || [], function(port){
+            var _data = JSON.parse(JSON.stringify(image));
+            _data.ports = _.map(_data.ports, function(port){
                 return {
                     containerPort: port.number,
                     protocol: port.protocol,
                 };
             });
-            _data.volumeMounts = _.map(_data.volumeMounts || [],
+            _data.volumeMounts = _.map(_data.volumeMounts,
                                        function(vm){ return {mountPath: vm}; });
-            var container = new this(_data);
-            container.originalCommand = container.get('command').slice(0);
-            container.originalArgs = container.get('args').slice(0);
-            return container;
+            _data.env = _.map(_data.env, _.clone);
+            _data.command = _data.command.slice(0);
+            _data.args = _data.args.slice(0);
+            return new this(_data);
         },
         validateMountPath: function(mountPath){
             if (mountPath && mountPath.length < 2)
@@ -227,6 +301,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             type: Backbone.Many,
             key: 'containers',
             relatedModel: data.Container,
+        }, {
+            type: Backbone.One,
+            key: 'edited_config',
+            relatedModel: Backbone.Self,
         }],
 
         updateSshAccess: function(){
@@ -261,6 +339,21 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 status: 'stopped',
             };
         },
+        editableAttributes: [  // difference in other attributes won't be interpreted as "change"
+            'kube_type', 'restartPolicy', 'volumes', 'containers', 'kuberdock_resolve',
+        ],
+        isChanged: function(compareTo){
+            if (!compareTo)
+                return false;
+            var attrs = _.without(this.editableAttributes, 'containers'),
+                before = _.partial(_.pick, this.toJSON()).apply(_, attrs),
+                after = _.partial(_.pick, compareTo.toJSON()).apply(_, attrs);
+            return !_.isEqual(before, after) ||  this.getContainersDiffCollection().any(function(container){
+                    var before = container.get('before'),
+                        after = container.get('after');
+                    return !before || !after || before.isChanged(after);
+                });
+        },
 
         parse: unwrapper,
 
@@ -268,6 +361,29 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             this.on('remove:containers', function(container){
                 this.deleteVolumes(container.get('volumeMounts').pluck('name'));
             });
+        },
+
+        // if it's "edited_config" of some other pod, get that pod:
+        // pod.editOf() === undefined || pod.editOf().get('edited_config') === pod
+        editOf: function(){ return getParentWithType(this, data.Pod); },
+        deepClone: function(){ return new data.Pod(utils.deepClone(this.toJSON())); },
+        getContainersDiffCollection: function(){
+            if (this._containersDiffCollection)
+                return this._containersDiffCollection;
+            var before = this,
+                getAfter = function(){
+                    return before.get('edited_config') || before.deepClone();
+                },
+                diff = new data.DiffCollection(
+                    [], {modelType: data.Container, before: before.get('containers'),
+                         after: getAfter().get('containers')}),
+                resetDiff = function(){
+                    diff.after = getAfter().get('containers');
+                    diff.recalc();
+                };
+            diff.listenTo(this, 'change:edited_config', resetDiff);
+            this._containersDiffCollection = diff;
+            return this._containersDiffCollection;
         },
 
         command: function(cmd, commandOptions){
@@ -465,6 +581,56 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             });
             return deferred.promise();
         },
+        cmdApplyChanges: function(){
+            var deferred = new $.Deferred(),
+                model = this;
+            App.getSystemSettingsCollection().done(function(settings){
+                var fixedPrice = App.userPackage.get('count_type') === 'fixed'
+                    && settings.byName('billing_type')
+                        .get('value').toLowerCase() !== 'no billing';
+                if (!fixedPrice){
+                    var cmd = model.ableTo('start') ? 'start': 'redeploy';
+                    return model.command(cmd, {applyEdit: true})
+                        .fail(utils.notifyWindow)
+                        .then(deferred.resolve, deferred.reject);
+                }
+                new Backbone.Model().save({pod: model}, {url: '/api/billing/orderPodEdit'})
+                    .fail(utils.notifyWindow, _.bind(deferred.reject, deferred))
+                    .done(function(response){
+                        if(response.data.status === 'Paid') {
+                            if (model.get('status') !== 'running')
+                                model.set('status', 'pending');
+                            model.get('containers').each(function(c){
+                                if (c.get('state') !== 'running')
+                                    c.set('state', 'pending');
+                            });
+                            deferred.resolve();
+                            App.navigate('pods/' + model.id, {trigger: true});
+                            return;
+                        }
+                        utils.modalDialog({
+                            title: 'Insufficient funds',
+                            body: 'Your account funds seem to be'
+                                + ' insufficient for the action.'
+                                + ' Would you like to go to billing'
+                                + ' system to make the payment?',
+                            small: true,
+                            show: true,
+                            footer: {
+                                buttonOk: function(){
+                                    window.location = response.data.redirect;
+                                },
+                                buttonCancel: function(){
+                                    deferred.reject();
+                                },
+                                buttonOkText: 'Go to billing',
+                                buttonCancelText: 'No, thanks'
+                            }
+                    });
+                });
+            });
+            return deferred.promise();
+        },
         cmdRestart: function(){
             var deferred = new $.Deferred(),
                 model = this,
@@ -544,8 +710,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
     data.Image = Backbone.Model.extend({
         url: '/api/images/new',
-        defaults: {
-            image: 'Imageless'
+        idAttribute: 'image',
+        defaults: function(){
+            return {
+                image: 'Imageless',
+                args: [],
+                command: [],
+                ports: [],
+                volumeMounts: [],
+            };
         },
         parse: unwrapper,
         fetch: function(options){
@@ -589,15 +762,21 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
     App.getPodCollection = App.resourcePromiser('podCollection', data.PodCollection);
 
-    data.ImageCollection = Backbone.Collection.extend({
+
+    data.ImageSearchItem = Backbone.Model.extend({
+        idAttribute: 'name',
+        parse: unwrapper,
+    });
+
+    data.ImageSearchCollection = Backbone.Collection.extend({
         url: '/api/images/',
-        model: data.Image,
+        model: data.ImageSearchItem,
         parse: unwrapper
     });
 
-    data.ImagePageableCollection = Backbone.PageableCollection.extend({
+    data.ImageSearchPageableCollection = Backbone.PageableCollection.extend({
         url: '/api/images/',
-        model: data.Image,
+        model: data.ImageSearchItem,
         parse: unwrapper,
         mode: 'infinite',
         state: {

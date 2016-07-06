@@ -9,7 +9,8 @@ class LoadBalanceService(Services):
     def __init__(self):
         super(LoadBalanceService, self).__init__(PUBLIC_SVC_TYPE)
 
-    def get_public_dns(self, service):
+    @staticmethod
+    def get_public_dns(service):
         if service['spec']['type'] == 'LoadBalancer':
             ingress = service['status']['loadBalancer'].get('ingress', [])
             if ingress and 'hostname' in ingress[0]:

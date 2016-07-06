@@ -42,6 +42,7 @@ image_request_schema = {
             'password': dict(ascii_string, empty=False, required=True)
         },
     },
+    'podID': {'type': 'string', 'empty': False, 'nullable': True},
     'refresh_cache': {'coerce': bool},
 }
 
@@ -211,35 +212,7 @@ restart_policy_schema = {'type': 'string',
                          'allowed': ['Always', 'OnFailure', 'Never']}
 pod_resolve_schema = {'type': 'list', 'schema': {'type': 'string'}}
 
-update_pod_schema = {
-    'command': {'type': 'string', 'allowed': ['start', 'stop', 'redeploy',
-                                              'set']},
-    'commandOptions': {
-        'type': 'dict',
-        'schema': {
-            'wipeOut': {'type': 'boolean', 'nullable': True},
-            'status': {'type': 'string', 'required': False,
-                       'allowed': ['unpaid', 'stopped']},
-            'name': pod_name_schema,
-            'postDescription': {'type': 'string', 'nullable': True},
-        }
-    },
-
-    # things that user allowed to change during pod's redeploy
-    'containers': {
-        'type': 'list',
-        'schema': {
-            'type': 'dict',
-            'schema': {
-                'kubes': kubes_qty_schema,
-                'name': dict(container_name_schema, required=True),
-            }
-        }
-    }
-}
-
-new_pod_schema = {
-    'name': dict(pod_name_schema, required=True),
+edited_pod_config_schema = {
     'podIP': {
         'type': 'ipv4',
         'nullable': True,
@@ -248,16 +221,6 @@ new_pod_schema = {
     'replicas': {'type': 'integer', 'min': 0, 'max': 1},
     'kube_type': dict(kube_type_schema, kube_type_in_user_package=True,
                       kube_type_exists=True, required=True),
-    'kuberdock_template_id': {
-        'type': 'integer',
-        'min': 0,
-        'nullable': True,
-        'template_exists': True,
-    },
-    'postDescription': {
-        'type': 'string',
-        'nullable': True,
-    },
     'kuberdock_resolve': pod_resolve_schema,
     'node': {
         'type': 'string',
@@ -265,14 +228,6 @@ new_pod_schema = {
         'internal_only': True,
     },
     'restartPolicy': dict(restart_policy_schema, required=True),
-    'dnsPolicy': {
-        'type': 'string', 'required': False,
-        'allowed': ['ClusterFirst', 'Default']
-    },
-    'status': {
-        'type': 'string', 'required': False,
-        'allowed': ['stopped', 'unpaid']
-    },
     'volumes': {
         'type': 'list',
         'schema': {
@@ -418,6 +373,66 @@ new_pod_schema = {
         }
     }
 }
+
+
+new_pod_schema = deepcopy(edited_pod_config_schema)
+new_pod_schema.update({
+    'name': dict(pod_name_schema, required=True),
+    'postDescription': {
+        'type': 'string',
+        'nullable': True,
+    },
+    'kuberdock_template_id': {
+        'type': 'integer',
+        'min': 0,
+        'nullable': True,
+        'template_exists': True,
+    },
+    'dnsPolicy': {
+        'type': 'string', 'required': False,
+        'allowed': ['ClusterFirst', 'Default']
+    },
+    'status': {
+        'type': 'string', 'required': False,
+        'allowed': ['stopped', 'unpaid']
+    },
+})
+
+
+command_pod_schema = {
+    'command': {'type': 'string', 'allowed': ['start', 'stop', 'redeploy',
+                                              'set', 'edit']},
+    'commandOptions': {
+        'type': 'dict',
+        'schema': {
+            'wipeOut': {'type': 'boolean', 'nullable': True},
+            'status': {'type': 'string', 'required': False,
+                       'allowed': ['unpaid', 'stopped']},
+            'name': pod_name_schema,
+            'postDescription': {'type': 'string', 'nullable': True},
+        }
+    },
+
+    'edited_config': {
+        'type': 'dict',
+        'match_volumes': True,
+        'nullable': True,
+        'schema': edited_pod_config_schema,
+    },
+
+    # things that user allowed to change during pod's redeploy
+    'containers': {
+        'type': 'list',
+        'schema': {
+            'type': 'dict',
+            'schema': {
+                'kubes': kubes_qty_schema,
+                'name': dict(container_name_schema, required=True),
+            }
+        }
+    }
+}
+
 
 pd_schema = {
     'name': pdname_schema,

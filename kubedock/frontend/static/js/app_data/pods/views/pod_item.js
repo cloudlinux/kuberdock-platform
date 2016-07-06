@@ -1,6 +1,8 @@
 define(['app_data/app', 'app_data/model',
         'tpl!app_data/pods/templates/layout_pod_item.tpl',
         'tpl!app_data/pods/templates/page_info_panel.tpl',
+        'tpl!app_data/pods/templates/page_containers_changed.tpl',
+        'tpl!app_data/pods/templates/page_containers_unchanged.tpl',
         'tpl!app_data/pods/templates/page_container_item.tpl',
         'tpl!app_data/pods/templates/pod_item_controls.tpl',
         'tpl!app_data/pods/templates/pod_item_upgrade_resources.tpl',
@@ -12,6 +14,8 @@ define(['app_data/app', 'app_data/model',
        function(App, Model,
                 layoutPodItemTpl,
                 pageInfoPanelTpl,
+                pageContainersChangedTpl,
+                pageContainersUnchangedTpl,
                 pageContainerItemTpl,
                 podItemControlsTpl,
                 upgradeResourcesTpl,
@@ -24,9 +28,11 @@ define(['app_data/app', 'app_data/model',
     podItem.PodItemLayout = Backbone.Marionette.LayoutView.extend({
         template : layoutPodItemTpl,
 
+        // TODO: move nav, header, and messages out of here
         regions: {
             nav      : '#item-navbar',
             header   : '#item-header',
+            messages : '#messages-block',
             controls : '#item-controls',
             info     : '#item-info',
             contents : '#layout-contents'
@@ -48,15 +54,20 @@ define(['app_data/app', 'app_data/model',
     });
 
     // View for showing a single container item as a container in containers list
-    podItem.InfoPanelItem = Backbone.Marionette.ItemView.extend({
+    podItem.ContainersListItem = Backbone.Marionette.ItemView.extend({
         template    : pageContainerItemTpl,
         tagName     : 'tr',
         className   : 'container-item',
 
+        initialize: function(){
+            this.model.addNestedChangeListener(this, this.render);
+        },
+
         templateHelpers: function(){
-            var kubes = this.model.get('kubes'),
-                startedAt = this.model.get('startedAt'),
-                imagename = this.model.get('image'),
+            var before = this.model.get('before'),
+                after = this.model.get('after'),
+                startedAt = before && before.get('startedAt'),
+                imagename = (before || after).get('image'),
                 imagetag = null;
 
             if (/[^/:]+:[^/:]+$/.test(imagename)) {
@@ -66,10 +77,10 @@ define(['app_data/app', 'app_data/model',
             }
 
             return {
-                kubes: kubes ? kubes : 0,
+                changed: !before || before.isChanged(after),
                 startedAt: startedAt ? App.currentUser.localizeDatetime(startedAt) : 'Not deployed yet',
                 updateIsAvailable: this.model.updateIsAvailable,
-                podID: this.model.getPod().id,
+                pod: before ? before.getPod() : after.getPod().editOf(),
                 imagename: imagename,
                 imagetag: imagetag
             };
@@ -91,12 +102,15 @@ define(['app_data/app', 'app_data/model',
         },
 
         modelEvents: { 'change': 'render' },
-        updateItem: function(){ this.model.update(); },
         onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
+        updateItem: function(){ this.model.get('before').update(); },
+        checkForUpdate: function(){
+            this.model.get('before').checkForUpdate().done(this.render);
+        },
         copySshLink: function(){
-            var sshAccess = this.model.getPod().sshAccess;
+            var sshAccess = this.model.get('before').getPod().sshAccess;
             if (sshAccess) {
-                var modelName = this.model.get('name'),
+                var modelName = this.model.get('before').get('name'),
                     sshLink = sshAccess.data.links[modelName];
                 utils.copyLink(sshLink,'SSH link copied to clipboard');
             } else {
@@ -105,7 +119,7 @@ define(['app_data/app', 'app_data/model',
             }
         },
         copySshPassword: function(){
-            var sshAccess = this.model.getPod().sshAccess;
+            var sshAccess = this.model.get('before').getPod().sshAccess;
             if (sshAccess) {
                 var sshPassword = sshAccess.data.auth;
                 utils.copyLink(sshPassword,'SSH password copied to clipboard');
@@ -114,15 +128,57 @@ define(['app_data/app', 'app_data/model',
                 'click Get SSH access to generate new link and password', 'error');
             }
         },
-        checkForUpdate: function(){
-            this.model.checkForUpdate().done(this.render);
-        }
     });
 
-    podItem.InfoPanel = Backbone.Marionette.CompositeView.extend({
+    var ContainersTableBaseView = Backbone.Marionette.CompositeView.extend({
+        childView: podItem.ContainersListItem,
+        childViewContainer: 'tbody',
+        collectionEvents: {
+            'update reset change': 'toggleVisibility',
+        },
+        onRender: function(){ this.toggleVisibility(); },
+    });
+
+    podItem.ChangedContainersView = ContainersTableBaseView.extend({
+        template: pageContainersChangedTpl,
+        filter: function(model){
+            return !model.get('before') || !model.get('after')
+                || model.get('before').isChanged(model.get('after'));
+        },
+        toggleVisibility: function(){
+            this.$el.toggleClass('hidden', !this.collection.some(this.filter));
+        },
+    });
+
+    podItem.UnchangedContainersView = ContainersTableBaseView.extend({
+        template: pageContainersUnchangedTpl,
+        ui: {
+            caption: 'caption',
+        },
+        filter: function(model){
+            return model.get('before') && model.get('after')
+                && !model.get('before').isChanged(model.get('after'));
+        },
+        toggleVisibility: function(){
+            this.$el.toggleClass('hidden', !this.collection.some(this.filter));
+            this.ui.caption.toggleClass('hidden', this.collection.all(this.filter));
+        },
+    });
+
+    podItem.ContainersPanel = Backbone.Marionette.LayoutView.extend({
         template  : pageInfoPanelTpl,
-        childView: podItem.InfoPanelItem,
-        childViewContainer: "tbody",
+
+        regions: {
+            changed  : '#containers-list-changed',
+            unchanged: '#containers-list',
+        },
+
+        initialize: function(){
+            this.on('show', function(){
+                this.changed.show(new podItem.ChangedContainersView({collection: this.collection}));
+                this.unchanged.show(new podItem.UnchangedContainersView({collection: this.collection}));
+            });
+        },
     });
 
     podItem.ControlsPanel = Backbone.Marionette.ItemView.extend({
@@ -131,22 +187,14 @@ define(['app_data/app', 'app_data/model',
         className: 'pod-controls',
 
         ui: {
-            close : 'span.close',
             updateSsh: '.updateSsh',
-            message: '.message-wrapper'
         },
-        onShow: function(){
-            if (this.model.get('postDescription'))
-                this.ui.close.parents('.message-wrapper').slideDown();
-        },
-
         events: {
             'click .start-btn'        : 'startItem',
             'click .pay-and-start-btn': 'payStartItem',
             'click .restart-btn'      : 'restartItem',
             'click .stop-btn'         : 'stopItem',
             'click .terminate-btn'    : 'terminateItem',
-            'click @ui.close'         : 'closeMessage',
             'click @ui.updateSsh'     : 'updateSshAccess'
         },
 
@@ -169,14 +217,14 @@ define(['app_data/app', 'app_data/model',
                 kubeType = App.kubeTypeCollection.get(kubeId),
                 hasPorts = this.model.get('containers').any(function(c) {
                     return c.get('ports') && c.get('ports').length;
-                }),
-                postDesc = this.model.get('postDescription');
+                });
 
             this.model.recalcInfo(pkg);
+            if (this.model.get('edited_config'))
+                this.model.get('edited_config').recalcInfo(pkg);
 
             return {
                 hasPorts        : hasPorts,
-                postDescription : this.preparePostDescription(postDesc),
                 publicIP        : this.model.get('public_ip'),
                 publicName      : publicName,
                 graphs          : this.graphs,
@@ -192,35 +240,11 @@ define(['app_data/app', 'app_data/model',
         },
 
         updateSshAccess : function() { this.model.updateSshAccess(); },
-        onDomRefresh: function(){
-            if (this.model.get('postDescription'))
-                this.ui.close.parents('.message-wrapper').show();
-        },
-
-        closeMessage: function(){
-            var model = this.model;
-            this.ui.close.parents('.message-wrapper').slideUp({
-                complete: function(){
-                    model.unset('postDescription');
-                    model.command('set', {postDescription: null});
-                }
-            });
-        },
-
         startItem: function(){ this.model.cmdStart(); },
         payStartItem: function(){ this.model.cmdPayAndStart(); },
         restartItem: function(){ this.model.cmdRestart(); },
         stopItem: function(){ this.model.cmdStop(); },
         terminateItem: function(){ this.model.cmdDelete(); },
-
-        preparePostDescription: function(val){
-            if (val == null)
-                return;
-            val = val.replace(/(%PUBLIC_ADDRESS%)/gi,
-                    this.model.get('public_ip') || this.model.get('public_aws') || '...');
-            var parser = new BBCodeParser(BBCodeParser.defaultTags());
-            return parser.parseString(val);
-        }
     });
 
     podItem.PodGraphItem = Backbone.Marionette.ItemView.extend({
@@ -281,7 +305,7 @@ define(['app_data/app', 'app_data/model',
             // If there is only one point, jqplot will display ugly plot with
             // weird grid and no line.
             // Remove this point to force jqplot to show noDataIndicator.
-            if (this.model.get('points').length == 1)
+            if (this.model.get('points').length === 1)
                 this.model.get('points').splice(0);
 
             this.model.get('points').forEach(function(record){
@@ -420,7 +444,7 @@ define(['app_data/app', 'app_data/model',
                         url: '/api/billing/orderKubes',
                         data: JSON.stringify({pod: JSON.stringify(that.model)}),
                     }).always(utils.preloader.hide).fail(utils.notifyWindow).done(function(xhr){
-                        if(xhr.data.status.toLowerCase() == 'paid'){
+                        if(xhr.data.status.toLowerCase() === 'paid'){
                             utils.notifyWindow('Pod will be upgraded.', 'success');
                             App.navigate('pods/' + that.model.id, {trigger: true});
                         } else {

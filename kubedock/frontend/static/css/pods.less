@@ -40,12 +40,21 @@
 }
 #item-info{
     .upgrade-summary{
-        margin-top: 20px;
         padding-top: 37px;
+    }
+}
+#tab-content.complete{
+    .payment-summary{
+        padding-top: 20px;
+    }
+}
+#item-info,
+#tab-content.complete{
+    .payment-summary,
+    .upgrade-summary{
+        margin-top: 20px;
         border-top: 1px solid #e0e0e0;
-        + .buttons{
-            margin-top: 0;
-        }
+        .diff-total,
         .upgrade-total-price{
             p {
                 color: #121010;
@@ -61,6 +70,8 @@
                 font-family: @regular;
             }
         }
+        .total,
+        .new-total,
         .upgrade-diff-price{
             color: #30a718;
             font-size: 23px;
@@ -71,79 +82,107 @@
         }
      }
 }
-#item-controls{
+#messages-block{
     margin-bottom: 0px;
-    .pod-controls{
-        .message-wrapper{
-            .box-shadow(0px 10px 21px 1px rgba(230,230,230,0.96));
-            display: none;
-            margin-bottom: 40px;
-            background-color: #e7f4dd;
-            &.show{
-                display: block;
-            }
+    .message-wrapper{
+        .box-shadow(0px 10px 21px 1px rgba(230,230,230,0.96));
+        display: none;
+        margin-bottom: 40px;
+        background-color: #e7f4dd;
+        &.show{
+            display: block;
+        }
+        &.edit-pod{
+            background-color: #fffeeb;
             .message{
-                top: 10px;
-                width: 100%;
-                position: relative;
-                padding: 10px 35px 30px 55px;
-                border: 10px solid transparent;
-                border-width: 0 0 10px;
-                background-color: #e7f4dd;
+                background-color: #fffeeb;
+                padding: 18px 18px 8px 18px;
                 background-color: hsla(0, 0%, 0%, 0);
-                background-image: -webkit-linear-gradient(#e7f4dd, #e7f4dd), -webkit-linear-gradient(top left, transparent 50.5%, #e7f4dd 50.5%), -webkit-linear-gradient(top right, transparent 50.5%, #e7f4dd 50.5%), -webkit-linear-gradient(bottom left, transparent 50.5%, #e7f4dd 50.5%), -webkit-linear-gradient(bottom right, transparent 50.5%, #e7f4dd 50.5%);
-                background-image: -moz-linear-gradient(#e7f4dd, #e7f4dd), -moz-linear-gradient(top left, transparent 50.5%, #e7f4dd 50.5%), -moz-linear-gradient(top right, transparent 50.5%, #e7f4dd 50.5%), -moz-linear-gradient(bottom left, transparent 50.5%, #e7f4dd 50.5%), -moz-linear-gradient(bottom right, transparent 50.5%, #e7f4dd 50.5%);
-                background-image: linear-gradient(#e7f4dd, #e7f4dd), linear-gradient(to bottom right, transparent 50.5%, #e7f4dd 50.5%), linear-gradient(to bottom left, transparent 50.5%, #e7f4dd 50.5%), linear-gradient(to top right, transparent 50.5%, #e7f4dd 50.5%), linear-gradient(to top left, transparent 50.5%, #e7f4dd 50.5%);
-                background-repeat: repeat, repeat-x, repeat-x, repeat-x, repeat-x;
-                background-position: 0 0, 0 0, 0 0, 10px 100%, 10px 100%;
-                background-size: auto auto, 0 0, 0 0, 20px 20px, 20px 20px;
-                background-clip: padding-box, border-box, border-box, border-box, border-box;
-                background-origin: padding-box, border-box, border-box, border-box, border-box;
+                background-image: -webkit-linear-gradient(#fffeeb, #fffeeb), -webkit-linear-gradient(top left, transparent 50.5%, #fffeeb 50.5%), -webkit-linear-gradient(top right, transparent 50.5%, #fffeeb 50.5%), -webkit-linear-gradient(bottom left, transparent 50.5%, #fffeeb 50.5%), -webkit-linear-gradient(bottom right, transparent 50.5%, #fffeeb 50.5%);
+                background-image: -moz-linear-gradient(#fffeeb, #fffeeb), -moz-linear-gradient(top left, transparent 50.5%, #fffeeb 50.5%), -moz-linear-gradient(top right, transparent 50.5%, #fffeeb 50.5%), -moz-linear-gradient(bottom left, transparent 50.5%, #fffeeb 50.5%), -moz-linear-gradient(bottom right, transparent 50.5%, #fffeeb 50.5%);
+                background-image: linear-gradient(#fffeeb, #fffeeb), linear-gradient(to bottom right, transparent 50.5%, #fffeeb 50.5%), linear-gradient(to bottom left, transparent 50.5%, #fffeeb 50.5%), linear-gradient(to top right, transparent 50.5%, #fffeeb 50.5%), linear-gradient(to top left, transparent 50.5%, #fffeeb 50.5%);
                 &:before{
-                    top: 14px;
-                    margin: 0;
-                    left: -36px;
-                    width: 71px;
-                    content: '';
-                    height: 72px;
-                    position: absolute;
-                    background: url('../img/success-big.png') 0 0 no-repeat;
+                    content: none;
+                }
+                h3, p{
+                    text-align: center;
                 }
                 h3{
-                    color: #050505;
                     font-size: 17px;
-                    margin-top: 5px;
-                    text-align: left;
-                    line-height: 17px;
-                    margin-bottom: 15px;
-                    font-family: @bold;
+                    margin-bottom: 10px;
                 }
-                p{
-                    color: #565656 ;
-                    font-size: 13px;
-                    line-height: 20px;
-                    word-break: break-all;
-                    word-wrap: break-word;
-                    font-family: @regular;
+                .buttons{
+                    margin: 20px 0 0 0;
+                    button{
+                        height: initial;
+                        padding: 0 15px;
+                        line-height: 28px;
+                        margin-bottom: 18px;
+                    }
                 }
-                .close{
-                    .opacity(1);
-                    top: 0;
-                    margin: 0;
-                    right: 10px;
-                    position: absolute;
-                    &:before{
-                        .border-radius(50%);
-                        color: #fff;
-                        padding: 3px;
-                        max-width: 100%;
-                        font-size: 16px;
-                        background-color: #B6DE9A;
-                    }
-                    &:hover{
-                        .opacity(0.7);
-                        cursor: pointer;
-                    }
+            }
+        }
+        .message{
+            top: 10px;
+            width: 100%;
+            position: relative;
+            padding: 10px 35px 30px 55px;
+            border: 10px solid transparent;
+            border-width: 0 0 10px;
+            background-color: #e7f4dd;
+            background-color: hsla(0, 0%, 0%, 0);
+            background-image: -webkit-linear-gradient(#e7f4dd, #e7f4dd), -webkit-linear-gradient(top left, transparent 50.5%, #e7f4dd 50.5%), -webkit-linear-gradient(top right, transparent 50.5%, #e7f4dd 50.5%), -webkit-linear-gradient(bottom left, transparent 50.5%, #e7f4dd 50.5%), -webkit-linear-gradient(bottom right, transparent 50.5%, #e7f4dd 50.5%);
+            background-image: -moz-linear-gradient(#e7f4dd, #e7f4dd), -moz-linear-gradient(top left, transparent 50.5%, #e7f4dd 50.5%), -moz-linear-gradient(top right, transparent 50.5%, #e7f4dd 50.5%), -moz-linear-gradient(bottom left, transparent 50.5%, #e7f4dd 50.5%), -moz-linear-gradient(bottom right, transparent 50.5%, #e7f4dd 50.5%);
+            background-image: linear-gradient(#e7f4dd, #e7f4dd), linear-gradient(to bottom right, transparent 50.5%, #e7f4dd 50.5%), linear-gradient(to bottom left, transparent 50.5%, #e7f4dd 50.5%), linear-gradient(to top right, transparent 50.5%, #e7f4dd 50.5%), linear-gradient(to top left, transparent 50.5%, #e7f4dd 50.5%);
+            background-repeat: repeat, repeat-x, repeat-x, repeat-x, repeat-x;
+            background-position: 0 0, 0 0, 0 0, 10px 100%, 10px 100%;
+            background-size: auto auto, 0 0, 0 0, 20px 20px, 20px 20px;
+            background-clip: padding-box, border-box, border-box, border-box, border-box;
+            background-origin: padding-box, border-box, border-box, border-box, border-box;
+            &:before{
+                top: 14px;
+                margin: 0;
+                left: -36px;
+                width: 71px;
+                content: '';
+                height: 72px;
+                position: absolute;
+                background: url('../img/success-big.png') 0 0 no-repeat;
+            }
+            h3{
+                color: #050505;
+                font-size: 17px;
+                margin-top: 5px;
+                text-align: left;
+                line-height: 17px;
+                margin-bottom: 15px;
+                font-family: @bold;
+            }
+            p{
+                color: #565656 ;
+                font-size: 13px;
+                line-height: 20px;
+                word-break: break-all;
+                word-wrap: break-word;
+                font-family: @regular;
+            }
+            .close{
+                .opacity(1);
+                top: 0;
+                margin: 0;
+                right: 10px;
+                position: absolute;
+                &:before{
+                    .border-radius(50%);
+                    color: #fff;
+                    padding: 3px;
+                    max-width: 100%;
+                    font-size: 16px;
+                    background-color: #B6DE9A;
+                }
+                &:hover{
+                    .opacity(0.7);
+                    cursor: pointer;
                 }
             }
         }
@@ -191,10 +230,7 @@
                     position: relative;
                 }
                 &.complete{
-                    padding-right: 10px;
-                    .left{
-                        margin-bottom: 29px;
-                    }
+                    border-bottom: none;
                     .total-wrapper{
                         position: relative;
                         margin-bottom: 52px;
@@ -227,13 +263,6 @@
                             tbody{
                                 tr{
                                     height: 40px;
-                                    .total, #total_price{
-                                        color: #3f920e;
-                                        font-size: 17px;
-                                        margin-top: 30px;
-                                        margin-bottom: 0;
-                                        text-align: right;
-                                    }
                                 }
                             }
                         }
@@ -269,6 +298,7 @@
                         }
                     }
                     label{
+                        margin-bottom: 5px;
                         display: inline-block;
                         vertical-align: middle;
                     }
@@ -347,7 +377,7 @@
                     }
                 }
                 .policy{
-                    margin-bottom: 29px;
+                    margin-bottom: 50px;
                 }
                 .kube-type-wrapper{
                     margin-bottom: 50px;
@@ -750,11 +780,8 @@
             .variables-table{
                 margin-top: 27px;
             }
-            .env-table{
+            #data-table{
                 margin-top: 0;
-                td{
-                    .word-wrap()
-                }
             }
         }
         &.limits-tab{

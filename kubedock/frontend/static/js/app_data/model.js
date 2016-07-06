@@ -893,7 +893,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         url: '/api/stats',
         model: data.Stat,
         parse: unwrapper,
-        setEmpty: function(noNework){
+        setEmpty: function(noNetwork){
             var emptyLines = [{
                 series: [{label: 'available'}, {label: 'cpu load'}],
                 title: 'CPU', ylabel: '%'
@@ -904,9 +904,28 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 series: [{fill: 'true', label: 'in'}, {label: 'out'}],
                 title: 'Network', ylabel: 'bps'
             }];
-            if (noNework)
+            if (noNetwork)
                 emptyLines.pop();
             this.reset(emptyLines);
+        }
+    });
+
+    data.PodStatsCollection = data.StatsCollection.extend({
+        initialize: function(models, options){
+            this.podId = options.podId
+        },
+        url: function(){
+            return '/api/stats/pods/' + this.podId
+        }
+    });
+
+    data.ContainerStatsCollection = data.StatsCollection.extend({
+        initialize: function(models, options){
+            this.podId = options.podId;
+            this.containerId = options.containerId;
+        },
+        url: function(){
+            return '/api/stats/' + ['pods', this.podId, 'containers', this.containerId].join('/');
         }
     });
 
@@ -1087,6 +1106,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         mode: 'client',
         state: {
             pageSize: 100
+        }
+    });
+
+    data.NodeStatsCollection = data.StatsCollection.extend({
+        initialize: function(models, options){
+            this.hostname = options.hostname
+        },
+        url: function() {
+            return '/api/stats/nodes/' + this.hostname
         }
     });
 

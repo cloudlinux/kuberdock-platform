@@ -1,63 +1,52 @@
 from datetime import datetime, timedelta
 
 from flask import Blueprint
+from sqlalchemy.exc import DataError
 
-from kubedock.exceptions import APIError
+from kubedock.exceptions import APIError, InternalAPIError
 from kubedock.kapi import node_utils
+from kubedock.kapi.podcollection import PodNotFound
 from kubedock.kubedata import kubestat
+from kubedock.login import auth_required
 from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod
-from ..login import auth_required
-from ..rbac import check_permission
-from ..utils import KubeUtils, all_request_params
+from kubedock.rbac import check_permission
+from kubedock.utils import KubeUtils
 
 stats = Blueprint('stats', __name__, url_prefix='/stats')
 
 
-class PodNotFoundError(APIError):
-    status_code = 404
-    message = 'Pod not found'
+class NodeNotRunning(APIError):
+    message = 'Node is not running'
 
 
-class WrongParametersError(APIError):
-    message = "Wrong parameters"
-
-
-@stats.route('/', methods=['GET'], strict_slashes=False)
+@stats.route('/nodes/<hostname>', methods=['GET'])
 @auth_required
+@check_permission('get', 'nodes')
 @KubeUtils.jsonwrap
-def get():
-    params = all_request_params()
-    node = params.get('node')
-    pod_id = params.get('unit')
+def nodes(hostname):
     end = datetime.now()
     start = end - timedelta(minutes=60)
-    if node is not None:
-        check_permission('get', 'nodes').check()
-        return get_node_data(node, start, end)
-    elif pod_id is not None:
-        check_permission('get', 'pods').check()
-        user = KubeUtils.get_current_user()
-        pod = Pod.filter(Pod.owner_id == user.id, Pod.id == pod_id).first()
-        if pod is None:
-            raise PodNotFoundError
-        container = params.get('container')
-        if container is None:
-            return get_pod_data(pod_id, start, end)
-        else:
-            return get_container_data(pod_id, container, start, end)
-    else:
-        raise WrongParametersError
 
-
-def get_node_data(node_name, start, end):
-    node = Node.get_by_name(node_name)
+    node = Node.get_by_name(hostname)
     if node is None:
-        raise APIError('Unknown node')
-    data = kubestat.get_node_stat(node_name, start, end)
+        raise APIError('Unknown node', 404)
+
+    if node.state != 'completed':
+        raise NodeNotRunning
+
     resources = node_utils.get_one_node(node.id)['resources']
-    cpu_capacity = resources['cpu']
-    memory_capacity = resources['memory']
+
+    if resources:
+        data = kubestat.get_node_stat(hostname, start, end)
+        cpu_capacity = float(resources.get('cpu')) * 1000
+        memory_capacity = float(resources.get('memory'))
+    else:
+        # We have checked that node is running, but no resources means
+        # that node is not running
+        raise InternalAPIError(
+            'DBNode is running, but k8s says it does not. Unknown error')
+
     diagrams = [
                    CpuDiagram(
                        _get_cpu_points(data, cpu_capacity)).to_dict(),
@@ -73,7 +62,15 @@ def get_node_data(node_name, start, end):
     return diagrams
 
 
-def get_pod_data(pod_id, start, end):
+@stats.route('/pods/<pod_id>', methods=['GET'])
+@auth_required
+@check_permission('get', 'pods')
+@KubeUtils.jsonwrap
+def pods(pod_id):
+    end = datetime.now()
+    start = end - timedelta(minutes=60)
+
+    _check_if_pod_exists(pod_id)
     data = kubestat.get_pod_stat(pod_id, start, end)
     diagrams = [
         CpuDiagram(_get_cpu_points(data)).to_dict(),
@@ -83,7 +80,15 @@ def get_pod_data(pod_id, start, end):
     return diagrams
 
 
-def get_container_data(pod_id, container_id, start, end):
+@stats.route('/pods/<pod_id>/containers/<container_id>', methods=['GET'])
+@auth_required
+@check_permission('get', 'pods')
+@KubeUtils.jsonwrap
+def containers(pod_id, container_id):
+    end = datetime.now()
+    start = end - timedelta(minutes=60)
+
+    _check_if_pod_exists(pod_id)
     data = kubestat.get_container_stat(pod_id, container_id, start, end)
     diagrams = [
         CpuDiagram(_get_cpu_points(data)).to_dict(),
@@ -92,22 +97,37 @@ def get_container_data(pod_id, container_id, start, end):
     return diagrams
 
 
+def _check_if_pod_exists(pod_id):
+    user = KubeUtils.get_current_user()
+    try:
+        pod = Pod.filter(Pod.owner_id == user.id, Pod.id == pod_id).first()
+        if pod is None:
+            raise PodNotFound
+    except DataError:
+        # pod_id is not uuid
+        raise PodNotFound
+
+
 def _get_cpu_points(data, cpu_limit=None):
+    if not data:
+        return []
     if cpu_limit is None:
         return [
-            (limit.time, 100.0, 100.0 * float(usage.value) / limit.value)
+            (usage.time, 0.1 * limit.value, 0.1 * usage.value)
             for limit, usage
             in zip(data['cpu/request'], data['cpu/usage_rate'])
             ]
     else:
         return [
-            (usage.time, 100.0, 0.1 * usage.value / float(cpu_limit))
+            (usage.time, 0.1 * cpu_limit, 0.1 * usage.value)
             for usage
             in data['cpu/usage_rate']
             ]
 
 
 def _get_memory_points(data, memory_limit=None):
+    if not data:
+        return []
     if memory_limit is None:
         return [
             (limit.time, _mb(limit.value), _mb(usage.value))
@@ -123,6 +143,8 @@ def _get_memory_points(data, memory_limit=None):
 
 
 def _get_network_points(data):
+    if not data:
+        return []
     return [
         (rxb.time, rxb.value, txb.value)
         for rxb, txb
@@ -131,6 +153,8 @@ def _get_network_points(data):
 
 
 def _get_fs_points(data):
+    if not data:
+        return []
     return [
         {
             'device': limits['resource_id'],

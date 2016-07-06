@@ -28,6 +28,12 @@ class APIError(Exception):
             self.__class__.__name__, self.message, self.status_code)
 
 
+class InternalAPIError(APIError):
+    """Message of this type is not shown to user, but to admin only."""
+
+    status_code = 500
+
+
 class PermissionDenied(APIError):
     message = "Insufficient permissions for requested action"
     status_code = 403

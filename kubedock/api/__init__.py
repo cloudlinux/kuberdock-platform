@@ -1,12 +1,12 @@
-import datetime
-
-from flask import jsonify
 from fabric.api import env, run, put, output
+from flask import jsonify
 
+from kubedock.core import current_app
+from kubedock.settings import SSH_KEY_FILENAME, SESSION_LIFETIME
+from kubedock.utils import KubeUtils, send_event_to_role
 from .. import factory
 from .. import sessions
-from ..exceptions import APIError
-from kubedock.settings import SSH_KEY_FILENAME, SESSION_LIFETIME
+from ..exceptions import APIError, InternalAPIError
 
 
 def create_app(settings_override=None, fake_sessions=False):
@@ -67,6 +67,33 @@ def pre_start_hook(app):
 
 
 def on_app_error(e):
+    if isinstance(e, InternalAPIError):
+        current_app.logger.exception(e.message)
+        current_user = KubeUtils.get_current_user()
+        if current_user.is_administrator():
+            return _jsonify_api_error(e)
+        else:
+            send_event_to_role('notify:error', {'message': e.message}, 'Admin')
+            return _jsonify_api_error(
+                APIError('Internal error, please contact administrator', 500))
+
+    elif isinstance(e, APIError):
+        return _jsonify_api_error(e)
+
+    else:  # unexpected error
+        current_app.logger.exception(e.message)
+        current_user = KubeUtils.get_current_user()
+        if current_user.is_administrator():
+            return _jsonify_api_error(APIError(repr(e), 500))
+        else:
+            send_event_to_role('notify:error',
+                               {'message': 'Unexpected error: ' + repr(e)},
+                               'Admin')
+            _jsonify_api_error(
+                APIError('Internal error, please contact administrator', 500))
+
+
+def _jsonify_api_error(e):
     return jsonify({
         'status': 'error',
         'data': e.message,  # left for backwards compatibility

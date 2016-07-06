@@ -160,8 +160,8 @@ define([
                 that.showPodBase(id).fail(function(){
                     App.navigate('pods', {trigger: true});
                 }).done(function(pageData){
-                    var statCollection = new Model.StatsCollection();
-                    statCollection.fetch({data: {unit: pageData.model.id}, reset: true})
+                    var statCollection = new Model.PodStatsCollection(null, {podId: pageData.model.id});
+                    statCollection.fetch({reset: true})
                         .always(function(){
                             pageData.itemLayout.controls.show(new Views.ControlsPanel({
                                 graphs: true,
@@ -276,9 +276,11 @@ define([
                         if (changeURL)
                             App.navigate('pods/' + id + '/container/' + name + '/' + tab);
                         if (tab === 'stats'){
-                            var statCollection = new Model.StatsCollection();
+                            var statCollection = new Model.ContainerStatsCollection(
+                                    null,
+                                    {podId: pod.id, containerId: model.id}
+                            );
                             statCollection.fetch({
-                                data: {unit: pod.id, container: model.id},
                                 reset: true,
                             }).done(function(){
                                 wizardLayout.steps.show(new Views.WizardStatsSubView({
@@ -921,8 +923,8 @@ define([
                                 new Views.NodeTimelinesTabView({model: node}));
                         } else if (tab === 'monitoring') {
                             var hostname = node.get('hostname'),
-                                graphCollection = new Model.StatsCollection();
-                            graphCollection.fetch({wait: true, data: {node: hostname}})
+                                graphCollection = new Model.NodeStatsCollection(null, {hostname: hostname});
+                            graphCollection.fetch({wait: true})
                                 .done(function(){
                                     var view = new Views.NodeMonitoringTabView({
                                         collection: graphCollection,

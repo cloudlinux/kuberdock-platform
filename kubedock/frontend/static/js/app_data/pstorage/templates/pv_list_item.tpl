@@ -10,7 +10,7 @@
         <span class="terminate-btn disabled" data-toggle="tooltip" data-placement="top"
             title="<%- forbidDeletionMsg %>"></span>
     <% } else { %>
-        <span class="terminate-btn"></span>
+        <span class="terminate-btn" data-toggle="tooltip" data-placement="top" title='Delete "<%- name %>" volume'></span>
     <% } %>
     <!-- <span class="unmount pull-right"></span>
     <span class="onsearsh pull-right"></span> -->

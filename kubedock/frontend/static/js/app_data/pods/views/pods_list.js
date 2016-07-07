@@ -1,10 +1,10 @@
 define(['app_data/app',
-        'tpl!app_data/pods/templates/layout_pod_list.tpl',
-        'tpl!app_data/pods/templates/pod_list_item.tpl',
-        'tpl!app_data/pods/templates/pod_list_empty.tpl',
-        'tpl!app_data/pods/templates/pod_list.tpl',
+        'tpl!app_data/pods/templates/pod_list/layout.tpl',
+        'tpl!app_data/pods/templates/pod_list/item.tpl',
+        'tpl!app_data/pods/templates/pod_list/empty.tpl',
+        'tpl!app_data/pods/templates/pod_list/list.tpl',
         'app_data/utils',
-        'bootstrap'],
+        'bootstrap', 'tooltip'],
        function(App, layoutPodListTpl, podListItemTpl, podListEmptyTpl, podListTpl, utils){
     'use strict';
 
@@ -71,7 +71,7 @@ define(['app_data/app',
             stop       : '.stop-btn',
             remove     : '.terminate-btn',
             checkbox   : 'label.custom span',
-            podPageBtn : '.poditem-page-btn'
+            tooltip    : '[data-toggle="tooltip"]'
         },
 
         events: {
@@ -80,7 +80,6 @@ define(['app_data/app',
             'click @ui.paystart'   : 'payStartItem',
             'click @ui.stop'       : 'stopItem',
             'click @ui.remove'     : 'deleteItem',
-            'click @ui.podPageBtn' : 'podPage',
             'click @ui.checkbox'   : 'toggleItem'
         },
 
@@ -88,10 +87,7 @@ define(['app_data/app',
             'change': 'render'
         },
 
-        podPage: function(evt){
-            evt.stopPropagation();
-            App.navigate('pods/' + this.model.id, {trigger: true});
-        },
+        onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
 
         startItem: function(){ this.model.cmdStart(); },
         payStartItem: function(){ this.model.cmdPayAndStart(); },

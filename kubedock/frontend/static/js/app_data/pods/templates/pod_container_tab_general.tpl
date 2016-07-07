@@ -13,7 +13,7 @@
         <div id="details_content" class="col-md-10 col-sm-12 configuration-general-tab">
             <div id="tab-content">
                 <div class="status-line">
-                    <span class="icon status <%- state %>"><span>Status: <%- state %></span></span>
+                    <span class="icon <%- state %>">Status: <span class="text-capitalize"><%- state %></span></span>
                     <% if (state == "running"){ %>
                         <span id="stopContainer"><span>Stop</span></span>
                         <% if (!updateIsAvailable) { %>

@@ -2,7 +2,7 @@
     <% if(status === 'preparing') { %>
         <span class="icon deploying">Status: Deploying</span>
     <% } else { %>
-        <span class="icon <%- status %>">Status: <%- status %></span>
+        <span class="icon <%- status %>">Status: <span class="text-capitalize"><%- status %></span></span>
     <% } %>
     <% if (graphs) { %>
         <a class="list-btn" href="#pods/<%- id %>"><span>Data</span></a>

@@ -35,11 +35,6 @@
     }
     .terminate-btn{
         .mdi('delete',21px, #B5BBC1, #3197EE);
-        &:hover{
-            &:before{
-                content: 'delete_forever'
-            }
-        }
     }
     .stats-btn{
         .mdi('equalizer',21px, #B5BBC1, #3197EE);
@@ -141,7 +136,6 @@
 
 // table icons
 table{
-    /* statusses */
     span{
         .statuses();
     }
@@ -197,6 +191,7 @@ table{
         }
     }
     .restart-btn{
+        display: inline-block;
         .mdi('autorenew',21px, #B5BBC1, #3197EE);
     }
     .container-update{
@@ -204,6 +199,7 @@ table{
         .mdi('cloud_upload',21px, #B5BBC1, #3197EE);
     }
     .edit-item{
+        display: inline-block;
         .mdi('create',21px, #B5BBC1, #3197EE);
     }
     .copy-link,

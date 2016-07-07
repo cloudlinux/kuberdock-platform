@@ -140,3 +140,17 @@ def pod_factory(image, **create_kwargs):
         return [cluster.create_pod(image, n, **params) for n in names]
 
     return _factory
+
+
+def center_text_message(message, width=120, fill_char='-'):
+    """
+    Returns a string where the message is centered relative to the specified
+    width filling the empty space around text with the given character
+
+    :param message: string
+    :param width: width of the screen
+    :param fill_char: char to use for filling blanks
+    :return: formatted message
+    """
+    message = ' {} '.format(message)
+    return '{{:{}^{}}}'.format(fill_char, width).format(message)

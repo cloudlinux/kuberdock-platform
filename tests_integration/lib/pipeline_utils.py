@@ -6,7 +6,8 @@ from functools import wraps
 from tempfile import NamedTemporaryFile
 
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.integration_test_utils import merge_dicts
+from tests_integration.lib.integration_test_utils import merge_dicts, \
+    center_text_message
 
 PIPELINES_PATH = '.pipelines/'
 logger = logging.getLogger()
@@ -77,11 +78,14 @@ class Pipeline(object):
         :param test: a callable which represents a test and accepts one a
             KDIntegrationAPI object as a first argument
         """
+        test_name = '{}::{}'.format(test.__module__, test.__name__)
+        logger.debug(center_text_message('{} START'.format(test_name)))
         self.set_up()
         try:
             test(self.cluster)
         finally:
             self.tear_down()
+            logger.debug(center_text_message('{} END'.format(test_name)))
 
     def create(self):
         """

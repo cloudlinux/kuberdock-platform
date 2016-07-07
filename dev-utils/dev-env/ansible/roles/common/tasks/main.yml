@@ -35,7 +35,8 @@
 
 - name: User dotfiles
   include: dotfiles.yml
-  when: dotfiles is defined and dotfiles
+  when: dotfiles is defined and dotfiles and is_dev_install
+
 
 - name: User hooks
   include: hook.yml

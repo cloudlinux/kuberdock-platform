@@ -1,11 +1,9 @@
 define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         'tpl!app_data/nodes/templates/node_detailed_layout.tpl',
         'tpl!app_data/nodes/templates/node_general_tab.tpl',
-        'tpl!app_data/nodes/templates/node_stats_tab.tpl',
         'tpl!app_data/nodes/templates/node_logs_tab.tpl',
         'tpl!app_data/nodes/templates/node_monitoring_tab.tpl',
         'tpl!app_data/nodes/templates/node_timelines_tab.tpl',
-        'tpl!app_data/nodes/templates/node_configuration_tab.tpl',
         'tpl!app_data/nodes/templates/node_add_layout.tpl',
         'tpl!app_data/nodes/templates/node_add_step.tpl',
         'tpl!app_data/nodes/templates/node_empty.tpl',
@@ -19,11 +17,9 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
        function(App, Controller, Marionette, utils,
                 nodeDetailedLayoutTpl,
                 nodeGeneralTabTpl,
-                nodeStatsTabTpl,
                 nodeLogsTabTpl,
                 nodeMonitoringTabTpl,
                 nodeTimelinesTabTpl,
-                nodeConfigurationTabTpl,
                 nodeAddLayoutTpl,
                 nodeAddStepTpl,
                 nodeEmptyTpl,
@@ -56,9 +52,12 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             var tgt = $(evt.target);
             var coll = this.model.get('c');
             if (tgt.hasClass('paginatorFirst')) coll.getFirstPage();
-            else if (tgt.hasClass('paginatorPrev') && coll.hasPreviousPage()) coll.getPreviousPage();
-            else if (tgt.hasClass('paginatorNext') && coll.hasNextPage()) coll.getNextPage();
-            else if (tgt.hasClass('paginatorLast')) coll.getLastPage();
+            else if (tgt.hasClass('paginatorPrev') && coll.hasPreviousPage())
+                coll.getPreviousPage();
+            else if (tgt.hasClass('paginatorNext') && coll.hasNextPage())
+                coll.getNextPage();
+            else if (tgt.hasClass('paginatorLast'))
+                coll.getLastPage();
             this.render();
         }
     });
@@ -98,14 +97,14 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 name = that.model.get('hostname');
 
             utils.modalDialogDelete({
-                title: "Delete " + name + "?",
+                title: 'Delete ' + name + '?',
                 body: "Are you sure you want to delete node '" + name + "'?",
                 small: true,
                 show: true,
                 footer: {
                     buttonOk: function() {
                         utils.preloader.show();
-                        that.model.save({command: 'delete'},{patch: true})
+                        that.model.save({command: 'delete'}, {patch: true})
                             .always(utils.preloader.hide)
                             .fail(utils.notifyWindow);
                     },
@@ -123,7 +122,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         template           : nodeListTpl,
         childView          : views.NodeItem,
         emptyView          : views.NodeEmpty,
-        childViewContainer : "tbody",
+        childViewContainer : 'tbody',
 
         ui: {
             navSearch   : '.nav-search',
@@ -273,13 +272,12 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         complete: function () {
             var that = this,
                 val = this.ui.node_name.val(),
-                pattern =  /^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$/i;
+                pattern =  /^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$/i;  // eslint-disable-line max-len
 
             val = val.replace(/\s+/g, '');
             this.ui.node_name.val(val);
 
             App.getNodeCollection().done(function(nodeCollection){
-                console.log(nodeCollection);
                 switch (true){
                     case !val:
                         that.ui.node_name.addClass('error');
@@ -287,7 +285,9 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                         break;
                     case val && !pattern.test(val):
                         that.ui.node_name.addClass('error');
-                        utils.notifyWindow('Hostname can\'t contain some special symbols like "#", "%", "/" or start with "."');
+                        utils.notifyWindow(
+                            'Hostname can\'t contain some special symbols like '
+                            + '"#", "%", "/" or start with "."');
                         break;
                     default:
                         utils.preloader.show();
@@ -369,13 +369,15 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         changeTab: function (evt) {
             evt.preventDefault();
             var tgt = $(evt.target);
-            if(tgt.not("li")) tgt = tgt.parent('li');
-            if (tgt.hasClass('nodeGeneralTab')) App.navigate('nodes/' + this.nodeId + '/general', {trigger: true});
-            else if (tgt.hasClass('nodeStatsTab')) App.navigate('nodes/' + this.nodeId + '/stats', {trigger: true});
-            else if (tgt.hasClass('nodeLogsTab')) App.navigate('nodes/' + this.nodeId + '/logs', {trigger: true});
-            else if (tgt.hasClass('nodeMonitoringTab')) App.navigate('nodes/' + this.nodeId + '/monitoring', {trigger: true});
-            else if (tgt.hasClass('nodeTimelinesTab')) App.navigate('nodes/' + this.nodeId + '/timelines', {trigger: true});
-            else if (tgt.hasClass('nodeConfigurationTab')) App.navigate('nodes/' + this.nodeId + '/configuration', {trigger: true});
+            if(tgt.not('li')) tgt = tgt.parent('li');
+            if (tgt.hasClass('nodeGeneralTab'))
+                App.navigate('nodes/' + this.nodeId + '/general', {trigger: true});
+            else if (tgt.hasClass('nodeLogsTab'))
+                App.navigate('nodes/' + this.nodeId + '/logs', {trigger: true});
+            else if (tgt.hasClass('nodeMonitoringTab'))
+                App.navigate('nodes/' + this.nodeId + '/monitoring', {trigger: true});
+            else if (tgt.hasClass('nodeTimelinesTab'))
+                App.navigate('nodes/' + this.nodeId + '/timelines', {trigger: true});
         },
 
         // redeployNode: function() {
@@ -405,7 +407,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 var model = nodeCollection.get(that.nodeId),
                     name = model.get('hostname');
                 utils.modalDialogDelete({
-                    title: "Delete " + name + "?",
+                    title: 'Delete ' + name + '?',
                     body: "Are you sure you want to delete node '" + name + "'?",
                     small: true,
                     show: true,
@@ -465,10 +467,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         }
     });
 
-    views.NodeStatsTabView = Backbone.Marionette.ItemView.extend({
-        template: nodeStatsTabTpl,
-    });
-
     views.NodeLogsTabView = Backbone.Marionette.ItemView.extend({
         template: nodeLogsTabTpl,
 
@@ -502,7 +500,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         onBeforeRender: function () {
             var el = this.ui.textarea;
-            if (typeof el !== 'object' || (el.scrollTop() + el.innerHeight()) === el[0].scrollHeight)
+            if (typeof el !== 'object' ||
+                    (el.scrollTop() + el.innerHeight()) === el[0].scrollHeight)
                 this.logScroll = null;  // stick to bottom
             else
                 this.logScroll = el.scrollTop();  // stay at this position
@@ -517,11 +516,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             if (this.niceScroll !== undefined)
                 this.niceScroll.remove();
             this.niceScroll = this.ui.textarea.niceScroll({
-                cursorcolor: "#E7F4FF",
-                cursorwidth: "12px",
-                cursorborder: "none",
-                cursorborderradius: "none",
-                background: "transparent",
+                cursorcolor: '#E7F4FF',
+                cursorwidth: '12px',
+                cursorborder: 'none',
+                cursorborderradius: 'none',
+                background: 'transparent',
                 autohidemode: false,
                 railoffset: 'bottom',
                 hidecursordelay: 0
@@ -545,84 +544,90 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         initialize: function(options) {
             this.node = options.node;
+            this.error = options.error;
             this.listenTo(this.node.collection, 'reset', this.render);
         },
 
         makeGraph: function(){
-            var that = this;
-            App.getNodeCollection().done(function(nodeCollection){
-                var lines = that.model.get('lines'),
-                    running = that.node.get('status') === 'running',
-                    points = [],
-                    options = {
-                        title: that.model.get('title'),
-                        axes: {
-                            xaxis: {
-                                label: 'time',
-                                renderer: $.jqplot.DateAxisRenderer,
-                            },
-                            yaxis: {label: that.model.get('ylabel'), min: 0}
-                        },
-                        seriesDefaults: {
-                            showMarker: false,
-                            rendererOptions: {
-                                smooth: true,
-                                animation: {
-                                    show: true
-                                }
-                            }
-                        },
-                        series: that.model.get('series'),
-                        legend: {
-                            show: true,
-                            placement: 'insideGrid'
-                        },
-                        grid: {
-                            background: '#ffffff',
-                            drawBorder: false,
-                            shadow: false
-                        },
-                        noDataIndicator: {
-                            show: true,
-                            indicator: !running ? "Couldn't connect to the node (maybe it's rebooting)..." :
-                                "Collecting data... plot will be dispayed in a few minutes.",
-                            axes: {
-                                xaxis: {
-                                    min: App.currentUser.localizeDatetime(+new Date() - 1000*60*20),
-                                    max: App.currentUser.localizeDatetime(),
-                                    tickOptions: {formatString:'%H:%M'},
-                                    tickInterval: '5 minutes',
-                                },
-                                yaxis: {min: 0, max: 150, tickInterval: 50}
-                            }
-                        },
-                    };
-                if (that.model.has('seriesColors')) {
-                    options.seriesColors = that.model.get('seriesColors');
-                }
+            var lines = this.model.get('lines'),
+                points = [],
+                error;
 
+            if (this.error)
+                error = this.error;
+            else if (this.node.get('status') === 'running')
+                error = 'Collecting data... plot will be dispayed in a few minutes.';
+            else
+                error = "Couldn't connect to the node (maybe it's rebooting)...";
+
+            var options = {
+                title: this.model.get('title'),
+                axes: {
+                    xaxis: {
+                        label: 'time',
+                        renderer: $.jqplot.DateAxisRenderer,
+                    },
+                    yaxis: {label: this.model.get('ylabel'), min: 0}
+                },
+                seriesDefaults: {
+                    showMarker: false,
+                    rendererOptions: {
+                        smooth: true,
+                        animation: {
+                            show: true
+                        }
+                    }
+                },
+                series: this.model.get('series'),
+                legend: {
+                    show: true,
+                    placement: 'insideGrid'
+                },
+                grid: {
+                    background: '#ffffff',
+                    drawBorder: false,
+                    shadow: false
+                },
+                noDataIndicator: {
+                    show: true,
+                    indicator: error,
+                    axes: {
+                        xaxis: {
+                            min: App.currentUser.localizeDatetime(+new Date() - 1000*60*20),
+                            max: App.currentUser.localizeDatetime(),
+                            tickOptions: {formatString:'%H:%M'},
+                            tickInterval: '5 minutes',
+                        },
+                        yaxis: {min: 0, max: 150, tickInterval: 50}
+                    }
+                },
+            };
+
+            if (this.model.has('seriesColors')) {
+                options.seriesColors = this.model.get('seriesColors');
+            }
+
+            for (var i=0; i<lines; i++) {
+                if (points.length < i+1) {
+                    points.push([]);
+                }
+            }
+
+            // If there is only one point, jqplot will display ugly plot with
+            // weird grid and no line.
+            // Remove this point to force jqplot to show noDataIndicator.
+            if (this.model.get('points').length === 1)
+                this.model.get('points').splice(0);
+
+            this.model.get('points').forEach(function(record){
                 for (var i=0; i<lines; i++) {
-                    if (points.length < i+1) {
-                        points.push([]);
-                    }
+                    points[i].push([
+                        App.currentUser.localizeDatetime(record[0]),
+                        record[i+1]
+                    ]);
                 }
-
-                // If there is only one point, jqplot will display ugly plot with
-                // weird grid and no line.
-                // Remove this point to force jqplot to show noDataIndicator.
-                if (that.model.get('points').length === 1)
-                    that.model.get('points').splice(0);
-
-                that.model.get('points').forEach(function(record){
-                    for (var i=0; i<lines; i++) {
-                        points[i].push([
-                            App.currentUser.localizeDatetime(record[0]),
-                            record[i+1]
-                        ]);
-                    }
-                });
-                that.ui.chart.jqplot(points, options);
             });
+            this.ui.chart.jqplot(points, options);
         },
 
         onDomRefresh: function(){
@@ -639,20 +644,24 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         template: nodeMonitoringTabTpl,
         childView: views.NodeMonitoringTabViewItem,
         childViewContainer: '.graphs',
-        childViewOptions: function() { return {node: this.model}; },
+        childViewOptions: function(){
+            return {node: this.model, error: this.error};
+        },
         onBeforeRender: function(){ utils.preloader.show; },
         onShow: function(){ utils.preloader.hide; },
         modelEvents: {
             'change': 'render'
-        }
+        },
+
+        initialize: function(options){
+            this.error = options.error;
+            if (this.error)
+                this.collection.setEmpty();
+        },
     });
 
     views.NodeTimelinesTabView = Backbone.Marionette.ItemView.extend({
         template: nodeTimelinesTabTpl
-    });
-
-    views.NodeConfigurationTabView = Backbone.Marionette.ItemView.extend({
-        template: nodeConfigurationTabTpl
     });
 
     views.NodesLayout = Backbone.Marionette.LayoutView.extend({

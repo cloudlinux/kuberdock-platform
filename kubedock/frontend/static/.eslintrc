@@ -12,7 +12,7 @@
         "indent": [0, 4],
         "linebreak-style": [2, "unix"],
         "max-depth": [1, 8],
-        "max-len": [1, {"code": 120, "ignoreUrls": true}],
+        "max-len": [1, {"code": 100, "ignoreUrls": true}],
         "no-trailing-spaces": [1],
         "no-unneeded-ternary": [1],
         "quotes": [0, "single", {"avoidEscape": true, "allowTemplateLiterals": true}],

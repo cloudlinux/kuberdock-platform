@@ -193,7 +193,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
                 // TODO: move common parts out of those views
                 podID: this.podBefore.id,
-                state: before ? before.getFakeState() : 'new',
+                state: before ? before.getPrettyStatus({fakeTransition: true}) : 'new',
                 image: (before || after).get('image'),
                 sourceUrl: (before || after).get('sourceUrl'),
                 kubes: (before || after).get('kubes'),
@@ -283,7 +283,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             return {
                 // TODO: move common parts out of those views
                 podID: this.podBefore.id,
-                state: before ? before.getFakeState() : 'new',
+                state: before ? before.getPrettyStatus({fakeTransition: true}) : 'new',
                 image: (before || after).get('image'),
                 sourceUrl: (before || after).get('sourceUrl'),
                 kubes: (before || after).get('kubes'),
@@ -305,7 +305,10 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
     views.WizardStatsSubItemView = Backbone.Marionette.ItemView.extend({
         template: podItemGraphTpl,
 
-        initialize: function(options){ this.container = options.container; },
+        initialize: function(options){
+            this.container = options.container;
+            this.error = options.error;
+        },
 
         ui: {
             chart: '.graph-item'
@@ -313,9 +316,17 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         onShow: function(){
             var lines = this.model.get('lines'),
-                running = this.container.get('state') === 'running',
                 series = this.model.get('series'),
-                options = {
+                error;
+
+            if (this.error)
+                error = this.error;
+            else if (this.container.get('state') === 'running')
+                error = 'Collecting data... plot will be dispayed in a few minutes.';
+            else
+                error = 'Container is not running...';
+
+            var options = {
                 title: this.model.get('title'),
                 axes: {
                     xaxis: {label: 'time', renderer: $.jqplot.DateAxisRenderer},
@@ -339,8 +350,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 },
                 noDataIndicator: {
                     show: true,
-                    indicator: !running ? 'Container is not running...' :
-                        'Collecting data... plot will be dispayed in a few minutes.',
+                    indicator: error,
                     axes: {
                         xaxis: {
                             min: App.currentUser.localizeDatetime(+new Date() - 1000*60*20),
@@ -354,7 +364,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             };
 
             var points = [];
-            for (var i=0; i<lines;i++)
+            for (var i=0; i<lines; i++)
                 points.push([]);
 
             // If there is only one point, jqplot will display ugly plot with
@@ -379,7 +389,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         tagName: 'div',
 
         childViewOptions: function() {
-            return {container: this.model.get('before')};
+            return {container: this.model.get('before'), error: this.error};
         },
 
         events: {
@@ -399,9 +409,13 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             'change': 'render'
         },
 
-        initialize: function() {
+        initialize: function(options) {
+            this.error = options.error;
             this.pod = this.model.get('before').getPod();
             this.model.addNestedChangeListener(this, this.render);
+
+            if (this.error)
+                this.collection.setEmpty(/* noNework */true);
         },
 
         templateHelpers: function(){
@@ -414,7 +428,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 kube_type: this.pod.getKubeType(),
                 limits: before.limits,
                 restart_policy: this.pod.get('restartPolicy'),
-                state: before.getFakeState(),
+                state: before.getPrettyStatus({fakeTransition: true}),
                 image: before.get('image'),
                 sourceUrl: before.get('sourceUrl'),
                 kubes: before.get('kubes'),
@@ -492,7 +506,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 kube_type: this.pod.getKubeType(),
                 limits: before.limits,
                 restart_policy: this.pod.get('restartPolicy'),
-                state: before.getFakeState(),
+                state: before.getPrettyStatus({fakeTransition: true}),
                 image: before.get('image'),
                 sourceUrl: before.get('sourceUrl'),
                 kubes: before.get('kubes'),
@@ -502,7 +516,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
         onBeforeRender: function () {
             var el = this.ui.textarea;
-            if (typeof el !== 'object' || (el.scrollTop() + el.innerHeight()) === el[0].scrollHeight)
+            if (typeof el !== 'object' ||
+                    (el.scrollTop() + el.innerHeight()) === el[0].scrollHeight)
                 this.logScroll = null;  // stick to bottom
             else
                 this.logScroll = el.scrollTop();  // stay at this position

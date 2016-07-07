@@ -24,14 +24,8 @@
 <td>
     <% if (status === 'deleting') { %>
         <span class="pending">pending</span>
-    <% } else if (status) { %>
-        <% if(status === 'preparing') { %>
-            <span class="deploying">deploying</span>
-        <% } else { %>
-            <span class="<%- status %>"><%- status %></span>
-        <% } %>
     <% } else { %>
-        <span class="stopped">stopped</span>
+        <span class="<%- prettyStatus %>"><%- prettyStatus %></span>
     <% } %>
 </td>
 <td><%- kubeType.get('name') %></td>

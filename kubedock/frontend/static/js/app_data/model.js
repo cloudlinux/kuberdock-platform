@@ -129,7 +129,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             containerPort: null,
             hostPort: null,
             isPublic: false,
-            protocol: "tcp",
+            protocol: 'tcp',
         },
         initialize: function(){
             this.on('change', this.resetID);
@@ -208,20 +208,25 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                         utils.notifyWindow('No updates found', 'success');
                 });
         },
-        getFakeState: function(){
+        getPrettyStatus: function(options){
+            options = options || {};
             var state = this.get('state'),
-                podStatus = this.getPod().get('status');
-            if (state === 'running' && podStatus === 'stopping')
+                podStatus = this.getPod().get('status'),
+                fakeTransition = options.fakeTransition;
+
+            if (fakeTransition && state === 'running' && podStatus === 'stopping')
                 return 'stopping';
-            else if (state === 'stopped' && podStatus === 'preparing')
+            else if (fakeTransition && state === 'stopped' && podStatus === 'preparing')
                 return 'deploying';
-            return state;
+            else if (state === 'running' && !this.get('ready'))
+                return 'pending';
+            return state || 'stopped';
         },
         update: function(){
             var model = this;
             utils.modalDialog({
                 title: 'Update container',
-                body: "During update whole pod will be restarted. Continue?",
+                body: 'During update whole pod will be restarted. Continue?',
                 small: true,
                 show: true,
                 footer: {
@@ -237,11 +242,11 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         getLogs: function(size){
             size = size || 100;
-            var pod_id = this.getPod().id,
+            var podID = this.getPod().id,
                 name = this.get('name');
             return $.ajax({  // TODO: use Backbone.Model
                 authWrap: true,
-                url: '/api/logs/container/' + pod_id + '/' + name + '?size=' + size,
+                url: '/api/logs/container/' + podID + '/' + name + '?size=' + size,
                 context: this,
             }).done(function(data){
                 var seriesByTime = _.indexBy(this.logs, 'start');
@@ -291,7 +296,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             else if (mountPath.length > 30)
                 return 'Mount path maximum length is 30 symbols';
             else if (!/^[\w/.-]*$/.test(mountPath))
-                return 'Mount path should contain letters of Latin alphabet or "/", "_", "-" symbols';
+                return 'Mount path should contain letters of Latin alphabet '
+                    + 'or "/", "_", "-" symbols';
         },
     });
 
@@ -335,16 +341,16 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         defaults: function(){
             var kubeTypes = new data.KubeTypeCollection(
                     App.userPackage.getKubeTypes().where({available: true})),
-                default_kube = kubeTypes.findWhere({is_default: true}) ||
+                defaultKube = kubeTypes.findWhere({is_default: true}) ||
                     kubeTypes.at(0) || data.KubeType.noAvailableKubeTypes;
             return {
                 name: 'Nameless',
                 containers: [],
                 volumes: [],
                 replicas: 1,
-                restartPolicy: "Always",
+                restartPolicy: 'Always',
                 node: null,
-                kube_type: default_kube.id,
+                kube_type: defaultKube.id,
                 status: 'stopped',
             };
         },
@@ -357,7 +363,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             var attrs = _.without(this.editableAttributes, 'containers'),
                 before = _.partial(_.pick, this.toJSON()).apply(_, attrs),
                 after = _.partial(_.pick, compareTo.toJSON()).apply(_, attrs);
-            return !_.isEqual(before, after) ||  this.getContainersDiffCollection().any(function(container){
+            return !_.isEqual(before, after) ||
+                this.getContainersDiffCollection().any(function(container){
                     var before = container.get('before'),
                         after = container.get('after');
                     return !before || !after || before.isChanged(after);
@@ -396,9 +403,19 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
 
         command: function(cmd, commandOptions){
-            var data = _.extend(this.changedAttributes() || {},  // patch should include previous `set`
+            // patch should include previous `set`
+            var data = _.extend(this.changedAttributes() || {},
                                 {command: cmd, commandOptions: commandOptions || {}});
             return this.save(data, {wait: true, patch: true});
+        },
+
+        getPrettyStatus: function(){
+            var status = this.get('status');
+            if (status === 'running' && !this.get('ready'))
+                return 'pending';
+            else if (status === 'preparing')
+                return 'deploying';
+            return status || 'stopped';
         },
 
         ableTo: function(command){
@@ -673,7 +690,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                                     model.command('redeploy', {wipeOut: true})
                                         .always(utils.preloader.hide).fail(utils.notifyWindow)
                                         .done(function(){
-                                            utils.notifyWindow('Pod will be restarted soon', 'success');
+                                            utils.notifyWindow('Pod will be restarted soon',
+                                                               'success');
                                         }).then(deferred.resolve, deferred.reject);
                                 },
                                 buttonOkText: 'Continue',
@@ -694,7 +712,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 model = this,
                 name = model.get('name');
             utils.modalDialogDelete({
-                title: "Delete " + _.escape(name) + "?",
+                title: 'Delete ' + _.escape(name) + '?',
                 body: "Are you sure you want to delete pod '" + _.escape(name) + "'?",
                 small: true,
                 show: true,
@@ -739,7 +757,14 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
 
     data.Stat = Backbone.Model.extend({
-        parse: unwrapper
+        parse: unwrapper,
+        defaults: function(){
+            return {
+                lines: 2,
+                points: [],
+                series: [],
+            };
+        },
     });
 
     data.PodCollection = data.SortableCollection.extend({
@@ -767,7 +792,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 function(m){ return m.get('status') !== 'deleting'; });
             return checkable.length && _.all(_.pluck(checkable, 'is_checked'));
         },
-        checkedItems: function(){ return this.fullCollection.filter(function(m){ return m.is_checked; }); },
+        checkedItems: function(){
+            return this.fullCollection.filter(function(m){ return m.is_checked; });
+        },
     });
     App.getPodCollection = App.resourcePromiser('podCollection', data.PodCollection);
 
@@ -820,9 +847,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 if (lines.length && oldLines.length) {
                     // if we have some logs, append only new lines
                     var first = lines[0],
-                        index_to = _.sortedIndex(oldLines, first, 'time_nano'),
-                        index_from = Math.max(0, index_to + lines.length - this.logsLimit);
-                    lines.unshift.apply(lines, oldLines.slice(index_from, index_to));
+                        indexTo = _.sortedIndex(oldLines, first, 'time_nano'),
+                        indexFrom = Math.max(0, indexTo + lines.length - this.logsLimit);
+                    lines.unshift.apply(lines, oldLines.slice(indexFrom, indexTo));
                 }
 
                 this.set('logs', lines);
@@ -853,7 +880,22 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     data.StatsCollection = Backbone.Collection.extend({
         url: '/api/stats',
         model: data.Stat,
-        parse: unwrapper
+        parse: unwrapper,
+        setEmpty: function(noNework){
+            var emptyLines = [{
+                series: [{label: 'available'}, {label: 'cpu load'}],
+                title: 'CPU', ylabel: '%'
+            }, {
+                series: [{label: 'available'}, {fill: true, label: 'used'}],
+                title: 'Memory', ylabel: 'MB'
+            }, {
+                series: [{fill: 'true', label: 'in'}, {label: 'out'}],
+                title: 'Network', ylabel: 'bps'
+            }];
+            if (noNework)
+                emptyLines.pop();
+            this.reset(emptyLines);
+        }
     });
 
     // TODO: Fixed code duplication by moving models from settings_app to a common file
@@ -938,7 +980,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 body: text,
                 small: true,
                 show: true,
-                type: force ? 'deleteAnyway' : 'delete' ,
+                type: force ? 'deleteAnyway' : 'delete',
                 footer: {
                     buttonOk: function(){ that.deleteUser(options, force); },
                     buttonCancel: true
@@ -970,7 +1012,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         loginConfirmDialog: function(options){
             var that = this;
             utils.modalDialog({
-                title: "Authorize by " + this.get('username'),
+                title: 'Authorize by ' + this.get('username'),
                 body: "Are you sure you want to authorize by user '" +
                     this.get('username') + "'?",
                 small: true,
@@ -1034,16 +1076,6 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         state: {
             pageSize: 100
         }
-    });
-
-    data.NodeStatsModel = Backbone.Model.extend({
-        parse: unwrapper,
-    });
-
-    data.NodeStatsCollection = Backbone.Collection.extend({
-        url: '/api/stats/',
-        model: data.NodeStatsModel,
-        parse: unwrapper
     });
 
     data.AppModel = Backbone.Model.extend({
@@ -1220,7 +1252,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     // Billing & resources
 
     data.Package = Backbone.AssociatedModel.extend({
-        url: function(){ return '/api/pricing/packages/' + this.id + '?with_kubes=1&with_internal=1'; },
+        url: function(){
+            return '/api/pricing/packages/' + this.id + '?with_kubes=1&with_internal=1';
+        },
         parse: unwrapper,
         defaults: function(){
             return {

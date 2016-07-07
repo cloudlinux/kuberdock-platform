@@ -57,6 +57,7 @@ define(['app_data/app',
 
         templateHelpers: function(){
             return {
+                prettyStatus: this.model.getPrettyStatus(),
                 kubes: this.model.getKubes(),
                 kubeType: this.model.getKubeType(),
                 checked: !!this.model.is_checked,
@@ -256,7 +257,9 @@ define(['app_data/app',
                             footer: {
                                 buttonOk: function(){
                                     that.sendCommand('redeploy', {wipeOut: true})
-                                        .done(function(){ utils.notifyWindow(successMsg, 'success'); });
+                                        .done(function(){
+                                            utils.notifyWindow(successMsg, 'success');
+                                        });
                                 },
                                 buttonOkText: 'Continue',
                                 buttonOkClass: 'btn-danger',

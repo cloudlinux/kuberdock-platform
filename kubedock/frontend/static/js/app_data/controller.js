@@ -2,7 +2,7 @@ define([
     'app_data/app', 'app_data/utils', 'app_data/model',
     'app_data/menu/views', 'app_data/paginator/views', 'app_data/breadcrumbs/views',
 ], function(App, utils, Model, Menu, Pager, Breadcrumbs){
-    "use strict";
+    'use strict';
 
     var controller = {
         checkPermissions: function(roles){
@@ -22,7 +22,7 @@ define([
                 var loginView = new Views.LoginView(options);
                 App.message.empty();  // hide any notification
                 utils.preloader.hide();  // hide preloader if there is any
-                App.listenTo(loginView,'action:signin', function(authModel){
+                App.listenTo(loginView, 'action:signin', function(authModel){
                     authModel.unset('password');
                     var token = authModel.get('token');
                     App.storage.authData = token;
@@ -161,24 +161,27 @@ define([
                     App.navigate('pods', {trigger: true});
                 }).done(function(pageData){
                     var statCollection = new Model.StatsCollection();
-                    statCollection.fetch({
-                        data: {unit: pageData.model.id},
-                        reset: true,
-                        success: function(){
+                    statCollection.fetch({data: {unit: pageData.model.id}, reset: true})
+                        .always(function(){
                             pageData.itemLayout.controls.show(new Views.ControlsPanel({
                                 graphs: true,
                                 model: pageData.model,
                                 fixedPrice: pageData.fixedPrice,
                             }));
+                        })
+                        .done(function(){
                             pageData.itemLayout.info.show(new Views.PodGraph({
                                 model: pageData.model,
-                                collection: statCollection
+                                collection: statCollection,
                             }));
-                        },
-                        error: function(collection, response){
-                            utils.notifyWindow(response);
-                        },
-                    });
+                        })
+                        .fail(function(xhr){
+                            pageData.itemLayout.info.show(new Views.PodGraph({
+                                model: pageData.model,
+                                collection: statCollection,
+                                error: xhr.responseJSON && xhr.responseJSON.data,
+                            }));
+                        });
                 });
             });
         },
@@ -277,15 +280,15 @@ define([
                             statCollection.fetch({
                                 data: {unit: pod.id, container: model.id},
                                 reset: true,
-                                success: function(){
-                                    wizardLayout.steps.show(new Views.WizardStatsSubView({
-                                        model: model,
-                                        collection:statCollection
-                                    }));
-                                },
-                                error: function(collection, response){
-                                    utils.notifyWindow(response);
-                                },
+                            }).done(function(){
+                                wizardLayout.steps.show(new Views.WizardStatsSubView({
+                                    model: model, collection: statCollection,
+                                }));
+                            }).fail(function(xhr){
+                                wizardLayout.steps.show(new Views.WizardStatsSubView({
+                                    model: model, collection: statCollection,
+                                    error: xhr.responseJSON && xhr.responseJSON.data,
+                                }));
                             });
                         } else {
                             return wizardLayout.steps.show(new tabViews[tab]({model: model}));
@@ -322,10 +325,14 @@ define([
                         }
                     });
 
-                    that.listenTo(wizardLayout, 'step:portconf', _.partial(showTab, 'general', true));
-                    that.listenTo(wizardLayout, 'step:envconf', _.partial(showTab, 'env', true));
-                    that.listenTo(wizardLayout, 'step:statsconf', _.partial(showTab, 'stats', true));
-                    that.listenTo(wizardLayout, 'step:logsconf', _.partial(showTab, 'logs', true));
+                    that.listenTo(wizardLayout, 'step:portconf',
+                                  _.partial(showTab, 'general', true));
+                    that.listenTo(wizardLayout, 'step:envconf',
+                                  _.partial(showTab, 'env', true));
+                    that.listenTo(wizardLayout, 'step:statsconf',
+                                  _.partial(showTab, 'stats', true));
+                    that.listenTo(wizardLayout, 'step:logsconf',
+                                  _.partial(showTab, 'logs', true));
                     App.contents.show(wizardLayout);
                 });
             });
@@ -357,7 +364,8 @@ define([
                 if (!originalModelCopy.get('edited_config')){
                     // copy original config to edited_config (if latter is empty)
                     originalModelCopy.set('edited_config',
-                        _.partial(_.pick, podConfig).apply(_, originalModelCopy.editableAttributes));
+                        _.partial(_.pick, podConfig).apply(
+                            _, originalModelCopy.editableAttributes));
                 }
                 var model = originalModelCopy.get('edited_config');
                 model.persistentDrives = persistentDrives;
@@ -541,11 +549,13 @@ define([
                                         utils.preloader.hide();
                                         App.navigate('pods/' + originalModel.id, {trigger: true});
                                     }).done(function(){
-                                        utils.notifyWindow('Pod will be restarted with the new '
-                                                           + 'configuration soon', 'success');
+                                        utils.notifyWindow(
+                                            'Pod will be restarted with the new '
+                                            + 'configuration soon', 'success');
                                     }).fail(function(){
-                                        utils.notifyWindow('New configuration saved successfully, '
-                                                           + 'but it\'s not applied yet', 'success');
+                                        utils.notifyWindow(
+                                            'New configuration saved successfully, '
+                                            + 'but it\'s not applied yet', 'success');
                                     });
                                 });
                         });
@@ -895,58 +905,44 @@ define([
                     that.listenTo(layoutView, 'show', function(){
 
                         layoutView.nav.show(navbar);
-                        //layoutView.breadcrumbs.show(new Views.Breadcrumbs({model: breadcrumbsModel}));
+                        // layoutView.breadcrumbs.show(new Views.Breadcrumbs(
+                        //     {model: breadcrumbsModel}));
 
-                        switch (tab) {
-
-                            case 'general': {
-                                //layoutView.sidebar.show(new Views.SideBar({model: sidebarModel, nodeId: nodeId}));
-                                layoutView.tabContent.show(new Views.NodeGeneralTabView({ model: node }));
-                            } break;
-
-                            case 'stats': {
-                                layoutView.tabContent.show(new Views.NodeStatsTabView({ model: node }));
-                            } break;
-
-                            case 'logs': {
-                                //layoutView.sidebar.show(new Views.SideBar({model: sidebarModel, nodeId: nodeId}));
-                                layoutView.tabContent.show(new Views.NodeLogsTabView({ model: node }));
-                            } break;
-
-                            case 'monitoring': {
-                                var hostname = node.get('hostname'),
-                                    graphCollection = new Model.NodeStatsCollection();
-                                graphCollection.fetch({
-                                    wait: true,
-                                    data: {node: hostname},
-                                    success: function(){
-                                        var view = new Views.NodeMonitoringTabView({
-                                            collection: graphCollection,
-                                            model: node,
-                                        });
-                                        //layoutView.sidebar.show(new Views.SideBar({model: sidebarModel, nodeId: nodeId}));
-                                        layoutView.tabContent.show(view);
-                                    },
-                                    error: function(collection, response){
-                                        utils.notifyWindow(response);
-                                    }
+                        if (tab === 'logs') {
+                            // layoutView.sidebar.show(new Views.SideBar(
+                            //     {model: sidebarModel, nodeId: nodeId}));
+                            layoutView.tabContent.show(
+                                new Views.NodeLogsTabView({model: node}));
+                        } else if (tab === 'timelines') {
+                            // layoutView.sidebar.show(new Views.SideBar(
+                            //     {model: sidebarModel, nodeId: nodeId}));
+                            layoutView.tabContent.show(
+                                new Views.NodeTimelinesTabView({model: node}));
+                        } else if (tab === 'monitoring') {
+                            var hostname = node.get('hostname'),
+                                graphCollection = new Model.StatsCollection();
+                            graphCollection.fetch({wait: true, data: {node: hostname}})
+                                .done(function(){
+                                    var view = new Views.NodeMonitoringTabView({
+                                        collection: graphCollection,
+                                        model: node,
+                                    });
+                                    layoutView.tabContent.show(view);
+                                })
+                                .fail(function(xhr){
+                                    var view = new Views.NodeMonitoringTabView({
+                                        collection: graphCollection,
+                                        model: node,
+                                        error: xhr.responseJSON && xhr.responseJSON.data,
+                                    });
+                                    layoutView.tabContent.show(view);
                                 });
-                            } break;
-
-                            case 'timelines': {
-                                layoutView.tabContent.show(new Views.NodeTimelinesTabView({ model: node }));
-                            } break;
-
-                            case 'configuration': {
-                                layoutView.tabContent.show(new Views.NodeConfigurationTabView({ model: node }));
-                            } break;
-
-                            default: {
-                                //layoutView.sidebar.show(new Views.SideBar({model: sidebarModel, nodeId: nodeId}));
-                                layoutView.tabContent.show(new Views.NodeGeneralTabView({ model: node }));
-                            } break;
-
-                        } // switch
+                        } else {
+                            // layoutView.sidebar.show(new Views.SideBar(
+                            //     {model: sidebarModel, nodeId: nodeId}));
+                            layoutView.tabContent.show(
+                                new Views.NodeGeneralTabView({model: node}));
+                        }
                     });
                     App.contents.show(layoutView);
                 });
@@ -1004,9 +1000,11 @@ define([
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
                     App.getUserCollection().done(function(userCollection){
-                        var userCollectionView = new Views.UsersListView({ collection: userCollection });
+                        var userCollectionView = new Views.UsersListView(
+                            {collection: userCollection});
                         layoutView.main.show(userCollectionView);
-                        layoutView.pager.show(new Pager.PaginatorView({ view: userCollectionView }));
+                        layoutView.pager.show(new Pager.PaginatorView(
+                            {view: userCollectionView}));
                     });
                 });
                 App.contents.show(layoutView);
@@ -1037,7 +1035,11 @@ define([
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
-                    $.when(App.getRoles(), App.getPackages(), App.getTimezones()).done(function(roles, packages, timezones){
+                    $.when(
+                        App.getRoles(),
+                        App.getPackages(),
+                        App.getTimezones()
+                    ).done(function(roles, packages, timezones){
                         layoutView.main.show(new Views.UserCreateView({
                             model: new Model.UserModel(),
                             roles: roles,
@@ -1059,8 +1061,11 @@ define([
                     navbar = new Menu.NavList({collection: App.menuCollection});
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
-                    $.when(App.getUserCollection(), App.getRoles(),
-                           App.getTimezones()).done(function(userCollection, roles, timezones){
+                    $.when(
+                        App.getUserCollection(),
+                        App.getRoles(),
+                        App.getTimezones()
+                    ).done(function(userCollection, roles, timezones){
                         var model = userCollection.fullCollection.get(Number(userId)),
                             view = new Views.UsersEditView({
                                 model: model, kubeTypes: App.kubeTypeCollection,
@@ -1147,7 +1152,8 @@ define([
 
                 var successModelSaving = function(context) {
                     var breadcrumbsModel = new Backbone.Model(_.extend(
-                            _.clone(context.breadcrumbsData), {breadcrumbs: [{name: 'Predefined Apps'}]})),
+                            _.clone(context.breadcrumbsData),
+                                    {breadcrumbs: [{name: 'Predefined Apps'}]})),
                         breadcrumbsView = new Views.Breadcrumbs({model: breadcrumbsModel});
 
                     utils.notifyWindow(
@@ -1169,12 +1175,14 @@ define([
                     if (response && !(response.responseJSON &&
                             response.responseJSON.data &&
                             response.responseJSON.type === 'ValidationError')){
-                                utils.notifyWindow(response);
-                                return;
+                        utils.notifyWindow(response);
+                        return;
                     }
                     // TODO: move it in views in AC-3434
-                    require(['tpl!app_data/papps/templates/validation_error.tpl', 'js-yaml'],
-                             function(validationErrorTpl, jsyaml){
+                    require([
+                        'tpl!app_data/papps/templates/validation_error.tpl',
+                        'js-yaml'
+                    ], function(validationErrorTpl, jsyaml){
                         utils.modalDialog({
                             title: 'Invalid template',
                             body: validationErrorTpl(
@@ -1282,7 +1290,8 @@ define([
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
                     App.getSystemSettingsCollection().done(function(settingsCollection){
-                        layoutView.main.show(new Views.GeneralView({ collection: settingsCollection }));
+                        layoutView.main.show(new Views.GeneralView(
+                            {collection: settingsCollection}));
                     });
                 });
                 App.contents.show(layoutView);
@@ -1324,9 +1333,11 @@ define([
                             var view, item, button, breadcrumbsControls;
                             ippoolCollection.ipPoolMode = ipPoolMode;
                             if (ipPoolMode === 'aws') {
-                                breadcrumbsControls = new Breadcrumbs.Controls({ button: {}});
+                                breadcrumbsControls = new Breadcrumbs.Controls(
+                                    {button: {}});
                                 layoutView.breadcrumb.show(breadcrumbsLayout);
-                                breadcrumbsLayout.subnets.show(new Breadcrumbs.Text({text: 'DNS names'}));
+                                breadcrumbsLayout.subnets.show(
+                                    new Breadcrumbs.Text({text: 'DNS names'}));
                                 breadcrumbsLayout.controls.show(breadcrumbsControls);
                                 item = ippoolCollection.at(0);
                                 view = new Views.SubnetIpsListView({
@@ -1335,16 +1346,21 @@ define([
                                 });
                             }
                             else {
-                                button = {id: 'create_network', href: '#ippool/create', title: 'Add subnet'},
-                                breadcrumbsControls = new Breadcrumbs.Controls({ button: button});
+                                button = {id: 'create_network',
+                                          href: '#ippool/create',
+                                          title: 'Add subnet'},
+                                breadcrumbsControls = new Breadcrumbs.Controls(
+                                    {button: button});
                                 layoutView.breadcrumb.show(breadcrumbsLayout);
-                                breadcrumbsLayout.subnets.show(new Breadcrumbs.Text({text: 'IP Pool'}));
+                                breadcrumbsLayout.subnets.show(
+                                    new Breadcrumbs.Text({text: 'IP Pool'}));
                                 breadcrumbsLayout.controls.show(breadcrumbsControls);
-                                view = new Views.SubnetsListView({ collection: ippoolCollection });
+                                view = new Views.SubnetsListView(
+                                    {collection: ippoolCollection});
                             }
                             layoutView.main.show(view);
                             layoutView.pager.show(new Pager.PaginatorView({view: view}));
-                    });
+                        });
                 });
                 App.contents.show(layoutView);
             });
@@ -1361,12 +1377,18 @@ define([
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
                     layoutView.breadcrumb.show(breadcrumbsLayout);
-                    breadcrumbsLayout.subnets.show(new Breadcrumbs.Link({text: 'IP Pool', href:'#ippool'}));
-                    breadcrumbsLayout.create.show(new Breadcrumbs.Text({text: 'Add subnet'}));
-                    $.when(App.getIppoolMode(), App.getNodeCollection()).done(function(ipPoolMode, nodeCollection){
+                    breadcrumbsLayout.subnets.show(
+                        new Breadcrumbs.Link({text: 'IP Pool', href:'#ippool'}));
+                    breadcrumbsLayout.create.show(
+                        new Breadcrumbs.Text({text: 'Add subnet'}));
+                    $.when(
+                        App.getIppoolMode(),
+                        App.getNodeCollection()
+                    ).done(function(ipPoolMode, nodeCollection){
                         var nodelist = _.map(nodeCollection.fullCollection.models,
                             function(model){ return model.get('hostname'); });
-                        layoutView.main.show(new Views.IppoolCreateSubnetworkView({ipPoolMode : ipPoolMode, nodelist : nodelist}));
+                        layoutView.main.show(new Views.IppoolCreateSubnetworkView(
+                            {ipPoolMode : ipPoolMode, nodelist : nodelist}));
                     });
                 });
                 App.contents.show(layoutView);
@@ -1380,11 +1402,13 @@ define([
             require(['app_data/ippool/views'], function(Views){
                 var layoutView = new Views.IppoolLayoutView(),
                     navbar = new Menu.NavList({collection: App.menuCollection}),
-                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['subnets', 'subnetName']});
+                    breadcrumbsLayout = new Breadcrumbs.Layout(
+                        {points: ['subnets', 'subnetName']});
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
                     layoutView.breadcrumb.show(breadcrumbsLayout);
-                    breadcrumbsLayout.subnets.show(new Breadcrumbs.Link({text: 'IP Pool', href:'#ippool'}));
+                    breadcrumbsLayout.subnets.show(
+                        new Breadcrumbs.Link({text: 'IP Pool', href:'#ippool'}));
                     breadcrumbsLayout.subnetName.show(new Breadcrumbs.Text({text: id}));
                     App.getIPPoolCollection().done(function(ippoolCollection){
                         var item = ippoolCollection.get(id),
@@ -1453,7 +1477,8 @@ define([
             require(['app_data/misc/views'], function(Views){
                 App.getNotificationCollection().done(function(notificationCollection){
                     if (notificationCollection.length) {
-                        var notificationView = new Views.MessageList({collection: notificationCollection});
+                        var notificationView = new Views.MessageList(
+                            {collection: notificationCollection});
                         App.message.show(notificationView);
                     }
                 });
@@ -1464,7 +1489,8 @@ define([
             require(['app_data/misc/views'], function(Views){
                 App.getNotificationCollection().done(function(notificationCollection){
                     notificationCollection.add(data);
-                    var notificationView = new Views.MessageList({collection: notificationCollection});
+                    var notificationView = new Views.MessageList(
+                        {collection: notificationCollection});
                     App.message.show(notificationView);
                 });
             });
@@ -1480,7 +1506,8 @@ define([
                         })
                     );
                     if (notificationCollection.length) {
-                        var notificationView = new Views.MessageList({collection: notificationCollection});
+                        var notificationView = new Views.MessageList(
+                            {collection: notificationCollection});
                         App.message.show(notificationView);
                     }
                     else {

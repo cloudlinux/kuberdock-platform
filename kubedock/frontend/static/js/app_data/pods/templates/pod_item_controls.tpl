@@ -1,9 +1,7 @@
 <div class="status-line">
-    <% if(status === 'preparing') { %>
-        <span class="icon deploying">Status: Deploying</span>
-    <% } else { %>
-        <span class="icon <%- status %>">Status: <span class="text-capitalize"><%- status %></span></span>
-    <% } %>
+    <span class="icon <%- prettyStatus %>">
+        Status: <span class="text-capitalize"><%- prettyStatus %></span>
+    </span>
     <% if (graphs) { %>
         <a class="list-btn" href="#pods/<%- id %>"><span>Data</span></a>
     <% } else { %>

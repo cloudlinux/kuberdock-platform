@@ -78,11 +78,14 @@ define(['app_data/app', 'app_data/model',
 
             return {
                 changed: !before || before.isChanged(after),
-                startedAt: startedAt ? App.currentUser.localizeDatetime(startedAt) : 'Not deployed yet',
+                startedAt: startedAt
+                    ? App.currentUser.localizeDatetime(startedAt)
+                    : 'Not deployed yet',
                 updateIsAvailable: this.model.updateIsAvailable,
                 pod: before ? before.getPod() : after.getPod().editOf(),
                 imagename: imagename,
-                imagetag: imagetag
+                imagetag: imagetag,
+                prettyState: before ? before.getPrettyStatus() : 'new',
             };
         },
 
@@ -112,7 +115,7 @@ define(['app_data/app', 'app_data/model',
             if (sshAccess) {
                 var modelName = this.model.get('before').get('name'),
                     sshLink = sshAccess.data.links[modelName];
-                utils.copyLink(sshLink,'SSH link copied to clipboard');
+                utils.copyLink(sshLink, 'SSH link copied to clipboard');
             } else {
                 utils.notifyWindow('SSH access credentials are outdated. Please, '+
                 'click Get SSH access to generate new link and password', 'error');
@@ -122,7 +125,7 @@ define(['app_data/app', 'app_data/model',
             var sshAccess = this.model.get('before').getPod().sshAccess;
             if (sshAccess) {
                 var sshPassword = sshAccess.data.auth;
-                utils.copyLink(sshPassword,'SSH password copied to clipboard');
+                utils.copyLink(sshPassword, 'SSH password copied to clipboard');
             } else {
                 utils.notifyWindow('SSH access credentials are outdated. Please, '+
                 'click Get SSH access to generate new link and password', 'error');
@@ -175,8 +178,10 @@ define(['app_data/app', 'app_data/model',
 
         initialize: function(){
             this.on('show', function(){
-                this.changed.show(new podItem.ChangedContainersView({collection: this.collection}));
-                this.unchanged.show(new podItem.UnchangedContainersView({collection: this.collection}));
+                this.changed.show(new podItem.ChangedContainersView(
+                    {collection: this.collection}));
+                this.unchanged.show(new podItem.UnchangedContainersView(
+                    {collection: this.collection}));
             });
         },
     });
@@ -224,6 +229,7 @@ define(['app_data/app', 'app_data/model',
                 this.model.get('edited_config').recalcInfo(pkg);
 
             return {
+                prettyStatus    : this.model.getPrettyStatus(),
                 hasPorts        : hasPorts,
                 publicIP        : this.model.get('public_ip'),
                 publicName      : publicName,
@@ -250,7 +256,10 @@ define(['app_data/app', 'app_data/model',
     podItem.PodGraphItem = Backbone.Marionette.ItemView.extend({
         template: podItemGraphTpl,
 
-        initialize: function(options){ this.pod = options.pod; },
+        initialize: function(options){
+            this.pod = options.pod;
+            this.error = options.error;
+        },
 
         ui: {
             chart: '.graph-item'
@@ -258,9 +267,17 @@ define(['app_data/app', 'app_data/model',
 
         onShow: function(){
             var lines = this.model.get('lines'),
-                running = this.pod.get('status') === 'running',
                 series = this.model.get('series'),
-                options = {
+                error;
+
+            if (this.error)
+                error = this.error;
+            else if (this.pod.get('status') === 'running')
+                error = 'Collecting data... plot will be dispayed in a few minutes.';
+            else
+                error = 'Pod is not running...';
+
+            var options = {
                 title: this.model.get('title'),
                 axes: {
                     xaxis: {label: 'time', renderer: $.jqplot.DateAxisRenderer},
@@ -284,8 +301,7 @@ define(['app_data/app', 'app_data/model',
                 },
                 noDataIndicator: {
                     show: true,
-                    indicator: !running ? 'Pod is not running...' :
-                        'Collecting data... plot will be dispayed in a few minutes.',
+                    indicator: error,
                     axes: {
                         xaxis: {
                             min: App.currentUser.localizeDatetime(+new Date() - 1000*60*20),
@@ -299,7 +315,7 @@ define(['app_data/app', 'app_data/model',
             };
 
             var points = [];
-            for (var i=0; i<lines;i++)
+            for (var i=0; i<lines; i++)
                 points.push([]);
 
             // If there is only one point, jqplot will display ugly plot with
@@ -320,11 +336,17 @@ define(['app_data/app', 'app_data/model',
     podItem.PodGraph = Backbone.Marionette.CollectionView.extend({
         childView: podItem.PodGraphItem,
         childViewOptions: function() {
-            return {pod: this.model};
+            return {pod: this.model, error: this.error};
         },
 
         modelEvents: {
             'change': 'render'
+        },
+
+        initialize: function(options){
+            this.error = options.error;
+            if (this.error)
+                this.collection.setEmpty();
         },
     });
 

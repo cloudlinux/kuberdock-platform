@@ -157,6 +157,9 @@ class Pod(object):
                     container['imageID'] = None
         else:
             pod._forge_dockers(status=pod.status)
+
+        pod.ready = all(container.get('ready')
+                        for container in pod.containers)
         return pod
 
     def as_dict(self):

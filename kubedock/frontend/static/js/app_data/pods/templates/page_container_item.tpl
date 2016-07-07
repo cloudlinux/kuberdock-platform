@@ -9,7 +9,7 @@
 </td>
 <td>
     <% if (before) { %>
-        <span class="<%- before.state %>"><%- before.state %></span>
+        <span class="<%- prettyState %>"><%- prettyState %></span>
     <% } %>
     <% if (before && !after) { %>
         <span class="diff-deleted">

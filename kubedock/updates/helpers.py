@@ -14,6 +14,8 @@ from kubedock.sessions import SessionData
 
 # For convenience to use in update scripts:
 from flask.ext.migrate import upgrade
+# noinspection PyUnresolvedReferences
+from flask.ext.migrate import downgrade as downgrade_db
 
 
 def upgrade_db(*args, **kwargs):

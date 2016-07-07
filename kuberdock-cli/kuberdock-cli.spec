@@ -2,7 +2,7 @@
 
 Name: kuberdock-cli
 Version: 1.0
-Release: 3%{?dist}.cloudlinux
+Release: 4%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License
@@ -56,7 +56,13 @@ rm -rf %{buildroot}
 
 %changelog
 
-* Fri Jun 03 2016 Maksym Lobur <mlobur@cloudlinux.com>, Aleksandr Skorodumov <askorodumov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 1.0-3
+* Thu Jul 07 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aleksandr Skorodumov <askorodumov@cloudlinux.com> 1.0-4
+- AC-3488 Fixed volume name generation
+- AC-3648 KCLI. After upgrade kcli don't rewrite global config
+- AC-3348 Add integration tests for nonfloating IP feature
+
+* Wed Jun 15 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Maksym Lobur <mlobur@cloudlinux.com>, Aleksandr Skorodumov <askorodumov@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 1.0-3
+- AC-3458 fix: user can't create pod with more that 10 kubes
 - Install kuberdock-plugin when deploy cli
 - AC-3248 Fix kcli - two conflicting patches
 - KCLI. Get home dir from config path
@@ -102,7 +108,7 @@ rm -rf %{buildroot}
 * Fri Oct 30 2015 Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com> 0.1-25
 - AC-1345: check --kubes type and value
 - AC-1372: add validation to environment variable name. Fixed API errors output in kcli
-- 
+-
 
 * Wed Oct 21 2015 Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com> 0.1-24
 - KCLI. Remove info messages (breaks cPanel plugin)
@@ -198,4 +204,3 @@ rm -rf %{buildroot}
 
 * Wed Apr 15 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-1
 - First release
-

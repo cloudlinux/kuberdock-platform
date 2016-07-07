@@ -21,6 +21,7 @@ Vagrant.configure(2) do |config|
   config.ssh.username = 'root'
   config.ssh.insert_key = 'true'
 
+
   config.gatling.rsync_on_startup = false
 
   config.vm.provider "virtualbox" do |vb, override|
@@ -33,7 +34,9 @@ Vagrant.configure(2) do |config|
     one.password = onePassword
     one.template_id = nebulaTemplateId
     override.ssh.private_key_path = privateKey
-    config.vm.synced_folder "../../", "/vagrant", type: "rsync", rsync__exclude: ["*.pyc", ".git/", ".venv/", ".tox/", "ceph_settings.py", ".cache", ".idea"]
+
+    rsyncExcludes= ["*.pyc", ".git/", ".venv/", ".tox/", "ceph_settings.py", ".cache", ".idea"]
+    config.vm.synced_folder "../../", "/vagrant", type: "rsync", rsync__exclude: rsyncExcludes, rsync_excludes: rsyncExcludes
   end
 
   (1..nodesCount).each do |i|
@@ -108,6 +111,8 @@ Vagrant.configure(2) do |config|
             "ceph_config" => ENV['KD_CEPH_CONFIG'],
             "ceph_user_keyring" => ENV['KD_CEPH_USER_KEYRING'],
             "pd_namespace" => ENV['KD_PD_NAMESPACE'],
+
+            "node_types" => ENV['KD_NODE_TYPES'],
         }
 
         # Clean undefined vars

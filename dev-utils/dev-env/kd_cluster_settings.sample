@@ -92,3 +92,6 @@ export VAGRANT_CWD=dev-utils/dev-env/
 #export KD_NONFLOATING_PUBLIC_IPS=true
 #
 
+# Uncomment to excpicitly define kube type for each mode
+# default: nothing
+#KD_NODE_TYPES='node1=standard,node2=tiny'

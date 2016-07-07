@@ -1,5 +1,15 @@
 class APIError(Exception):
-    def __init__(self, message, type_='Unknown', details=None):
-        super(APIError, self).__init__(message)
-        self.type = type_
-        self.details = details
+    def __init__(self, json):
+        self.json = json
+
+
+class UnknownAnswer(Exception):
+    def __init__(self, text, status_code):
+        self.text = text
+        self.status_code = status_code
+
+    def as_dict(self):
+        return {
+            'text': self.text,
+            'status_code': self.status_code
+        }

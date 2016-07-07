@@ -30,6 +30,8 @@ def _filter_persistent_volumes(pod_spec):
 
 
 class MultipleErrors(APIError):
+    message = 'Multiple errors'
+
     def __init__(self, errors):
         details = {
             'errors': [

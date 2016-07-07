@@ -1,6 +1,8 @@
+import json
 import os
 from copy import copy
 
+import click
 import yaml
 
 from ..kdclient import KDClient
@@ -95,11 +97,20 @@ class ConfigManager(object):
 
 
 class KDCtl(object):
-    def __init__(self, config_dir):
+    def __init__(self, config_dir, debug):
         self.cm = ConfigManager(config_dir)
         self._config = None
         self._client = None
         self._token = None
+        self.debug = debug
+
+        if debug:
+            self._set_requests_logging()
+
+    @classmethod
+    def _set_requests_logging(cls):
+        import logging
+        logging.getLogger('requests_logger').setLevel(logging.DEBUG)
 
     @property
     def config(self):
@@ -133,3 +144,46 @@ class KDCtl(object):
         self.config.update(**kwargs)
         self.cm.save_config(self.config)
         return self.config
+
+    def __getattr__(self, item):
+        """Redirect to kdclient if method is not defined here"""
+        m = getattr(self.client, item)
+        if m:
+            return m
+
+        raise AttributeError
+
+
+class IO(object):
+    def __init__(self, json_only):
+        self.json_only = json_only
+
+    def out_text(self, text, **kwargs):
+        """Print text. If `self.json_only` == True,
+        then text will not be printed.
+        :param text: Text to be prompted.
+        :param kwargs: Is passed to `click.echo()`.
+        """
+        if not self.json_only:
+            click.echo(text, **kwargs)
+
+    def out_json(self, d, **kwargs):
+        """Print dictionary as json.
+        :param d: Dictionary to be printed.
+        :param kwargs: Is passed to `click.echo()`.
+        """
+        assert isinstance(d, dict)
+
+        message = json.dumps(d, indent=4, sort_keys=True)
+        click.echo(message, **kwargs)
+
+    def confirm(self, text, **kwargs):
+        """Prompts for confirmation (yes/no question).
+        Parameter `self.json_only` must be set to False, otherwise
+        `AssertionError` will be raised.
+        :param text: Text to be prompted.
+        :param kwargs: Is passed to `click.confirm()`.
+        :return: True or False.
+        """
+        assert not self.json_only
+        return click.confirm(text, **kwargs)

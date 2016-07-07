@@ -13,10 +13,9 @@ def data_argument(*args, **kwargs):
     @click.argument(<arg_name>, **kwargs)
     @click.option('-f', '--file', help='Input file.', expose_value=False)
     
-    Only <arg_name> passed to decorated function. If -f specified, it read data from file 
-    and pass it to argument <arg_name>.
-    e.g
-        
+    Only <arg_name> passed to decorated function. If -f specified, it read data
+    from file and pass it to argument <arg_name>.
+
     If you have questions, see examples of usages.
     
     Used when one can pass json data directly from command line
@@ -64,13 +63,3 @@ def data_argument(*args, **kwargs):
         return d2(d1(fn))
 
     return wrapper
-
-
-def formatted(data):
-    if isinstance(data, dict):
-        result = json.dumps(data, indent=4, sort_keys=True)
-    elif data is None:
-        result = None
-    else:
-        result = str(data)
-    return result

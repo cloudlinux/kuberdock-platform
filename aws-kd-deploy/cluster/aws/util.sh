@@ -935,6 +935,7 @@ function kube-up {
 
   get-tokens
 
+
   detect-image
   detect-minion-image
 
@@ -1035,14 +1036,49 @@ function kube-up {
     echo "Kubernetes cluster created."
 
     detect-nodes
+    pre-deploy-hook
     deploy-master
     deploy-nodes
+    post-deploy-hook
   fi
 
   # Check the cluster is OK
   check-cluster
 
 }
+
+function pre-deploy-hook(){
+  local script=${PRE_DEPLOY_SCRIPT:-}
+  if [ -z $script ]; then
+    echo "No pre deploy script defined"
+  else
+    echo "Upload and run pre deploy script"
+    scp -v -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" $script "${SSH_USER}@${KUBE_MASTER_IP}":~/
+    local run=$(basename $script)
+    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; chmod +x ~/$run && ./$run | cat; test ${PIPESTATUS[0]} -eq 0" < <(cat) 2>"$LOG"
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Pre deploy script finish with $? error code"
+      exit 1
+    fi
+  fi
+}
+
+function post-deploy-hook(){
+  local script=${POST_DEPLOY_SCRIPT:-}
+  if [ -z $script ]; then
+    echo "No post deploy script defined"
+  else
+    echo "Upload and run post deploy script"
+    scp -v -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" $script "${SSH_USER}@${KUBE_MASTER_IP}":~/
+    local run=$(basename $script)
+    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; chmod +x ~/$run && ./$run | cat; test ${PIPESTATUS[0]} -eq 0" < <(cat) 2>"$LOG"
+    if [ $? -ne 0 ]; then
+      echo "ERROR: Post deploy script finish with $? error code"
+      exit 1
+    fi
+  fi
+}
+
 function deploy-master(){
     echo "start kuberdock deploy"
     echo $SSH_USER

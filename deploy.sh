@@ -1091,6 +1091,10 @@ fi
 
 do_and_log chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_DIR
 
+# 19. Generate random secret key
+SEC_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+echo "SECRET_KEY=$SEC_KEY" >> $KUBERDOCK_MAIN_CONFIG
+
 # ======================================================================
 log_it echo "WARNING: Firewalld will be disabled on nodes. Will use iptables instead"
 log_it echo "WARNING: $WEBAPP_USER need ssh access to nodes as 'root'"

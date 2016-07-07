@@ -126,7 +126,7 @@ SQLALCHEMY_MAX_OVERFLOW = 20
 
 SQLALCHEMY_COMMIT_ON_TEARDOWN = True
 # SQLALCHEMY_ECHO=True
-SECRET_KEY = os.environ.get('SECRET_KEY', '0987654321')
+SECRET_KEY = '0987654321'
 SESSION_LIFETIME = 3600
 
 KUBERDOCK_INTERNAL_USER = 'kuberdock-internal'
@@ -265,6 +265,8 @@ if cp.read(KUBERDOCK_SETTINGS_FILE) and cp.has_section('main'):
     if cp.has_option('main', 'NONFLOATING_PUBLIC_IPS'):
         NONFLOATING_PUBLIC_IPS = cp.getboolean(
             'main', 'NONFLOATING_PUBLIC_IPS')
+    if cp.has_option('main', 'SECRET_KEY'):
+        SECRET_KEY = cp.get('main', 'SECRET_KEY')
 
 
 # Import local settings

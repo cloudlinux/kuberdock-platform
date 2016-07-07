@@ -1,82 +1,93 @@
+@defaultIconColor: #B5BBC1;
+@defaultIconColorDarken: darken(@defaultIconColor, 20%);
+@hoverIconColor: #3197EE;
+@activeIconColor: #3197EE;
+
+@statusLineTextColor: #1D1D1D;
+@hoverStatusLineText: darken(@statusLineTextColor, 20%);
+
 .status-line{
-    color: #4e5665;
+    color: @statusLineTextColor;
     font-size: 13px;
     position: relative;
     font-family: @regular;
     border-bottom: 1px solid #e5e5e5;
     > *{
-        color: #4e5665;
+        color: @statusLineTextColor;
         margin-right: 20px;
         margin-bottom: 20px;
         display: inline-block;
         text-decoration: none;
         vertical-align: middle;
-        &:hover{
-            text-decoration: none;
-        }
-        &:last-child{
-            margin-right: 0;
-        }
+        &:hover{ text-decoration: none;}
+        &:last-child{ margin-right: 0; }
     }
     .start-btn,
     #startContainer,
     .pay-and-start-btn{
-        .mdi('play_arrow',21px, #B5BBC1, #3197EE);
+        .mdi('play_arrow',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
     }
     .stop-btn,
     #stopContainer{
-        .mdi('stop',21px, #B5BBC1, #3197EE);
+        .mdi('stop',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
     }
+    .ic_reorder{ .mdi('reorder',21px, @defaultIconColor, @defaultIconColorDarken); }
     .check-for-update{
-        .mdi('find_replace',21px, #B5BBC1, #3197EE);
+        .mdi('find_replace',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
     }
     .container-update{
-        .mdi('cloud_upload',21px, #B5BBC1, #3197EE);
-    }
-    .terminate-btn{
-        .mdi('delete',21px, #B5BBC1, #3197EE);
+        .mdi('cloud_upload',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
     }
     .stats-btn{
-        .mdi('equalizer',21px, #B5BBC1, #3197EE);
+        .mdi('equalizer',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
     }
     .restart-btn{
-        .mdi('autorenew',21px, #B5BBC1, #3197EE);
+        .mdi('autorenew',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
     }
     .container-update{
-        .mdi('cloud_upload',21px, #B5BBC1, #3197EE);
+        .mdi('cloud_upload',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
+    }
+    .updateSsh{
+        .mdi('update',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
+    }
+    .terminate-btn{
+        .mdi('delete',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
     }
     .edit-btn,
     .edit-container-env,
     .edit-container-general{
-        .mdi('create',21px, #B5BBC1, #3197EE);
-    }
+        .mdi('create',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
+      }
     .list-btn{
-        .mdi('equalizer',21px, #B5BBC1, #3197EE);
-        &:before{
-            .rotate(-90deg);
-        }
-    }
-    .updateSsh{
-        .mdi('update',21px, #B5BBC1, #3197EE);
+        .mdi('equalizer',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:before{ .rotate(-90deg); }
     }
     .upgrade-btn{
-        .mdi('vertical_align_top',21px, #B5BBC1, #3197EE);
+        .mdi('vertical_align_top',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
         &.back{
-            color: #3197ee;
-            .mdi('vertical_align_bottom',21px, #3197EE, #B5BBC1);
+            .mdi('vertical_align_bottom',21px, @defaultIconColor, @defaultIconColorDarken);
+            &:hover span{color: @hoverStatusLineText; }
         }
     }
     .award{
-        .mdi('star',21px, #B5BBC1, #B5BBC1);
+        .mdi('star',21px, @defaultIconColor, @defaultIconColor);
         &:hover{
             cursor: default;
             span{
                 color: #4e5665;
             }
         }
-    }
-    .ic_reorder{
-        .mdi('reorder',21px, #646f82, #3197EE);
     }
     .icon{
         min-height: 21px;
@@ -92,7 +103,7 @@
             &:active,
             &:focus {
                 cursor: pointer;
-                color: #3197ee;
+                color: @hoverIconColor;
                 text-decoration: none;
             }
         }
@@ -100,23 +111,51 @@
     }
 }
 /* sidebar icons*/
-@sidebarIconDefaultColor: #B5BBC1;
-@sidebarIconHoverColor: #3197EE;
-@sidebarActiveLinkColor: @sidebarIconHoverColor;
 .sidebar{
     .nav-sidebar{
         li{
-            &.users{ .mdi('group',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
-            &.profile{ .mdi('person',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
-            &.variables{ .mdi('tune',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
-            &.stats{ .mdi('equalizer',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
-            &.logHistory{ .mdi('history',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
-            &.license{ .mdi('star_border',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
-            &.monitoring{ .mdi('timeline',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
-            &.configuration, &.general{ .mdi('settings',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
-            &.activityPage{ .mdi('transfer_within_a_station',18px, @sidebarIconDefaultColor, @sidebarIconHoverColor); }
+            span{ color: @statusLineTextColor; }
+            &.users{
+                .mdi('group',18px, @defaultIconColor, @defaultIconColorDarken);
+                &:hover span{color: @hoverStatusLineText; }
+            }
+            &.profile{
+                .mdi('person',18px, @defaultIconColor, @defaultIconColorDarken);
+                &:hover span{color: @hoverStatusLineText; }
+            }
+            &.variables{
+                .mdi('tune',18px, @defaultIconColor, @defaultIconColorDarken);
+                &:hover span{color: @hoverStatusLineText; }
+            }
+            &.stats{
+                .mdi('equalizer',18px, @defaultIconColor, @defaultIconColorDarken);
+                &:hover span{color: @hoverStatusLineText; }
+            }
+            &.logHistory{
+                .mdi('history',18px, @defaultIconColor, @defaultIconColorDarken);
+                &:hover span{color: @hoverStatusLineText; }
+            }
+            &.license{
+                .mdi('star_border',18px, @defaultIconColor, @defaultIconColorDarken);
+                &:hover span{color: @hoverStatusLineText; }
+            }
+            &.monitoring{
+                .mdi('timeline',18px, @defaultIconColor, @defaultIconColorDarken);
+                &:hover span{color: @hoverStatusLineText; }
+            }
+            &.configuration, &.general{
+                .mdi('settings',18px, @defaultIconColor, @defaultIconColorDarken);
+                &:hover span{color: @hoverStatusLineText; }
+            }
+            &.activityPage{
+                .mdi('transfer_within_a_station',18px, @defaultIconColor, @defaultIconColorDarken);
+            }
             &.active{
-                &:before, a, span{ color: @sidebarActiveLinkColor }
+                &:before, a, span{ color: @activeIconColor }
+                &:hover{
+                    &:before, a, span{ color: @activeIconColor }
+                }
+
             }
         }
     }
@@ -124,21 +163,15 @@
 /* end sidebar icons*/
 .complete{
     .help{
-        .mdi('help_outline',20px, #b8c0c5, #3197EE);
-        &:hover{
-            cursor: default;
-        }
+        .mdi('help_outline',20px, defaultIconColor, @defaultIconColorDarken);
+        &:hover{ cursor: default; }
     }
 }
-.close{
-     .mdi('close',20px, #b8c0c5, #3197EE);
-}
+.close{ .mdi('close',20px, @defaultIconColor, @hoverIconColor); }
 
 // table icons
 table{
-    span{
-        .statuses();
-    }
+    span{ .statuses(); }
     .deleteNode,
     .deleteUser,
     .remove-env,
@@ -148,41 +181,37 @@ table{
     .terminate-btn,
     #deleteNetwork{
         display: inline-block;
-        .mdi('delete',21px, #B5BBC1, #3197EE);
+        .mdi('delete',21px, @defaultIconColor, @hoverIconColor);
         &.disabled {
             &:before{
                 .opacity(0.7);
-                color: #B5BBC1;
+                color: @defaultIconColor;
             }
             &:hover{
                 cursor: not-allowed;
                 &:before{
-                    color: #B5BBC1;
+                    color: @defaultIconColor;
                 }
             }
         }
     }
-    .blockUser{
-        .mdi('block',19px, #B5BBC1, #3197EE);
-    }
+    .blockUser{ .mdi('block',19px, @defaultIconColor, @hoverIconColor); }
     .unbind_ip,
-    .activeteUser{
-        .mdi('lock_open',19px, #B5BBC1, #3197EE);
-    }
+    .activeteUser{ .mdi('lock_open',19px, @defaultIconColor, @hoverIconColor); }
     .start-btn,
     .unblock_ip,
     .pay-and-start-btn{
         display: inline-block;
-        .mdi('play_arrow',21px, #B5BBC1, #3197EE);
+        .mdi('play_arrow',21px, @defaultIconColor, @hoverIconColor);
     }
     .stop-btn,
     .block_ip{
         display: inline-block;
-        .mdi('stop',21px, #B5BBC1, #3197EE);
+        .mdi('stop',21px, @defaultIconColor, @hoverIconColor);
     }
     .check-for-update{
         display: inline-block;
-        .mdi('find_replace',21px, #B5BBC1, #3197EE);
+        .mdi('find_replace',21px, @defaultIconColor, @hoverIconColor);
         &.start-atimation{
             &:before{
                 .animation(rotating, 1s, linear infinite);
@@ -192,91 +221,74 @@ table{
     }
     .restart-btn{
         display: inline-block;
-        .mdi('autorenew',21px, #B5BBC1, #3197EE);
+        .mdi('autorenew',21px, @defaultIconColor, @hoverIconColor);
     }
     .container-update{
         display: inline-block;
-        .mdi('cloud_upload',21px, #B5BBC1, #3197EE);
+        .mdi('cloud_upload',21px, @defaultIconColor, @hoverIconColor);
     }
     .edit-item{
         display: inline-block;
-        .mdi('create',21px, #B5BBC1, #3197EE);
+        .mdi('create',21px, @defaultIconColor, @hoverIconColor);
     }
     .copy-link,
     .copy-ssh-link{
         display: inline-block;
-        .mdi('insert_link',21px, #B5BBC1, #3197EE);
+        .mdi('insert_link',21px, @defaultIconColor, @hoverIconColor);
     }
     .copy-ssh-password{
         display: inline-block;
-        .mdi('vpn_key',21px, #B5BBC1, #3197EE);
+        .mdi('vpn_key',21px, @defaultIconColor, @hoverIconColor);
     }
     .warning-info-title-ico{
         .mdi('info_outline',19px, #F25555, #F25555);
-        &:hover{
-            cursor: default;
-        }
-        &:before{
-            .rotate(-180deg);
-        }
+        &:hover{ cursor: default; }
+        &:before{ .rotate(-180deg); }
     }
     .diff-arrow{
         display: inline-block;
         vertical-align: middle;
         .mdi('trending_flat',18px, #8e8e8e, #8e8e8e);
-        &:hover{
-          cursor: default;
-        }
+        &:hover{ cursor: default; }
     }
     .diff-added-icon{
         display: inline-block;
         vertical-align: middle;
         .mdi('add',18px, #8e8e8e, #8e8e8e);
-        &:hover{
-          cursor: default;
-        }
+        &:hover{ cursor: default; }
         ~ span {
             vertical-align: middle;
             display: inline-block;
         }
     }
     .kubes-more,
-    .upgrade-kubes-more{
-        .mdi('add_circle_outline',18px, #3197EE, #3197EE);
-    }
+    .upgrade-kubes-more{ .mdi('add_circle_outline',18px, @hoverIconColor, @hoverIconColor); }
     .kubes-less,
-    .upgrade-kubes-less{
-        .mdi('remove_circle_outline',18px, #3197EE, #3197EE);
-    }
+    .upgrade-kubes-less{ .mdi('remove_circle_outline',18px, @hoverIconColor, @hoverIconColor); }
 }
 /* edit pod message icons */
 .message-pod-canged-info-title-ico{
     display: inline-block;
     vertical-align: middle;
     .mdi('info_outline',24px, inherit, inherit);
-    &:hover{
-        cursor: default;
-    }
-    &:before{
-        .rotate(-180deg);
-    }
+    &:hover{ cursor: default; }
+    &:before{ .rotate(-180deg); }
 }
 /* add image icons */
 .image-link{
-    color: #4e5665;
-    .mdi('keyboard_arrow_right',20px, #B5BBC1, #3197EE);
+    color: @statusLineTextColor;
+    .mdi('keyboard_arrow_right',20px, @defaultIconColor, @defaultIconColorDarken);
     &:before{
         .border-radius(50%);
-        border: 1px solid #B5BBC1;
+        border: 1px solid @defaultIconColor;
     }
     &:hover{
-        color: #3197EE;
         span{
-            color: #3197EE;
+            color: @hoverStatusLineText;
         }
         &:before{
-            color: #3197EE;
-            border-color: #3197EE;
+            color: @defaultIconColorDarken;
+            border-color: @defaultIconColorDarken;
         }
     }
 }
@@ -289,13 +301,13 @@ table{
 }
 #data-collection .item .more a{
     color: #4e5665;
-    .mdi('keyboard_arrow_right',20px, #3197EE, #3197EE);
+    .mdi('keyboard_arrow_right',20px, @hoverIconColor, @hoverIconColor);
     &:before{
         .border-radius(50%);
-        border: 1px solid #3197EE;
+        border: 1px solid @hoverIconColor;
     }
     span{
-        color: #3197EE;
+        color: @hoverIconColor;
     }
 }
 #data-collection .item .like{
@@ -305,7 +317,7 @@ table{
     text-align: center;
     font-family: @regular;
     background-color: transparent;
-    .mdi('thumb_up',21px, #B5BBC1, #B5BBC1);
+    .mdi('thumb_up',21px, @defaultIconColor, @defaultIconColor);
     &:hover{
         cursor: default;
         span{
@@ -313,25 +325,18 @@ table{
         }
     }
 }
-
 .podsControl{
     .removePods{
-        .mdi('delete',21px, #B5BBC1, #3197EE);
+        .mdi('delete',21px, @defaultIconColor, @defaultIconColorDarken);
         &:hover{
             &:before{
                 content: 'delete_forever'
             }
         }
     }
-    .stopPods{
-        .mdi('stop',21px, #B5BBC1, #3197EE);
-    }
-    .runPods{
-        .mdi('play_arrow',21px, #B5BBC1, #3197EE);
-    }
-    .restartPods{
-        .mdi('autorenew',21px, #B5BBC1, #3197EE);
-    }
+    .stopPods{ .mdi('stop',21px, @defaultIconColor, @defaultIconColorDarken); }
+    .runPods{  .mdi('play_arrow',21px, @defaultIconColor, @defaultIconColorDarken); }
+    .restartPods{ .mdi('autorenew',21px, @defaultIconColor, @defaultIconColorDarken); }
 }
 .notifyjs-corner{
     .notifyjs-container{

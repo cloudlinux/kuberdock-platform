@@ -3,15 +3,6 @@
 - name: Disable stuff
   service: name=emperor.uwsgi state=stopped
 
-- name: Proxy pass for nginx
-  replace:
-    dest: /etc/nginx/conf.d/kuberdock-ssl.conf
-    regexp: "include uwsgi_params;\n[ ]*uwsgi_pass 127.0.0.1:8009;"
-    replace: "proxy_pass http://127.0.0.1:5000;"
-    backup: yes
-  notify:
-    - restart nginx
-
 - name: Update nginx root
   replace:
     dest: /etc/nginx/conf.d/kuberdock-ssl.conf
@@ -31,16 +22,8 @@
       - tmux
 
 - name: Up wsgi
-  command: tmux new-window -t '{{ tmux_session_name }}' \; send-keys "sudo python wsgi.py" C-m chdir=/vagrant
+  command: tmux new-window -t '{{ tmux_session_name }}' -n wsgi/celery \; send-keys "uwsgi --ini /etc/uwsgi/vassals/kuberdock.ini  --uid nginx --gid nginx --worker-reload-mercy 0 --python-autoreload 1 --reload-on-exception --chdir /vagrant --pythonpath /vagrant" C-m chdir=/vagrant
   when: not no_wsgi
-  tags:
-      - tmux
-
-- name: Up celery
-  command: tmux new-window -t '{{ tmux_session_name }}' \; send-keys "{{ item }}" C-m chdir=/vagrant
-  with_items:
-    - "sudo -u nginx /usr/bin/celery -A kubedock.tasks --autoscale=16,1 worker -Ofair"
-    - "sudo /usr/bin/celery -A kubedock.tasks beat -s /tmp/celerybeat-schedule"
   tags:
       - tmux
 

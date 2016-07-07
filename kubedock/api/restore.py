@@ -28,10 +28,10 @@ pods_args_schema = {
 @restore.route('/pod', methods=['POST'], strict_slashes=False)
 @auth_required
 @maintenance_protected
-@check_permission('restore_for_another', 'pods')
+@check_permission('create_non_owned', 'pods')
 @KubeUtils.jsonwrap
 @use_kwargs(pods_args_schema)
 def pods(pod_data, owner, volumes_dir_url=None):
-    with check_permission('create', 'pods', user=owner):
+    with check_permission('own', 'pods', user=owner):
         return backup_pods.restore(
             pod_data=pod_data, owner=owner, volumes_dir_url=volumes_dir_url)

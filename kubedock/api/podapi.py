@@ -28,8 +28,10 @@ class PodsAPI(KubeUtils, MethodView):
         current_user = self.get_current_user()
         owner = owner or current_user
 
-        check_permission('get', 'pods', user=owner).check()
-        if owner != current_user:
+        check_permission('own', 'pods', user=owner).check()
+        if owner == current_user:
+            check_permission('get', 'pods').check()
+        else:
             check_permission('get_non_owned', 'pods').check()
 
         return PodCollection(owner).get(pod_id, as_json=False)
@@ -40,8 +42,10 @@ class PodsAPI(KubeUtils, MethodView):
         current_user = self.get_current_user()
         owner = owner or current_user
 
-        check_permission('create', 'pods', user=owner).check()
-        if owner != current_user:
+        check_permission('own', 'pods', user=owner).check()
+        if owner == current_user:
+            check_permission('create', 'pods').check()
+        else:
             check_permission('create_non_owned', 'pods').check()
 
         params = check_new_pod_data(params, owner)
@@ -56,8 +60,10 @@ class PodsAPI(KubeUtils, MethodView):
             raise PodNotFound()
         owner = db_pod.owner
 
-        check_permission('edit', 'pods', user=owner)
-        if owner != current_user:
+        check_permission('own', 'pods', user=owner).check()
+        if owner == current_user:
+            check_permission('edit', 'pods').check()
+        else:
             check_permission('edit_non_owned', 'pods').check()
 
         data = check_change_pod_data(params)
@@ -107,8 +113,10 @@ class PodsAPI(KubeUtils, MethodView):
         current_user = self.get_current_user()
         owner = owner or current_user
 
-        check_permission('delete', 'pods', user=owner).check()
-        if owner != current_user:
+        check_permission('own', 'pods', user=owner).check()
+        if owner == current_user:
+            check_permission('delete', 'pods').check()
+        else:
             check_permission('delete_non_owned', 'pods').check()
 
         pods = PodCollection(owner)
@@ -122,27 +130,51 @@ register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id', strict_slashes=False)
               strict_slashes=False)
 @auth_required
 @KubeUtils.jsonwrap
-@check_permission('get', 'pods')
-def check_updates(pod_id, container_name):
-    user = KubeUtils.get_current_user()
-    return PodCollection(user).check_updates(pod_id, container_name)
+@use_kwargs(schema)
+def check_updates(pod_id, container_name, owner=None):
+    current_user = KubeUtils.get_current_user()
+    owner = owner or current_user
+
+    check_permission('own', 'pods', user=owner).check()
+    if owner == current_user:
+        check_permission('get', 'pods').check()
+    else:
+        check_permission('get_non_owned', 'pods').check()
+
+    return PodCollection(owner).check_updates(pod_id, container_name)
 
 
 @podapi.route('/<pod_id>/<container_name>/update', methods=['POST'],
               strict_slashes=False)
 @auth_required
 @KubeUtils.jsonwrap
-@check_permission('get', 'pods')
-def update_container(pod_id, container_name):
-    user = KubeUtils.get_current_user()
-    return PodCollection(user).update_container(pod_id, container_name)
+@use_kwargs(schema)
+def update_container(pod_id, container_name, owner=None):
+    current_user = KubeUtils.get_current_user()
+    owner = owner or current_user
+
+    check_permission('own', 'pods', user=owner).check()
+    if owner == current_user:
+        check_permission('get', 'pods').check()
+    else:
+        check_permission('get_non_owned', 'pods').check()
+
+    return PodCollection(owner).update_container(pod_id, container_name)
 
 
 @podapi.route('/<pod_id>/direct_access', methods=['GET'],
               strict_slashes=False)
 @auth_required
 @KubeUtils.jsonwrap
-@check_permission('get', 'pods')
-def access_container(pod_id):
-    user = KubeUtils.get_current_user()
-    return PodCollection(user).direct_access(pod_id)
+@use_kwargs(schema)
+def access_container(pod_id, owner=None):
+    current_user = KubeUtils.get_current_user()
+    owner = owner or current_user
+
+    check_permission('own', 'pods', user=owner).check()
+    if owner == current_user:
+        check_permission('get', 'pods').check()
+    else:
+        check_permission('get_non_owned', 'pods').check()
+
+    return PodCollection(owner).direct_access(pod_id)

@@ -45,9 +45,11 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         current_user = self.get_current_user()
         owner = owner or current_user
 
-        check_permission('get', 'pods', user=owner).check()
-        if owner != current_user:
-            check_permission('get_non_owned', 'pods').check()
+        check_permission('own', 'persistent_volumes', user=owner).check()
+        if owner == current_user:
+            check_permission('get', 'persistent_volumes').check()
+        else:
+            check_permission('get_non_owned', 'persistent_volumes').check()
 
         cls = self._resolve_storage()
         free_only = params.get('free-only')
@@ -65,9 +67,11 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         current_user = self.get_current_user()
         owner = owner or current_user
 
-        check_permission('get', 'pods', user=owner).check()
-        if owner != current_user:
-            check_permission('get_non_owned', 'pods').check()
+        check_permission('own', 'persistent_volumes', user=owner).check()
+        if owner == current_user:
+            check_permission('create', 'persistent_volumes').check()
+        else:
+            check_permission('create_non_owned', 'persistent_volumes').check()
 
         name, size = params['name'], params['size']
 
@@ -95,9 +99,11 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         current_user = self.get_current_user()
         owner = owner or current_user
 
-        check_permission('get', 'pods', user=owner).check()
-        if owner != current_user:
-            check_permission('get_non_owned', 'pods').check()
+        check_permission('own', 'persistent_volumes', user=owner).check()
+        if owner == current_user:
+            check_permission('delete', 'persistent_volumes').check()
+        else:
+            check_permission('delete_non_owned', 'persistent_volumes').check()
 
         pd = PersistentDisk.get_all_query().filter(
             PersistentDisk.id == device_id,

@@ -13,9 +13,11 @@ ROLES = (
 resources = {
     'users': ('create', 'get', 'edit', 'delete', 'auth_by_another'),
     'nodes': ('create', 'get', 'edit', 'delete', 'redeploy'),
-    'pods': ('create', 'get', 'edit', 'delete', 'restore_for_another',
-             'create_non_owned', 'get_non_owned', 'edit_non_owned',
-             'delete_non_owned'),
+    'pods': ('own', 'create', 'get', 'edit', 'delete', 'create_non_owned',
+             'get_non_owned', 'edit_non_owned', 'delete_non_owned'),
+    'persistent_volumes': ('own', 'create', 'get', 'edit', 'delete',
+                           'create_non_owned', 'get_non_owned',
+                           'edit_non_owned', 'delete_non_owned'),
     'yaml_pods': ('create',),
     'ippool': ('create', 'get', 'edit', 'delete', 'view'),
     'notifications': ('create', 'get', 'edit', 'delete'),
@@ -57,11 +59,14 @@ permissions = {
         ('system_settings', 'delete'): True,
         ('images', 'get'): True,
         ('images', 'isalive'): True,
-        ('pods', 'restore_for_another'): True,
         ('pods', 'create_non_owned'): True,
         ('pods', 'get_non_owned'): True,
         ('pods', 'edit_non_owned'): True,
         ('pods', 'delete_non_owned'): True,
+        ('persistent_volumes', 'create_non_owned'): True,
+        ('persistent_volumes', 'get_non_owned'): True,
+        ('persistent_volumes', 'edit_non_owned'): True,
+        ('persistent_volumes', 'delete_non_owned'): True,
         ('predefined_apps', 'create'): True,
         ('predefined_apps', 'get'): True,
         ('predefined_apps', 'edit'): True,
@@ -74,10 +79,16 @@ permissions = {
         ('timezone', 'get'): True,
     }),
     'User': dict(permissions_base, **{
+        ('pods', 'own'): True,
         ('pods', 'create'): True,
         ('pods', 'get'): True,
         ('pods', 'edit'): True,
         ('pods', 'delete'): True,
+        ('persistent_volumes', 'own'): True,
+        ('persistent_volumes', 'create'): True,
+        ('persistent_volumes', 'get'): True,
+        ('persistent_volumes', 'edit'): True,
+        ('persistent_volumes', 'delete'): True,
         ('yaml_pods', 'create'): True,
         ('system_settings', 'read'): True,
         ('images', 'get'): True,
@@ -88,6 +99,7 @@ permissions = {
 }
 permissions['LimitedUser'] = dict(permissions['User'], **{
     ('pods', 'create'): False,
+    ('persistent_volumes', 'create'): False,
 })
 permissions['TrialUser'] = dict(permissions['User'], **{
     # ...

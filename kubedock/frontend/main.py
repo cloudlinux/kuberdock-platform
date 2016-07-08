@@ -1,6 +1,7 @@
 from flask import (Blueprint, request, render_template, make_response,
                    session, redirect, url_for)
 from ..sessions import create_token
+from ..settings import TEST
 
 
 main = Blueprint('main', __name__)
@@ -24,8 +25,8 @@ def index():
     return render_template('index.html', token=None)
 
 
-#@main.route('/test', methods=['GET'])
-#def run_tests():
-#    if TEST:
-#        return render_template('t/pod_index.html')
-#    return "not found", 404
+@main.route('/test', methods=['GET'])
+def run_tests():
+    if TEST:
+        return render_template('tests/index.html')
+    return "not found", 404

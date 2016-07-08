@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>KuberDock tests</title>
+    <meta charset="utf8">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/mocha.css') }}">
+</head>
+<body>
+    <div id="mocha"></div>
+    <div id="fixtures" style="display: none; visibility: hidden;"></div>
+    <script data-main="{{ url_for('static', filename='js/app_data/tests/main.js') }}" src="{{ url_for('static', filename='js/lib/require.js') }}"></script>
+</body>
+</html>

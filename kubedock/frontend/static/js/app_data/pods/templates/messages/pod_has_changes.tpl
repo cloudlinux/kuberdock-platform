@@ -9,9 +9,6 @@
             You'll need to pay additional <%- changesRequirePayment %>/<%- period %>
             after you re-deploy this pod with new containers and configuration.
                 <button class="blue pay-and-apply" title="Pod will be restarted">Pay & apply changes</button>
-        <% } else if (ableTo('start')) { %>
-            You can deploy this pod with new containers and configuration.
-                <button class="blue apply">Start & apply changes</button>
         <% } else { %>
             You need to re-deploy this pod with new containers and configuration.
                 <button class="blue apply">Restart & apply changes</button>

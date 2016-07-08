@@ -33,6 +33,7 @@ define([
 
         modelEvents: {
             'change': 'render',
+            'apply-changes-start': 'render',
         },
 
         initialize: function(options){ this.fixedPrice = !!options.fixedPrice; },
@@ -59,8 +60,7 @@ define([
         },
 
         onRender: function(){
-            var changed = this.model.isChanged(this.model.get('edited_config'));
-            this.$el.toggleClass('show', changed);
+            this.$el.toggleClass('show', this.model.isChanged());
         },
 
         applyChanges: function(){

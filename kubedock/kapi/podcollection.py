@@ -789,7 +789,12 @@ class PodCollection(object):
                 pod.set_status(POD_STATUSES.stopping, send_update=True)
                 if block:
                     scale_replicationcontroller(pod.id)
-                    pod = wait_pod_status(pod.id, POD_STATUSES.stopped)
+                    pod = wait_pod_status(
+                        pod.id, POD_STATUSES.stopped,
+                        error_message=(
+                            'During restart, Pod "{0}" did not become stopped '
+                            'after a given timeout. It may become later.'
+                            .format(pod.name)))
                 else:
                     scale_replicationcontroller_task.apply_async((pod.id,))
                 return pod.as_dict()
@@ -1038,7 +1043,8 @@ class PodCollection(object):
         return len(running_nodes) > 0
 
 
-def wait_pod_status(pod_id, wait_status, interval=1, max_retries=10):
+def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
+                    error_message=None):
     """Keeps polling k8s api until pod status becomes as given"""
 
     def check_status():
@@ -1050,8 +1056,9 @@ def wait_pod_status(pod_id, wait_status, interval=1, max_retries=10):
 
     return retry(
         check_status, interval, max_retries,
-        APIError("Pod {0} did not become {1} after a given timeout. "
-                 "It may become later.".format(pod_id, wait_status))
+        APIError(error_message or (
+            "Pod {0} did not become {1} after a given timeout. "
+            "It may become later.".format(pod_id, wait_status)))
     )
 
 

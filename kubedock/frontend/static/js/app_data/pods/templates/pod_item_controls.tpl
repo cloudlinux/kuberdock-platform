@@ -7,11 +7,11 @@
     <% } else { %>
         <a class="stats-btn" href="#pods/<%- id %>/stats"><span>Stats</span></a>
     <% } %>
-    <% if (upgrade) { %>
+    <!-- <% if (upgrade) { %>
         <a class="upgrade-btn back" href="#pods/<%- id %>"><span>Upgrade</span></a>
     <% } else { %>
         <a class="upgrade-btn" href="#pods/<%- id %>/upgrade"><span>Upgrade</span></a>
-    <% } %>
+    <% } %> -->
     <span class="updateSsh"><span>Get SSH access</span></span>
     <div class="btn-group controls pull-right">
         <span type="button" class="dropdown-toggle" data-toggle="dropdown">

@@ -525,6 +525,7 @@ define([
                                 .fail(utils.notifyWindow,
                                       function(){ originalModel.set('edited_config', oldEdited); })
                                 .done(function(){
+                                    delete originalModel.applyingChangesStarted;
                                     pod.editOf().cleanup();  // backbone-associations, prevent leak
                                     var url = 'pods/' + originalModel.id,
                                         containerID = pod.wizardState.container

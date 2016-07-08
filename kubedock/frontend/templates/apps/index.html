@@ -307,7 +307,7 @@
       zoom:1; /* For IE 6/7 (trigger hasLayout) */
     }
     #popup {
-       position: absolute;
+       position: fixed;
        bottom: 52px;
        left: 40px;
        min-width: 292px;
@@ -600,16 +600,35 @@
                             if (r.readyState == 4) {
                                 //console.log(r);
                                 if(r.status != 200) {
+                                    var popup = document.getElementById('popup');
+                                    if (popup){
+                                        popup.parentNode.removeChild(popup);
+                                    }
                                     try {
                                         var error = JSON.parse(r.responseText);
                                         if (error.type === 'PermissionDenied'){
-                                            alert('Permission denied. Note, that '
+                                            showError('Permission denied. Note, that '
                                                 + 'you need to be logged in as '
                                                 + 'a User (not Admin).');
                                             return;
                                         }
                                     } catch (e) {}
-                                    alert(r.responseText);
+                                    var message = JSON.parse(r.responseText);
+                                    if (typeof message.data === 'object'){
+                                        var totalMessage = [];
+                                        for (var i in message.data){
+                                            if (message.data[i]){
+                                                if (typeof message.data[i] === 'object')
+                                                    message.data[i] = JSON.stringify(message.data[i]);
+                                                totalMessage.push(message.data[i]);
+                                            }
+                                        }
+                                        totalMessage.join(', ');
+                                        showError(totalMessage);
+                                    } else {
+                                        message = message.data;
+                                        showError(message);
+                                    }
                                     return;
                                 }
 
@@ -632,7 +651,7 @@
                         r.send(window.JSON.stringify({data: jsyaml.safeDump(yml)}));
                     }
                     else {
-                        alert('Missing authentication information');
+                        showError('Missing authentication information');
                     }
                 };
 

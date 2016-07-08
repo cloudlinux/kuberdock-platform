@@ -165,6 +165,19 @@ def _add_permissions(permissions=()):
                 permission.save()
 
 
+def _delete_permissions(permissions=()):
+    for res, role, perm, allow in permissions:
+        resource = Resource.query.filter_by(name=res).first()
+        role = Role.query.filter_by(rolename=role).first()
+        if role and resource:
+            permission = Permission.filter(Permission.role == role). \
+                filter(Permission.resource == resource). \
+                filter(Permission.allow == allow). \
+                filter(Permission.name == perm).first()
+            if permission:
+                permission.delete()
+
+
 def add_permissions(roles=None, resources=None, permissions=None):
     if not roles:
         roles = ROLES

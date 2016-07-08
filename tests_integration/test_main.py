@@ -74,6 +74,17 @@ def test_a_pv_created_separately(cluster):
     '''
 
 
+@pipeline('main')
+def test_can_create_pod_without_volumes_and_ports(cluster):
+    # Contents of Docker file utilized to create image:
+    # FROM busybox
+    # CMD ["/bin/sh", "-c", "while true; do sleep 1; done"]
+    cluster.create_pod("apopova/busybox", "test_busybox_pod_1",
+                       start=True, open_all_ports=False,
+                       healthcheck=False, wait_ports=False,
+                       wait_for_status='running')
+
+
 @pipeline('networking')
 def test_nginx(cluster):
     # It is possible to create an nginx pod with public IP

@@ -12,7 +12,7 @@ import requests
 
 from datetime import datetime
 from importlib import import_module
-from fabric.api import env
+from fabric.api import env, run
 from sqlalchemy import or_
 from flask.ext.migrate import Migrate
 
@@ -194,6 +194,7 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
         node.upgrade_status = UPDATE_STATUSES.started
         db_upd.print_log('Upgrading {0} ...'.format(node.hostname))
         try:
+            run('yum --enablerepo=kube,kube-testing clean metadata')
             upgrade_node(db_upd, with_testing, env)
         except Exception as e:
             successful = False
@@ -325,6 +326,7 @@ def do_cycle_updates(with_testing=False):
             break
 
     if not is_failed:
+        helpers.close_all_sessions()
         print 'All update scripts are applied.'
     return is_failed
 

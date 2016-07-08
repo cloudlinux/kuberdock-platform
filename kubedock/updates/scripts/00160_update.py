@@ -46,18 +46,6 @@ class _Update(object):
         pass
 
 
-class _PreU(_Update):
-    @classmethod
-    def upgrade_node(cls, *args, **kwargs):
-        run('yum --enablerepo=kube,kube-testing clean metadata')
-
-
-class _PostU(_Update):
-    @classmethod
-    def upgrade(cls, upd, with_testing):
-        helpers.close_all_sessions()
-
-
 class _UpgradeDB(_Update):
     @classmethod
     def upgrade(cls, upd, with_testing):
@@ -544,7 +532,6 @@ class _U162(_Update):
 
 
 updates = [
-    _PreU,
     _UpgradeDB,
     _UpdatePermissions,
     _U149,
@@ -554,7 +541,6 @@ updates = [
     _U156,
     _U157,
     _U162,
-    _PostU
 ]
 
 

@@ -7,6 +7,7 @@ import subprocess
 from fabric.api import env, run, output
 from fabric.network import disconnect_all
 from fabric.exceptions import NetworkError, CommandTimeout
+from kubedock.core import ssh_connect
 
 if __name__ == '__main__' and __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(
@@ -66,6 +67,15 @@ def get_services_state(services, local=True):
     return dict(zip(services, status))
 
 
+def can_ssh_to_host(hostname):
+    ssh, err = ssh_connect(hostname)
+    if err:
+        return False
+    else:
+        ssh.close()
+        return True
+
+
 def get_node_state(node):
     status = {}
     if node.get('status') == 'pending':
@@ -77,13 +87,17 @@ def get_node_state(node):
     try:
         status['ntp'] = False
         status['services'] = False
-        rv = run('ntpstat', quiet=True, timeout=SSH_TIMEOUT)
-        if rv.succeeded:
-            status['ntp'] = True
-        status['ssh'] = True
-        stopped = get_stopped_services(node_services, local=False)
-        status['services'] = stopped if stopped else True
-        status['disk'] = check_disk_space(local=False)
+        # AC-3105 Fix. Check if master can connect to node via ssh.
+        if can_ssh_to_host(hostname):
+            rv = run('ntpstat', quiet=True, timeout=SSH_TIMEOUT)
+            if rv.succeeded:
+                status['ntp'] = True
+            status['ssh'] = True
+            stopped = get_stopped_services(node_services, local=False)
+            status['services'] = stopped if stopped else True
+            status['disk'] = check_disk_space(local=False)
+        else:
+            status['ssh'] = False
     except (NetworkError, CommandTimeout):
         status['ssh'] = False
     return status

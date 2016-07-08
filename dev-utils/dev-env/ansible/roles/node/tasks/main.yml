@@ -6,7 +6,7 @@
   when: is_dev_install
 
 - name: Docker options
-  set_fact: 
+  set_fact:
       docker_options: --insecure-registry dockerhub-proxy.cloudlinux.com:5000 --registry-mirror=https://dockerhub-proxy.cloudlinux.com:5000
   when: is_nebula
 
@@ -22,8 +22,17 @@
 - name: Set enforce for SELinux
   command: setenforce 1
 
+- set_fact:
+    ntypes: "{{ ntypes | default({}) | combine( {item.split('=')[0]: item.split('=')[1]}) }}"
+  with_items: "{{ (node_types | default('')).split(',') }}"
+
+- set_fact:
+    kube_type: "--kube-type={{ ntypes[ansible_hostname] }}"
+  when:
+      ansible_hostname in ntypes
+
 - name: Add node to master
-  shell: python "{{ src_prefix }}/manage.py" add_node --hostname {{ ansible_hostname }} --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}"
+  shell: python "{{ src_prefix }}/manage.py" add_node --hostname {{ ansible_hostname }} {{ kube_type | default("") }} --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}"
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
   tags:

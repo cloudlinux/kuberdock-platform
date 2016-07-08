@@ -60,6 +60,7 @@ class KDIntegrationTestAPI(object):
             "KD_PD_NAMESPACE",
             "KD_NONFLOATING_PUBLIC_IPS",
             "KD_NEBULA_TEMPLATE_ID",
+            "KD_NODE_TYPES",
         ]
 
         if override_envs is None:
@@ -177,6 +178,9 @@ class KDIntegrationTestAPI(object):
         _, pods, _ = self.kubectl("get pods", out_as_dict=True)
         return pods
 
+    def assert_pods_number(self, number):
+        assert_eq(len(self.get_all_pods()), number)
+
     def delete_ip_pool(self, pool):
         self.manage('delete-ip-pool -s {}'.format(pool['network']))
 
@@ -194,7 +198,7 @@ class KDIntegrationTestAPI(object):
                    open_all_ports=True, restart_policy="Always", pvs=None,
                    start=True, wait_ports=True, healthcheck=True,
                    wait_for_status=None):
-        assert_in(kube_type, ("Standard",))
+        assert_in(kube_type, ("Tiny", "Standard", "High memory"))
         assert_in(restart_policy, ("Always", "Never", "OnFailure"))
 
         pod = self._create_pod_object(image, kube_type, kubes, name,

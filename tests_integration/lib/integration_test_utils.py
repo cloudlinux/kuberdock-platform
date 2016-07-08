@@ -78,8 +78,9 @@ def wait_net_port(ip, port, timeout, try_interval=2):
 
 def kube_type_to_int(kube_type):
     int_types = {
-        "Small": 0,
+        "Tiny": 0,
         "Standard": 1,
+        "High memory": 2,
     }
     return int_types[kube_type]
 

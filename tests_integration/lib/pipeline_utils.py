@@ -186,6 +186,14 @@ class NonfloatingPipeline(Pipeline):
         self.cluster.delete_all_ip_pools()
 
 
+class KubeTypePipeline(Pipeline):
+    NAME = 'kubetype'
+    ENV = {
+        'KD_NODES_COUNT': '2',
+        'KD_NODE_TYPES': 'node1=standard,node2=tiny'
+    }
+
+
 pipelines = defaultdict(list)
 
 

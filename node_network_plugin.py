@@ -34,7 +34,7 @@ PUBLIC_IP_MANGLE_RULE = \
     '-p {2} --dport {3} -j MARK --set-mark 2'
 
 PUBLIC_IP_POSTROUTING_RULE = 'iptables -w -{0} KUBERDOCK-PUBLIC-IP-SNAT ' \
-                             '-t nat -s {1} -o {2} -j SNAT --to-source {3}'
+                             '-t nat -s {1} -j SNAT --to-source {2}'
 
 # MARKS:
 # 1 - traffic to reject/drop
@@ -276,11 +276,10 @@ def handle_public_ip(
                 host_port = port_spec.get('hostPort', None) or container_port
 
                 if action == 'add':
-                    add_ip(container_port, host_port, pod_ip, proto, public_ip,
-                           iface)
+                    add_ip(container_port, host_port, pod_ip, proto, public_ip)
                 elif action == 'del':
                     delete_ip(container_port, host_port, pod_ip, proto,
-                              public_ip, iface)
+                              public_ip)
         # Temporarily disable check. Maybe will be removed completely
         # if not (nonfloating or is_nonfloating_ip_mode_enabled()):
         #    modify_ip(action, public_ip, iface)
@@ -295,7 +294,7 @@ def is_nonfloating_ip_mode_enabled():
     return config['nonfloating_public_ips'].lower() in enabled_options
 
 
-def delete_ip(container_port, host_port, pod_ip, proto, public_ip, iface):
+def delete_ip(container_port, host_port, pod_ip, proto, public_ip):
     subprocess.call(
         PUBLIC_IP_RULE.format('D', public_ip, proto, host_port,
                               pod_ip, container_port).split(
@@ -304,11 +303,10 @@ def delete_ip(container_port, host_port, pod_ip, proto, public_ip, iface):
         PUBLIC_IP_MANGLE_RULE.format('D', public_ip, proto,
                                      host_port).split(' '))
     subprocess.call(
-        PUBLIC_IP_POSTROUTING_RULE.format('D', pod_ip, iface,
-                                          public_ip).split(' '))
+        PUBLIC_IP_POSTROUTING_RULE.format('D', pod_ip, public_ip).split(' '))
 
 
-def add_ip(container_port, host_port, pod_ip, proto, public_ip, iface):
+def add_ip(container_port, host_port, pod_ip, proto, public_ip):
     if subprocess.call(
             PUBLIC_IP_RULE.format('C', public_ip, proto,
                                   host_port, pod_ip,
@@ -325,10 +323,10 @@ def add_ip(container_port, host_port, pod_ip, proto, public_ip, iface):
             PUBLIC_IP_MANGLE_RULE.format('I', public_ip, proto,
                                          host_port).split(' '))
     if subprocess.call(
-            PUBLIC_IP_POSTROUTING_RULE.format('C', pod_ip, iface,
+            PUBLIC_IP_POSTROUTING_RULE.format('C', pod_ip,
                                               public_ip).split(' ')):
         subprocess.call(
-            PUBLIC_IP_POSTROUTING_RULE.format('I', pod_ip, iface,
+            PUBLIC_IP_POSTROUTING_RULE.format('I', pod_ip,
                                               public_ip).split(' '))
 
 

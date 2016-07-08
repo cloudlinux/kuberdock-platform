@@ -151,6 +151,10 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         html: "<div>\n<div class='text-wrapper'>\n<span data-notify-text></span>\n</div>\n</div>",
     });
 
+    utils.notifyWindowClose = function(){
+        $('.notifyjs-bootstrap-error').trigger('notify-hide');
+    };
+
     // close errors only if there is no selected text (let user copy error message)
     $(document).on('click', '.notifyjs-bootstrap-error', function(event) {
         event.stopPropagation();

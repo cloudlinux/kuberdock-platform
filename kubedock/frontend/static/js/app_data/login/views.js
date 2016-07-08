@@ -45,7 +45,10 @@ define(['app_data/app', 'app_data/model', 'app_data/utils', 'marionette',
                     view = this;
                 authModel.save(auth, {wait:true})
                     .always(utils.preloader.hide)
-                    .done(function(){ view.triggerMethod('action:signin', authModel); })
+                    .done(function(){
+                        utils.notifyWindowClose();
+                        view.triggerMethod('action:signin', authModel);
+                    })
                     .fail(function(xhr){
                         utils.notifyWindow(xhr.status === 401
                             ? 'Invalid credentials provided' : xhr);

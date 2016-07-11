@@ -373,10 +373,50 @@ def process_service_event_k8s(data, app):
             set_public_address(hostname, pod_id, send=True)
 
 
-def process_pods_event_k8s(data, app):
+def update_pod_direct_access(pods, pod, obj):
+    """Update direct access attributes for pod"""
+    try:
+        conditions = obj.get('status', {}).get('conditions', ())
+        for c in conditions:
+            if c['type'] == 'Ready' and c['status'] == 'True':
+                pods.update_direct_access(pod)
+                break
+    except:
+        current_app.logger.exception(
+            "Failed to update direct access pod {}".format(pod))
+
+def pin_pod_to_node(spec, node, pods, pod):
     """Binds pods and persistent disks to a node in a case when starts a pod
     with volumes on local storage backend.
     """
+    try:
+        pod_volumes = pod.get_dbconfig('volumes')
+        if not has_local_storage(pod_volumes):
+            return
+        # Try to set node_id for every local PD of the pod, if they are not
+        # set at the moment.
+        # Set node selectors for the pod only if they are not set.
+        dbnode = Node.get_by_name(node)
+        if dbnode:
+            PersistentDisk.bind_to_node(pod.id, dbnode.id)
+        else:
+            current_app.logger.warning('Unknown node with name "%s"', node)
+
+        node_selector = spec.get(
+            'nodeSelector', {}).get('kuberdock-node-hostname')
+        if node_selector or pod.get_dbconfig('node'):
+            return
+        pods.update(pod.id, {'command': 'change_config', 'node': node})
+    except:
+        current_app.logger.exception(
+            'Failed to pin pod "%s" to node "%s"', pod.id, node
+        )
+    else:
+        current_app.logger.debug(
+            'Pin pod "%s" to node "%s"', pod.id, node
+        )
+
+def process_pods_event_k8s(data, app):
     event_type = data['type']
     if event_type != 'MODIFIED':
         return
@@ -398,43 +438,8 @@ def process_pods_event_k8s(data, app):
             current_app.logger.warning('Unknown user for pod %s', pod_id)
             return
         pods = PodCollection(user)
-        if user.username != KUBERDOCK_INTERNAL_USER:
-            conditions = obj.get('status', {}).get('conditions', ())
-            for c in conditions:
-                if c['type'] == 'Ready' and c['status'] == 'True':
-                    pods.update_direct_access(pod)
-                    break
-        pod_volumes = pod.get_dbconfig('volumes')
-        if not has_local_storage(pod_volumes):
-            return
-        # Try to set node_id for every local PD of the pod, if they are not
-        # set at the moment.
-        # Set node selectors for the pod only if they are not set.
-        dbnode = Node.get_by_name(node)
-        if dbnode:
-            PersistentDisk.bind_to_node(pod_id, dbnode.id)
-        else:
-            current_app.logger.warning('Unknown node with name "%s"', node)
-
-        node_selector = spec.get(
-            'nodeSelector', {}
-        ).get('kuberdock-node-hostname')
-        if node_selector or pod.get_dbconfig('node'):
-            return
-
-        try:
-            pods.update(
-                pod_id,
-                {'command': 'change_config', 'node': node}
-            )
-        except:
-            current_app.logger.exception(
-                'Failed to pin pod "%s" to node "%s"', pod_id, node
-            )
-        else:
-            current_app.logger.debug(
-                'Pin pod "%s" to node "%s"', pod_id, node
-            )
+        update_pod_direct_access(pods, pod, obj)
+        pin_pod_to_node(spec, node, pods, pod)
 
 
 def prelist_version(url):

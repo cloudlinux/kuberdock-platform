@@ -131,6 +131,7 @@ class TestPodEventK8s(DBTestCase):
             'hostname': self._node_name
         })
         get_node_mock.return_value = node
+        pod_mock.query.filter_by.return_value.first.return_value.id = self._pod_id
         listeners.process_pods_event_k8s(data, app)
         self.assertTrue(pod_mock.query.filter_by.called)
         self.assertTrue(pod_mock.query.filter_by.return_value.first.called)

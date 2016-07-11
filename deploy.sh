@@ -1090,7 +1090,7 @@ fi
 do_and_log chown -R $WEBAPP_USER.$WEBAPP_USER $TGT_DIR
 
 # 19. Generate random secret key
-SEC_KEY=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1)
+SEC_KEY=$(cat /dev/urandom | base64 | tr -d "=+/" | dd bs=32 count=1 2> /dev/null)
 echo "SECRET_KEY=$SEC_KEY" >> $KUBERDOCK_MAIN_CONFIG
 
 # ======================================================================

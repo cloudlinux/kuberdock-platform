@@ -358,8 +358,14 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             'kube_type', 'restartPolicy', 'volumes', 'containers', 'kuberdock_resolve',
         ],
         isChanged: function(compareTo){
-            if (!compareTo)
-                return false;
+            if (!compareTo){
+                if (this.applyingChangesStarted &&
+                        +new Date() - this.applyingChangesStarted < 120000)
+                    return false;  // user hit "apply" less then 2 minutes ago
+                compareTo = this.get('edited_config');
+                if (!compareTo)
+                    return false;
+            }
             var attrs = _.without(this.editableAttributes, 'containers'),
                 before = _.partial(_.pick, this.toJSON()).apply(_, attrs),
                 after = _.partial(_.pick, compareTo.toJSON()).apply(_, attrs);
@@ -617,6 +623,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 if (!fixedPrice){
                     var cmd = model.ableTo('start') ? 'start': 'redeploy';
                     return model.command(cmd, {applyEdit: true})
+                        .done(function(){
+                            model.applyingChangesStarted = +new Date();
+                            model.trigger('apply-changes-start');
+                        })
                         .fail(utils.notifyWindow)
                         .then(deferred.resolve, deferred.reject);
                 }
@@ -630,6 +640,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                                 if (c.get('state') !== 'running')
                                     c.set('state', 'pending');
                             });
+                            model.applyingChangesStarted = +new Date();
+                            model.trigger('apply-changes-start');
                             deferred.resolve();
                             App.navigate('pods/' + model.id, {trigger: true});
                             return;

@@ -377,10 +377,11 @@ def update_pod_direct_access(pods, pod, obj):
     """Update direct access attributes for pod"""
     try:
         conditions = obj.get('status', {}).get('conditions', ())
-        for c in conditions:
-            if c['type'] == 'Ready' and c['status'] == 'True':
-                pods.update_direct_access(pod)
-                break
+        if pod.status != POD_STATUSES.stopping:
+            for c in conditions:
+                if c['type'] == 'Ready' and c['status'] == 'True':
+                    pods.update_direct_access(pod)
+                    break
     except:
         current_app.logger.exception(
             "Failed to update direct access pod {}".format(pod))

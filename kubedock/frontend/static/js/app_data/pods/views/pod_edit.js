@@ -159,7 +159,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 this.ui.privateWrapper.show();
                 this.ui.loginPrivateUres.slideDown();
                 this.ui.searchImageButton.parent().hide();
-                this.ui.privateField.attr('placeholder','registry/namespace/image');
+                this.ui.privateField.attr('placeholder', 'registry/namespace/image');
                 this.ui.privateField.addClass('private-registry');
                 this.ui.label.text('Select image from any registry');
             } else if (val === 'PRIVATE_REPOS') {
@@ -167,7 +167,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 this.ui.privateWrapper.show();
                 this.ui.loginPrivateUres.slideDown();
                 this.ui.searchImageButton.parent().hide();
-                this.ui.privateField.attr('placeholder','namespace/image');
+                this.ui.privateField.attr('placeholder', 'namespace/image');
                 this.ui.privateField.removeClass('private-registry');
                 this.ui.label.text('Select image from DockerHub');
             }
@@ -300,7 +300,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 show: true,
                 footer: {
                     buttonOk: function(){
-                        App.navigate('pods/' + podID + '/container/' + id + '/general', {trigger: true});
+                        App.navigate('pods/' + podID + '/container/' + id
+                                        + '/general', {trigger: true});
                     },
                     buttonCancel: true,
                     buttonOkText: 'Yes, discard latest changes',
@@ -532,8 +533,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 mode: 'inline',
                 validate: validatePort,
                 success: function(response, newValue) {
-                    if (checkUniqueness(_.extend({}, that.model.toJSON(), {containerPort: newValue})))
-                        return ' ';
+                    if (checkUniqueness(_.extend({}, that.model.toJSON(),
+                        {containerPort: newValue}))) return ' ';
                     that.model.set('containerPort', newValue);
                 },
             });
@@ -636,7 +637,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             this.ui.pdSelect.find('.add-new-pd, .invalid-name-pd').remove();
 
             if (name){
-                var error = !this.nameFormat.test(name) ? 'Only "-", "_" and alphanumeric symbols are allowed.'
+                var error = !this.nameFormat.test(name)
+                    ? 'Only "-", "_" and alphanumeric symbols are allowed.'
                     : name.length > 36 ? 'Maximum length is 36 symbols.'
                     : null;
                 if (error){
@@ -880,8 +882,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 return false;
             }
             if (!paternValidName.test(name)){
-                utils.notifyInline('Variable name should contain only Latin letters or ".", "_", "-" symbols',
-                                   this.ui.nameField);
+                utils.notifyInline('Variable name should contain only ' +
+                'Latin letters or ".", "_", "-" symbols', this.ui.nameField);
                 return false;
             }
             if (name.length > 255){
@@ -1013,7 +1015,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 show: true,
                 footer: {
                     buttonOk: function(){
-                        App.navigate('pods/' + podID + '/container/' + id + '/env', {trigger: true});
+                        App.navigate('pods/' + podID + '/container/' + id
+                                             + '/env', {trigger: true});
                     },
                     buttonCancel: true,
                     buttonOkText: 'Yes, discard latest changes',
@@ -1118,12 +1121,17 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             var kubeTypes = this.pkg.getKubeTypes();
             kubeTypes.each(function(kt){
                 var conflicts = kt.conflicts.pluck('name').join(', ');
-                kt.formattedName = kt.get('name') + ' ' + (
-                    !kt.get('available') ? '(currently not available)'
-                        : kt.conflicts.length ? '(conflict with disk ' + conflicts + ')'
-                            : '');
-                kt.disabled = kt.get('available') && !kt.conflicts.length;
+
+                kt.formattedName = kt.get('name') + ' ' + (kt.conflicts.length
+                    ? '(conflict with disk ' + conflicts + ')'
+                    : '');
+
+                kt.disabled = !kt.conflicts.length;
             });
+
+            kubeTypes.reset(kubeTypes.filter(function(kt){
+                if (kt.get('available')) return kt;
+            }));
 
             var edited = this.model.editOf();
 
@@ -1142,14 +1150,16 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 totalPrice       : this.model.rawTotalPrice,
                 kubeTypes        : kubeTypes,
                 kubesLimit       : this.kubesLimit,
-                restart_policies : {'Always': 'Always', 'Never': 'Never', 'OnFailure': 'On Failure'},
+                restart_policies : {'Always': 'Always', 'Never': 'Never',
+                                    'OnFailure': 'On Failure'},
                 restart_policy   : this.model.get('restartPolicy'),
                 pkg              : this.pkg,
                 hasBilling       : this.hasBilling,
                 persistentDrives : _.chain(this.model.get('volumes'))
                     .map(function(vol){
                         return vol.persistentDisk && vol.persistentDisk.pdName
-                            && this.model.persistentDrives.findWhere({name: vol.persistentDisk.pdName});
+                            && this.model.persistentDrives.findWhere(
+                                {name: vol.persistentDisk.pdName});
                     }, this).filter(_.identity).value(),
                 payg             : this.payg    // Pay-As-You-Go billing method
             };
@@ -1319,10 +1329,12 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         onRender: function() {
+            var noAvailableKubeTypes = Model.KubeType.noAvailableKubeTypes;
+
             this.ui.selectpicker.selectpicker();
             this.ui.tooltip.tooltip();
             this.ui.kubeTypes.selectpicker({
-                noneSelectedText: this.model.get('kube_type') === Model.KubeType.noAvailableKubeTypes
+                noneSelectedText: this.model.get('kube_type') === noAvailableKubeTypes
                     ? 'No available kube types' : 'Select kube type',
             });
             if (this.model.get('kube_type') === undefined)
@@ -1334,7 +1346,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         editPolicy: function(){
             this.ui.editPolicy.hide();
             this.ui.editPolycyDescription.hide();
-            this.ui.policy.attr('disabled',false);
+            this.ui.policy.attr('disabled', false);
             this.$('.policy .disabled').removeClass('disabled');
         },
 

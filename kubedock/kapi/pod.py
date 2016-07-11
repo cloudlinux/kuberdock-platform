@@ -506,11 +506,20 @@ def add_kdtools(containers, volumes):
     into containers.
 
     """
-    volume_name = 'kdtools-' + uuid.uuid4().hex
+    prefix = 'kdtools-'
+    volume_name = prefix + uuid.uuid4().hex
+    # Make sure we remove previous info, to handle case when image changes
+    kdtools_vol = filter(lambda v: v['name'].startswith(prefix), volumes)
+    if kdtools_vol:
+        volumes.remove(kdtools_vol[0])
     volumes.append({
         u'hostPath': {u'path': HOST_KDTOOLS_PATH},
         u'name': volume_name})
     for container in containers:
+        kdtools_mnt = filter(lambda m: m['name'].startswith(prefix),
+                                    container['volumeMounts'])
+        if kdtools_mnt:
+            container['volumeMounts'].remove(kdtools_mnt[0])
         container['volumeMounts'].append({
             u'readOnly': True,
             u'mountPath': MOUNT_KDTOOLS_PATH,

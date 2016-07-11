@@ -477,6 +477,8 @@ define(['app_data/app', 'app_data/model',
                     that.model.command('redeploy')
                         .fail(function(){ col.add(modelOrigBackup, {merge: true}); })
                         .done(function(){
+                            // we need to re-generate diff
+                            delete that.modelOrig._containersDiffCollection;
                             utils.notifyWindow('Pod will be upgraded.', 'success');
                             App.navigate('pods/' + that.model.id, {trigger: true});
                         });

@@ -39,7 +39,7 @@ class TestNodeEventListeners(DBTestCase):
         u'object': {
             u'status': {},
             u'metadata': {u'name': u'node1'}},
-            u'type': u'MODIFIED'}
+        u'type': u'MODIFIED'}
 
     def test_event_has_first_node_down_status(self, _ns, _t, _r, _s):
         app = mock.MagicMock()

@@ -105,7 +105,8 @@ class TestAtomic(DBTestCase):
         self.assertTrue(self.current_transaction.is_active)
 
     def test_with_api_error(self):
-        """If some `APIError` was rised, don't stop it, but rollback all changes."""
+        """If some `APIError` was rised, don't stop it, 
+        but rollback all changes."""
         with self.assertRaises(self.TargetAPIEror):  # original exception
             with atomic(self.CreatePackageError()):
                 self._target_with_APIError()
@@ -126,7 +127,8 @@ class TestAtomic(DBTestCase):
         self.assertTrue(self.current_transaction.is_active)
 
     def test_ok_and_commit_current_transaction(self):
-        """If everything is ok, preserve changes and commit current transaction."""
+        """If everything is ok, 
+        preserve changes and commit current transaction."""
         with atomic(self.CreatePackageError(), nested=False):
             self._target_without_exception()
 
@@ -147,7 +149,8 @@ class TestAtomic(DBTestCase):
 
     def test_ok_and_commit_current_transaction_as_decrator(self):
         """
-        Parameter `commit` in decorated function must override parameter `nested`
+        Parameter `commit` in decorated function 
+        must override parameter `nested`
         in `atomic` decorator.
         """
         decorator = atomic(self.CreatePackageError())
@@ -159,7 +162,8 @@ class TestAtomic(DBTestCase):
         self.assertFalse(self.current_transaction.is_active)
 
     def test_main_transaction_commited(self):
-        """Prevent main transaction from beeng commited inside of atomic block."""
+        """Prevent main transaction from beeng commited 
+        inside of atomic block."""
         with self.assertRaises(atomic.UnexpectedCommit):
             with atomic():
                 self._target_with_commit()

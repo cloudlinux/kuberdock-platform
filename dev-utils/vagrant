@@ -34,6 +34,7 @@ KD_DEPLOY_DEBUG
 ANSIBLE_LOG_PATH
 VAGRANT_DOTFILE_PATH
 KD_NODE_TYPES
+KD_ONE_URL
 "
 
 py_get_env_args="import sys, os;

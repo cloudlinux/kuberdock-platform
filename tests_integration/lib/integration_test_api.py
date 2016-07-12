@@ -10,9 +10,11 @@ import paramiko
 import vagrant
 import yaml
 
+from tests_integration.lib.exceptions import StatusWaitException, \
+    UnexpectedKubectlResponse, DiskNotFoundException
 from tests_integration.lib.integration_test_utils import \
     ssh_exec, assert_eq, assert_in, kube_type_to_int, wait_net_port, \
-    UnexpectedKubectlResponse, StatusWaitException, merge_dicts, retry
+    merge_dicts, retry
 
 OPENNEBULA = "opennebula"
 VIRTUALBOX = "virtualbox"
@@ -533,6 +535,3 @@ class PV(object):
     def exists(self):
         return self._get_by_name(self.name) is not None
 
-
-class DiskNotFoundException(Exception):
-    pass

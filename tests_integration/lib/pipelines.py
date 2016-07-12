@@ -5,21 +5,15 @@ from contextlib import contextmanager
 from functools import wraps
 from tempfile import NamedTemporaryFile
 
+from tests_integration.lib.exceptions import PipelineNotFound
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.integration_test_utils import merge_dicts, \
-    center_text_message
+    center_text_message, NebulaIPPool, suppress
 
 PIPELINES_PATH = '.pipelines/'
+INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-
-
-class PipelineNotFound(Exception):
-    pass
-
-
-class PipelineInvalidName(Exception):
-    pass
 
 
 class Pipeline(object):
@@ -56,20 +50,14 @@ class Pipeline(object):
         self.settings = merge_dicts(self.defaults, getattr(self, 'ENV', {}))
         self.settings['VAGRANT_DOTFILE_PATH'] = os.path.join(
             PIPELINES_PATH, self.name)
-
+        self.routable_ip_count = getattr(self, 'ROUTABLE_IP_COUNT', 0)
         self.vagrant_log = NamedTemporaryFile(delete=False)
 
-        @contextmanager
-        def cm():
-            """
-            Vagrant uses subprocess.check_call to execute each command.
-            Thus we need a context manager which will catch it's stdout/stderr
-            output and save it somewhere we can access it later
-            """
-            yield self.vagrant_log
-
-        self.cluster = KDIntegrationTestAPI(override_envs=self.settings,
-                                            err_cm=cm, out_cm=cm)
+        self.routable_ip_pool = NebulaIPPool.factory(
+            os.environ['KD_ONE_URL'],
+            os.environ['KD_ONE_USERNAME'],
+            os.environ['KD_ONE_PASSWORD'])
+        self.cluster = None
 
     def run_test(self, test):
         """
@@ -92,7 +80,22 @@ class Pipeline(object):
         Create a pipeline. Underneath creates a KD cluster and destroys it
         automatically if any error occurs during that process
         """
+
+        @contextmanager
+        def cm():
+            """
+            Vagrant uses subprocess.check_call to execute each command.
+            Thus we need a context manager which will catch it's stdout/stderr
+            output and save it somewhere we can access it later
+            """
+            yield self.vagrant_log
+
         try:
+            ips = self.routable_ip_pool.reserve_ips(
+                INTEGRATION_TESTS_VNET, self.routable_ip_count)
+            self._add_public_ips(ips)
+            self.cluster = KDIntegrationTestAPI(override_envs=self.settings,
+                                                err_cm=cm, out_cm=cm)
             self.cluster.start()
         except:
             self.destroy()
@@ -111,12 +114,12 @@ class Pipeline(object):
         """
         Destroys KD cluster
         """
-        try:
+        with suppress():
+            self.routable_ip_pool.free_reserved_ips()
+        with suppress():
             self.cluster.destroy()
-        except:
-            pass
-        finally:
-            self._print_vagrant_log()
+
+        self._print_vagrant_log()
 
     def set_up(self):
         """
@@ -146,6 +149,18 @@ class Pipeline(object):
         except KeyError:
             raise PipelineNotFound(name)
 
+    def _add_public_ips(self, ip_list):
+        """
+        Adds given public IP addresses to the cluster settings. Will be used on
+        cluster creation during provisioning
+
+        :param ip_list: array of IPv4 in x.x.x.x format
+        """
+
+        # KD_ONE_PUB_IPS is a list of last IP octets
+        kd_pub_ips = ','.join(i.split('.')[-1] for i in ip_list)
+        self.settings['KD_ONE_PUB_IPS'] = kd_pub_ips
+
     def _print_vagrant_log(self):
         """
         Sends logs produced by vagrant to the default logger
@@ -157,12 +172,13 @@ class Pipeline(object):
             '\n-----------------> {name} VAGRANT LOGS ----------------->\n'
             '{log}'
             '\n<----------------- {name} VAGRANT LOGS <-----------------\n'
-            .format(name=self.name, log=log)
+                .format(name=self.name, log=log)
         )
 
 
 class MainPipeline(Pipeline):
     NAME = 'main'
+    ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
     }
@@ -170,6 +186,7 @@ class MainPipeline(Pipeline):
 
 class NetworkingPipeline(Pipeline):
     NAME = 'networking'
+    ROUTABLE_IP_COUNT = 2
     ENV = {
         'KD_NODES_COUNT': '1',
     }
@@ -177,6 +194,7 @@ class NetworkingPipeline(Pipeline):
 
 class NonfloatingPipeline(Pipeline):
     NAME = 'nonfloating'
+    ROUTABLE_IP_COUNT = 3
     ENV = {
         'KD_NONFLOATING_PUBLIC_IPS': 'true',
         'KD_NODES_COUNT': '2',
@@ -189,6 +207,7 @@ class NonfloatingPipeline(Pipeline):
 
 class CephPipeline(Pipeline):
     NAME = 'ceph'
+    ROUTABLE_IP_COUNT = 2
     ENV = {
         'KD_NODES_COUNT': '1',
         'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',
@@ -205,8 +224,10 @@ class CephPipeline(Pipeline):
         """
         self.cleanup()
 
+
 class KubeTypePipeline(Pipeline):
     NAME = 'kubetype'
+    ROUTABLE_IP_COUNT = 2
     ENV = {
         'KD_NODES_COUNT': '2',
         'KD_NODE_TYPES': 'node1=standard,node2=tiny'

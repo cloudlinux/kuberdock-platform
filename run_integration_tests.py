@@ -18,7 +18,6 @@ from tests_integration.lib import multilogger
 from tests_integration.lib.pipelines import pipelines as \
     registered_pipelines, Pipeline
 
-
 INTEGRATION_TESTS_PATH = 'tests_integration/'
 # Lock is needed for printing info thread-safely and it's done by two
 # separate print calls
@@ -31,7 +30,7 @@ logger.setLevel(logging.DEBUG)
 
 
 def print_msg(msg, color=Fore.MAGENTA):
-    print('\n{}>>> {} <<<{}'.format(color, msg, Style.RESET_ALL))
+    print('\n{}{}{}'.format(color, msg, Style.RESET_ALL))
     sys.stdout.flush()
 
 
@@ -100,8 +99,10 @@ def run_tests_in_a_pipeline(name, tests):
         print_msg('{} -> {}'.format(name, msg), color)
 
     pipe_log('CREATING CLUSTER', Fore.MAGENTA)
+
     try:
         pipeline = Pipeline.from_name(name)
+
         pipeline.create()
         pipe_log('CLUSTER CREATED', Fore.GREEN)
     except:

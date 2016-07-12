@@ -4,13 +4,20 @@ import re
 import socket
 import string
 import time
+from collections import defaultdict
 from contextlib import contextmanager
 from itertools import count, islice
 
 from colorama import Fore, Style
+from ipaddress import IPv4Address
+
+from tests_integration.lib.exceptions import PublicPortWaitTimeoutException, \
+    NonZeroRetCodeException, NotEnoughFreeIPs
+# TODO: Use upstream version. Look AC-3849 for details
+from tests_integration.lib.vendor import oca
+from tests_integration.lib.vendor.oca import OpenNebulaException
 
 NO_FREE_IPS_ERR_MSG = 'no free public IP-addresses'
-
 LOG = logging.getLogger(__name__)
 
 
@@ -31,27 +38,6 @@ def ssh_exec(ssh, cmd, timeout=None, check_retcode=True):
         raise NonZeroRetCodeException(
             stdout=out, stderr=err, ret_code=ret_code)
     return ret_code, out, err
-
-
-class PublicPortWaitTimeoutException(Exception):
-    pass
-
-
-class StatusWaitException(Exception):
-    pass
-
-
-class UnexpectedKubectlResponse(Exception):
-    pass
-
-
-class NonZeroRetCodeException(Exception):
-    def __init__(self, message='', stdout=None, stderr=None, ret_code=None):
-        self.stdout, self.stderr, self.ret_code = stdout, stderr, ret_code
-        super(NonZeroRetCodeException, self).__init__(message)
-
-    def __str__(self):
-        return '\n'.join([self.message, self.stdout, self.stderr])
 
 
 def wait_net_port(ip, port, timeout, try_interval=2):
@@ -192,6 +178,116 @@ def retry(f, tries=3, interval=1, _raise=True, *f_args, **f_kwargs):
                     raise
 
 
+class NebulaIPPool(object):
+    def __init__(self, client):
+        self.client = client
+        self.reserved = defaultdict(set)
+
+    @property
+    def pool(self):
+        p = oca.VirtualNetworkPool(self.client, preload_info=True)
+        p.info()
+        return p
+
+    def get_free_ip_list(self, network_name):
+        """
+        Returns the set of free IP addresses in the given network
+
+        :param network_name: the name of a network in OpenNebula
+        :return: a set of IPv4 addresses
+        """
+        net = self.pool.get_by_name(network_name)
+        ip_list, used_ip_list = set(), set()
+
+        for r in net.address_ranges:
+            start_ip = int(IPv4Address(unicode(r.ip)))
+            end_ip = start_ip + r.size
+
+            for ip in range(start_ip, end_ip):
+                ip_list.add(str(IPv4Address(ip)))
+            for lease in r.leases:
+                used_ip_list.add(lease.ip)
+
+        return ip_list - used_ip_list
+
+    def reserve_ips(self, network_name, count):
+        """
+        Tries to hold the given amount of given IP addresses of a network
+        Automatically retries if IP were concurrently taken. Raises if there
+        are not enough IP addresses
+
+        :param network_name: the name of a network in OpenNebula
+        :param count: number of IPs to hold
+        :return: a set of reserved IPv4 addresses
+        """
+        ips = self.get_free_ip_list(network_name)
+        if len(ips) < count:
+            raise NotEnoughFreeIPs(
+                '{} net has {} free IPs but {} requested'.format(network_name,
+                                                                 len(ips),
+                                                                 count))
+
+        net = self.pool.get_by_name(network_name)
+
+        def reserve_ip():
+            """
+            Tries to reserve a random free IP. Retries if any OpenNebula
+            related problem occurs.
+            :return: reserved IP
+            """
+            while ips:
+                ip = ips.pop()
+                try:
+                    net.hold(ip)
+                    return ip
+                except OpenNebulaException:
+                    # It's not possible to distinguish if that was an
+                    # arbitrary API error or the IP was concurrently
+                    # reserved. We'll consider it's always the latter case
+                    pass
+
+            raise NotEnoughFreeIPs(
+                'The number of free IPs became less than requested during '
+                'reservation')
+
+        for _ in range(count):
+            ip = reserve_ip()
+            self.reserved[network_name].add(ip)
+
+        return self.reserved[network_name]
+
+    def free_reserved_ips(self):
+        """
+        Tries to release all IPs reserved within this class object instance
+        """
+        for net_name, ip_set in self.reserved.items():
+            net = self.pool.get_by_name(net_name)
+            for ip in ip_set:
+                try:
+                    net.release(ip)
+                except OpenNebulaException:
+                    pass
+
+    @classmethod
+    def factory(cls, url, username, password):
+        client = oca.Client('{}:{}'.format(username, password), url)
+        return cls(client)
+
+
 def get_rnd_string(length=10, prefix=""):
     return prefix + ''.join(random.SystemRandom().choice(
         string.ascii_uppercase + string.digits) for _ in range(length))
+
+
+@contextmanager
+def suppress(exc=Exception):
+    """
+    A contextlib.suppress port from python 3.4 for suppressing a given type
+    of exception
+
+    :param exc: exception class to ignore
+    """
+    try:
+        yield
+    except exc:
+        pass

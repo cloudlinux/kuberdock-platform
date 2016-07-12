@@ -1,6 +1,6 @@
 from tests_integration.lib.integration_test_utils import \
-    NonZeroRetCodeException, NO_FREE_IPS_ERR_MSG, assert_raises,\
-    assert_eq, get_rnd_string
+    NO_FREE_IPS_ERR_MSG, assert_raises, assert_eq, get_rnd_string
+from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.pipelines import pipeline
 
 

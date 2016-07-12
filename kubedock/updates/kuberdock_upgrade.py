@@ -440,7 +440,9 @@ def parse_cmdline():
                              help='Enable testing repo during upgrade')
     root_parser.add_argument(
         '--local',
-        help='Filename of local package to install for upgrade')
+        help="Filename of local package to install for upgrade. Don't "
+             "use it on non-latest KuberDock release unless you know what you "
+             "are doing")
     root_parser.add_argument(
         '--skip-health-check',
         action='store_true',
@@ -614,6 +616,14 @@ if __name__ == '__main__':
             if args.use_testing:
                 print 'Testing repo enabled.'
             if args.local:
+                print 'WARNING: Upgrade from local package is not for ' \
+                      'generic purpose and it can cause troubles unless you ' \
+                      'know what you are doing, because it skips upgrade ' \
+                      'to all intermediate KuberDock versions in favor of ' \
+                      'provided package.\n' \
+                      "Also, it's STRONGLY recommended to upgrade to latest " \
+                      "KuberDock release first, unless other instructions " \
+                      "provided\n"
                 # Check if it's newer
                 res = subprocess.call(['rpm', '-i', '--replacefiles',
                                        '--nodeps',

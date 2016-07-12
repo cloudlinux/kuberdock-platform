@@ -1,5 +1,5 @@
 from tests_integration.lib.integration_test_utils import assert_eq
-from tests_integration.lib.pipeline_utils import pipeline
+from tests_integration.lib.pipelines import pipeline
 
 
 @pipeline('kubetype')

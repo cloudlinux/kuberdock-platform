@@ -15,7 +15,7 @@ from pygments.formatters.terminal256 import Terminal256Formatter
 from pygments.lexers.python import PythonLexer
 
 from tests_integration.lib import multilogger
-from tests_integration.lib.pipeline_utils import pipelines as \
+from tests_integration.lib.pipelines import pipelines as \
     registered_pipelines, Pipeline
 
 

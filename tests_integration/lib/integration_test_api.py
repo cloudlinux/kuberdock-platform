@@ -12,7 +12,7 @@ import yaml
 
 from tests_integration.lib.integration_test_utils import \
     ssh_exec, assert_eq, assert_in, kube_type_to_int, wait_net_port, \
-    UnexpectedKubectlResponse, StatusWaitException, merge_dicts
+    UnexpectedKubectlResponse, StatusWaitException, merge_dicts, retry
 
 OPENNEBULA = "opennebula"
 VIRTUALBOX = "virtualbox"
@@ -142,7 +142,8 @@ class KDIntegrationTestAPI(object):
                 "the existing one.")
 
         if provider == OPENNEBULA:
-            self.vagrant.up(provider=provider, no_provision=True)
+            retry(self.vagrant.up, tries=3,
+                  provider=provider, no_provision=True)
             self.vagrant.provision()
         else:
             self.vagrant.up(provider=provider)

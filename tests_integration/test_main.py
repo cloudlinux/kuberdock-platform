@@ -1,6 +1,6 @@
 from tests_integration.lib.integration_test_utils import \
     NonZeroRetCodeException, NO_FREE_IPS_ERR_MSG, assert_raises, assert_eq
-from tests_integration.lib.pipeline_utils import pipeline
+from tests_integration.lib.pipelines import pipeline
 
 
 # TODO: to API add method, which creates IP pools via kdclt instead of

@@ -3,7 +3,6 @@ import re
 import socket
 import time
 from contextlib import contextmanager
-from functools import wraps
 from itertools import count, islice
 
 from colorama import Fore, Style
@@ -155,3 +154,29 @@ def center_text_message(message, width=120, fill_char='-'):
     """
     message = ' {} '.format(message)
     return '{{:{}^{}}}'.format(fill_char, width).format(message)
+
+
+def retry(f, tries=3, interval=1, _raise=True, *f_args, **f_kwargs):
+    """
+    Retries given func call specified n times
+
+    :param f: callable
+    :param tries: number of retries
+    :param interval: sleep interval between retries
+    :param _raise: re-raise function exception when retries done
+    :param f_args: callable args
+    :param f_kwargs: callable kwargs
+    :return:
+    """
+    while tries > 0:
+        tries -= 1
+        try:
+            return f(*f_args, **f_kwargs)
+        except Exception as ex:
+            LOG.debug("Retry failed with exception: {0}".format(repr(ex)))
+            if tries > 0:
+                LOG.debug("{0} retries left".format(tries))
+                time.sleep(interval)
+            else:
+                if _raise:
+                    raise

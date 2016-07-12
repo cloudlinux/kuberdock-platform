@@ -7,8 +7,7 @@ from itertools import count, islice
 
 from colorama import Fore, Style
 
-NO_FREE_IPS_ERR_MSG = 'There are no free public IP-addresses, contact ' \
-                      'KuberDock administrator'
+NO_FREE_IPS_ERR_MSG = 'no free public IP-addresses'
 
 LOG = logging.getLogger(__name__)
 
@@ -99,11 +98,20 @@ def assert_in(item, sequence):
 
 
 @contextmanager
-def assert_raises(exc, text):
+def assert_raises(expected_exc, text=".*"):
     try:
         yield
-    except exc as e:
-        assert re.search(text, str(e)) is not None
+    except expected_exc as e:
+        err_msg = str(e)
+        if re.search(text, err_msg) is None:
+            raise AssertionError("Given text '{}' is not found in error "
+                                 "message: '{}'".format(text, err_msg))
+    except Exception as e:
+        raise AssertionError("Caught exception '{}' does not match expected "
+                             "one '{}'".format(repr(e), str(expected_exc)))
+    else:
+        raise AssertionError("Expected to raise '{}' but nothing is "
+                             "raised.".format(str(expected_exc)))
 
 
 def merge_dicts(*dictionaries):

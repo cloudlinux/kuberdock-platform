@@ -12,7 +12,7 @@ set -e
 # 2. No VBox support. The only cross-platform way to make it is reverse-ssh:
 # http://stackoverflow.com/a/19364263/923620 which is shitty
 
-IMG=lobur/dev-env:v3
+IMG=lobur/dev-env:v4
 
 if [ ! -d "dev-utils" ]
 then

@@ -1,6 +1,25 @@
+import sys
+
 import requests
 
 from kubedock import settings
+from kubedock.exceptions import InternalAPIError
+
+
+class InfluxDBError(InternalAPIError):
+    pass
+
+
+class InfluxDBConnectionError(InfluxDBError):
+    def __init__(self, e):
+        message = 'Error during connection to influxdb cause of %s' % repr(e)
+        super(InfluxDBConnectionError, self).__init__(message)
+
+
+class InfluxDBUnexpectedAnswer(InfluxDBError):
+    def __init__(self, e):
+        message = 'Wrong answer from influxdb. Details: %s' % repr(e)
+        super(InfluxDBUnexpectedAnswer, self).__init__(message)
 
 
 def _query(query_str):
@@ -15,11 +34,16 @@ def _query(query_str):
         'u': settings.INFLUXDB_USER,
         'p': settings.INFLUXDB_PASSWORD
     }
-    r = requests.get(
-        url=url,
-        params=params
-    )
-    return r.json()
+    try:
+        r = requests.get(
+            url=url,
+            params=params
+        )
+        return r.json()
+    except requests.ConnectionError as e:
+        raise InfluxDBConnectionError(e), None, sys.exc_info()[2]
+    except ValueError as e:
+        raise InfluxDBUnexpectedAnswer(e), None, sys.exc_info()[2]
 
 
 def get_node_stat(nodename, start, end):
@@ -28,8 +52,10 @@ def get_node_stat(nodename, start, end):
     query_str = ' '.join((
         b.start_new().with_selector(CpuLimitSelector).with_filter(f).build(),
         b.start_new().with_selector(CpuUsageSelector).with_filter(f).build(),
-        b.start_new().with_selector(MemoryLimitSelector).with_filter(f).build(),
-        b.start_new().with_selector(MemoryUsageSelector).with_filter(f).build(),
+        b.start_new().with_selector(MemoryLimitSelector).with_filter(
+            f).build(),
+        b.start_new().with_selector(MemoryUsageSelector).with_filter(
+            f).build(),
         b.start_new().with_selector(RxbSelector).with_filter(f).build(),
         b.start_new().with_selector(TxbSelector).with_filter(f).build(),
         b.start_new().with_selector(FsLimitSelector).with_filter(f).build(),
@@ -55,8 +81,10 @@ def get_pod_stat(pod_name, start, end):
     query_str = ' '.join((
         b.start_new().with_selector(CpuLimitSelector).with_filter(f).build(),
         b.start_new().with_selector(CpuUsageSelector).with_filter(f).build(),
-        b.start_new().with_selector(MemoryLimitSelector).with_filter(f).build(),
-        b.start_new().with_selector(MemoryUsageSelector).with_filter(f).build(),
+        b.start_new().with_selector(MemoryLimitSelector).with_filter(
+            f).build(),
+        b.start_new().with_selector(MemoryUsageSelector).with_filter(
+            f).build(),
         b.start_new().with_selector(RxbSelector).with_filter(f).build(),
         b.start_new().with_selector(TxbSelector).with_filter(f).build(),
     ))
@@ -78,8 +106,10 @@ def get_container_stat(pod_name, container_name, start, end):
     query_str = ' '.join((
         b.start_new().with_selector(CpuLimitSelector).with_filter(f).build(),
         b.start_new().with_selector(CpuUsageSelector).with_filter(f).build(),
-        b.start_new().with_selector(MemoryLimitSelector).with_filter(f).build(),
-        b.start_new().with_selector(MemoryUsageSelector).with_filter(f).build(),
+        b.start_new().with_selector(MemoryLimitSelector).with_filter(
+            f).build(),
+        b.start_new().with_selector(MemoryUsageSelector).with_filter(
+            f).build(),
     ))
     response = _query(query_str)
     data = response['results']

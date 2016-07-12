@@ -196,8 +196,8 @@ class KDIntegrationTestAPI(object):
             self.vagrant.destroy()
 
     def create_pod(self, image, name, kube_type="Standard", kubes=1,
-                   open_all_ports=True, restart_policy="Always", pvs=None,
-                   start=True, wait_ports=True, healthcheck=True,
+                   open_all_ports=False, restart_policy="Always", pvs=None,
+                   start=True, wait_ports=False, healthcheck=False,
                    wait_for_status=None):
         assert_in(kube_type, ("Tiny", "Standard", "High memory"))
         assert_in(restart_policy, ("Always", "Never", "OnFailure"))
@@ -345,6 +345,8 @@ class KDPod(RESTMixin):
         pv_cmd = self.pv_cmd
         escaped_name = self.escaped_name
 
+        # Does not mean these are Public IP ports, depends on a cluster setup.
+        self.open_all_ports = open_all_ports
         ports_arg = ''
         if open_all_ports:
             pub_ports = ",".join(["+{0}".format(p) for p in self.ports])
@@ -378,6 +380,16 @@ class KDPod(RESTMixin):
     def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
         ports = ports or self.ports
         self._wait_for_ports(ports, timeout)
+
+    def _wait_for_ports(self, ports, timeout):
+        # NOTE: we still don't know if this is in a routable network, so
+        # open_all_ports does not exactly mean wait_for_ports pass.
+        # But for sure it does not make sense to wait if no ports open.
+        if not self.open_all_ports:
+            raise Exception("Cannot wait for ports on a pod with no ports open"
+                            "(must pass open_all_ports=True)")
+        for p in ports:
+            wait_net_port(self.public_ip, p, timeout)
 
     def wait_for_status(self, status, tries=50, interval=5, delay=0):
         """
@@ -414,10 +426,6 @@ class KDPod(RESTMixin):
     def escaped_name(self):
         return pipes.quote(self.name)
 
-    def _wait_for_ports(self, ports, timeout):
-        for p in ports:
-            wait_net_port(self.public_ip, p, timeout)
-
     def get_spec(self):
         rc, out, err = self.cluster.kubectl(
             "describe pods {0}".format(self.escaped_name))
@@ -448,6 +456,9 @@ class _NginxPod(KDPod):
         self._wait_for_ports(ports, timeout)
 
     def healthcheck(self):
+        if not self.open_all_ports:
+            raise Exception("Cannot perform nginx healthcheck without public IP"
+                            "(must pass open_all_ports=True)")
         self._generic_healthcheck()
         assert_in("Welcome to nginx!", self.do_GET())
 

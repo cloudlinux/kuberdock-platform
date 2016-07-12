@@ -192,6 +192,6 @@ def retry(f, tries=3, interval=1, _raise=True, *f_args, **f_kwargs):
                     raise
 
 
-def get_rnd_string(length=10):
-    return ''.join(random.SystemRandom().choice(
+def get_rnd_string(length=10, prefix=""):
+    return prefix + ''.join(random.SystemRandom().choice(
         string.ascii_uppercase + string.digits) for _ in range(length))

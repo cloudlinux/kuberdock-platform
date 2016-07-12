@@ -20,7 +20,7 @@ from kubedock.rbac import fixtures as rbac_fixtures
 from kubedock.updates import helpers
 from kubedock.updates.helpers import restart_service, remote_install
 from kubedock.users import User
-from kubedock.utils import POD_STATUSES
+from kubedock.utils import POD_STATUSES, randstr
 from kubedock.validation import check_internal_pod_data
 from node_network_plugin import PLUGIN_PATH
 from node_network_plugin import PUBLIC_IP_POSTROUTING_RULE
@@ -517,6 +517,7 @@ class _U157(_Update):
 
         run('systemctl restart sshd.service')
 
+
 class _U162(_Update):
     @classmethod
     def upgrade(cls, upd, with_testing):
@@ -530,6 +531,16 @@ class _U162(_Update):
                 cp.set('main', 'WITH_TESTING', 'yes')
                 with open(KUBERDOCK_SETTINGS_FILE, 'wb') as configfile:
                     cp.write(configfile)
+
+
+class _U164(_Update):
+    @classmethod
+    def upgrade(cls, upd, with_testing):
+        fdata = open(KUBERDOCK_SETTINGS_FILE).read()
+        if 'SECRET_KEY=' not in fdata:
+            upd.print_log('Generating secret key...')
+            with open(KUBERDOCK_SETTINGS_FILE, 'a') as c:
+                c.write("SECRET_KEY={0}\n".format(randstr(32, secure=True)))
 
 
 class _U165(_Update):
@@ -555,6 +566,7 @@ updates = [
     _U156,
     _U157,
     _U162,
+    _U164,
     _U165,
 ]
 

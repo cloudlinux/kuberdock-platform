@@ -9,3 +9,6 @@ ceph_config_dest: "/tmp/ceph.conf"
 ceph_user_keyring_dest: "/tmp/ceph.keyring"
 
 token_gathering_url: https://localhost/api/auth/token
+
+deploy_log_file: /var/log/kuberdock_master_deploy.log
+deploy_log_file_dst: /tmp/kd_master_deploy.log

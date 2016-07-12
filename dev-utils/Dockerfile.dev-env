@@ -3,12 +3,11 @@ FROM centos:7
 RUN yum -y install epel-release && \
     yum -y update && \
     yum -y install ansible rsync wget git gcc make && \
-    wget https://releases.hashicorp.com/vagrant/1.8.1/vagrant_1.8.1_x86_64.rpm && \
-    yum -y localinstall vagrant_1.8.1_x86_64.rpm && \
+    wget https://releases.hashicorp.com/vagrant/1.8.4/vagrant_1.8.4_x86_64.rpm && \
+    yum -y localinstall vagrant_1.8.4_x86_64.rpm && \
     vagrant plugin install vagrant-gatling-rsync && \
     vagrant plugin install vagrant-rsync-back && \
-    wget https://github.com/histrio/opennebula-provider/releases/download/fog-1.0.1/opennebula-provider-1.0.1.gem && \
-    vagrant plugin install opennebula-provider-1.0.1.gem && \
+    vagrant plugin install opennebula-provider --plugin-version 1.0.4 && \
     yum clean all
 
 # Remove annoying "duplicated key at line 132 ignored: :nic" warning
@@ -16,8 +15,8 @@ RUN sed -i '132d' /root/.vagrant.d/gems/gems/fog-1.38.0/lib/fog/opennebula/reque
 
 # Workaround for https://github.com/mitchellh/vagrant/issues/6721 # TODO remove "gcc" and "make" rpms when fixed
 RUN cd /opt/vagrant/embedded/ && \
-    bin/gem install ffi && \
-    yes | cp lib/ruby/gems/2.2.0/extensions/x86_64-linux/2.2.0/ffi-1.9.10/ffi_c.so /opt/vagrant/embedded/gems/extensions/x86_64-linux/2.2.0/ffi-1.9.10/ffi_c.so
+    bin/gem install ffi -v 1.9.10 && \
+    yes | cp {lib/ruby/gems/2.2.0,gems}/extensions/x86_64-linux/2.2.0/ffi-1.9.10/ffi_c.so
 
 
 # Rebuild & push with:

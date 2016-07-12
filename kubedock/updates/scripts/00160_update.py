@@ -229,40 +229,17 @@ class _U151(_Update):
     @classmethod
     def add_kdtools_to_master(cls, upd):
         # Patch RC specs
-        upd.print_log('Patch replication controllers to support ssh access...')
+        upd.print_log('Restart pods to support ssh access...')
         pc = PodCollection()
-        for dbpod in Pod.query.filter(Pod.status != 'deleted'):
-            pod_id = dbpod.id
-            pod = pc._get_by_id(pod_id)
-            try:
-                get_replicationcontroller(pod.namespace, pod.sid)
-            except APIError:
-                # there is no RC created for the pod yet, skip it.
-                continue
-
-            volumes = []
-            containers = [
-                {
-                    'name': container['name'],
-                    'volumeMounts': []
-                }
-                for container in pod.containers
-                ]
-            add_kdtools(containers, volumes)
-
-            res = PodCollection().patch_running_pod(
-                pod_id,
-                {
-                    'spec': {
-                        'volumes': volumes,
-                        'containers': containers
-                    },
-                },
-                replace_lists=False,
-                restart=True
-            )
-            res = res or {}
-            upd.print_log('Updated pod: {}'.format(res.get('name', 'Unknown')))
+        user = User.filter_by(username=settings.KUBERDOCK_INTERNAL_USER).one()
+        dns_pod = Pod.filter_by(name='kuberdock-dns', owner=user).first()
+        query = Pod.query.filter(
+            Pod.status != 'deleted').filter(Pod.id != dns_pod.id)
+        for dbpod in query:
+            pod = pc._get_by_id(dbpod.id)
+            pc._stop_pod(pod, block=True)
+            pc._start_pod(pod, {'async_pod_create': False})
+            upd.print_log('Restart pod: {}'.format(dbpod.name))
 
     @classmethod
     def add_kdtools_to_node(cls, with_testing):

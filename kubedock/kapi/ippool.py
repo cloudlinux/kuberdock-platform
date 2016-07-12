@@ -92,11 +92,7 @@ class IpAddrPool(object):
             node = K8SNode(hostname=node_name)
             node.increment_free_public_ip_count(len(pool.free_hosts()))
 
-        return {'id': str(network),
-                'network': str(network),
-                'autoblock': block_list,
-                'allocation': pool.free_hosts_and_busy(page=1),
-                'node': node_name}
+        return pool.to_dict(page=1)
 
     @atomic(nested=False)
     def update(self, network, params):

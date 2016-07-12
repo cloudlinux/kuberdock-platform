@@ -118,7 +118,11 @@ class TestIpPool(DBTestCase):
             'node': self.node.hostname,
         }
         res = ippool.IpAddrPool().create(data)
-        self.assertEqual(res, {'network': data['network'], 'autoblock': [],
+        self.assertEqual(res, {'network': data['network'],
+                               'free_hosts': ['192.168.1.1'],
+                               'blocked_list': [],
+                               'ipv6': False,
+                               'pages': 1, 'page': 1,
                                'id': data['network'],
                                'allocation': [('192.168.1.1', None, 'free')],
                                'node': data['node']})
@@ -142,18 +146,13 @@ class TestIpPool(DBTestCase):
             'node': self.node.hostname,
         }
         res = ippool.IpAddrPool().create(data)
-        self.assertEqual(
-            {
-                'network': res['network'],
-                'autoblock': res['autoblock']
-            },
-            {
-                'network': data['network'],
-                'autoblock': [
-                    int(ipaddress.ip_address(ip)) for ip in expected_block_ips
-                ],
-            }
-        )
+        self.assertEqual({
+            'network': res['network'],
+            'blocked_list': res['blocked_list']
+        }, {
+            'network': data['network'],
+            'blocked_list': expected_block_ips,
+        })
 
         invalid_block = 'qwerty'
         data = {

@@ -322,18 +322,17 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             relatedModel: Backbone.Self,
         }],
 
-        updateSshAccess: function(){
+        resetSshAccess: function(){
             var that = this;
-
             utils.preloader.show();
             $.ajax({
-                url: '/api/podapi/' + that.id + '/direct_access',
+                url: '/api/podapi/' + that.id + '/reset_direct_access_pass',
                 authWrap: true,
             })
             .done(function(response) {
-                utils.notifyWindow('SSH credentials are ready to use.' +
+                that.set('direct_access', response.data);
+                utils.notifyWindow('SSH credentials are updated.' +
                 ' See table below in column SSH.', 'success');
-                that.sshAccess = response;
             })
             .always(utils.preloader.hide).fail(utils.notifyWindow);
         },

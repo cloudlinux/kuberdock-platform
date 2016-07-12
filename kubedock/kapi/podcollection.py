@@ -676,7 +676,8 @@ class PodCollection(object):
             pod.template_id = template_id
             pod.kube_type = db_pod.kube_id
             pod.db_status = db_pod.status
-            pod.direct_access = db_pod.direct_access
+            pod.direct_access = (json.loads(db_pod.direct_access)
+                                 if db_pod.direct_access else None)
 
             if pod.db_status in (POD_STATUSES.preparing,
                                  POD_STATUSES.stopping,
@@ -895,7 +896,7 @@ class PodCollection(object):
             pass
         return self._store_direct_access(pod, origin_pass)
 
-    def _store_direct_access(self, pod, origin_pass=None):
+    def _store_direct_access(self, pod, origin_pass=None, silent=False):
         """Store direct access attributes
         Call :meth:`._direct_access` and store returned attributes.
 
@@ -908,6 +909,9 @@ class PodCollection(object):
         direct_access = self._direct_access(pod.id, origin_pass)
         pod.direct_access = json.dumps(direct_access)
         pod.save()
+        if not silent:
+            send_event_to_role('pod:change', {'id': pod.id}, 'Admin')
+            send_event_to_user('pod:change', {'id': pod.id}, self.owner.id)
         return direct_access
 
     def _direct_access(self, pod_id, orig_pass=None):

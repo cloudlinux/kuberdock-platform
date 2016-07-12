@@ -1197,6 +1197,7 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
                        'name': 'pod{0}'.format(i),
                        'namespace': namespaces[i % namespaces_total],
                        'owner': self.user,
+                       'direct_access': '{}',
                        'kube_id': randrange(3),
                        'config': json.dumps({'name': pod_id,
                                              'containers': ()})}

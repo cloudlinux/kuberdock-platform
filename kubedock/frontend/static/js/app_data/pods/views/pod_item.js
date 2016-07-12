@@ -111,10 +111,10 @@ define(['app_data/app', 'app_data/model',
             this.model.get('before').checkForUpdate().done(this.render);
         },
         copySshLink: function(){
-            var sshAccess = this.model.get('before').getPod().sshAccess;
+            var sshAccess = this.model.get('before').getPod().get('direct_access');
             if (sshAccess) {
                 var modelName = this.model.get('before').get('name'),
-                    sshLink = sshAccess.data.links[modelName];
+                    sshLink = sshAccess.links[modelName];
                 utils.copyLink(sshLink, 'SSH link copied to clipboard');
             } else {
                 utils.notifyWindow('SSH access credentials are outdated. Please, '+
@@ -122,9 +122,9 @@ define(['app_data/app', 'app_data/model',
             }
         },
         copySshPassword: function(){
-            var sshAccess = this.model.get('before').getPod().sshAccess;
+            var sshAccess = this.model.get('before').getPod().get('direct_access');
             if (sshAccess) {
-                var sshPassword = sshAccess.data.auth;
+                var sshPassword = sshAccess.auth;
                 utils.copyLink(sshPassword, 'SSH password copied to clipboard');
             } else {
                 utils.notifyWindow('SSH access credentials are outdated. Please, '+
@@ -192,19 +192,19 @@ define(['app_data/app', 'app_data/model',
         className: 'pod-controls',
 
         ui: {
-            updateSsh: '.updateSsh',
+            resetSsh : '.resetSsh',
         },
         events: {
-            'click .start-btn'        : 'startItem',
-            'click .pay-and-start-btn': 'payStartItem',
-            'click .restart-btn'      : 'restartItem',
-            'click .stop-btn'         : 'stopItem',
-            'click .terminate-btn'    : 'terminateItem',
-            'click @ui.updateSsh'     : 'updateSshAccess'
+            'click .start-btn'         : 'startItem',
+            'click .pay-and-start-btn' : 'payStartItem',
+            'click .restart-btn'       : 'restartItem',
+            'click .stop-btn'          : 'stopItem',
+            'click .terminate-btn'     : 'terminateItem',
+            'click @ui.resetSsh'       : 'resetSshAccess'
         },
 
         modelEvents: {
-            'change': 'render',
+            'change' : 'render'
         },
 
         initialize: function(options){
@@ -245,7 +245,7 @@ define(['app_data/app', 'app_data/model',
             };
         },
 
-        updateSshAccess : function() { this.model.updateSshAccess(); },
+        resetSshAccess : function() { this.model.resetSshAccess(); },
         startItem: function(){ this.model.cmdStart(); },
         payStartItem: function(){ this.model.cmdPayAndStart(); },
         restartItem: function(){ this.model.cmdRestart(); },

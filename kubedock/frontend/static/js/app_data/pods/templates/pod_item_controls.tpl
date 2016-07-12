@@ -12,7 +12,7 @@
     <% } else { %>
         <a class="upgrade-btn" href="#pods/<%- id %>/upgrade"><span>Upgrade</span></a>
     <% } %> -->
-    <span class="updateSsh"><span>Get SSH access</span></span>
+    <% if (prettyStatus === 'running') { %><span class="resetSsh"><span>Reset SSH access</span></span><% } %>
     <div class="btn-group controls pull-right">
         <span type="button" class="dropdown-toggle" data-toggle="dropdown">
             <span class="ic_reorder">

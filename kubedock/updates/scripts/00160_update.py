@@ -23,6 +23,7 @@ from kubedock.users import User
 from kubedock.utils import POD_STATUSES
 from kubedock.validation import check_internal_pod_data
 from node_network_plugin import PLUGIN_PATH
+from node_network_plugin import PUBLIC_IP_POSTROUTING_RULE
 from kubedock.settings import KUBERDOCK_SETTINGS_FILE
 
 
@@ -531,6 +532,19 @@ class _U162(_Update):
                     cp.write(configfile)
 
 
+class _U165(_Update):
+    @classmethod
+    def upgrade_node(cls, upd, with_testing, env):
+        upd.print_log('Update iptables rules ...')
+        run('systemctl restart kuberdock-watcher')
+        rv = run('iptables -L KUBERDOCK-PUBLIC-IP-SNAT -t nat')
+        run('iptables -F KUBERDOCK-PUBLIC-IP-SNAT -t nat')
+        ips = [(line.split()[3], line.split()[5].split(':')[1])
+            for line in rv.splitlines()[2:]]
+        for pod_ip, public_ip in ips:
+            run(PUBLIC_IP_POSTROUTING_RULE.format('I', pod_ip, public_ip))
+
+
 updates = [
     _UpgradeDB,
     _UpdatePermissions,
@@ -541,6 +555,7 @@ updates = [
     _U156,
     _U157,
     _U162,
+    _U165,
 ]
 
 

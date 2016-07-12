@@ -71,18 +71,34 @@ def mountpoint_is_busy(mountpoint):
     return True
 
 
+def get_local_keyring_path(keyring):
+    # Don't blame me for this hardcode. There 26 more of them scattered
+    # all over the project. So
+    # TODO: Pick out all these cases to one place.
+    CONF_PATH = '/var/lib/kuberdock/conf'
+    basename = os.path.basename(keyring)
+    return os.path.join(CONF_PATH, basename)
+
+
 def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors,
                    **kwargs):
     """ Backup all CEPH drives for pool
     """
     try:
         from kubedock import ceph_settings, settings
+        if any([pool, monitors, keyring, auth_user]):
+            logger.warning('Ceph settings found. Some of passed parameters may be overriten.')
         auth_user = getattr(ceph_settings, 'CEPH_CLIENT_USER', auth_user)
         monitors = getattr(ceph_settings, 'MONITORS', monitors)
-        keyring = getattr(ceph_settings, 'CEPH_KEYRING_PATH', keyring)
+        keyring_path = getattr(ceph_settings, 'CEPH_KEYRING_PATH', None)
+        if keyring_path is not None:
+            keyring = get_local_keyring_path(keyring_path)
         pool = getattr(settings, 'CEPH_POOL_NAME', pool)
     except ImportError:
         logger.warning("CEPH settings for kuberdock was not found.")
+
+    logger.debug({'pool': pool, 'monitors': monitors, 'keyring': keyring,
+                 'auth_user': auth_user})
 
     mountpoint = os.environ.get('KD_CEPH_BACKUP_MOUNTPOINT', '/mnt')
     if not os.path.exists(mountpoint):
@@ -94,7 +110,6 @@ def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors,
                               "release it or specify free mount point via"
                               " KD_CEPH_BACKUP_MOUNTPOINT".format(mountpoint))
 
-    logger.info([pool, monitors, keyring, auth_user])
     if not all([pool, monitors, keyring, auth_user]):
         raise BackupException("Insufficient ceph parameters")
 
@@ -216,8 +231,8 @@ def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors,
         except BackupException as err:
             if not skip_errors:
                 raise
-            logger.warning("Drive `{0}` not backuped due error '{1}'. Skipped".format(
-                drive, err))
+            logger.warning("Drive `{0}` not backuped due error '{1}'. "
+                           "Skipped".format(drive, err))
 
 
 def parse_args(args):

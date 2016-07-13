@@ -1,0 +1,4 @@
+[client.jenkins]
+	key = SOMESECRET==
+	caps mon = "allow r"
+	caps osd = "allow rwx pool=jenkins_pool"

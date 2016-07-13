@@ -1,4 +1,0 @@
-[client.ddemianyk]
-	key = AQBen2NXo8QOGBAAXx4BfscKUstleVkeGd1N4g==
-	caps mon = "allow r"
-	caps osd = "allow rwx pool=dd_pool"

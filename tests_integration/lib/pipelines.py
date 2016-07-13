@@ -185,18 +185,17 @@ class NonfloatingPipeline(Pipeline):
         super(NonfloatingPipeline, self).cleanup()
         self.cluster.delete_all_ip_pools()
 
-# TODO: change Denys Demianyk's Ceph credentials to Jenkins' ones
-# when available
+
 class CephPipeline(Pipeline):
     NAME = 'ceph'
     ENV = {
         'KD_NODES_COUNT': '1',
         'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',
         'KD_CEPH': '1',
-        'KD_CEPH_USER': 'ddemianyk',
+        'KD_CEPH_USER': 'jenkins',
         'KD_CEPH_CONFIG': 'ceph_configs/ceph.conf',
-        'KD_CEPH_USER_KEYRING': 'ceph_configs/client.ddemianyk.keyring',
-        'KD_PD_NAMESPACE': 'dd_pool'
+        'KD_CEPH_USER_KEYRING': 'ceph_configs/client.jenkins.keyring',
+        'KD_PD_NAMESPACE': 'jenkins_pool'
     }
 
     def tear_down(self):

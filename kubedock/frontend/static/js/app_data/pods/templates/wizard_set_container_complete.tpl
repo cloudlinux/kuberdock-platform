@@ -143,7 +143,7 @@
                 <button class="add-more blue">Add more containers</button>
                 <% if (!edited){ %>
                     <button class="save-container blue">Save</button>
-                    <% if (!hasBilling && !payg){ %>
+                    <% if (hasBilling && !payg){ %>
                         <button class="pay-and-run-container blue">Pay and Run</button>
                     <% } %>
                 <% } else { %>

@@ -549,6 +549,17 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             this.rawTotalPrice = totalPrice;
             this.totalPrice = pkg.getFormattedPrice(totalPrice);
         },
+        waitForStatus: function(statuses){
+            var deferred = $.Deferred(),
+                checker = function(){
+                    if (_.contains(statuses, this.get('status')))
+                        deferred.resolveWith(this);
+                    else
+                        this.once('change:status', checker);
+                };
+            checker.call(this);
+            return deferred.promise();
+        },
 
         // commands with common app/UI interactions, return promise
         cmdStart: function(){
@@ -628,6 +639,21 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                         })
                         .fail(utils.notifyWindow)
                         .then(deferred.resolve, deferred.reject);
+                }
+                if (model.ableTo('stop')){
+                    // Workaround for better error-handling: restart and stop
+                    // are asynchronous, so billing might not get any error
+                    // from KD API directly.
+                    // Stop pod and then go to billing.
+                    utils.notifyWindow('Pod will be restarted...', 'success');
+                    $.when(
+                        model.command('stop'),
+                        model.waitForStatus(['stopped'])
+                    ).done(function(){
+                        model.cmdApplyChanges()
+                            .then(deferred.resolve, deferred.reject);
+                    }).fail(utils.notifyWindow, deferred.reject);
+                    return deferred.promise();
                 }
                 new Backbone.Model().save({pod: model}, {url: '/api/billing/orderPodEdit'})
                     .fail(utils.notifyWindow, _.bind(deferred.reject, deferred))

@@ -30,6 +30,7 @@ def token2():
     username = request.json and request.json.get('username')
     password = request.json and request.json.get('password')
     token = (request.json and request.json.get('token') or
+             request.form and request.form.get('token') or
              request.args.get('token'))
 
     user = None

@@ -635,12 +635,10 @@
                                 var id = JSON.parse(r.response).data.id,
                                     response_token = r.getResponseHeader('X-Auth-Token'),
                                     url = window.location.origin
-                                        + '/#pods/'
-                                        + id
-                                        + '?token2='
+                                        + '/?token2='
                                         + response_token
-                                        + '&postDescription='
-                                        + desc || '';
+                                        + '#pods/'
+                                        + id;
                                 window.location = url;
 
                             }

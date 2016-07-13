@@ -12,6 +12,11 @@ import json
 billing = Blueprint('billing', __name__, url_prefix='/billing')
 
 
+class WithoutBilling(APIError):
+    message = 'Without billing'
+    status_code = 404
+
+
 def no_billing_data():
     return {
         'billing': 'No billing',
@@ -43,7 +48,7 @@ def get_billing_info():
 def payment_methods():
     current_billing = SystemSettings.get_by_name('billing_type')
     if current_billing == 'No billing':
-        raise APIError('Without billing', 404)
+        raise WithoutBilling()
     billing = current_app.billing_factory.get_billing(current_billing)
     return billing.getpaymentmethods()
 
@@ -56,7 +61,7 @@ def order_product():
     data = KubeUtils._get_params()
     current_billing = SystemSettings.get_by_name('billing_type')
     if current_billing == 'No billing':
-        raise APIError('Without billing', 404)
+        raise WithoutBilling()
     billing = current_app.billing_factory.get_billing(current_billing)
     if data.get('pod'):
         data['referer'] = data['referer'] if 'referer' in data else ''
@@ -73,7 +78,7 @@ def order_edit():
     data['pod'] = json.dumps(data['pod'])
     current_billing = SystemSettings.get_by_name('billing_type')
     if current_billing == 'No billing':
-        raise APIError('Without billing', 404)
+        raise WithoutBilling()
     billing = current_app.billing_factory.get_billing(current_billing)
     response = billing.orderpodedit(**data)
     if response.get('result') == 'error':
@@ -89,7 +94,7 @@ def order_kubes():
     data = KubeUtils._get_params()
     current_billing = SystemSettings.get_by_name('billing_type')
     if current_billing == 'No billing':
-        raise APIError('Without billing', 404)
+        raise WithoutBilling()
     billing = current_app.billing_factory.get_billing(current_billing)
     data['referer'] = data['referer'] if 'referer' in data else ''
     return billing.orderkubes(**data)

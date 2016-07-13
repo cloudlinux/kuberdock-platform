@@ -253,14 +253,14 @@ def check_change_pod_data(data):
                            for c in data.get('containers') or []]}
 
 
-def check_new_pod_data(data, user=None):
+def check_new_pod_data(data, user=None, **kwargs):
     # FIXME: in cerberus 0.9.1 "corece" in nested fields doesn't work right:
     # .validated({'a': 123, 'b': {'a': 456}},
     #            {'a': {}, 'b': {'type': 'dict',
     #                            'schema': {'a': {'coerce': str}}}})
     # -> {'a': '456', 'b': {'a': 456}}
     # use normalisation only after upgrade to Cerberus 1.0 ...
-    validator = V(user=None if user is None else user.username)
+    validator = V(user=None if user is None else user.username, **kwargs)
     if not validator.validate(data, new_pod_schema):
         raise ValidationError(validator.errors)
 

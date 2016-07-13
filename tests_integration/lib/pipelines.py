@@ -141,7 +141,8 @@ class Pipeline(object):
         """
         try:
             available = {c.NAME: c for c in cls.__subclasses__()}
-            return available[name.split('_')[0]](name)
+            pipe_name = name.rsplit('_', 1)[0]
+            return available[pipe_name](name)
         except KeyError:
             raise PipelineNotFound(name)
 

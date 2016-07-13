@@ -118,22 +118,20 @@
                         </tbody>
                     </table>
                 <% } %>
-                <table>
-                    <tbody>
-                        <% if (edited && diffTotalPrice > 0){ %>
-                            <tr><td class="total" colspan="3">
-                                Additional costs: <span id="total_price"><%- formatPrice(diffTotalPrice) %> / <%- pkg.get('period') %></span>
-                            </td></tr>
-                            <tr><td class="total" colspan="3">
-                                New total price: <span id="total_price"><%- formatPrice(totalPrice) %> / <%- pkg.get('period') %></span>
-                            </td></tr>
-                        <% } else { %>
-                            <tr><td class="total" colspan="3">
-                                Total price: <span id="total_price"><%- formatPrice(totalPrice) %> / <%- pkg.get('period') %></span>
-                            </td></tr>
-                        <% } %>
-                    </tbody>
-                </table>
+            </div>
+            <div class="col-md-12 payment-summary no-padding text-right">
+                <% if (edited && diffTotalPrice > 0){ %>
+                    <div class="upgrade-total-price">
+                        <p>Additional costs: <span id="total_price"><%- formatPrice(diffTotalPrice) %> / <%- pkg.get('period') %></span></p>
+                    </div>
+                    <div class="upgrade-diff-price">
+                        New total price: <span id="total_price"><%- formatPrice(totalPrice) %> / <%- pkg.get('period') %></span>
+                    </div>
+                <% } else { %>
+                    <div class="upgrade-diff-price">
+                        Total price: <span id="total_price"><%- formatPrice(totalPrice) %> / <%- pkg.get('period') %></span>
+                    </div>
+                <% } %>
             </div>
             <div class="buttons col-md-12 no-padding text-right">
                 <% if (edited){ %>
@@ -145,21 +143,25 @@
                 <button class="add-more blue">Add more containers</button>
                 <% if (!edited){ %>
                     <button class="save-container blue">Save</button>
-                    <% if (hasBilling && !payg){ %>
+                    <% if (!hasBilling && !payg){ %>
                         <button class="pay-and-run-container blue">Pay and Run</button>
                     <% } %>
                 <% } else { %>
                     <% if (hasBilling && !payg && diffTotalPrice > 0){ %>
+                        <button class="save-changes gray">Save for later</button>
                         <button class="pay-and-apply-changes blue">Pay and Apply changes *</button>
-                        <button class="save-changes">Save for later</button>
-                        <span class="edit-pod-note" style="clear: both; font-size: 12px">
-                            * Pod will be restarted
-                        </span>
                     <% } else { %>
                         <button class="save-changes blue">Save</button>
                     <% } %>
                 <% } %>
             </div>
+            <% if (edited && hasBilling && !payg && diffTotalPrice > 0){ %>
+                <div class="col-md-12 no-padding text-right">
+                    <span class="edit-pod-note" style="clear: both; font-size: 12px">
+                        * Pod will be restarted
+                    </span>
+                </div>
+            <% } %>
         </div>
     </div>
 </div>

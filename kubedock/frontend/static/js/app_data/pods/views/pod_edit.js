@@ -1129,9 +1129,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 kt.disabled = !kt.conflicts.length;
             });
 
-            kubeTypes.reset(kubeTypes.filter(function(kt){
-                if (kt.get('available')) return kt;
-            }));
+            kubeTypes.reset(kubeTypes.filter(function(kt){ return kt.get('available'); }));
 
             var edited = this.model.editOf();
 

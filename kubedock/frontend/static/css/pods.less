@@ -43,11 +43,6 @@
         padding-top: 37px;
     }
 }
-#tab-content.complete{
-    .payment-summary{
-        padding-top: 20px;
-    }
-}
 #item-info,
 #tab-content.complete{
     .payment-summary,
@@ -58,9 +53,7 @@
         .upgrade-total-price{
             p {
                 color: #121010;
-                font-size: 23px;
-                line-height: 23px;
-                margin-bottom: 5px;
+                font-size: 13px;
                 font-family: @semibold;
             }
             small{
@@ -74,13 +67,18 @@
         .new-total,
         .upgrade-diff-price{
             color: #30a718;
-            font-size: 23px;
-            line-height: 23px;
-            margin-right: 7px;
+            font-size: 19px;
             font-family: @semibold;
-            padding-bottom: 3px;
         }
      }
+}
+#tab-content.complete{
+    .payment-summary{
+        margin-top: 0;
+        border-top: none;
+        padding-bottom: 20px;
+        border-bottom: 1px solid #e0e0e0;
+    }
 }
 #messages-block{
     margin-bottom: 0px;
@@ -233,7 +231,7 @@
                     border-bottom: none;
                     .total-wrapper{
                         position: relative;
-                        margin-bottom: 52px;
+                        margin-bottom: 20px;
                         background-color: #fff;
                         border: 1px solid #e5e5e5;
                         padding: 14px 20px 4px 20px;

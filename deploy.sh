@@ -496,7 +496,7 @@ if [ "$ISAMAZON" = true ];then
 
     if [ -z "$ROUTE_TABLE_ID" ];then
         install_repos
-        yum_wrapper install aws-cli -y
+        yum_wrapper install awscli -y   # only after epel is installed
         INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
         INSTANCE_DATA=$(aws ec2 describe-instances --region=$REGION --instance-id $INSTANCE_ID)
         VPC_ID=$(echo "$INSTANCE_DATA"|get_vpc_id)

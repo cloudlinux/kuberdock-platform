@@ -99,7 +99,6 @@ clean_node(){
 
     if [ "$AWS" = True ];then
         remove_unneeded awscli
-        remove_unneeded aws-cli
         remove_unneeded jq
         remove_unneeded python2-boto
         remove_unneeded python2-botocore
@@ -439,7 +438,7 @@ yum_wrapper -y install tuned
 # kdtools - statically linked binaries to provide ssh access into containers
 yum_wrapper -y install kdtools
 
-# 3. If amazon instance install aws-cli, epel and jq
+# 3. If amazon instance install additional packages from epel
 if [ "$AWS" = True ];then
     # we need to install command-line json parser from epel
     rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7

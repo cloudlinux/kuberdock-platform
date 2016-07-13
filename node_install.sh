@@ -391,7 +391,7 @@ yum --enablerepo=kube,kube-testing clean metadata
 
 
 # 1.2 Install ntp, we need correct time for node logs
-# AC-3199 Remove chrony which prevents ntpd service to start 
+# AC-3199 Remove chrony which prevents ntpd service to start
 # after boot
 yum erase -y chrony
 # We use setup like this
@@ -441,10 +441,10 @@ yum_wrapper -y install kdtools
 
 # 3. If amazon instance install aws-cli, epel and jq
 if [ "$AWS" = True ];then
-    yum_wrapper -y install awscli
     # we need to install command-line json parser from epel
     rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
     yum_wrapper -y install epel-release
+    yum_wrapper -y install awscli
     yum_wrapper -y install jq
     yum_wrapper -y install python2-botocore
     yum_wrapper -y install python2-boto
@@ -766,7 +766,7 @@ fi
 if [ ! -z "$CEPH_CONF" ]; then
 
     install_ceph_client
-    
+
     cp $CEPH_CONF/* /etc/ceph/
     check_status
 

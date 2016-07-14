@@ -1,3 +1,4 @@
+from kubedock import validation
 from kubedock.exceptions import APIError
 from kubedock.kapi.pod import VolumeExists
 from kubedock.kapi.podcollection import PodCollection
@@ -53,7 +54,9 @@ class _PodRestore(object):
         self.volumes_dir_url = volumes_dir_url
 
     def __call__(self):
-        pod_spec = _extract_needed_information(self.pod_data)
+        pod_spec = validation.check_new_pod_data(
+            _extract_needed_information(self.pod_data),
+            allow_unknown=True)
 
         if _filter_persistent_volumes(pod_spec):
             if not self.volumes_dir_url:

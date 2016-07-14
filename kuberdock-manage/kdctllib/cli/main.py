@@ -27,9 +27,7 @@ class MainGroup(click.Group):
 
 @click.group(help='Kuberdock admin utilities.', cls=MainGroup,
              context_settings={
-                 'allow_interspersed_args': True,
-                 'allow_extra_args': True,
-                 'ignore_unknown_options': True,
+                 'help_option_names': ['-h', '--help']
              })
 @click.option(
     '-c', '--config-dir',
@@ -59,11 +57,16 @@ def print_result(obj, result, **params):
         obj.io.out_text(str(result))
 
 
-@main.command(help='Login.')
+@main.command(help='Login to remote server.')
 @click.option('-u', '--username')
 @click.option('-p', '--password')
 @click.pass_obj
 def login(obj, username, password):
+    if not username:
+        username = obj.io.prompt('Username')
+        password = obj.io.prompt('Password', hide_input=True)
+    elif not password:
+        password = obj.io.prompt('Password', hide_input=True)
     obj.kdctl.login(username, password)
 
 

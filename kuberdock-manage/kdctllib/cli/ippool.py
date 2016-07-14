@@ -4,7 +4,7 @@ from main import main
 from utils import data_argument
 
 
-@main.group(help='IP pool management.')
+@main.group(help='Commands for IP pool management.')
 def ippool():
     pass
 

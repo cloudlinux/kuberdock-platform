@@ -14,9 +14,9 @@ if __name__ == '__main__':
 
     from kdctllib.cli.main import main
     from kdctllib.cli import ippool
-    from kdctllib.cli import license
     from kdctllib.cli import nodes
     from kdctllib.cli import predefined_apps
+    from kdctllib.cli import pricing
     from kdctllib.cli import restore
     from kdctllib.cli import system_settings
     from kdctllib.cli import users

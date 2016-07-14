@@ -2,14 +2,14 @@ from .auth import AuthClient
 from .backup import BackupClient
 from .ippool import IPPoolClient
 from .nodes import NodesClient
-from .pstorage import PStorageClient
 from .podapi import PodAPIClient
 from .predefined_apps import PredefinedAppsClient
+from .pricing import PricingClient
+from .pstorage import PStorageClient
 from .restore import RestoreClient
 from .system_settings import SystemSettingsClient
 from .users import UsersClient
 from .utils import Transport
-from .license import LicenseClient
 
 
 class KDClient(object):
@@ -34,7 +34,7 @@ class KDClient(object):
         self.pstorage = PStorageClient(self)
         self.pods = PodAPIClient(self)
         self.predefined_apps = PredefinedAppsClient(self)
+        self.pricing = PricingClient(self)
         self.restore = RestoreClient(self)
         self.system_settings = SystemSettingsClient(self)
         self.users = UsersClient(self)
-        self.license = LicenseClient(self)

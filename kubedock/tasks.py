@@ -233,6 +233,10 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
         sftp.put('/etc/pki/etcd/etcd-client.key', '/etcd-client.key')
         sftp.put('/etc/pki/etcd/etcd-dns.crt', '/etcd-dns.crt')
         sftp.put('/etc/pki/etcd/etcd-dns.key', '/etcd-dns.key')
+
+        # AC-3652 Node backup
+        sftp.put('backup_node.py', '/usr/bin/kd-backup-node')
+
         if CEPH:
             TEMP_CEPH_CONF_PATH = '/tmp/kd_ceph_config'
             CEPH_CONF_SRC_PATH = '/var/lib/kuberdock/conf'
@@ -344,7 +348,7 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
                   log_file, channels)
 
         ssh.close()
-        
+
         db_node.state = NODE_STATUSES.completed
         db.session.commit()
         send_event('node:change', {'id': db_node.id})

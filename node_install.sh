@@ -491,6 +491,8 @@ mv /kd-ssh-gc "$KD_SSH_GC_PATH"
 chmod +x "$KD_SSH_GC_PATH"
 check_status
 
+chmod +x "/usr/bin/kd-backup-node"
+check_status
 
 # For direct ssh feature
 groupadd kddockersshuser

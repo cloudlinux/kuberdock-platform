@@ -12,8 +12,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
     var data = {},
         unwrapper = function(response) {
-            var data = response.hasOwnProperty('data') ? response['data'] : response;
-            if(response.status === 'error' || response.status === 'warning')
+            var data = response.hasOwnProperty('data') ? response.data : response;
+            if (response.status === 'error' || response.status === 'warning')
                 utils.notifyWindow(response);
             return data;
         },
@@ -276,19 +276,19 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
     }, {  // Class Methods
         fromImage: function(image){
-            var _data = JSON.parse(JSON.stringify(image));
-            _data.ports = _.map(_data.ports, function(port){
+            var data = JSON.parse(JSON.stringify(image));
+            data.ports = _.map(data.ports, function(port){
                 return {
                     containerPort: port.number,
                     protocol: port.protocol,
                 };
             });
-            _data.volumeMounts = _.map(_data.volumeMounts,
+            data.volumeMounts = _.map(data.volumeMounts,
                                        function(vm){ return {mountPath: vm}; });
-            _data.env = _.map(_data.env, _.clone);
-            _data.command = _data.command.slice(0);
-            _data.args = _data.args.slice(0);
-            return new this(_data);
+            data.env = _.map(data.env, _.clone);
+            data.command = data.command.slice(0);
+            data.args = data.args.slice(0);
+            return new this(data);
         },
         validateMountPath: function(mountPath){
             if (mountPath && mountPath.length < 2)
@@ -569,8 +569,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     name: 'billing_type'}).get('value');
                 if (billingType.toLowerCase() === 'no billing') {
                     model.cmdStart().then(deferred.resolve, deferred.reject);
-                }
-                else {
+                } else {
                     utils.preloader.show();
                     $.ajax({  // TODO: use Backbone.Model
                         authWrap: true,
@@ -585,15 +584,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     ).fail(
                         utils.notifyWindow
                     ).done(function(response){
-                        if(response.data.status === 'Paid') {
+                        if (response.data.status === 'Paid') {
                             deferred.resolveWith(model, arguments);
                         } else {
                             utils.modalDialog({
                                 title: 'Insufficient funds',
                                 body: 'Your account funds seem to be'
-                                        +' insufficient for the action.'
-                                        +' Would you like to go to billing'
-                                        +' system to make the payment?',
+                                        + ' insufficient for the action.'
+                                        + ' Would you like to go to billing'
+                                        + ' system to make the payment?',
                                 small: true,
                                 show: true,
                                 footer: {
@@ -621,7 +620,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     && settings.byName('billing_type')
                         .get('value').toLowerCase() !== 'no billing';
                 if (!fixedPrice){
-                    var cmd = model.ableTo('start') ? 'start': 'redeploy';
+                    var cmd = model.ableTo('start') ? 'start' : 'redeploy';
                     return model.command(cmd, {applyEdit: true})
                         .done(function(){
                             model.applyingChangesStarted = +new Date();
@@ -633,7 +632,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 new Backbone.Model().save({pod: model}, {url: '/api/billing/orderPodEdit'})
                     .fail(utils.notifyWindow, _.bind(deferred.reject, deferred))
                     .done(function(response){
-                        if(response.data.status === 'Paid') {
+                        if (response.data.status === 'Paid') {
                             if (model.get('status') !== 'running')
                                 model.set('status', 'pending');
                             model.get('containers').each(function(c){
@@ -838,9 +837,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         parse: unwrapper,
         defaults: function() {
             return {
-                'ip': '',
-                'logs': [],
-                'logsError': null,
+                ip: '',
+                logs: [],
+                logsError: null,
             };
         },
         getLogs: function(size){
@@ -912,10 +911,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
     data.PodStatsCollection = data.StatsCollection.extend({
         initialize: function(models, options){
-            this.podId = options.podId
+            this.podId = options.podId;
         },
         url: function(){
-            return '/api/stats/pods/' + this.podId
+            return '/api/stats/pods/' + this.podId;
         }
     });
 
@@ -994,9 +993,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 active: true,
                 suspended: false,
                 actions: {
-                    'lock': true,
-                    'delete': true,
-                    'suspend': true,
+                    lock: true,
+                    delete: true,
+                    suspend: true,
                 },
             };
         },
@@ -1111,10 +1110,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
     data.NodeStatsCollection = data.StatsCollection.extend({
         initialize: function(models, options){
-            this.hostname = options.hostname
+            this.hostname = options.hostname;
         },
         url: function() {
-            return '/api/stats/nodes/' + this.hostname
+            return '/api/stats/nodes/' + this.hostname;
         }
     });
 
@@ -1144,7 +1143,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 if (key === 'name')
                     return (model.get(key) || '').toLowerCase();
                 return model.get(key);
-            },
+            };
             this.listenTo(this, 'add', this.refilter);
             this.listenTo(this, 'remove', this.refilter);
         },
@@ -1420,7 +1419,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             username: 'Nameless'
         },
         parse: function(data){
-            return data['status'] === 'OK' ? _.omit(data, 'status') : {};
+            return data.status === 'OK' ? _.omit(data, 'status') : {};
         }
     });
 

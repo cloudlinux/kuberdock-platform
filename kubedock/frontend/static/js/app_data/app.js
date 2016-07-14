@@ -19,19 +19,19 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
          * @returns {Promise} - promise to be logged in :)
          */
         cleanUp: function(keepToken){
-            App.initialized = false;
+            this.initialized = false;
             $.xhrPool.abortAll();
             if (!keepToken)
-                delete App.storage.authData;  // delete token
+                delete this.storage.authData;  // delete token
             _.each([  // delete all initial data
                 'menuCollection', 'currentUser', 'userPackage',
                 'packageCollection', 'kubeTypeCollection', 'packageKubeCollection'
-            ], function(name){ delete App[name]; });
-            for (var resource in App._cache) delete App._cache[resource];
-            if (App.sseEventSource) {  // close SSE stream
-                App.sseEventSource.close();
-                delete App.sseEventSource;
-                clearTimeout(App.eventHandlerReconnectTimeout);
+            ], function(name){ delete this[name]; }, this);
+            for (var resource in this._cache) delete this._cache[resource];
+            if (this.sseEventSource) {  // close SSE stream
+                this.sseEventSource.close();
+                delete this.sseEventSource;
+                clearTimeout(this.eventHandlerReconnectTimeout);
             }
             return this;
         },
@@ -195,8 +195,9 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
             };
         };
 
-        if (typeof(EventSource) === undefined) {
-            console.log('ERROR: EventSource is not supported by browser');  // eslint-disable-line no-console
+        if (typeof EventSource === undefined) {
+            console.log(  // eslint-disable-line no-console
+                'ERROR: EventSource is not supported by browser');
             return;
         }
         if (nodes) {
@@ -208,7 +209,7 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                     that.getNodeCollection().done(function(collection){
                         var decoded = JSON.parse(ev.data),
                             node = collection.get(decoded.id);
-                        if (typeof(node) !== 'undefined')
+                        if (typeof node !== 'undefined')
                             node.appendLogs(decoded.data);
                     });
                 },
@@ -261,10 +262,11 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         };
         source.onerror = function () {
             console.log('SSE Error. Reconnecting...');  // eslint-disable-line no-console
-            console.log(source);
             var timeOut = 5000;
             if (source.readyState === 0){
-                Utils.notifyWindow('The page you are looking for is temporarily unavailable. Please try again later');
+                Utils.notifyWindow(
+                    'The page you are looking for is temporarily unavailable. '
+                    + 'Please try again later');
                 timeOut = 30000;
             }
             if (source.readyState !== 2)
@@ -307,7 +309,7 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
             }).fail(function(){ deferred.rejectWith(App, arguments); });
         });
         return deferred.promise();
-    },
+    };
 
     App.on('start', function(){
         Utils.preloader.show();
@@ -337,12 +339,10 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                 xhr.done(function(){
                     if (xhr && (xhr.status === 401 || xhr.status === 403)){
                         App.cleanUp().initApp();
-                    } else {
-                        if (App.getCurrentAuth()){
-                            var token = xhr.getResponseHeader('X-Auth-Token');
-                            if (token) {
-                                App.updateAuth(token);
-                            }
+                    } else if (App.getCurrentAuth()){
+                        var token = xhr.getResponseHeader('X-Auth-Token');
+                        if (token) {
+                            App.updateAuth(token);
                         }
                     }
                 })

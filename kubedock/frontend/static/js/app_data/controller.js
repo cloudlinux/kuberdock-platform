@@ -160,7 +160,8 @@ define([
                 that.showPodBase(id).fail(function(){
                     App.navigate('pods', {trigger: true});
                 }).done(function(pageData){
-                    var statCollection = new Model.PodStatsCollection(null, {podId: pageData.model.id});
+                    var statCollection = new Model.PodStatsCollection(
+                        null, {podId: pageData.model.id});
                     statCollection.fetch({reset: true})
                         .always(function(){
                             pageData.itemLayout.controls.show(new Views.ControlsPanel({
@@ -223,7 +224,7 @@ define([
                         var billingType = settings.byName('billing_type').get('value'),
                             kubesLimit = settings.byName('max_kubes_per_container').get('value');
                         pageData.itemLayout.info.show(new Views.UpgradeResources({
-                            kubesLimit: parseInt(kubesLimit),
+                            kubesLimit: parseInt(kubesLimit, 10),
                             modelOrig: pageData.model,
                             model: newModel,
                             containerName: containerName,
@@ -258,10 +259,10 @@ define([
                             {points: ['pods', 'pod', 'container']}),
                         messagesLayout = new PodMessages.Layout(),
                         tabViews = {
-                            'logs': Views.WizardLogsSubView,
-                            'stats': Views.WizardStatsSubView,
-                            'general': Views.WizardGeneralSubView,
-                            'env': Views.WizardEnvSubView,
+                            logs: Views.WizardLogsSubView,
+                            stats: Views.WizardStatsSubView,
+                            general: Views.WizardGeneralSubView,
+                            env: Views.WizardEnvSubView,
                         };
 
                     if (!model || !_.contains(_.keys(tabViews), tab))
@@ -764,7 +765,7 @@ define([
                                 ).fail(
                                     utils.notifyWindow
                                 ).done(function(response){
-                                    if(response.data.status === 'Paid') {
+                                    if (response.data.status === 'Paid'){
                                         if (model && model.id) {
                                             if (model.get('status') !== 'running') {
                                                 model.set('status', 'pending');
@@ -776,8 +777,7 @@ define([
                                             });
                                             App.navigate('pods/' + model.id)
                                                 .controller.showPodContainers(model.id);
-                                        }
-                                        else {
+                                        } else {
                                             App.navigate('pods')
                                                 .controller.showPods();
                                         }
@@ -923,7 +923,8 @@ define([
                                 new Views.NodeTimelinesTabView({model: node}));
                         } else if (tab === 'monitoring') {
                             var hostname = node.get('hostname'),
-                                graphCollection = new Model.NodeStatsCollection(null, {hostname: hostname});
+                                graphCollection = new Model.NodeStatsCollection(
+                                    null, {hostname: hostname});
                             graphCollection.fetch({wait: true})
                                 .done(function(){
                                     var view = new Views.NodeMonitoringTabView({
@@ -1130,7 +1131,7 @@ define([
                 var appCollection = new Model.AppCollection(),
                     mainLayout = new Views.MainLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection}),
-                    breadcrumbsData = {buttonID: 'add_pod',  buttonLink: '/#newapp',
+                    breadcrumbsData = {buttonID: 'add_pod', buttonLink: '/#newapp',
                                        buttonTitle: 'Add new application', showControls: true};
                 appCollection.fetch({wait: true})
                     .done(function(){ App.contents.show(mainLayout); })
@@ -1347,11 +1348,10 @@ define([
                                     model: item,
                                     collection: item.getIPs()
                                 });
-                            }
-                            else {
+                            } else {
                                 button = {id: 'create_network',
                                           href: '#ippool/create',
-                                          title: 'Add subnet'},
+                                          title: 'Add subnet'};
                                 breadcrumbsControls = new Breadcrumbs.Controls(
                                     {button: button});
                                 layoutView.breadcrumb.show(breadcrumbsLayout);
@@ -1512,8 +1512,7 @@ define([
                         var notificationView = new Views.MessageList(
                             {collection: notificationCollection});
                         App.message.show(notificationView);
-                    }
-                    else {
+                    } else {
                         App.message.empty();
                     }
                 });

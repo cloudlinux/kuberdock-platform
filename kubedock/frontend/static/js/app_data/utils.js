@@ -10,12 +10,12 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
             return modal.one('hidden.bs.modal', _.bind(this.modalDialog, this, options));
         }
         modalDialog.css('margin-top', ( $(window).height() / 2 - 140 ));
-        if(options.title) modal.find('.modal-title').html(options.title);
-        if(options.body) modal.find('.modal-body').html(options.body);
-        if(options.large) modal.addClass('bs-example-modal-lg');
-        if(options.small) modal.addClass('bs-example-modal-sm');
-        if(options.show) modal.modal('show');
-        if(options.footer){
+        if (options.title) modal.find('.modal-title').html(options.title);
+        if (options.body) modal.find('.modal-body').html(options.body);
+        if (options.large) modal.addClass('bs-example-modal-lg');
+        if (options.small) modal.addClass('bs-example-modal-sm');
+        if (options.show) modal.modal('show');
+        if (options.footer){
             modal.find('.modal-footer').empty();
             var buttonText;
             if (options.type === 'delete'){
@@ -28,7 +28,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
                 buttonText = 'Ok';
             }
             var btn;
-            if(options.footer.buttonOk){
+            if (options.footer.buttonOk){
                 btn = $('<button type="button" class="btn blue" ' +
                             'data-dismiss="modal">').unbind('click')
                         .bind('click', options.footer.buttonOk)
@@ -36,7 +36,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
                         .text(options.footer.buttonOkText || buttonText);
                 modal.find('.modal-footer').append(btn);
             }
-            if(options.footer.buttonCancel){
+            if (options.footer.buttonCancel){
                 btn = $('<button type="button" class="btn"' +
                             'data-dismiss="modal">Cancel</button>')
                         .addClass(options.footer.buttonCancelClass || '')
@@ -54,28 +54,12 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         return this.modalDialog(options);
     };
 
-    utils.toHHMMSS = function (seconds) {
-        var sec_num = parseInt(seconds, 10); // don't forget the second param
-        var hours = Math.floor(sec_num / 3600);
-        var minutes = Math.floor((sec_num - (hours * 3600)) / 60);
-        var secs = sec_num - (hours * 3600) - (minutes * 60);
-        if (hours   < 10)
-            hours = "0" + hours;
-        if (minutes < 10)
-            minutes = "0" + minutes;
-        if (secs < 10)
-            secs = "0" + secs;
-        return hours + ':' + minutes + ':' + secs;
+    utils.toHHMMSS = function(seconds){
+        return numeral(seconds).format('00:00:00');
     };
 
     utils.dateYYYYMMDD = function(date, sep){
-        if(!date) date = new Date();
-        if(!sep) sep = '-';
-        var y = date.getFullYear(),
-            m = date.getMonth() + 1,
-            d = date.getDate(),
-            D = [y, m > 9 ? m : '0' + m, d > 9 ? d : '0' + d];
-        return D.join(sep);
+        return moment(date).format(['YYYY', 'MM', 'DD'].join(sep || '-'));
     };
 
     /**
@@ -153,6 +137,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
 
     utils.notifyWindowClose = function(){
         $('.notifyjs-bootstrap-error').trigger('notify-hide');
+        utils.notifyList = {};
     };
 
     // close errors only if there is no selected text (let user copy error message)
@@ -172,13 +157,13 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
     utils.hasScroll = function() {
         var hContent = $('body').height(),
             hWindow = $(window).height();
-        return  hContent > hWindow ? true : false;
+        return hContent > hWindow;
     };
 
     utils.scrollTo = function(a){
         var el = a.offset().top;
         $('html, body').animate({
-            scrollTop: el-50
+            scrollTop: el - 50
         }, 500);
     };
 
@@ -197,7 +182,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
             elementPosition: 'bottom left',
         });
         var messageHeight = $(el).parent().find('.text-wrapper').height();
-        item.css('margin-bottom', messageHeight+10);
+        item.css('margin-bottom', messageHeight + 10);
         item.addClass('error');
     };
     // Just a shortcut to remove error from input (or group of inputs)
@@ -208,7 +193,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
 
     $(document).on('notify-hide', '.notifyjs-metro-error', function(event) {
         $(this).parents('td, .form-group').find('input')
-            .css('margin','').removeClass('error');
+            .css('margin', '').removeClass('error');
     });
     $(document).on('click', '.notifyjs-metro-error', function(event) {
         $(this).trigger('notify-hide')
@@ -248,8 +233,8 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         var urlParts = url.split('?');
         if (urlParts.length < 2) { return url; }
         var prefix = encodeURIComponent(parameter) + '=',
-            pars= urlParts[1].split(/[&;]/g);
-        for (var i=pars.length; i-- > 0;) {
+            pars = urlParts[1].split(/[&;]/g);
+        for (var i = pars.length; i-- > 0;) {
             if (pars[i].lastIndexOf(prefix, 0) !== -1) {
                 pars.splice(i, 1);
             }
@@ -258,22 +243,26 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
     };
 
     utils.deepClone = function(obj) {
+        /* eslint-disable no-nested-ternary */
         return (!obj || (typeof obj !== 'object')) ? obj :
             _.isString(obj) ? String.prototype.slice.call(obj) :
             _.isDate(obj) ? new Date(obj.valueOf()) :
             _.isFunction(obj.clone) ? obj.clone() :
             _.isArray(obj) ? _.map(obj, function(t){ return utils.deepClone(t); }) :
             _.mapObject(obj, function(val) { return utils.deepClone(val); });
+        /* eslint-enable no-nested-ternary */
     };
 
     utils.copyLink = function(text, successMessage, messageState){
         var link = text,
-            $txa = $("<textarea />",{val:link,css:{position:"fixed"}}).appendTo("body").select();
+            $txa = $('<textarea />', {val: link, css: {position: 'fixed'}})
+                .appendTo("body").select();
 
         if (document.execCommand('copy')){ // CH, FF, Edge, IE
             utils.notifyWindow(successMessage, messageState ? messageState : 'success');
         } else {
-            prompt("Copy to clipboard:\nSelect, Cmd+C, Enter", link);
+            prompt(  // eslint-disable-line no-alert
+                'Copy to clipboard:\nSelect, Cmd+C, Enter', link);
         }
         $txa.remove();
     };

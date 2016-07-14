@@ -2,22 +2,24 @@
 
 from __future__ import print_function
 
+import json
 import os
+import shutil
 import socket
+import subprocess
 import sys
 import tarfile
 import time
-import json
-import subprocess
+import urlparse
+import zipfile
 from ConfigParser import ConfigParser
 from StringIO import StringIO
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 
 import ipaddress
 import requests
-import shutil
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
@@ -398,26 +400,47 @@ class VolumeRestoreException(Exception):
     pass
 
 
-class Volume(object):
-    def __init__(self, path, size, name):
-        self.path, self.size, self.name = path, size, name
-
-    def restore(self, backup_url, user_id):
+class VolumeSpec(object):
+    def __init__(self, path, size, name, backup_url=None):
         """
-        Downloads the backup archive from a given base URL and extracts it
-        into a volume path
-
-        :param backup_url: URL which contains backup archives. It is expected
-        that the particular volume backup is found at:
-                        base_url/backups/<user_id>/<volume_name>
-        :param user_id: user ID which is used to construct the final URL to
-        the backup archive
+        :param path: Local path.
+        :param size: Size.
+        :param name: Name.
+        :param backup_url: Optional. URL which contains backup archives.
+            Expected archive in format .tar.gz or .zip.
         """
-        archive_name = '{}.tar.gz'.format(self.name)
-        url = '/'.join([backup_url, 'backups', user_id, archive_name])
+        self.path = path
+        self.size = size
+        self.name = name
+        self.backup_url = backup_url
+
+
+class VolumeManager(object):
+    """Class that creates, restores from backup and deletes volumes."""
+
+    def restore_if_needed(self, volume_spec):
+        """If backup url specified, it downloads the backup archive from
+        backup url and extracts it into a volume path.
+        """
+        if not volume_spec.backup_url:
+            return
+
+        url_path = urlparse.urlparse(volume_spec.backup_url).path
+        extractor = self._ArchiveExtractor()
+        try:
+            extractor.detect_type_by_extension(url_path)
+        except extractor.UnknownType:
+            raise VolumeRestoreException(
+                'Unknown type of archive got from {url}. '
+                'At the moment only {supported_formats} formats '
+                'are supported'.format(
+                    url=volume_spec.backup_url,
+                    supported_formats=', '.join(
+                        x.strip('.') for x in extractor.supported_formats)
+                ))
 
         try:
-            r = requests.get(url, stream=True, verify=False)
+            r = requests.get(volume_spec.backup_url, stream=True, verify=False)
             r.raise_for_status()
 
             with NamedTemporaryFile('w+b') as f:
@@ -426,74 +449,142 @@ class Volume(object):
                         f.write(chunk)
 
                 f.seek(0)
-                self._extract_archive(f)
+                extractor.extract(f, volume_spec.path)
 
         except (requests.exceptions.RequestException, socket.timeout):
             raise VolumeRestoreException(
-                'Connection failure while downloading backup from {}'.format(
-                    url))
-        except tarfile.TarError:
+                'Connection failure while downloading backup from {}'
+                    .format(volume_spec.backup_url))
+        except extractor.BadArchive:
             raise VolumeRestoreException(
-                'An error occurred while extracting {}'.format(archive_name))
+                'An error occurred while extracting archive got from {}'
+                    .format(volume_spec.backup_url))
 
-    def create(self):
+    def create(self, volume_spec):
         """
         Creates a folder for the volume and sets correct SELinux type on it
         """
         try:
-            os.makedirs(self.path)
+            os.makedirs(volume_spec.path)
             subprocess.call(
-                ['chcon', '-Rt', 'svirt_sandbox_file_t', self.path])
+                ['chcon', '-Rt', 'svirt_sandbox_file_t', volume_spec.path])
         except os.error:
             raise PluginException(
-                'Failed to create local storage dir "{}"'.format(self.path)
+                'Failed to create local storage dir "{}"'
+                    .format(volume_spec.path)
             )
 
-    def remove(self):
+    @staticmethod
+    def remove(volume_spec):
         """
         Physically removes directory
         """
-        shutil.rmtree(self.path, True)
+        shutil.rmtree(volume_spec.path, True)
 
-    def _extract_archive(self, file_obj):
-        with tarfile.open(fileobj=file_obj, mode='r:gz') as archive:
-            archive.extractall(self.path)
+    class _ArchiveExtractor(object):
+        supported_formats = ['.tar.gz', '.zip']
+
+        def __init__(self, archive_type=None):
+            self.archive_type = archive_type
+
+        def detect_type_by_extension(self, path):
+            for ext in self.supported_formats:
+                if path.endswith(ext):
+                    self.archive_type = ext
+                    return self
+
+            raise self.UnknownType
+
+        def extract(self, file_obj, path):
+            assert self.archive_type
+            extractors = {
+                '.tar.gz': self._extract_tar,
+                '.zip': self._extract_zip
+            }
+            try:
+                extract = extractors[self.archive_type]
+            except KeyError:
+                raise self.UnknownType
+            else:
+                return extract(file_obj, path)
+
+        def _extract_tar(self, file_obj, path):
+            try:
+                with tarfile.open(fileobj=file_obj, mode='r:gz') as archive:
+                    archive.extractall(path)
+            except tarfile.TarError:
+                raise self.BadArchive
+
+        def _extract_zip(self, file_obj, path):
+            try:
+                with zipfile.ZipFile(file_obj) as archive:
+                    archive.extractall(path)
+            except zipfile.BadZipfile:
+                raise self.BadArchive
+
+        class UnknownType(Exception):
+            pass
+
+        class BadArchive(Exception):
+            pass
 
 
 class LocalStorage(object):
+    volume_manager = VolumeManager()
+
     @classmethod
     def init(cls, pod_spec_file):
         annotations, metadata, vol_annotations = cls._parse_pod_spec(
             pod_spec_file)
 
-        volumes = [cls.create_volume(a) for a in vol_annotations
-                   if cls.check_annotation(a)]
-
-        backup_url = annotations.get('kuberdock-volumes-backup-url')
+        volumes = [cls.extract_volume_spec(a)
+                   for a in vol_annotations if cls.check_annotation(a)]
+        cls.create_volumes(volumes)
         try:
-            if backup_url:
-                cls.restore_backup(backup_url, volumes, metadata)
+            cls.restore_backups(volumes)
         except VolumeRestoreException:
-            cls._cleanup(volumes)
+            cls.remove_volumes(volumes)
             raise
 
         cls.set_xfs_volume_size_limits(volumes)
 
     @classmethod
-    def set_xfs_volume_size_limits(cls, volumes):
-        if not volumes:
+    def extract_volume_spec(cls, annotation):
+        """
+        Extracts volumes specifications from annotation.
+        :param annotation: POD's volume annotation.
+        :return: Instance of :class:`VolumeSpec`.
+        """
+        ls = annotation['localStorage']
+        backup_url = annotation.get('backupUrl')
+        path, size, name = ls['path'], ls.get('size', 1), ls['name']
+        volume_spec = VolumeSpec(path=path, size='{}g'.format(size), name=name,
+                                 backup_url=backup_url)
+        return volume_spec
+
+    @classmethod
+    def create_volumes(cls, volume_specs):
+        for v in volume_specs:
+            cls.volume_manager.create(v)
+
+    @classmethod
+    def restore_backups(cls, volume_specs):
+        for v in volume_specs:
+            cls.volume_manager.restore_if_needed(v)
+
+    @classmethod
+    def remove_volumes(cls, volume_specs):
+        for v in volume_specs:
+            cls.volume_manager.remove(v)
+
+    @classmethod
+    def set_xfs_volume_size_limits(cls, volume_specs):
+        if not volume_specs:
             return
         subprocess.call(
             ['/usr/bin/env', 'python2', FSLIMIT_PATH, 'storage'] +
-            ['{0}={1}'.format(v.path, v.size) for v in volumes]
+            ['{0}={1}'.format(v.path, v.size) for v in volume_specs]
         )
-
-    @classmethod
-    def restore_backup(cls, backup_url, volumes, metadata):
-        user_id = metadata['labels']['kuberdock-user-uid']
-
-        for v in volumes:
-            v.restore(backup_url, user_id)
 
     @staticmethod
     def check_annotation(annotation):
@@ -510,27 +601,6 @@ class LocalStorage(object):
         except (KeyError, TypeError):
             return False
         return True
-
-    @classmethod
-    def create_volume(cls, annotation):
-        """
-        Instantiates a Volume object given volume annotation and creates a
-        volume
-        :param annotation: POD's volume annotation
-        :return: Volume object
-        """
-        ls = annotation['localStorage']
-        path, size, name = ls['path'], ls.get('size', 1), ls['name']
-        v = Volume(path=path, size='{}g'.format(size), name=name)
-
-        glog("Making directory for local storage: {}".format(annotation))
-        v.create()
-        return v
-
-    @classmethod
-    def _cleanup(cls, volumes):
-        for v in volumes:
-            v.remove()
 
     @classmethod
     def _parse_pod_spec(cls, pod_spec_file):

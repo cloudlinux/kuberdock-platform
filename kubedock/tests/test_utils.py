@@ -1,15 +1,14 @@
+import subprocess
+import unittest
 from collections import namedtuple
 from datetime import datetime
-import unittest
-import subprocess
-import nginx
 
 import mock
+import nginx
 
-from ..testutils.testcases import DBTestCase
 from ..exceptions import APIError
 from ..login import get_user_role
-
+from ..testutils.testcases import DBTestCase
 from ..utils import (
     atomic,
     get_api_url,
@@ -25,6 +24,7 @@ from ..utils import (
     update_allowed,
     from_siunit,
     get_version,
+    nested_dict_utils
 )
 
 
@@ -564,5 +564,125 @@ class TestGetVersion(unittest.TestCase):
         self.assertEqual(expected, ver,
                          "version extected to be {0} but {1} got".format(
                              expected, ver))
+
+
+class TestDictUtils(unittest.TestCase):
+    def test_get(self):
+        d = {'x': {'y': 'z'}}
+        actual = nested_dict_utils.get(d, 'x.y')
+        expected = 'z'
+        self.assertEqual(actual, expected)
+
+    def test_get_empty_path(self):
+        d = {'x': {'y': 'z'}}
+        with self.assertRaises(ValueError):
+            nested_dict_utils.get(d, '')
+
+    def test_get_key_not_found(self):
+        d = {'x': {'y': 'z'}}
+        actual = nested_dict_utils.get(d, 'x.z')
+        expected = None
+        self.assertEqual(actual, expected)
+
+    def test_get_empty_dict(self):
+        d = {}
+        actual = nested_dict_utils.get(d, 'x')
+        expected = None
+        self.assertEqual(actual, expected)
+
+    def test_get_flat_dict(self):
+        d = {'x': 'y'}
+        actual = nested_dict_utils.get(d, 'x')
+        expected = 'y'
+        self.assertEqual(actual, expected)
+
+    def test_get_nested_is_not_dict(self):
+        # dict_utils is design to use with nested dicts only,
+        # so it does not work with another types
+        d = {'x': {'y': 2}}
+        with self.assertRaises(nested_dict_utils.StructureError):
+            # nested key 'x.y' is not dict
+            nested_dict_utils.get(d, 'x.y.z')
+        d = {'x': 2}
+        with self.assertRaises(nested_dict_utils.StructureError):
+            # nested key 'x.y' is not dict
+            nested_dict_utils.get(d, 'x.y.z')
+
+    def test_set(self):
+        d = {'x': {'y': 'z'}}
+        nested_dict_utils.set(d, 'x.y', 'qwe')
+        expected = {'x': {'y': 'qwe'}}
+        self.assertDictEqual(d, expected)
+
+    def test_set_empty_path(self):
+        d = {'x': {'y': 'z'}}
+        with self.assertRaises(ValueError):
+            nested_dict_utils.set(d, '', 'qwe')
+
+    def test_set_create_keys(self):
+        d = {'x': {'y': 'z'}}
+        nested_dict_utils.set(d, 'x.new_key.new_sub_key', 'new_value')
+        expected = {'x': {'y': 'z', 'new_key': {'new_sub_key': 'new_value'}}}
+        self.assertDictEqual(d, expected)
+
+    def test_set_nested_is_not_dict(self):
+        # dict_utils is design to use with nested dicts only,
+        # so it does not work with another types
+        d = {'x': {'y': 2}}
+        with self.assertRaises(nested_dict_utils.StructureError):
+            # nested key 'x.y' is not dict
+            nested_dict_utils.set(d, 'x.y.z', 'some_value')
+        d = {'x': 2}
+        with self.assertRaises(nested_dict_utils.StructureError):
+            # nested key 'x.y' is not dict
+            nested_dict_utils.set(d, 'x.y.z', 'some_value')
+
+    def test_del(self):
+        d = {'x': {'y': 'z'}}
+        nested_dict_utils.delete(d, 'x.y')
+        expected = {'x': {}}
+        self.assertDictEqual(d, expected)
+
+    def test_del_empty_path(self):
+        d = {'x': {'y': 'z'}}
+        with self.assertRaises(ValueError):
+            nested_dict_utils.delete(d, '', 'qwe')
+
+    def test_del_remove_empty_key(self):
+        d = {'x': {'y': 'z'}}
+        nested_dict_utils.delete(d, 'x.y', remove_empty_keys=True)
+        expected = {}
+        self.assertDictEqual(d, expected)
+
+    def test_del_remove_empty_key1(self):
+        d = {'x': {'y': 'z', 'a': 'b'}}
+        nested_dict_utils.delete(d, 'x.y', remove_empty_keys=True)
+        expected = {'x': {'a': 'b'}}
+        self.assertDictEqual(d, expected)
+
+    def test_del_remove_empty(self):
+        d = {'x': {'y': 'z'}}
+        nested_dict_utils.delete(d, 'x.y', remove_empty_keys=True)
+        expected = {}
+        self.assertDictEqual(d, expected)
+
+    def test_del2(self):
+        d = {'x': {'y': 'z', 'a': 'b'}}
+        nested_dict_utils.delete(d, 'x.y')
+        expected = {'x': {'a': 'b'}}
+        self.assertDictEqual(d, expected)
+
+    def test_del_key_not_found(self):
+        d = {'x': {'y': 'z', 'a': 'b'}}
+        nested_dict_utils.delete(d, 'x.not_existed_key')
+        expected = {'x': {'y': 'z', 'a': 'b'}}
+        self.assertDictEqual(d, expected)
+
+    def test_del_wrong_structure(self):
+        d = {'x': 2}
+        with self.assertRaises(nested_dict_utils.StructureError):
+            nested_dict_utils.delete(d, 'x.y')
+
+
 if __name__ == '__main__':
     unittest.main()

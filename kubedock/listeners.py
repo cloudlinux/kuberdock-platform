@@ -21,13 +21,13 @@ from .settings import (
 from .utils import (get_api_url, unregistered_pod_warning,
                     send_event_to_role, send_event_to_user,
                     pod_without_id_warning, k8s_json_object_hook,
-                    send_pod_status_update, POD_STATUSES)
+                    send_pod_status_update, POD_STATUSES, nested_dict_utils)
 from .kapi.usage import update_states
 from .kapi.pstorage import get_storage_class
 from .kapi.podcollection import PodCollection, set_public_address
 from .kapi.lbpoll import LoadBalanceService
 from .kapi.pstorage import get_storage_class_by_volume_info, LocalStorage
-from .kapi.helpers import set_pod_status
+from .kapi import helpers
 from . import tasks
 
 
@@ -97,7 +97,8 @@ def process_pods_event(data, app, event_time=None, live=True):
     # if live, we need to send events to frontend
     if live:
         if db_pod.status == POD_STATUSES.stopping and event_type == 'DELETED':
-            set_pod_status(pod_id, POD_STATUSES.stopped, send_update=True)
+            helpers.set_pod_status(pod_id, POD_STATUSES.stopped,
+                                   send_update=True)
         else:
             send_pod_status_update(get_pod_state(pod), db_pod, event_type)
 
@@ -237,18 +238,24 @@ def mark_restore_as_finished(pod_id):
     Removes backup related data from POD spec. Is called after a restored POD
     successfully started which means that the restore process was successful.
     """
-    data = {
-        'command': 'change_config',
-        'volumes_dir_url': '',
-        'template': {
-            'metadata': {
-                'annotations': {
-                    'kuberdock-volumes-backup-url': ''
-                }
-            }
-        }
-    }
-    PodCollection().update(pod_id, data)
+    pod_config = helpers.get_pod_config(pod_id)
+    volumes_config = pod_config.get('volumes', [])
+    volumes_public_config = pod_config.get('volumes_public', [])
+    if volumes_config or volumes_public_config:
+        for vc in volumes_config + volumes_public_config:
+            nested_dict_utils.delete(
+                vc, 'annotation.backupUrl', remove_empty_keys=True)
+        updated_pod_data = PodCollection().update(pod_id, {
+            'command': 'change_config',
+            'volumes': volumes_config,
+            'volumes_public': volumes_public_config,
+        })
+        current_app.logger.debug('mark_restore_as_finished: '
+                                 'Removed backup-urls for pod %s. '
+                                 'Updated pod data: %s',
+                                 pod_id, updated_pod_data)
+    else:
+        current_app.logger.debug('mark_restore_as_finished: Nothing to do')
 
 
 def process_events_event(data, app):

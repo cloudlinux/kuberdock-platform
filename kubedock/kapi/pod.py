@@ -2,7 +2,6 @@ import json
 import os
 import shlex
 from copy import deepcopy
-from collections import namedtuple
 
 from flask import current_app
 import uuid
@@ -26,7 +25,14 @@ MOUNT_KDTOOLS_PATH = '/.kdtools'
 HOST_KDTOOLS_PATH = '/usr/lib/kdtools'
 
 
-PodOwnerTuple = namedtuple('PodOwnerTuple', ['id', 'username'])
+class PodOwner(dict):
+    """Inherited from dict so as it will be presented as dict in
+    `as_dict` method.
+    """
+    def __init__(self, id, username):
+        super(PodOwner, self).__init__(id=id, username=username)
+        self.id = id
+        self.username = username
 
 
 class VolumeExists(APIError):
@@ -34,10 +40,8 @@ class VolumeExists(APIError):
     status_code = 409
 
     def __init__(self, volume_name=None, volume_id=None):
-        message = self.message_template.format(name=volume_name)
         details = {'name': volume_name, 'id': volume_id}
-        super(VolumeExists, self).__init__(
-            message=message, details=details)
+        super(VolumeExists, self).__init__(details=details)
 
 
 class Pod(object):
@@ -88,9 +92,9 @@ class Pod(object):
 
         """
         if owner is not None:
-            self.owner = PodOwnerTuple(id=owner.id, username=owner.username)
+            self.owner = PodOwner(id=owner.id, username=owner.username)
         else:
-            self.owner = PodOwnerTuple(None, None)
+            self.owner = PodOwner(None, None)
 
     @staticmethod
     def populate(data):
@@ -164,7 +168,7 @@ class Pod(object):
 
     def as_dict(self):
         # unneeded fields in API output
-        hide_fields = ['node', 'labels', 'namespace', 'secrets', 'owner']
+        hide_fields = ['node', 'labels', 'namespace', 'secrets']
         data = vars(self).copy()
 
         data['volumes'] = data.pop('volumes_public', [])
@@ -275,7 +279,6 @@ class Pod(object):
         kube_type = getattr(self, 'kube_type', Kube.get_default_kube_type())
         volumes = getattr(self, 'volumes', [])
         secrets = getattr(self, 'secrets', [])
-        volumes_dir_url = getattr(self, 'volumes_dir_url', "")
         kuberdock_resolve = ''.join(getattr(self, 'kuberdock_resolve', []))
         volume_annotations = self.extract_volume_annotations(volumes)
 
@@ -322,7 +325,6 @@ class Pod(object):
                             "kuberdock-volume-annotations": json.dumps(
                                 volume_annotations
                             ),
-                            "kuberdock-volumes-backup-url": volumes_dir_url
                         }
                     },
                     "spec": {

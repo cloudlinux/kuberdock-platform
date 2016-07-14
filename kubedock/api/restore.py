@@ -17,7 +17,12 @@ pods_args_schema = {
         'required': True
     },
     'owner': owner_mandatory_schema,
-    'volumes_dir_url': {
+    'pv_backups_location': {
+        'type': 'string',
+        'required': False,
+        'nullable': True
+    },
+    'pv_backups_path_template': {
         'type': 'string',
         'required': False,
         'nullable': True
@@ -31,7 +36,6 @@ pods_args_schema = {
 @check_permission('create_non_owned', 'pods')
 @KubeUtils.jsonwrap
 @use_kwargs(pods_args_schema)
-def pods(pod_data, owner, volumes_dir_url=None):
+def pods(pod_data, owner, **kwargs):
     with check_permission('own', 'pods', user=owner):
-        return backup_pods.restore(
-            pod_data=pod_data, owner=owner, volumes_dir_url=volumes_dir_url)
+        return backup_pods.restore(pod_data=pod_data, owner=owner, **kwargs)

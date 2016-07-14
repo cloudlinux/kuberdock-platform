@@ -31,24 +31,30 @@ class UserNotFound(APIError):
 
 
 class UserIsNotDeleteable(APIError):
+    message_template = 'User {username} is undeletable'
     status_code = 403
 
-    def __init__(self, username):
-        self.message = 'User {0} is undeletable'.format(username)
+    def __init__(self, username=None, **kwargs):
+        super(UserIsNotDeleteable, self).__init__(
+            details=dict(username=username, **kwargs))
 
 
 class UserIsNotLockable(APIError):
+    message_template = 'User {username} cannot be locked'
     status_code = 403
 
-    def __init__(self, username):
-        self.message = 'User {0} cannot be locked'.format(username)
+    def __init__(self, username=None, **kwargs):
+        super(UserIsNotLockable, self).__init__(
+            details=dict(username=username, **kwargs))
 
 
 class UserIsNotSuspendable(APIError):
+    message_template = 'User {username} cannot be suspended'
     status_code = 403
 
-    def __init__(self, username):
-        self.message = 'User {0} cannot be suspended'.format(username)
+    def __init__(self, username=None, **kwargs):
+        super(UserIsNotSuspendable, self).__init__(
+            details=dict(username=username, **kwargs))
 
 
 class UserCollection(object):

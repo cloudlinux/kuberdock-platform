@@ -1,23 +1,43 @@
 """
-Defines and exports global kuberdock exceptions:
-APIError, PermissionDenied, NotAuthorized
+Defines and exports global kuberdock exceptions
 """
 
 
 class APIError(Exception):
-    message = 'Unknown error'
-    status_code = 400
-    details = None
+    """
+    Base API error class. DO NOT USE IT DIRECTLY. Create inheritors.
 
-    def __init__(self, message=None, status_code=None, type=None,
+    :param message_template: Template for human-readable `message`.
+    :param status_code: HTTP status code
+    :param type: Error type. Do not use this unless you really have to.
+        Create inheritors.
+    :param details: Object with data for machines. Use camelCase here.
+
+    """
+    message_template = 'Unknown error'
+    status_code = 400
+
+    def __init__(self, message_template=None, status_code=None, type=None,
                  details=None):
-        if message is not None:
-            self.message = message
+        if message_template is not None:
+            self.message_template = message_template
         if status_code is not None:
             self.status_code = status_code
+
         if type is not None:
             self.type = type
-        self.details = details
+        elif not hasattr(self, 'type'):
+            self.type = self.__class__.__name__
+
+        if details is not None:
+            self.details = details
+        elif not hasattr(self, 'details'):
+            self.details = {}
+
+    @property
+    def message(self):
+        """Human-readable message"""
+        return self.message_template.format(**self.details)
 
     def __str__(self):
         # Only message because this class may wrap other exception classes
@@ -35,20 +55,25 @@ class InternalAPIError(APIError):
 
 
 class PermissionDenied(APIError):
-    message = "Insufficient permissions for requested action"
+    message_template = 'Insufficient permissions for requested action'
     status_code = 403
 
 
 class NotAuthorized(APIError):
-    message = 'Not Authorized'
+    message_template = 'Not Authorized'
     status_code = 401
 
 
+class NotFound(APIError):
+    message_template = 'Not found'
+    status_code = 404
+
+
 class NoFreeIPs(APIError):
-    message = 'There are no free public IP-addresses, contact KuberDock ' \
-              'administrator'
+    message_template = ('There are no free public IP-addresses, contact '
+                        'KuberDock administrator')
 
 
 class NoSuitableNode(APIError):
-    message = 'There are no suitable nodes for the pod. ' \
-              'Please try again later or contact KuberDock administrator'
+    message_template = ('There are no suitable nodes for the pod. Please try '
+                        'again later or contact KuberDock administrator')

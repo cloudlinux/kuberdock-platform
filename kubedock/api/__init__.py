@@ -1,12 +1,30 @@
+from functools import wraps
+
 from fabric.api import env, run, put, output
-from flask import jsonify
+from flask import jsonify, request, g
 
 from kubedock.core import current_app
+from kubedock.utils import KubeUtils, send_event_to_role, API_VERSIONS
+from kubedock import factory
+from kubedock import sessions
+from kubedock.exceptions import APIError, InternalAPIError, NotFound
 from kubedock.settings import SSH_KEY_FILENAME, SESSION_LIFETIME
-from kubedock.utils import KubeUtils, send_event_to_role
-from .. import factory
-from .. import sessions
-from ..exceptions import APIError, InternalAPIError
+
+
+class InvalidAPIVersion(APIError):
+    def __init__(self, *args, **kwargs):
+        super(InvalidAPIVersion, self).__init__(*args, **kwargs)
+        self.details.setdefault('apiVersion', g.get('api_version'))
+        self.details.setdefault('acceptableVersions', API_VERSIONS.acceptable)
+
+    @property
+    def message(self):
+        apiVersion = self.details.get('apiVersion')
+        acceptableVersions = ', '.join(self.details.get('acceptableVersions'))
+        return (
+            'Invalid api version: {apiVersion}. Acceptable versions are: '
+            '{acceptableVersions}.'.format(
+                apiVersion=apiVersion, acceptableVersions=acceptableVersions))
 
 
 def create_app(settings_override=None, fake_sessions=False):
@@ -17,7 +35,7 @@ def create_app(settings_override=None, fake_sessions=False):
         app.session_interface = sessions.ManagedSessionInterface(
             sessions.DataBaseSessionManager(), SESSION_LIFETIME)
 
-    # registering blueprings
+    # registering blueprints
     from .images import images
     from .stream import stream
     from .nodes import nodes
@@ -46,7 +64,17 @@ def create_app(settings_override=None, fake_sessions=False):
     app.errorhandler(404)(on_404)
     app.errorhandler(APIError)(on_app_error)
 
+    app.before_request(handle_api_version)
+
     return app
+
+
+def handle_api_version():
+    api_version = request.headers.get('kuberdock-api-version',
+                                      API_VERSIONS.default)
+    g.api_version = api_version
+    if api_version not in API_VERSIONS.acceptable:
+        return on_app_error(InvalidAPIVersion())
 
 
 def pre_start_hook(app):
@@ -94,17 +122,27 @@ def on_app_error(e):
 
 
 def _jsonify_api_error(e):
-    return jsonify({
-        'status': 'error',
-        'data': e.message,  # left for backwards compatibility
-        'details': getattr(e, 'details'),
-        'type': getattr(e, 'type', e.__class__.__name__)
-    }), e.status_code
+    api_version = (g.api_version if g.api_version in API_VERSIONS.acceptable
+                   else API_VERSIONS.default)
+
+    if api_version == API_VERSIONS.v1:
+        return jsonify({
+            'status': 'error',
+            'data': e.message,  # left for backwards compatibility
+            'details': e.details,
+            'type': e.type,
+        }), e.status_code
+    elif api_version == API_VERSIONS.v2:
+        return jsonify({
+            'status': 'error',
+            'message': e.message,
+            'details': e.details,
+            'type': e.type,
+        }), e.status_code
 
 
 def on_404(e):
-    return on_app_error(APIError('Not found', status_code=404,
-                                 type='NotFound'))
+    return on_app_error(NotFound())
 
 
 def populate_registered_hosts(app):
@@ -122,3 +160,34 @@ def populate_registered_hosts(app):
         requests.put('/'.join([ETCD_REGISTERED_HOSTS, registered_host]))
 
     update_nginx_proxy_restriction(accept_ips)
+
+
+class check_api_version(object):
+    """Check that api version in request is one of `acceptable_versions`.
+
+    Can be used as decorator, callback (use #check method), or coerced to
+    boolean.
+    """
+    def __init__(self, acceptable_versions):
+        self.acceptable_versions = acceptable_versions
+
+    def __call__(self, func):
+        def wrapper(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+        return wraps(func)(wrapper)
+
+    def __enter__(self):
+        self.check()
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        pass
+
+    def __nonzero__(self):
+        return g.api_version in self.acceptable_versions
+
+    def check(self):
+        if not self:
+            raise InvalidAPIVersion(
+                details={'acceptableVersions': self.acceptable_versions})

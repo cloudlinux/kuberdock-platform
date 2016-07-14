@@ -33,6 +33,13 @@ from .settings import NODE_TOBIND_EXTERNAL_IPS
 from .users.models import SessionData
 
 
+class API_VERSIONS:
+    v1 = 'v1'
+    v2 = 'v2'
+    acceptable = (v1, v2)
+    default = v1
+
+
 class UPDATE_STATUSES:
     """
     Possible upgrade statuses for both - upgrade scripts and node upgrades

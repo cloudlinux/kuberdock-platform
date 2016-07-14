@@ -238,9 +238,9 @@ def check_hostname(hostname):
     validator = V()
     if not validator.validate({'Hostname': hostname},
                               {'Hostname': hostname_schema}):
-        raise APIError(validator.errors)
+        raise ValidationError(validator.errors)
     if is_ip(hostname):
-        raise APIError('Please, enter hostname, not ip address.')
+        raise ValidationError('Please, enter hostname, not ip address.')
 
 
 def check_change_pod_data(data):

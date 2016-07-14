@@ -453,7 +453,7 @@ kube_name_schema = {
     'required': True,
     'empty': False,
     'regex': {
-        'regex': r'^[A-Za-z0-9]+[A-Za-z0-9 ]*$',
+        'regex': r'^(?:[A-Za-z0-9]+[A-Za-z0-9 ]*)?$',
         'message': 'Name may contain Latin alphabet letters, digits, spaces '
                    'and should not start with a space'
     }

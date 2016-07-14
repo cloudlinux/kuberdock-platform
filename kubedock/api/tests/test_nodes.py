@@ -52,14 +52,16 @@ class TestNodeCRUD(APITestCase):
                 'hostname': 'localhost',
                 'kube_type': 12345
             })
-        self.assertAPIError(response, 400, 'ValidationError')
+        self.assertAPIError(response, 400, 'ValidationError',
+                            {u'kube_type': u'No such kube_type: "12345"'})
 
         response = self.admin_open(
             NodesUrl.create(), 'POST', {
                 'hostname': 'localhost',
                 'kube_type': 12345
             })
-        self.assertAPIError(response, 400, 'ValidationError')
+        self.assertAPIError(response, 400, 'ValidationError',
+                            {u'kube_type': u'No such kube_type: "12345"'})
 
     def test_create_invalid_hostname(self):
         response = self.admin_open(
@@ -133,12 +135,14 @@ class TestNodeCRUD(APITestCase):
         response = self.admin_open(
             NodesUrl.check_host('127.0.0.1'), 'GET')
 
-        self.assertAPIError(response, 400, 'APIError')
+        self.assertAPIError(response, 400, 'ValidationError')
 
         response = self.admin_open(
             NodesUrl.check_host(''), 'GET')
 
-        self.assertAPIError(response, 400, 'APIError')
+        self.assertAPIError(response, 400, 'ValidationError',
+                            {u'Hostname': [u'invalid hostname',
+                                           u'empty values not allowed']})
 
     # The functionality is commented out
     # @mock.patch('kubedock.kapi.nodes.redeploy_node')

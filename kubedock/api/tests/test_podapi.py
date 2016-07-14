@@ -43,7 +43,11 @@ class TestPodAPI(APITestCase):
     def test_post_invalid_params(self):
         response = self.user_open(PodAPIUrl.post(), 'POST', {})
 
-        self.assertAPIError(response, 400, 'ValidationError')
+        self.assertAPIError(response, 400, 'ValidationError', {
+            u'restartPolicy': u'required field',
+            u'kube_type': u'required field',
+            u'name': u'required field',
+            u'containers': u'required field'})
 
     @mock.patch('kubedock.validation.V._validate_kube_type_exists')
     # @mock.patch('kubedock.kapi.images.Image._check_availability')

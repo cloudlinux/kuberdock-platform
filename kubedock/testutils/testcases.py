@@ -7,9 +7,9 @@ import sqlalchemy
 from flask_testing import TestCase as FlaskBaseTestCase
 from nose.plugins.attrib import attr
 
-from kubedock import utils
-from kubedock.core import db
 from . import create_app, fixtures
+from ..core import db
+from ..utils import atomic
 
 
 def prepareDB():
@@ -74,10 +74,10 @@ class DBTestCase(FlaskTestCase):
         self._transaction = connection.begin()
 
         db.session = db.create_scoped_session({'bind': connection})
-        utils.atomic.unregister()  # can be removed if SQLAlchemy >= 0.9.8
-        utils.atomic.register()
+        atomic.unregister()  # can be removed if SQLAlchemy >= 0.9.8
+        atomic.register()
 
-        # To prevent closing root transaction, start the session in a SAVEPOINT...
+        # To prevent closing root transaction, start the session in a SAVEPOINT
         db.session.begin_nested()
 
         # and each time that SAVEPOINT ends, reopen it
@@ -102,8 +102,8 @@ class APITestCase(DBTestCase):
         from kubedock import sessions
         from kubedock.rbac import acl
 
-        #self.app.session_interface = sessions.ManagedSessionInterface(
-        #    sessions.DataBaseSessionManager(self.SECRET_KEY), 3600)
+        # self.app.session_interface = sessions.ManagedSessionInterface(
+        #     sessions.DataBaseSessionManager(self.SECRET_KEY), 3600)
         self.app.session_interface = sessions.ManagedSessionInterface(
             sessions.DataBaseSessionManager(), self.SESSION_LIFETIME)
         acl.init_permissions()
@@ -116,7 +116,8 @@ class APITestCase(DBTestCase):
         self.logger = logging.getLogger('APITestCase.open')
         self.logger.setLevel(logging.DEBUG)
 
-    def open(self, url=None, method='GET', json=None, auth=None, headers=None, **kwargs):
+    def open(self, url=None, method='GET', json=None, auth=None, headers=None,
+             version=None, **kwargs):
         if url is None:
             url = getattr(self, 'url', '/')
         if headers is None:
@@ -133,15 +134,22 @@ class APITestCase(DBTestCase):
         if json is not None:
             kwargs.setdefault('data', json_dumps(json))
             kwargs.setdefault('content_type', 'application/json')
-        response = self.client.open(url, method=method, headers=headers, **kwargs)
+        if version is not None:
+            headers['kuberdock-api-version'] = version
+        response = self.client.open(url, method=method, headers=headers,
+                                    **kwargs)
         self.logger.debug('{0}:{1}\n\t{2}\n{3}: {4}'
-                          .format(url, method, json, response.status, response.data))
+                          .format(url, method, json, response.status,
+                                  response.data))
         return response
 
     def item_url(self, *args):
         return '/'.join(map(str, (self.url,) + args))
 
     def assertAPIError(self, response, status, type, details=None):
+        if details is None:
+            details = {}
+
         self.assertStatus(response, status)
         type_got = response.json.get('type')
         self.assertEqual(response.json.get('type'), type,

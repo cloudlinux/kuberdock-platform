@@ -111,7 +111,8 @@ class TestPackageCRUD(ExtendedAPITestCase):
             name=self.package.name))
         self.assertAPIError(response, 400, 'DuplicateName')
         response = self.admin_open(url, 'POST', valid_package(name=''))
-        self.assertAPIError(response, 400, 'ValidationError')
+        self.assertAPIError(response, 400, 'ValidationError',
+                            {u'name': u'empty values not allowed'})
         response = self.admin_open(url, 'POST', valid_package())
         self.assert200(response)
 
@@ -121,7 +122,8 @@ class TestPackageCRUD(ExtendedAPITestCase):
 
         response = self.admin_open(Url.package(self.package.id), 'PUT',
                                    valid_package(name=''))
-        self.assertAPIError(response, 400, 'ValidationError')
+        self.assertAPIError(response, 400, 'ValidationError',
+                            {u'name': u'empty values not allowed'})
         response = self.admin_open(Url.package(self.package.id), 'PUT',
                                    valid_package())
         self.assert200(response)
@@ -195,7 +197,8 @@ class TestKubeCRUD(ExtendedAPITestCase):
             name=self.kube.name))
         self.assertAPIError(response, 400, 'DuplicateName')
         response = self.admin_open(Url.kubes(), 'POST', valid_kube(name=''))
-        self.assertAPIError(response, 400, 'ValidationError')
+        self.assertAPIError(response, 400, 'ValidationError',
+                            {u'name': u'empty values not allowed'})
 
         response = self.admin_open(Url.kubes(), 'POST', valid_kube())
         self.assert200(response)
@@ -218,7 +221,8 @@ class TestKubeCRUD(ExtendedAPITestCase):
         self.assertAPIError(response, 400, 'DuplicateName')
 
         response = self.admin_open(Url.kube(self.kube.id), 'PUT', {'name': ''})
-        self.assertAPIError(response, 400, 'ValidationError')
+        self.assertAPIError(response, 400, 'ValidationError',
+                            {u'name': u'empty values not allowed'})
 
         response = self.admin_open(Url.kube(INTERNAL_SERVICE_KUBE_TYPE), 'PUT',
                                    valid_kube())
@@ -344,7 +348,8 @@ class TestPackageKubeCRUD(ExtendedAPITestCase):
                                    valid_package_kube(name=self.kube.name))
         self.assertAPIError(response, 400, 'DuplicateName')
         response = self.admin_open(url, 'POST', valid_package_kube(name=''))
-        self.assertAPIError(response, 400, 'ValidationError')
+        self.assertAPIError(response, 400, 'ValidationError',
+                            {u'name': u'empty values not allowed'})
 
         response = self.admin_open(url, 'POST', valid_package_kube())
         self.assert200(response)
@@ -408,7 +413,7 @@ class TestPricingSSE(ExtendedAPITestCase):
         self.user_2, _ = self.fixtures.user_fixtures()
         self.user_1.package_id = self.package.id
         self.db.session.commit()
-        
+
         user_patcher = mock.patch('kubedock.billing.models.send_event_to_user')
         role_patcher = mock.patch('kubedock.billing.models.send_event_to_role')
         self.addCleanup(user_patcher.stop)

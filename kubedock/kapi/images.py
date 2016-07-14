@@ -36,29 +36,37 @@ PING_REQUEST_TIMEOUT = 5.0
 
 
 class ImageNotAvailable(APIError):
-    def __init__(self, image):
-        self.message = 'Image {0} is not available'.format(image)
+    message_template = 'Image "{image}" is not available'
+
+    def __init__(self, image=None, **kwargs):
+        super(ImageNotAvailable, self).__init__(
+            details=dict(image=image, **kwargs))
 
 
 class CommandIsMissing(APIError):
-    def __init__(self, image, container):
-        self.message = ('You need to specify CMD or ENTRYPOINT for container '
-                        '"{0}", \'cause image "{1}" doesn\'t provide one.'
-                        .format(container, image))
+    message_template = (
+        'You need to specify CMD or ENTRYPOINT for container "{container}", '
+        'because image "{image}" does not provide one.')
+
+    def __init__(self, image=None, container=None, **kwargs):
+        super(CommandIsMissing, self).__init__(
+            details=dict(image=image, container=container, **kwargs))
 
 
 class RegistryError(APIError):
     """
     Raised when the whole registry is not available.
     """
-    _msg_format = ('It seems that the registry {registry} is not available now '
-                   '({status}). Try again later or contact your administrator '
-                   'for support.')
+    message_template = (
+        'It seems that the registry {registryHost} is not available now '
+        '({status}). Try again later or contact your administrator for '
+        'support.')
+    status_code = 503
 
-    def __init__(self, registry=DEFAULT_REGISTRY, status=''):
-        message = self._msg_format.format(registry=urlparse(registry).netloc,
-                                          status=status)
-        super(RegistryError, self).__init__(message, 503)
+    def __init__(self, registry=DEFAULT_REGISTRY, status='', **kwargs):
+        super(RegistryError, self).__init__(
+            details=dict(registryHost=urlparse(registry).netloc,
+                         registry=registry, status=status, **kwargs))
 
 
 @contextmanager

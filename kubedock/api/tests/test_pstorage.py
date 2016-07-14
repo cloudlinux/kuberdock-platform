@@ -3,6 +3,7 @@ import unittest
 import mock
 from kubedock.pods.models import PersistentDisk
 from kubedock.testutils.testcases import APITestCase
+from kubedock.utils import API_VERSIONS
 
 url = '/pstorage'
 
@@ -142,46 +143,43 @@ class TestPStorageApiPost(APITestCase):
         }
         self.assertEqual(expected, resp.json)
 
+    def checkValidation(self, data, errors, message='Invalid schema'):
+        resp = self.user_open(url, 'POST', data, version=API_VERSIONS.v1)
+        self.assertAPIError(resp, 400, 'ValidationError', errors)
+        self.assertEqual(resp.json['data'], errors)
+
+        resp = self.user_open(url, 'POST', data, version=API_VERSIONS.v2)
+        self.assertAPIError(resp, 400, 'ValidationError', errors)
+        self.assertEqual(resp.json['message'], message)
+
     def test_size_less_zero(self):
-        resp = self.user_open(url, 'POST', {'name': 'some_name', 'size': -1})
-        self.assertAPIError(resp, 400, 'ValidationError')
-        self.assertEqual(resp.json['data'], {'size': 'min value is 1'})
+        self.checkValidation({'name': 'some_name', 'size': -1},
+                             {'size': 'min value is 1'})
 
     def test_size_equal_zero(self):
-        resp = self.user_open(url, 'POST', {'name': 'some_name', 'size': 0})
-        self.assertAPIError(resp, 400, 'ValidationError')
-        self.assertEqual(resp.json['data'], {'size': 'min value is 1'})
+        self.checkValidation({'name': 'some_name', 'size': 0},
+                             {'size': 'min value is 1'})
 
     def test_size_is_not_number(self):
-        resp = self.user_open(
-            url, 'POST', {'name': 'some_name', 'size': 'zxc'})
-        self.assertAPIError(resp, 400, 'ValidationError')
-        self.assertEqual(resp.json['data'],
-                         {'size': ["field 'size' could not be coerced",
-                                   'must be of integer type']})
+        self.checkValidation({'name': 'some_name', 'size': 'zxc'},
+                             {'size': ["field 'size' could not be coerced",
+                                       'must be of integer type']})
 
     def test_size_is_not_specified(self):
-        resp = self.user_open(url, 'POST', {'name': 'some_name'})
-        self.assertAPIError(resp, 400, 'ValidationError')
-        self.assertEqual(resp.json['data'], {'size': 'required field'})
+        self.checkValidation({'name': 'some_name'}, {'size': 'required field'})
 
     def test_name_is_not_specified(self):
-        resp = self.user_open(url, 'POST', {'size': 1})
-        self.assertAPIError(resp, 400, 'ValidationError')
-        self.assertEqual(resp.json['data'], {'name': 'required field'})
+        self.checkValidation({'size': 1}, {'name': 'required field'})
 
     def test_name_is_empty(self):
-        resp = self.user_open(url, 'POST', {'name': '', 'size': 1})
-        self.assertAPIError(resp, 400, 'ValidationError')
-        self.assertEqual(set(resp.json['data']['name']), set([
+        self.checkValidation({'name': '', 'size': 1}, {'name': [
             u'Latin letters, digits, undescores and dashes are '
             'expected only. Must start with a letter',
-            u'empty values not allowed']))
+            u'empty values not allowed']})
 
     def test_name_is_not_a_string(self):
-        resp = self.user_open(url, 'POST', {'name': 1, 'size': 1})
-        self.assertAPIError(resp, 400, 'ValidationError')
-        self.assertEqual(resp.json['data'], {'name': 'must be of string type'})
+        self.checkValidation({'name': 1, 'size': 1},
+                             {'name': 'must be of string type'})
 
     def test_already_exists(self):
         existed = PersistentDisk.create(owner=self.user,

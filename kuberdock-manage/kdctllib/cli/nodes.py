@@ -11,41 +11,41 @@ def nodes():
 
 @nodes.command()
 @click.pass_obj
-def list(obj):
-    return obj.client.nodes.list()
+def list(obj, **params):
+    return obj.kdctl.nodes.list(**params)
 
 
 @nodes.command()
 @click.argument('node-id')
 @click.pass_obj
-def get(obj, node_id):
-    return obj.client.nodes.get(node_id)
+def get(obj, **params):
+    return obj.kdctl.nodes.get(**params)
 
 
 @nodes.command()
 @data_argument('node-data')
 @click.pass_obj
-def create(obj, node_data):
-    return obj.client.nodes.create(node_data)
+def create(obj, **params):
+    return obj.kdctl.nodes.create(**params)
 
 
 @nodes.command()
 @click.argument('node-id')
 @data_argument('node-data')
 @click.pass_obj
-def update(obj, node_id, node_data):
-    return obj.client.nodes.update(node_id, node_data)
+def update(obj, **params):
+    return obj.kdctl.nodes.update(**params)
 
 
 @nodes.command()
 @click.argument('node-id')
 @click.pass_obj
-def delete(obj, node_id):
-    return obj.client.nodes.delete(node_id)
+def delete(obj, **params):
+    return obj.kdctl.nodes.delete(**params)
 
 
 @nodes.command('check-host')
 @click.argument('hostname')
 @click.pass_obj
-def check_host(obj, hostname):
-    return obj.client.nodes.check_host(hostname)
+def check_host(obj, **params):
+    return obj.kdctl.nodes.check_host(**params)

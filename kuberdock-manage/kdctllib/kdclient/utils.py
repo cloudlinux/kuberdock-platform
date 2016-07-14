@@ -3,25 +3,9 @@ import logging
 
 import requests
 
-from .exceptions import APIError
+from .exceptions import APIError, UnknownAnswer
 
 requests_logger = logging.getLogger('requests_logger')
-
-
-def _get_response_message(response):
-    try:
-        return response.json()
-    except ValueError:
-        return response.text
-
-
-def _raise(response_message):
-    if isinstance(response_message, dict):
-        raise APIError(response_message.get('data'),
-                       response_message.get('type'),
-                       response_message.get('details'))
-    else:
-        raise APIError(response_message)
 
 
 class ClientBase(object):
@@ -63,11 +47,16 @@ class Transport(object):
         response = self.conn.send(r)
         self.requests_logger.log_http_response(response)
 
-        response_message = _get_response_message(response)
         if response.ok:
-            return response_message
+            try:
+                return response.json()
+            except ValueError:
+                raise UnknownAnswer(response.text, response.status_code)
         else:
-            _raise(response_message)
+            try:
+                raise APIError(response.json())
+            except ValueError:
+                raise UnknownAnswer(response.text, response.status_code)
 
     def get(self, url, params=None):
         return self.request('GET', url, params=params)

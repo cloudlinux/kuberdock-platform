@@ -12,18 +12,13 @@ if __name__ == '__main__':
         requests.packages.urllib3.exceptions.InsecureRequestWarning
     )
 
-    from kdctllib.parser.main import main
-    from kdctllib.parser import ippool
-    from kdctllib.parser import nodes
-    from kdctllib.parser import predefined_apps
-    from kdctllib.parser import restore
-    from kdctllib.parser import system_settings
-    from kdctllib.parser import users
-    from kdctllib.parser import license
+    from kdctllib.cli.main import main
+    from kdctllib.cli import ippool
+    from kdctllib.cli import license
+    from kdctllib.cli import nodes
+    from kdctllib.cli import predefined_apps
+    from kdctllib.cli import restore
+    from kdctllib.cli import system_settings
+    from kdctllib.cli import users
 
-    from kdctllib.parser import utils
-
-    try:
-        print(main())
-    except Exception as e:
-        raise SystemExit(utils.formatted(e.message))
+    main()

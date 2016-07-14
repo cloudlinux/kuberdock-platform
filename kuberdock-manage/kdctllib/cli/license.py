@@ -12,11 +12,11 @@ def license():
 @license.command()
 @click.pass_obj
 def show(obj):
-    return obj.client.license.show()
+    return obj.kdctl.license.show()
 
 
 @license.command()
 @click.option('-l', '--license')
 @click.pass_obj
-def set(obj, license):
-    return obj.client.license.set(license)
+def set(obj, **params):
+    return obj.kdctl.license.set(**params)

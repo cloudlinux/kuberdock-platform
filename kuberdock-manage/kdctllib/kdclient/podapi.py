@@ -24,6 +24,7 @@ class PodAPIClient(ClientBase):
         )
 
     def update(self, pod_id, pod_data):
+        # todo: add parameter "owner" in api/v2
         return self.transport.put(
             self._url(pod_id),
             json=pod_data

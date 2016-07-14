@@ -55,6 +55,9 @@ class PodsAPI(KubeUtils, MethodView):
     @maintenance_protected
     @use_kwargs({}, allow_unknown=True)
     def put(self, pod_id, **params):
+        # it's left for backwards compatibility
+        # that this method does not contain parameter "owner"
+        # todo: In api/v2 add parameter "owner"
         current_user = self.get_current_user()
         db_pod = Pod.query.get(pod_id)
         if db_pod is None:

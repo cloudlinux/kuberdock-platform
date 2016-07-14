@@ -33,3 +33,7 @@ class PipelineNotFound(Exception):
 
 class PipelineInvalidName(Exception):
     pass
+
+
+class PodIsNotRunning(Exception):
+    pass

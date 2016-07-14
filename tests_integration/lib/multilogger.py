@@ -55,10 +55,11 @@ class FilePerThreadHandler(logging.Handler):
         self.files = {}
 
 
-def init_handler(logger):
+def init_handler(logger, live_log=False):
     log_format = '%(threadName)s %(message)s'
 
-    logger.handlers = []
+    if not live_log:
+        logger.handlers = []
     handler = FilePerThreadHandler()
     handler.setFormatter(logging.Formatter(log_format))
     logger.addHandler(handler)

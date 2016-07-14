@@ -201,8 +201,9 @@ def _verify_pipelines(ctx, param, items):
 @click.command()
 @click.argument('paths', nargs=-1, callback=_verify_paths)
 @click.option('--pipelines', callback=_verify_pipelines)
-def main(paths, pipelines):
-    with closing(multilogger.init_handler(logger)) as handler:
+@click.option('--live-log', is_flag=True)
+def main(paths, pipelines, live_log):
+    with closing(multilogger.init_handler(logger, live_log)) as handler:
         discover_integration_tests(paths or [INTEGRATION_TESTS_PATH])
 
         if not pipelines:
@@ -211,7 +212,6 @@ def main(paths, pipelines):
             requested = {
                 k: v
                 for k, v in registered_pipelines.items() if k[0] in pipelines}
-
         threads = [
             start_test(pipe, tests) for pipe, tests in requested.items()
             ]
@@ -219,7 +219,9 @@ def main(paths, pipelines):
         for t in threads:
             t.join()
 
-        print_pipeline_logs(handler)
+        # If live log was enabled all the logs were already printed
+        if not live_log:
+            print_pipeline_logs(handler)
 
         if integration_tests_failed:
             sys.exit(1)

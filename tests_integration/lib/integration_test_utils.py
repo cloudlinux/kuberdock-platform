@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from itertools import count, islice
 
 from colorama import Fore, Style
-from ipaddress import IPv4Address
+from ipaddress import IPv4Address, IPv4Network
 
 from tests_integration.lib.exceptions import PublicPortWaitTimeoutException, \
     NonZeroRetCodeException, NotEnoughFreeIPs
@@ -186,7 +186,11 @@ class NebulaIPPool(object):
     @property
     def pool(self):
         p = oca.VirtualNetworkPool(self.client, preload_info=True)
-        p.info()
+        # Filter flag possible values:
+        # -3: Connected user's resources
+        # -2: All resources
+        # -1: Connected user's and his group's resources
+        p.info(filter=-2, range_start=-1, range_end=-1)
         return p
 
     def get_free_ip_list(self, network_name):
@@ -208,7 +212,12 @@ class NebulaIPPool(object):
             for lease in r.leases:
                 used_ip_list.add(lease.ip)
 
-        return ip_list - used_ip_list
+        # TODO: AC-3928 Right now ansible can only use /24 network while we
+        # have /22 Remove this as soon as ansible can deal with that
+        allowed_ips = {
+            str(h) for h in IPv4Network(u'192.168.113.0/24').hosts()}
+
+        return (ip_list - used_ip_list) & allowed_ips
 
     def reserve_ips(self, network_name, count):
         """

@@ -3,7 +3,7 @@
 - name: Install additional packages
   yum: name=python-httplib2 state=latest
   tags:
-    - kcli
+   - kcli
 
 - stat: path=/vagrant/kcli.rpm
   register: kcli_rpm
@@ -18,24 +18,39 @@
   tags:
    - kcli
 
-- name: Get token for test_user
+- name: Get API tokens
   uri:
     url: "{{ token_gathering_url}}"
-    user: test_user
-    password: test_user
+    user: "{{ item.username }}"
+    password: "{{ item.password }}"
     validate_certs: no
     force_basic_auth: yes
-  register: raw_token
-  until: raw_token.status == 200
+  register: tokens
+  until: tokens.status == 200
   retries: 5
   delay: 30
+  with_items:
+    - {username: 'test_user', password: 'test_user'}
+    - {username: 'alt_test_user', password: 'alt_test_user'}
   tags:
-    - kcli
+   - kcli
 
-- name: Write kcli auth (test_user only for now!)
-  lineinfile:
-      dest: "/etc/kubecli.conf"
-      line: "token = {{ raw_token.json.token }}"
-      state: present
+- name: Duplicate KCLI configs for test users
+  command: "cp /etc/kubecli.conf /etc/kubecli_{{ item.item.username }}.conf"
+  with_items: "{{ tokens.results }}"
   tags:
-    - kcli
+   - kcli
+
+- name: Write auth tokens to the KCLI configs for each test user
+  lineinfile:
+    dest: "/etc/kubecli_{{ item.item.username }}.conf"
+    line: "token = {{ item.json.token }}"
+    state: present
+  with_items: "{{ tokens.results }}"
+  tags:
+   - kcli
+
+- name: Make test_user a default user for KCLI
+  command: cp /etc/kubecli_test_user.conf /etc/kubecli.conf
+  tags:
+   - kcli

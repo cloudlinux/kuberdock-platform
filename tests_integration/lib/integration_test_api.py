@@ -11,7 +11,7 @@ import vagrant
 import yaml
 
 from tests_integration.lib.exceptions import StatusWaitException, \
-    UnexpectedKubectlResponse, DiskNotFoundException
+    UnexpectedKubectlResponse, DiskNotFoundException, PodIsNotRunning
 from tests_integration.lib.integration_test_utils import \
     ssh_exec, assert_eq, assert_in, kube_type_to_int, wait_net_port, \
     merge_dicts, retry
@@ -85,15 +85,20 @@ class KDIntegrationTestAPI(object):
         self.vagrant = vagrant.Vagrant(quiet_stdout=False, quiet_stderr=False,
                                        env=kd_env, out_cm=out_cm,
                                        err_cm=err_cm)
+        self.kd_env = kd_env
         self._ssh_connections = {}
+
+    @staticmethod
+    def _cut_vm_name_prefix(name):
+        return name.replace('kd_', '')
 
     @property
     def node_names(self):
-        def _cut_prefix(name):
-            return name.replace('kd_', '')
-
         names = (n.name for n in self.vagrant.status() if '_node' in n.name)
-        return [_cut_prefix(n) for n in names]
+        return [self._cut_vm_name_prefix(n) for n in names]
+
+    def get_host_ip(self, hostname):
+        return self.vagrant.hostname('kd_{}'.format(hostname))
 
     def get_ssh(self, host):
         host = self.vm_names[host]
@@ -118,6 +123,32 @@ class KDIntegrationTestAPI(object):
 
         self._ssh_connections[host] = ssh
         return ssh
+
+    def recreate_routable_ip_pool(self):
+        self.delete_all_ip_pools()
+        # First we parse get the default interface:
+        # 8.8.8.8 via 192.168.115.254 dev ens3  src 192.168.113.245
+        #
+        # Then we extract IP/Preffix from this:
+        # 2: ens3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast
+        # link/ether 02:00:c0:a8:71:f5 brd ff:ff:ff:ff:ff:ff
+        # inet 192.168.113.245/22 brd 192.168.115.255 scope global ens3
+
+        cmd = """
+        MAIN_INTERFACE=$(ip route get 8.8.8.8 | egrep 'dev\s+.+?\s+src' -o | awk '{print $2}');
+        ip addr show dev $MAIN_INTERFACE | awk 'NR==3 { print $2 }'
+        """
+        _, main_ip, _ = self.ssh_exec('master', cmd)
+
+        # TODO: AC-3928 Right now ansible can only use /24 network while we
+        # have /22 Remove this as soon as ansible can deal with that
+        # Cut the actual prefix length and replace it with /24
+        ip_pool = str(main_ip.rsplit('.', 1)[0]) + '.0/24'
+        requested_ip_octets = set(self.kd_env['KD_ONE_PUB_IPS'].split(','))
+        all_ip_octets = set(str(i) for i in range(0, 256))
+
+        excludes = ','.join(all_ip_octets - requested_ip_octets)
+        self.add_ip_pool(ip_pool, excludes=excludes)
 
     def _build_cluster_flag(self, op_name):
         build_flag = "BUILD_CLUSTER"
@@ -174,16 +205,25 @@ class KDIntegrationTestAPI(object):
         LOG.debug("VM Power On: '{}'".format(vm_name))
         self.vagrant.up(vm_name=vm_name)
 
+    def get_kd_users(self):
+        _, out, _ = self.kdctl('users list', out_as_dict=True)
+        sys_users = ['kuberdock-internal', 'admin']
+        user_names = (u['username'] for u in out['data'])
+        return (u for u in user_names if u not in sys_users)
+
     def delete_all_pods(self):
-        for pod in self.get_all_pods():
-            name = self._escape_command_arg(pod['name'])
-            self.kcli('delete {0}'.format(name))
+        for user in self.get_kd_users():
+            for pod in self.get_all_pods(user):
+                name = self._escape_command_arg(pod['name'])
+                self.kcli('delete {}'.format(name), user=user)
 
     def forget_all_pods(self):
-        _, pods, _ = self.kcli('list', out_as_dict=True)
-        for pod in pods:
-            name = self._escape_command_arg(pod['name'])
-            self.kcli('forget {}'.format(name))
+        for user in self.get_kd_users():
+            _, pods, _ = self.kcli('list', out_as_dict=True, user=user)
+
+            for pod in pods:
+                name = self._escape_command_arg(pod['name'])
+                self.kcli('forget {}'.format(name), user=user)
 
     def delete_all_ip_pools(self):
         _, pools, _ = self.manage('list-ip-pools', out_as_dict=True)
@@ -192,8 +232,8 @@ class KDIntegrationTestAPI(object):
 
         self.forget_all_pods()
 
-    def get_all_pods(self):
-        _, pods, _ = self.kubectl("get pods", out_as_dict=True)
+    def get_all_pods(self, owner='test_user'):
+        _, pods, _ = self.kubectl("get pods", out_as_dict=True, user=owner)
         return pods
 
     def assert_pods_number(self, number):
@@ -202,21 +242,23 @@ class KDIntegrationTestAPI(object):
     def delete_ip_pool(self, pool):
         self.manage('delete-ip-pool -s {}'.format(pool['network']))
 
-    def add_ip_pool(self, subnet, hostname=None):
+    def add_ip_pool(self, subnet, hostname=None, excludes=''):
         cmd = 'create-ip-pool -s {}'.format(subnet)
         if hostname is not None:
             cmd += ' --node {}'.format(hostname)
+        cmd += ' -e "{}"'.format(excludes)
         self.manage(cmd)
 
     def create_pod(self, image, name, kube_type="Standard", kubes=1,
                    open_all_ports=False, restart_policy="Always", pvs=None,
                    start=True, wait_ports=False, healthcheck=False,
-                   wait_for_status=None):
+                   wait_for_status=None, owner='test_user'):
         assert_in(kube_type, ("Tiny", "Standard", "High memory"))
         assert_in(restart_policy, ("Always", "Never", "OnFailure"))
 
         pod = self._create_pod_object(image, kube_type, kubes, name,
-                                      open_all_ports, restart_policy, pvs)
+                                      open_all_ports, restart_policy, pvs,
+                                      owner)
         if start:
             pod.start()
         if wait_for_status:
@@ -228,7 +270,7 @@ class KDIntegrationTestAPI(object):
         return pod
 
     def _create_pod_object(self, image, kube_type, kubes, name, open_all_ports,
-                           restart_policy, pvs):
+                           restart_policy, pvs, owner='test_user'):
         """
         Given an image name creates an instance of a corresponding pod class
         """
@@ -236,7 +278,7 @@ class KDIntegrationTestAPI(object):
 
         this_pod_class = pod_classes.get(image, KDPod)
         return this_pod_class(self, image, name, kube_type, kubes,
-                              open_all_ports, restart_policy, pvs)
+                              open_all_ports, restart_policy, pvs, owner)
 
     def preload_docker_image(self, image, node=None):
         """
@@ -265,29 +307,43 @@ class KDIntegrationTestAPI(object):
                                  "kuberdock-upgrade health-check-only")
         assert_eq(rc, 0)
 
-    def kcli(self, cmd, out_as_dict=False):
+    def kcli(self, cmd, out_as_dict=False, user=None):
+        kcli_cmd = ['kcli']
+
+        if user is not None:
+            config_path = self._kcli_config_path(user)
+            kcli_cmd.extend(['-c', config_path])
+
         if out_as_dict:
-            rc, out, err = self.ssh_exec(
-                "master", "kcli -j kuberdock {}".format(cmd))
+            kcli_cmd.extend(['-j', 'kuberdock', cmd])
+            rc, out, err = self.ssh_exec('master', ' '.join(kcli_cmd))
             return rc, json.loads(out), err
 
-        return self.ssh_exec("master", "kcli kuberdock {0}".format(cmd))
+        kcli_cmd.extend(['kuberdock', cmd])
+        return self.ssh_exec('master', ' '.join(kcli_cmd))
 
-    def kubectl(self, cmd, out_as_dict=False):
+    # TODO: Kubectl will be moved out of KCLI so this code duplication won't
+    #  hurt that much
+    def kubectl(self, cmd, out_as_dict=False, user=None):
+        kcli_cmd = ['kcli']
+
+        if user is not None:
+            config_path = self._kcli_config_path(user)
+            kcli_cmd.extend(['-c', config_path])
+
         if out_as_dict:
-            rc, out, err = self.ssh_exec(
-                "master", "kcli -j kubectl {}".format(cmd))
+            kcli_cmd.extend(['-j', 'kubectl', cmd])
+            rc, out, err = self.ssh_exec('master', ' '.join(kcli_cmd))
             return rc, json.loads(out), err
 
-        return self.ssh_exec("master", "kcli kubectl {}".format(cmd))
+        kcli_cmd.extend(['kubectl', cmd])
+        return self.ssh_exec('master', ' '.join(kcli_cmd))
 
     def kdctl(self, cmd, out_as_dict=False):
+        rc, out, err = self.ssh_exec("master", "kdctl {}".format(cmd))
         if out_as_dict:
-            rc, out, err = self.ssh_exec(
-                "master", "kdctl {}".format(cmd))
-            return rc, json.loads(out), err
-
-        return self.ssh_exec("master", "kdctl {}".format(cmd))
+            out = json.loads(out)
+        return rc, out, err
 
     def docker(self, cmd, node="node1"):
         return self.ssh_exec(node, "docker {0}".format(cmd))
@@ -307,16 +363,21 @@ class KDIntegrationTestAPI(object):
     def _escape_command_arg(self, arg):
         return pipes.quote(arg)
 
+    def _kcli_config_path(self, user):
+        if user is not None:
+            return '/etc/kubecli_{}.conf'.format(user)
+
     def create_pv(self, kind, name, mount_path='/some_mnt_pth', size=1):
         return PV(self, kind, name, mount_path, size)
 
     def delete_all_pvs(self):
-        for pv in self.get_all_pvs():
-            name = self._escape_command_arg(pv['name'])
-            self.kcli('drives delete {0}'.format(name))
+        for user in self.get_kd_users():
+            for pv in self.get_all_pvs(user):
+                name = self._escape_command_arg(pv['name'])
+                self.kcli('drives delete {0}'.format(name), user=user)
 
-    def get_all_pvs(self):
-        _, pvs, _ = self.kcli("drives list", out_as_dict=True)
+    def get_all_pvs(self, owner=None):
+        _, pvs, _ = self.kcli("drives list", out_as_dict=True, user=owner)
         return pvs
 
 
@@ -340,7 +401,7 @@ class KDPod(RESTMixin):
     SRC = None
 
     def __init__(self, cluster, image, name, kube_type, kubes,
-                 open_all_ports, restart_policy, pvs):
+                 open_all_ports, restart_policy, pvs, owner):
         self.cluster = cluster
         self.name = name
         self.image = image
@@ -348,6 +409,7 @@ class KDPod(RESTMixin):
         self.kubes = kubes
         self.restart_policy = restart_policy
         self.public_ip = None
+        self.owner = owner
         self.ports = self._get_ports(image)
         self.pv_cmd = ''
         if pvs is not None:
@@ -366,29 +428,31 @@ class KDPod(RESTMixin):
             ports_arg = "--container-port {0}".format(pub_ports)
 
         self.cluster.kcli(
-            "create -C {image} --kube-type {kube_type} "
-            "--kubes {kubes} --restart-policy {restart_policy} {ports_arg} {"
-            "pv_cmd} {escaped_name}".format(
-                **locals()))
-        self.cluster.kcli("save {0}".format(self.escaped_name))
+            "create -C {image} --kube-type {kube_type} --kubes {kubes} "
+            "--restart-policy {restart_policy} {ports_arg} {pv_cmd} "
+            "{escaped_name}".format(
+                **locals()), user=self.owner)
+        self.cluster.kcli(
+            "save {0}".format(self.escaped_name), user=self.owner)
 
     def _get_ports(self, image):
-        # Duplicated keys in yml out, pyyaml won't work :(
-        # AC-3205
-        rc, out, err = self.cluster.kcli(
-            "image_info %s | grep number | awk -F ':' '{print $2}'" % image)
-        return [int(l) for l in out.splitlines()]
+        _, out, _ = self.cluster.kcli(
+            'image_info {}'.format(image), out_as_dict=True, user=self.owner)
+        return [int(p['number']) for p in out['ports']]
 
     def start(self):
-        rc, out, err = self.cluster.kcli("start {0}".format(self.escaped_name))
+        rc, out, err = self.cluster.kcli("start {0}".format(self.escaped_name),
+                                         user=self.owner)
         # TODO: Handle exclamation mark in a response correctly
         self.public_ip = yaml.load(out).get('public_ip')
 
     def stop(self):
-        self.cluster.kcli("stop {0}".format(self.escaped_name))
+        self.cluster.kcli(
+            "stop {0}".format(self.escaped_name), user=self.owner)
 
     def delete(self):
-        self.cluster.kcli("delete {0}".format(self.escaped_name))
+        self.cluster.kcli(
+            "delete {0}".format(self.escaped_name), user=self.owner)
 
     def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
         ports = ports or self.ports
@@ -424,9 +488,9 @@ class KDPod(RESTMixin):
     @property
     def info(self):
         try:
-            _, out, _ = self.cluster.kubectl('get pod {}'.format(
-                self.escaped_name),
-                out_as_dict=True)
+            _, out, _ = self.cluster.kubectl(
+                'get pod {}'.format(self.escaped_name), out_as_dict=True,
+                user=self.owner)
             return out[0]
         except KeyError:
             raise UnexpectedKubectlResponse()
@@ -439,11 +503,26 @@ class KDPod(RESTMixin):
     def escaped_name(self):
         return pipes.quote(self.name)
 
+    def get_container_ip(self, container_id):
+        """
+        Returns internal IP of a given container within the current POD
+        """
+        _, out, _ = self.docker_exec(container_id, 'hostname --ip-address')
+        return out
+
     def get_spec(self):
-        rc, out, err = self.cluster.kubectl(
-            "describe pods {0}".format(self.escaped_name))
-        # NOTE: Duplicated entries will be hidden!
-        return yaml.load(out)
+        _, out, _ = self.cluster.kubectl(
+            "describe pods {}".format(self.escaped_name), out_as_dict=True,
+            user=self.owner)
+        return out
+
+    def docker_exec(self, container_id, command):
+        if self.status != 'running':
+            raise PodIsNotRunning()
+
+        node_name = self.info['host']
+        docker_cmd = 'exec {} {}'.format(container_id, command)
+        return self.cluster.docker(docker_cmd, node_name)
 
     def healthcheck(self):
         LOG.warning(
@@ -454,7 +533,8 @@ class KDPod(RESTMixin):
     def _generic_healthcheck(self):
         spec = self.get_spec()
         assert_eq(spec['kube_type'], kube_type_to_int(self.kube_type))
-        assert_eq(spec['containers']['kubes'], self.kubes)
+        for container in spec['containers']:
+            assert_eq(container['kubes'], self.kubes)
         assert_eq(spec['restartPolicy'], self.restart_policy)
         assert_eq(spec['status'], "running")
         return spec
@@ -470,8 +550,9 @@ class _NginxPod(KDPod):
 
     def healthcheck(self):
         if not self.open_all_ports:
-            raise Exception("Cannot perform nginx healthcheck without public IP"
-                            "(must pass open_all_ports=True)")
+            raise Exception(
+                "Cannot perform nginx healthcheck without public IP"
+                "(must pass open_all_ports=True)")
         self._generic_healthcheck()
         assert_in("Welcome to nginx!", self.do_GET())
 
@@ -485,9 +566,10 @@ class VagrantIsAlreadyUpException(Exception):
 
 
 class PV(object):
-    def __init__(self, cluster, kind, name, mount_path, size):
+    def __init__(self, cluster, kind, name, mount_path, size, owner=None):
         self.cluster = cluster
         self.name = name
+        self.owner = owner
         self.mount_path = mount_path
         inits = {"new": self._create_new,
                  "existing": self._load_existing,
@@ -506,8 +588,8 @@ class PV(object):
         and also create new PV in the Kuberdock.
         """
         self.size = size
-        self.cluster.kcli("drives add --size {0} {1}".format(
-            self.size, self.name))
+        self.cluster.kcli("drives add --size {} {}".format(
+            self.size, self.name), self.owner)
 
     def _create_dummy(self, size):
         """
@@ -535,14 +617,15 @@ class PV(object):
         self.size = pv['size']
 
     def _get_by_name(self, name):
-        _, pvs, _ = self.cluster.kcli('drives list', out_as_dict=True)
+        _, pvs, _ = self.cluster.kcli(
+            'drives list', out_as_dict=True, user=self.owner)
         for pv in pvs:
             if pv['name'] == name:
                 return pv
 
     def delete(self):
-        self.cluster.kcli("drives delete {0}".format(self.name))
+        self.cluster.kcli(
+            "drives delete {0}".format(self.name), user=self.owner)
 
     def exists(self):
         return self._get_by_name(self.name) is not None
-

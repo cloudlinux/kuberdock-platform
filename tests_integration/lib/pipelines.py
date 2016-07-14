@@ -142,12 +142,13 @@ class Pipeline(object):
         Fabric method for creating a specific pipeline class instance
         depending on a given name
         """
-        try:
-            available = {c.NAME: c for c in cls.__subclasses__()}
-            pipe_name = name.rsplit('_', 1)[0]
-            return available[pipe_name](name)
-        except KeyError:
+        available = {c.NAME: c for c in cls.__subclasses__()}
+        pipe_name = name.rsplit('_', 1)[0]
+
+        if pipe_name not in available:
             raise PipelineNotFound(name)
+
+        return available[pipe_name](name)
 
     def _add_public_ips(self, ip_list):
         """
@@ -188,8 +189,15 @@ class NetworkingPipeline(Pipeline):
     NAME = 'networking'
     ROUTABLE_IP_COUNT = 2
     ENV = {
+        # TODO: AC-3584 When the isolation rules are fixed so pods on
+        # different nodes correctly communicate with each other raise that
+        # number to 2
         'KD_NODES_COUNT': '1',
     }
+
+    def set_up(self):
+        super(NetworkingPipeline, self).set_up()
+        self.cluster.recreate_routable_ip_pool()
 
 
 class NonfloatingPipeline(Pipeline):
@@ -240,6 +248,7 @@ class FailConditions(Pipeline):
     ENV = {
         'KD_NODES_COUNT': '1',
     }
+
 
 pipelines = defaultdict(list)
 

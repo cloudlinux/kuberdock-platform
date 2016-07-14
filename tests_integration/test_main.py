@@ -84,9 +84,9 @@ def test_can_create_pod_without_volumes_and_ports(cluster):
 
 @pipeline('main')
 def test_nginx_with_healthcheck(cluster):
-    cluster.create_pod("nginx", "test_nginx_pod_1",
-                       open_all_ports=True, start=True,
-                       wait_ports=True, healthcheck=True)
+    cluster.create_pod("nginx", "test_nginx_pod_1", open_all_ports=True,
+                       start=True, wait_ports=True, healthcheck=True,
+                       wait_for_status='running')
 
 
 @pipeline('networking')

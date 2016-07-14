@@ -2,7 +2,7 @@
 # vi: set ft=ruby :
 #
 
-defaultBuildDir =File.expand_path('../../../builds', __FILE__) 
+defaultBuildDir =File.expand_path('../../../builds', __FILE__)
 buildDir = ENV['KD_BUILD_DIR'] || defaultBuildDir
 
 nodesCount = Integer(ENV['KD_NODES_COUNT'] || '1')
@@ -39,9 +39,9 @@ Vagrant.configure(2) do |config|
     one.template_id = nebulaTemplateId
     override.ssh.private_key_path = privateKey
 
-    rsyncExcludes = [".git/", ".venv/", "ceph_settings.py", buildDir] 
+    rsyncExcludes = [".git/", ".venv/", "ceph_settings.py", buildDir]
 
-    gitignoreFile = File.expand_path("../../../.gitignore", __FILE__) 
+    gitignoreFile = File.expand_path("../../../.gitignore", __FILE__)
     if File.readable?(gitignoreFile)
       File.open(gitignoreFile) do |f|
         f.each_line do |line|

@@ -23,7 +23,7 @@ class NotEnoughFreeIPs(Exception):
     pass
 
 
-class DiskNotFoundException(Exception):
+class DiskNotFound(Exception):
     pass
 
 
@@ -35,5 +35,21 @@ class PipelineInvalidName(Exception):
     pass
 
 
+class PodNotFound(Exception):
+    pass
+
+
 class PodIsNotRunning(Exception):
+    pass
+
+
+class IncorrectPodDescription(Exception):
+    pass
+
+
+class PodIsNotRunning(Exception):
+    pass
+
+
+class CannotRestorePodWithMoreThanOneContainer(Exception):
     pass

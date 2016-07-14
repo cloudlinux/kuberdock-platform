@@ -63,13 +63,22 @@ def wait_net_port(ip, port, timeout, try_interval=2):
     raise PublicPortWaitTimeoutException()
 
 
+KUBE_TYPE_TO_INT = {
+    "Tiny": 0,
+    "Standard": 1,
+    "High memory": 2,
+}
+INT_TO_KUBE_TYPE = {
+    v: k for k, v in KUBE_TYPE_TO_INT.iteritems()
+}
+
+
 def kube_type_to_int(kube_type):
-    int_types = {
-        "Tiny": 0,
-        "Standard": 1,
-        "High memory": 2,
-    }
-    return int_types[kube_type]
+    return KUBE_TYPE_TO_INT[kube_type]
+
+
+def kube_type_to_str(kube_type):
+    return INT_TO_KUBE_TYPE[kube_type]
 
 
 def assert_eq(actual, expected):
@@ -77,6 +86,12 @@ def assert_eq(actual, expected):
         raise AssertionError("Values are not equal\n"
                              "Expected: {0}\n"
                              "Actual  : {1}".format(expected, actual))
+
+
+def assert_not_eq(actual, not_expected):
+    if actual == not_expected:
+        raise AssertionError("Value should not be equal {}"
+                             .format(not_expected))
 
 
 def assert_in(item, sequence):
@@ -378,3 +393,19 @@ def suppress(exc=Exception):
 
 def get_test_full_name(test):
     return '{}::{}'.format(test.__module__, test.__name__)
+
+
+def http_share(cluster, host, shared_dir):
+
+    def _is_running ():
+        cmd = "curl -X GET http://{}".format("127.0.0.1")
+        try:
+            cluster.ssh_exec(host, cmd)
+            return True
+        except NonZeroRetCodeException:
+            return False
+
+    if not _is_running():
+        cmd = "docker run -d -p 80:80 -v {}:/usr/share/nginx/html/backups:ro " \
+              "nginx:latest".format(shared_dir)
+        cluster.ssh_exec(host, cmd)

@@ -108,65 +108,118 @@ def _check_if_pod_exists(pod_id):
         raise PodNotFound
 
 
+def _merge_graphs(base_graph, other_graphs, result_factory):
+    """Merge several graphs into one.
+    It takes time points from base_graph, and for other graphs it takes
+    nearest lesser-or-equal point.
+    It needs because sometimes different graphs that must be shown
+    on the same draw have close but little different timestamps.
+    (E.g. 'memory/request' and 'memory/usage' -- 'memory/request' can have
+    less points then 'memory/usage', but they are shown on one draw)
+
+    :param base_graph: Sorted list of `Point` that will be used as source
+        of timestamps.
+    :param other_graphs: List of sorted list of `Point` that used as
+        other graphs.
+    :param result_factory: Factory method that produces items of result list.
+        It's signature -- (time, point_of_base_graph, *points_of_other_graphs).
+    :return List of items that produced by `result_factory` callback.
+    """
+    rv = []
+    los = [0 for _ in other_graphs]
+    for b in base_graph:
+        time = b.time
+        others = []
+        for i, other_graph in enumerate(other_graphs):
+            z = _floor(other_graph, time, los[i])
+            if z < 0:
+                others.append(None)
+            else:
+                others.append(other_graph[z])
+                los[i] = z
+        rv.append(result_factory(time, b, *others))
+    return rv
+
+
 def _get_cpu_points(data, cpu_limit=None):
     if not data:
         return []
     if cpu_limit is None:
-        return [
-            (usage.time, 0.1 * limit.value, 0.1 * usage.value)
-            for limit, usage
-            in zip(data['cpu/request'], data['cpu/usage_rate'])
-            ]
+        limits = data.get('cpu/request', [])
+        usages = data.get('cpu/usage_rate', [])
+
+        def r_factory(time, usage, limit):
+            if limit is None:
+                return time, None, _mc2p(usage.value)
+            else:
+                return time, _mc2p(limit.value), _mc2p(usage.value)
+
+        return _merge_graphs(usages, [limits], r_factory)
     else:
-        return [
-            (usage.time, 0.1 * cpu_limit, 0.1 * usage.value)
-            for usage
-            in data['cpu/usage_rate']
-            ]
+        return [(usage.time, _mc2p(cpu_limit), _mc2p(usage.value))
+                for usage
+                in data.get('cpu/usage_rate', [])
+                ]
 
 
 def _get_memory_points(data, memory_limit=None):
     if not data:
         return []
     if memory_limit is None:
-        return [
-            (limit.time, _mb(limit.value), _mb(usage.value))
-            for limit, usage
-            in zip(data['memory/request'], data['memory/usage'])
-            ]
+        limits = data.get('memory/request', [])
+        usages = data.get('memory/usage', [])
+
+        def r_factory(time, usage, limit):
+            if limit is None:
+                return time, None, _mb(usage.value)
+            else:
+                return time, _mb(limit.value), _mb(usage.value)
+
+        return _merge_graphs(usages, [limits], r_factory)
     else:
         return [
             (usage.time, _mb(memory_limit), _mb(usage.value))
             for usage
-            in data['memory/usage']
+            in data.get('memory/usage', [])
             ]
 
 
 def _get_network_points(data):
     if not data:
         return []
-    return [
-        (rxb.time, rxb.value, txb.value)
-        for rxb, txb
-        in zip(data['network/rx_rate'], data['network/tx_rate'])
-        ]
+    rx_rate = data.get('network/rx_rate', [])
+    tx_rate = data.get('network/tx_rate', [])
+
+    def r_factory(time, rxb, txb):
+        return time, rxb.value, txb.value
+
+    return _merge_graphs(rx_rate, [tx_rate], r_factory)
 
 
 def _get_fs_points(data):
     if not data:
         return []
+
+    def r_factory(time, usage, limit):
+        if limit is None:
+            return time, None, _gb(usage.value)
+        else:
+            return time, _gb(limit.value), _gb(usage.value)
+
     return [
         {
             'device': limits['resource_id'],
-            'points': [
-                (limit.time, _gb(limit.value), _gb(usage.value))
-                for limit, usage
-                in zip(limits['values'], usages['values'])
-                ]
+            'points': _merge_graphs(
+                usages['values'], [limits['values']], r_factory)
         }
         for limits, usages
         in zip(data['filesystem/limit'], data['filesystem/usage'])
         ]
+
+
+def _mc2p(mlcores):
+    """Convert millicores to percents"""
+    return 0.1 * mlcores
 
 
 def _gb(bytes_):
@@ -225,3 +278,22 @@ class FsDiagram(Diagram):
     ylabel = 'GB'
     series = [{'label': 'available'}, {'label': 'used', 'fill': True}]
     series_colors = ['#4bb2c5', '#ff5800']
+
+
+def _floor(a_list, x_time, lo=0, hi=None):
+    """
+    Find nearest lesser-or-equal point.
+    :param a_list: Sorted list of `Point`. Point must have field 'time'.
+    :param x_time: Time to search.
+    :param lo: Index of point in list from which search will be started.
+    :param hi: Index of point in list on which search will be finished.
+    :return: Index of nearest lesser-or-equal point or -1 if timestamp of
+        first point of list is greater then `x_time`.
+    """
+    if lo < 0:
+        raise ValueError('lo must be non-negative')
+    if hi is None:
+        hi = len(a_list)
+    while lo < hi and x_time >= a_list[lo].time:
+        lo += 1
+    return lo - 1

@@ -14,10 +14,10 @@ class MainGroup(click.Group):
             return super(MainGroup, self).invoke(ctx)
         except APIError as e:
             ctx.obj.io.out_json(e.json, err=True)
-            raise SystemExit
+            raise SystemExit(1)
         except UnknownAnswer as e:
             ctx.obj.io.out_json(e.as_dict(), err=True)
-            raise SystemExit
+            raise SystemExit(1)
         except click.ClickException:
             # caught in super().main()
             raise

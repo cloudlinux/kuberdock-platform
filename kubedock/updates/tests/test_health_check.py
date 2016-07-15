@@ -4,6 +4,7 @@ import subprocess
 
 from kubedock.updates import health_check
 from kubedock.kapi import node_utils
+from kubedock.utils import NODE_STATUSES
 
 
 class TestHealthCheck(unittest.TestCase):
@@ -31,7 +32,7 @@ class TestHealthCheck(unittest.TestCase):
         mock_get_nodes_state.return_value = {
             'node1': {
                 'ssh': True,
-                'running': True,
+                NODE_STATUSES.running: True,
                 'ntp': True,
                 'disk': True
             }
@@ -42,7 +43,7 @@ class TestHealthCheck(unittest.TestCase):
         mock_get_nodes_state.return_value = {
             'node1': {
                 'ssh': True,
-                'running': True,
+                NODE_STATUSES.running: True,
                 'ntp': False,
                 'disk': True
             }
@@ -53,7 +54,7 @@ class TestHealthCheck(unittest.TestCase):
         mock_get_nodes_state.return_value = {
             'node1': {
                 'ssh': True,
-                'running': True,
+                NODE_STATUSES.running: True,
                 'ntp': True,
                 'disk': True
             }
@@ -121,7 +122,7 @@ class TestHealthCheck(unittest.TestCase):
             'ssh': True,
             'ntp': True,
             'disk': True,
-            'running': True
+            NODE_STATUSES.running: True
         }
         mock_node_utils.return_value = [{'hostname': 'node1'},
                                         {'hostname': 'node2'}]

@@ -11,6 +11,7 @@ from kubedock.core import db
 from kubedock.pods import models as pod_models
 from kubedock.testutils.testcases import DBTestCase
 from kubedock.usage import models as usage_models
+from kubedock.utils import NODE_STATUSES
 from .. import es_logs
 
 
@@ -254,7 +255,7 @@ class TestCheckLogsPod(DBTestCase):
             ip='12.13.14.15',
             hostname='test-node-1',
             kube=bill_models.Kube.get_default_kube(),
-            state='running',
+            state=NODE_STATUSES.running,
         )
         self.internal_user = User.get_internal()
         self.pod = self.fixtures.pod(name='logs pod',

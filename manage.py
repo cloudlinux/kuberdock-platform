@@ -13,7 +13,7 @@ from kubedock.api import create_app
 from kubedock.exceptions import APIError
 from kubedock.kapi.nodes import create_node, delete_node
 from kubedock.validation import check_node_data
-from kubedock.utils import UPDATE_STATUSES
+from kubedock.utils import UPDATE_STATUSES, NODE_STATUSES
 from kubedock.core import db
 from kubedock.models import User, Pod
 from kubedock.pods.models import PersistentDisk
@@ -133,7 +133,7 @@ def wait_for_nodes(nodes_list, timeout, verbose=False):
                 raise WaitTimeoutException("Node `%s` was not found." % nhost)
             k8s_node = get_one_node(db_node.id)
             state = k8s_node['status']
-            if state == 'troubles':
+            if state == NODE_STATUSES.troubles:
                 if nhost not in nodes_in_trouble:
                     nodes_in_trouble[nhost] = time.time() + WAIT_TROUBLE_TIMEOUT
                 if time.time() > nodes_in_trouble[nhost]:
@@ -145,7 +145,7 @@ def wait_for_nodes(nodes_list, timeout, verbose=False):
                     _print("Node '{}' state is 'troubles' but acceptable "
                            "troubles timeout '{}'s is not reached yet..".format(
                             nhost, WAIT_TROUBLE_TIMEOUT))
-            elif state == 'running':
+            elif state == NODE_STATUSES.running:
                 host_list.remove(nhost)
             else:
                 _print("Node '{}' state is '{}', continue waiting..".format(

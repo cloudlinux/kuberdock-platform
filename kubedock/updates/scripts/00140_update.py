@@ -20,7 +20,7 @@ from kubedock.system_settings.models import SystemSettings
 from kubedock.updates.helpers import (close_all_sessions, downgrade_db,
                                       install_package, reboot_node,
                                       start_service, stop_service, upgrade_db)
-from kubedock.utils import randstr
+from kubedock.utils import randstr, NODE_STATUSES
 
 u124_old = '/index.txt'
 u124_new = '/var/lib/kuberdock/k8s2etcd_resourceVersion'
@@ -61,7 +61,7 @@ def upgrade_localstorage_paths(upd):
 
         timeout = 60
         if node is not None:
-            with settings(hide('running', 'warnings', 'stdout', 'stderr'),
+            with settings(hide(NODE_STATUSES.running, 'warnings', 'stdout', 'stderr'),
                           host_string=node.hostname, warn_only=True):
                 try:
                     put('/var/opt/kuberdock/node_network_plugin.py',

@@ -14,7 +14,7 @@ from kubedock.exceptions import APIError
 from kubedock.kapi import nodes
 from kubedock.nodes.models import Node
 from kubedock.testutils.testcases import DBTestCase
-
+from kubedock.utils import NODE_STATUSES
 
 class TestNodes(DBTestCase):
     def setUp(self):
@@ -198,7 +198,7 @@ class TestNodes(DBTestCase):
         is_ceph_mock.assert_called_once_with(node1.hostname)
         add_node_to_k8s_mock.assert_called_once_with(
             node1.hostname, node1.kube_id, False)
-        self.assertEqual(node1.state, 'completed')
+        self.assertEqual(node1.state, NODE_STATUSES.completed)
         self.assertFalse(add_node_mock.apply_async.called)
 
 

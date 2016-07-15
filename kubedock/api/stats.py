@@ -11,7 +11,7 @@ from kubedock.login import auth_required
 from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod
 from kubedock.rbac import check_permission
-from kubedock.utils import KubeUtils
+from kubedock.utils import KubeUtils, NODE_STATUSES
 
 stats = Blueprint('stats', __name__, url_prefix='/stats')
 
@@ -32,7 +32,7 @@ def nodes(hostname):
     if node is None:
         raise APIError('Unknown node', 404)
 
-    if node.state != 'completed':
+    if node.state != NODE_STATUSES.completed:
         raise NodeNotRunning
 
     resources = node_utils.get_one_node(node.id)['resources']

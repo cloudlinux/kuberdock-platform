@@ -16,7 +16,7 @@ from ...exceptions import APIError, NoSuitableNode
 from ..pod import Pod
 from ..images import Image
 from .. import podcollection
-from ...utils import POD_STATUSES
+from ...utils import POD_STATUSES, NODE_STATUSES
 from ...users.models import User
 from ...rbac.models import Role
 
@@ -601,9 +601,9 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         dbpod_mock.query.get.return_value = db_pod
 
         nodes_collection = [
-            {'id': str(uuid4()), 'status': 'deletion'},
-            {'id': str(uuid4()), 'status': 'troubles'},
-            {'id': str(uuid4()), 'status': 'running'}
+            {'id': str(uuid4()), 'status': NODE_STATUSES.deletion},
+            {'id': str(uuid4()), 'status': NODE_STATUSES.troubles},
+            {'id': str(uuid4()), 'status': NODE_STATUSES.running}
         ]
         get_nodes_mock.return_value = nodes_collection
 
@@ -613,9 +613,9 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         self.assertTrue(res)
 
         nodes_collection = [
-            {'id': str(uuid4()), 'status': 'deletion'},
-            {'id': str(uuid4()), 'status': 'troubles'},
-            {'id': str(uuid4()), 'status': 'troubles'}
+            {'id': str(uuid4()), 'status': NODE_STATUSES.deletion},
+            {'id': str(uuid4()), 'status': NODE_STATUSES.troubles},
+            {'id': str(uuid4()), 'status': NODE_STATUSES.troubles}
         ]
         get_nodes_mock.return_value = nodes_collection
 

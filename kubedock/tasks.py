@@ -25,7 +25,7 @@ from flask import current_app
 from .core import db, ssh_connect
 from .utils import (
     update_dict, get_api_url, send_event, send_logs, k8s_json_object_hook,
-    get_timezone,
+    get_timezone, NODE_STATUSES, POD_STATUSES
 )
 from .models import Pod, ContainerState, PodState, PersistentDisk, User
 from .nodes.models import Node, NodeAction, NodeFlag, NodeFlagNames
@@ -59,7 +59,7 @@ class AddNodeTask(celery.Task):
         with self.flask_app.app_context():
             node_id = kwargs.get('node_id', args[0])
             db_node = Node.get_by_id(node_id)
-            db_node.state = 'troubles'
+            db_node.state = NODE_STATUSES.troubles
             db.session.commit()
             send_event('node:change', {'id': db_node.id})
 
@@ -345,7 +345,7 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
 
         ssh.close()
         
-        db_node.state = 'completed'
+        db_node.state = NODE_STATUSES.completed
         db.session.commit()
         send_event('node:change', {'id': db_node.id})
 
@@ -437,7 +437,7 @@ def fix_pods_timeline():
     # Sometime later it can be deleted (now is 2016-04-06).
     non_consistent_pss = db.session.query(PodState) \
         .join(PodState.pod).filter(
-        Pod.status == 'deleted',
+        Pod.status == POD_STATUSES.deleted,
         PodState.end_time.is_(None))
     closed_states = 0
     for ps in non_consistent_pss:

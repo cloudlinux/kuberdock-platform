@@ -61,6 +61,18 @@ class POD_STATUSES:
     deleting = 'deleting'
 
 
+class NODE_STATUSES:
+    """
+    Possible node statuses
+    """
+    completed = 'completed'
+    pending = 'pending'
+    running = 'running'
+    deletion = 'deletion'
+    autoadded = 'autoadded'
+    troubles = 'troubles'
+
+
 def catch_error(action, trigger):
     """
     The decorator catches exception if any and runs corresponding actions

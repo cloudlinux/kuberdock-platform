@@ -18,7 +18,7 @@ from ..nodes.models import Node, NodeFlagNames
 from ..pods.models import PersistentDisk, PersistentDiskStatuses, Pod
 from ..users.models import User
 from ..usage.models import PersistentDiskState
-from ..utils import send_event_to_role, atomic
+from ..utils import send_event_to_role, atomic, NODE_STATUSES
 from ..settings import (
     SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR,
     NODE_LOCAL_STORAGE_PREFIX, CEPH_CLIENT_USER, CEPH_KEYRING_PATH)
@@ -584,7 +584,7 @@ def run_remote_command(host_string, command, timeout=NODE_COMMAND_TIMEOUT,
     If result of execution is expected in json format, then the output will
     be treated as json.
     """
-    with settings(hide('running', 'warnings', 'stdout', 'stderr'),
+    with settings(hide(NODE_STATUSES.running, 'warnings', 'stdout', 'stderr'),
                   host_string=host_string,
                   warn_only=True):
         return execute_run(command, timeout=timeout, jsonresult=jsonresult,
@@ -794,7 +794,7 @@ class CephStorage(PersistentStorage):
         for node in nodes:
             k8s_node = node_utils._get_k8s_node_by_host(node.hostname)
             status, _ = node_utils.get_status(node, k8s_node)
-            if status == 'running':
+            if status == NODE_STATUSES.running:
                 return node
         raise NoNodesError("Can't find node running with ceph")
 
@@ -1502,7 +1502,7 @@ def _get_alive_nodes():
     """
     nodes = node_utils.get_nodes_collection()
     return {
-        item['id']: item['ip'] for item in nodes if item['status'] == 'running'
+        item['id']: item['ip'] for item in nodes if item['status'] == NODE_STATUSES.running
     }
 
 

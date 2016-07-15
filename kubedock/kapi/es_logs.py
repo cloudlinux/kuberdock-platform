@@ -12,6 +12,7 @@ from ..exceptions import APIError
 from ..nodes.models import Node
 from ..usage.models import ContainerState as CS
 from ..users.models import User
+from ..utils import NODE_STATUSES
 
 
 CONTAINER_POSTFIX = 'Contact the administrator if the problem persists.'
@@ -204,7 +205,7 @@ def _check_logs_pod(host):
     node = Node.query.filter_by(ip=host).first()
     if node is None:
         return 'Node not found ({0})'.format(host)
-    elif node.state not in ('completed', 'running'):
+    elif node.state not in (NODE_STATUSES.completed, NODE_STATUSES.running):
         return 'Node is in {0} state'.format(node.state)
 
     pod_name = get_kuberdock_logs_pod_name(node.hostname)

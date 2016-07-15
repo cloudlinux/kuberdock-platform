@@ -32,7 +32,7 @@ from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
-from ..utils import (POD_STATUSES, atomic, update_dict, send_event_to_user,
+from ..utils import (POD_STATUSES, NODE_STATUSES, atomic, update_dict, send_event_to_user,
                      send_event_to_role, retry)
 from .node_utils import get_external_node_ip
 from ..nodes.models import Node
@@ -1043,7 +1043,7 @@ class PodCollection(object):
 
         nodes_list = get_nodes_collection(kube_type=pod.kube_type)
         running_nodes = [node for node in nodes_list
-                         if node['status'] == 'running']
+                         if node['status'] == NODE_STATUSES.running]
         return len(running_nodes) > 0
 
 

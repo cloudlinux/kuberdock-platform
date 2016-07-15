@@ -8,6 +8,7 @@ from fabric.api import env, run, output
 from fabric.network import disconnect_all
 from fabric.exceptions import NetworkError, CommandTimeout
 from kubedock.core import ssh_connect
+from kubedock.utils import NODE_STATUSES
 
 if __name__ == '__main__' and __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(
@@ -29,10 +30,10 @@ MESSAGES = {
     'disk': "\tLow disk space: {}",
     'services': "\tSome services in wrong state: {}",
     'ntp': "\tTime not synced. Please either synchronize it manually or wait several minutes (up to 20) and repeat",
-    'running': "\tNode not running in kubernetes",
+    NODE_STATUSES.running: "\tNode not running in kubernetes",
     'ssh': "\tCan't access node from master through ssh",
     'pods': "Some internal pods in wrong state: {}",
-    'pending': "\tThe node is under installation. Please wait for its completion to upgrade"
+    NODE_STATUSES.pending: "\tThe node is under installation. Please wait for its completion to upgrade"
 }
 
 master_services = ['etcd', 'influxdb', 'kube-apiserver',
@@ -78,11 +79,11 @@ def can_ssh_to_host(hostname):
 
 def get_node_state(node):
     status = {}
-    if node.get('status') == 'pending':
-        status['pending'] = False
+    if node.get('status') == NODE_STATUSES.pending:
+        status[NODE_STATUSES.pending] = False
         return status
     hostname = node['hostname']
-    status['running'] = node.get('status') == 'running'
+    status[NODE_STATUSES.running] = node.get('status') == NODE_STATUSES.running
     env.host_string = hostname
     try:
         status['ntp'] = False
@@ -171,7 +172,7 @@ def check_nodes():
     except (SystemExit, Exception) as e:
         msg.append("Can't get nodes list because of {}".format(e.message))
     pendings = [get_kuberdock_logs_pod_name(node)
-                for node, state in states.items() if 'pending' in state]
+                for node, state in states.items() if NODE_STATUSES.pending in state]
     if states and len(pendings) != len(states):
         try:
             pod_states = get_internal_pods_state()

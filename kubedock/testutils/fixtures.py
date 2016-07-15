@@ -8,7 +8,7 @@ import responses
 
 from kubedock.billing.fixtures import add_kubes_and_packages
 from kubedock.core import db
-from kubedock.utils import randstr
+from kubedock.utils import randstr, NODE_STATUSES
 from kubedock.kapi.node import Node as K8SNode
 from kubedock.models import User, Pod
 from kubedock.billing.models import Kube
@@ -102,7 +102,7 @@ def node(hostname=None, ip=None, kube_id=None, owner=None):
     if hostname is None:
         hostname = randstr()
 
-    return Node(ip=ip, hostname=hostname, kube_id=kube_id.id, state='pending')
+    return Node(ip=ip, hostname=hostname, kube_id=kube_id.id, state=NODE_STATUSES.pending)
 
 
 def kube_type(**kwargs):

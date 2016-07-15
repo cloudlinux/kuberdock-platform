@@ -13,7 +13,7 @@ from flask import current_app
 
 from kubedock.core import db, ssh_connect, ConnectionPool
 from kubedock.kapi import licensing
-from kubedock.utils import get_version
+from kubedock.utils import get_version, NODE_STATUSES
 from kubedock.kapi.users import UserCollection
 from kubedock.nodes.models import Node
 from kubedock.pods.models import (
@@ -174,7 +174,7 @@ def get_node_container_counts(ssh):
     _, o, _ = ssh.exec_command('docker ps --format "{{.ID}}"|wc -l')
     if o.channel.recv_exit_status() == 0:
         try:
-            counters['running'] = int(o.read())
+            counters[NODE_STATUSES.running] = int(o.read())
         except:
             pass
     _, o, _ = ssh.exec_command('docker ps -a --format "{{.ID}}"|wc -l')
@@ -201,7 +201,7 @@ def get_node_user_containers_counts(ssh):
     )
     if o.channel.recv_exit_status() == 0:
         try:
-            counters['running'] = int(o.read())
+            counters[NODE_STATUSES.running] = int(o.read())
         except:
             pass
     return counters
@@ -282,7 +282,7 @@ def get_pods_info():
         Pod.owner_id != internal_user_id,
     ).scalar()
     return {
-        'running': running_count,
+        NODE_STATUSES.running: running_count,
         'total': total_count
     }
 

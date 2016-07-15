@@ -8,7 +8,7 @@ from ..exceptions import APIError, PermissionDenied
 from ..rbac import check_permission
 from ..login import auth_required
 from ..settings import KUBERDOCK_INTERNAL_USER
-from ..utils import KubeUtils, register_api, atomic, all_request_params
+from ..utils import KubeUtils, register_api, atomic, all_request_params, NODE_STATUSES
 from ..users import User
 from ..validation import check_pricing_api, package_schema, kube_schema, \
     packagekube_schema
@@ -457,7 +457,7 @@ def process_collection(data):
         'cores': sum(n.get('cores', 0) for n in nodes),
         'memory': sum(int(n.get('memory', {}).get('total', 0)) for n in nodes),
         'containers': sum(
-            n.get('user_containers', {}).get('running', 0) for n in nodes
+            n.get('user_containers', {}).get(NODE_STATUSES.running, 0) for n in nodes
         )
     }
 

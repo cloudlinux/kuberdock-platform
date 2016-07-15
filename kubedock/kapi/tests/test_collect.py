@@ -5,6 +5,7 @@ import unittest
 import mock
 
 from .. import collect
+from kubedock.utils import NODE_STATUSES
 
 
 class TestStatItem(unittest.TestCase):
@@ -84,9 +85,9 @@ class TestStatItem(unittest.TestCase):
         mock_inst = mock.MagicMock(
             **{'get.return_value': [
                 {'status': 'stopped'},
-                {'status': 'running'}]})
+                {'status': NODE_STATUSES.running}]})
         _PodCollection.return_value = mock_inst
-        expected = {'total': 2, 'running': 1}
+        expected = {'total': 2, NODE_STATUSES.running: 1}
         pods = collect.get_pods()
         mock_inst.get.assert_called_once_with(as_json=False)
         self.assertEqual(pods, expected,

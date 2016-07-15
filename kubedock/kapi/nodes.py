@@ -21,7 +21,7 @@ from ..settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, KUBERDOCK_INTERNAL_USER,
     ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE, NODE_INSTALL_TASK_ID)
 from ..users.models import User
-from ..utils import send_event_to_role, run_ssh_command, retry
+from ..utils import send_event_to_role, run_ssh_command, retry, NODE_STATUSES
 from ..validation import check_internal_pod_data
 from ..kd_celery import celery
 
@@ -70,7 +70,7 @@ def create_node(ip, hostname, kube_id,
                        'this kind of setup is not supported at this '
                        'moment')
     _check_node_hostname(ip, hostname)
-    node = Node(ip=ip, hostname=hostname, kube_id=kube_id, state='pending')
+    node = Node(ip=ip, hostname=hostname, kube_id=kube_id, state=NODE_STATUSES.pending)
 
     try:
         # clear old log before it pulled by SSE event
@@ -169,7 +169,7 @@ def mark_node_as_being_deleted(node_id):
     if node is None:
         raise APIError('Node not found, id = {}'.format(node_id))
     _check_node_can_be_deleted(node)
-    node.state = 'deletion'
+    node.state = NODE_STATUSES.deletion
     db.session.commit()
     return node
 
@@ -329,8 +329,7 @@ def _deploy_node(dbnode, do_deploy, with_testing,
             raise APIError('Error during adding node to k8s. {0}'
                            .format(err))
         else:
-            # TODO write all possible states to class
-            dbnode.state = 'completed'
+            dbnode.state = NODE_STATUSES.completed
             db.session.commit()
 
 

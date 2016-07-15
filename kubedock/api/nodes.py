@@ -9,6 +9,7 @@ from ..validation import check_int_id, check_node_data, check_hostname
 from ..kapi import nodes as kapi_nodes
 from ..kapi import node_utils
 from ..settings import WITH_TESTING, AWS, CEPH
+from ..utils import NODE_STATUSES
 
 
 nodes = Blueprint('nodes', __name__, url_prefix='/nodes')
@@ -87,7 +88,7 @@ def patch_item(node_id):
         raise APIError('Unsupported command')
     node = kapi_nodes.mark_node_as_being_deleted(node_id)
     kapi_nodes.delete_node(node=node)
-    return jsonify({'status': 'OK', 'data': {'status': 'deletion'}})
+    return jsonify({'status': 'OK', 'data': {'status': NODE_STATUSES.deletion}})
 
 
 @nodes.route('/<node_id>', methods=['DELETE'])

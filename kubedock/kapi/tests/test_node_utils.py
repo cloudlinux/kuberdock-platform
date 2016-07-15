@@ -16,6 +16,7 @@ from kubedock.kapi import node_utils
 from kubedock.testutils.testcases import DBTestCase
 from kubedock import settings
 from kubedock.nodes.models import Node
+from kubedock.utils import NODE_STATUSES
 
 
 class TestNodeUtils(DBTestCase):
@@ -69,7 +70,7 @@ class TestNodeUtils(DBTestCase):
         ip3 = '192.168.1.4'
         host3 = 'host3'
         kube_type = Kube.get_default_kube_type()
-        node3 = Node(ip=ip3, hostname=host3, kube_id=kube_type, state='pending')
+        node3 = Node(ip=ip3, hostname=host3, kube_id=kube_type, state=NODE_STATUSES.pending)
         db.session.add(node3)
         db.session.commit()
         get_all_nodes_mock.return_value = [
@@ -101,7 +102,7 @@ class TestNodeUtils(DBTestCase):
                 'ip': node1.ip,
                 'hostname': node1.hostname,
                 'kube_type': node1.kube_id,
-                'status': 'running',
+                'status': NODE_STATUSES.running,
                 'reason': '',
                 'install_log': '',
                 'resources': {}
@@ -110,14 +111,14 @@ class TestNodeUtils(DBTestCase):
         self.assertEqual(res[1]['id'], node2.id)
         self.assertEqual(res[1]['ip'], node2.ip)
         self.assertEqual(res[1]['hostname'], node2.hostname)
-        self.assertTrue(res[1]['status'], 'troubles')
+        self.assertTrue(res[1]['status'], NODE_STATUSES.troubles)
         self.assertTrue('qwerty' in res[1]['reason'])
         self.assertTrue('asdfg' in res[1]['reason'])
 
         self.assertEqual(res[2]['id'], node3.id)
         self.assertEqual(res[2]['ip'], node3.ip)
         self.assertEqual(res[2]['hostname'], node3.hostname)
-        self.assertTrue(res[2]['status'], 'pending')
+        self.assertTrue(res[2]['status'], NODE_STATUSES.pending)
 
     @mock.patch.object(node_utils, 'SystemSettings')
     @mock.patch.object(node_utils, '_get_k8s_node_by_host')
@@ -145,7 +146,7 @@ class TestNodeUtils(DBTestCase):
             'ip': node1.ip,
             'hostname': node1.hostname,
             'kube_type': node1.kube_id,
-            'status': 'troubles',
+            'status': NODE_STATUSES.troubles,
             'resources': {}
         }, node)
         get_k8s_node_mock.assert_called_once_with(node1.hostname)
@@ -175,7 +176,7 @@ class TestNodeUtils(DBTestCase):
                 'reason': '',
                 'hostname': node1.hostname,
                 'kube_type': node1.kube_id,
-                'status': 'running',
+                'status': NODE_STATUSES.running,
                 'resources': {
                     "cpu": str(float(self.cpu)),
                     "memory": float(self.mem),

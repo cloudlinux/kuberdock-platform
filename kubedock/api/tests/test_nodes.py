@@ -5,6 +5,7 @@ import mock
 from mock import Mock
 
 from kubedock.testutils.testcases import APITestCase
+from kubedock.utils import NODE_STATUSES
 
 
 class NodesUrl(object):
@@ -113,7 +114,7 @@ class TestNodeCRUD(APITestCase):
             })
 
         self.assert200(response)
-        self.assertTrue(response.json['data']['status'] == 'deletion')
+        self.assertTrue(response.json['data']['status'] == NODE_STATUSES.deletion)
 
     @mock.patch('kubedock.kapi.nodes.delete_node')
     def test_delete(self, *_):

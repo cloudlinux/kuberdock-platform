@@ -7,7 +7,7 @@ from flask import current_app
 
 from ..nodes.models import Node, NodeFlag, LocalStorageDevices
 from ..system_settings.models import SystemSettings
-from ..utils import from_binunit, from_siunit, get_api_url
+from ..utils import from_binunit, from_siunit, get_api_url, NODE_STATUSES
 from ..billing.models import Kube
 from ..exceptions import APIError
 from ..core import db, ssh_connect
@@ -104,7 +104,7 @@ def _fix_missed_nodes(nodes, kuberenetes_nodes_hosts):
                     "Check /etc/hosts file for correct Node records"
                     .format(host))
             m = Node(ip=resolved_ip, hostname=host, kube_id=default_kube_id,
-                     state='autoadded')
+                     state=NODE_STATUSES.autoadded)
             add_node_to_db(m)
             res.append(m)
     return res
@@ -119,14 +119,14 @@ def get_status(node, k8s_node=None):
     """
     if k8s_node is not None:
         if _node_is_active(k8s_node):
-            if node.state == 'deletion':
-                res_node_status = 'deletion'
+            if node.state == NODE_STATUSES.deletion:
+                res_node_status = NODE_STATUSES.deletion
                 node_status_message = 'Node marked as being deleting'
             else:
-                res_node_status = 'running'
+                res_node_status = NODE_STATUSES.running
                 node_status_message = ''
         else:
-            res_node_status = 'troubles'
+            res_node_status = NODE_STATUSES.troubles
             condition = _get_node_condition(k8s_node)
             if condition:
                 if condition['status'] == 'Unknown':
@@ -158,7 +158,7 @@ def get_status(node, k8s_node=None):
                 # in 1m after adding to cluster k8s add "Unknown" condition
                 # to it with reason "NodeStatusNeverUpdated" that we display
                 # correctly as "troubles" with some possible reasons
-                res_node_status = 'pending'
+                res_node_status = NODE_STATUSES.pending
                 node_status_message = (
                     'Node is a member of KuberDock cluster but '
                     'does not provide information about its condition\n'
@@ -167,15 +167,15 @@ def get_status(node, k8s_node=None):
                     '======================================'
                 )
     else:
-        if node.state == 'pending':
-            res_node_status = 'pending'
+        if node.state == NODE_STATUSES.pending:
+            res_node_status = NODE_STATUSES.pending
             node_status_message = (
                 'Node is not a member of KuberDock cluster\n'
                 'Possible reasons:\n'
                 'Node is in installation progress\n'
             )
         else:
-            res_node_status = 'troubles'
+            res_node_status = NODE_STATUSES.troubles
             node_status_message = (
                 'Node is not a member of KuberDock cluster\n'
                 'Possible reasons:\n'
@@ -189,7 +189,7 @@ def get_status(node, k8s_node=None):
 
 def node_status_running(k8snode):
     k8snode_info = get_one_node(k8snode.id)
-    return k8snode_info['status'] == 'running'
+    return k8snode_info['status'] == NODE_STATUSES.running
 
 
 def add_node_to_db(node):
@@ -239,7 +239,7 @@ def _get_node_condition(x):
 
 
 def get_install_log(node_status, hostname):
-    if node_status == 'running':
+    if node_status == NODE_STATUSES.running:
         return ''
     else:
         try:

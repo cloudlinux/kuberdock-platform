@@ -180,10 +180,25 @@ class IO(object):
     def confirm(self, text, **kwargs):
         """Prompts for confirmation (yes/no question).
         Parameter `self.json_only` must be set to False, otherwise
-        `AssertionError` will be raised.
+        `click.UsageError` will be raised.
         :param text: Text to be prompted.
         :param kwargs: Is passed to `click.confirm()`.
         :return: True or False.
         """
-        assert not self.json_only
+        if self.json_only:
+            raise click.UsageError(
+                'Cannot perform confirmation in json-only mode')
         return click.confirm(text, **kwargs)
+
+    def prompt(self, text, **kwargs):
+        """Prompts a user for input.
+        Parameter `self.json_only` must be set to False, otherwise
+        `click.UsageError` will be raised.
+        :param text: Text to be prompted.
+        :param kwargs: Is passed to `click.prompt()`.
+        :return: User input.
+        """
+        if self.json_only:
+            raise click.UsageError(
+                'Cannot perform user input in json-only mode')
+        return click.prompt(text, **kwargs)

@@ -5,7 +5,7 @@ from utils import data_argument
 from ..kdclient.exceptions import APIError
 
 
-@main.group(help='Restore objects from backups.')
+@main.group(help='Commands for restore objects from backups.')
 def restore():
     pass
 

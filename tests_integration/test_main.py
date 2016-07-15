@@ -8,7 +8,7 @@ from tests_integration.lib.pipelines import pipeline
 def test_cadvisor_errors(cluster):
     """Check cadvisor error/warning appears in uwsgi (AC-3499)"""
 
-    cluster.kdctl('license show')
+    cluster.kdctl('pricing license show')
 
     # TODO: Remove once AC-3618 implemented
     cmd = "[ $(journalctl --since '15 min ago' -m -t uwsgi | " \

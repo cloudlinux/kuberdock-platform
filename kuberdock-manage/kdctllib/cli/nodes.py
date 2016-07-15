@@ -4,7 +4,7 @@ from main import main
 from utils import data_argument
 
 
-@main.group(help='Nodes management.')
+@main.group(help='Commands for nodes management.')
 def nodes():
     pass
 

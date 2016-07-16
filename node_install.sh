@@ -91,6 +91,7 @@ clean_node(){
         yum -y remove kubernetes*
         yum -y remove docker
         yum -y remove flannel*
+        yum -y remove kuberdock-cadvisor  # obsolete package
     } &> /dev/null
     remove_unneeded python-requests
     remove_unneeded python-ipaddress

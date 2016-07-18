@@ -13,7 +13,11 @@ The script uses following environment variables:
 IMPORTANT: This script is for Python 3
 """
 
+from __future__ import print_function
+
 import os
+import sys
+import time
 
 import requests
 
@@ -22,32 +26,69 @@ MASTER = os.environ.get('MASTER', 'master')
 TOKEN = os.environ.get('TOKEN', '')
 NODENAME = os.environ.get('NODENAME', '')
 
-pods = requests.get('https://{}/api/podapi?token={}'.format(MASTER, TOKEN),
-                    verify=False).json()['data']
+# Number of maximum retries to fetch own clusterIP address
+# If it's not possible, then script will fail and the pod won't start.
+MAX_RETRY_COUNT = 200
+# Time in seconds to wait between retries
+RETRY_PAUSE = 1
+
+
+LOGS_POD_PREFIX = 'kuberdock-logs-'
+
+
+def eprint(msg):
+    print(msg, file=sys.stderr)
+
+
+def discover_cluster(url, ips):
+    """Function retrieves all existing logs pods from Kuberdock master,
+    fills its service IP array, and finds service IP for the current pod.
+    :param url: Full URL to send request for pods
+    :param ips: list wich will be extended with found service IPs of logs pods
+    :return: own service IP address, or None if self service IP is not found.
+    """
+    self_ip = None
+    try:
+        pods = requests.get(url, verify=False).json()['data']
+    except Exception as err:
+        eprint('Failed to get pods from: {}\n{}'.format(url, err))
+        return self_ip
+
+    for pod in pods:
+        name = pod['name']
+        if not name.startswith(LOGS_POD_PREFIX):
+            continue
+        if pod['status'] != 'running':
+            continue
+
+        _, hostname = name.split(LOGS_POD_PREFIX, 1)
+        ip = pod.get('podIP', None)
+        if not ip:
+            continue
+        if hostname == NODENAME:
+            self_ip = ip
+            # skip self in unicast.hosts
+            continue
+        ips.append(ip)
+    return self_ip
+
 
 node_ip = None
-cluster_ips = []
+master_url = 'https://{}/api/podapi?token={}'.format(MASTER, TOKEN)
 
-for pod in pods:
-    name = pod['name']
-    if not name.startswith('kuberdock-logs-'):
-        continue
-    if pod['status'] != 'running':
-        continue
+for i in range(MAX_RETRY_COUNT):
+    cluster_ips = []
+    eprint('Trying to get pods config. Iteration: {}'.format(i))
+    node_ip = discover_cluster(master_url, cluster_ips)
+    if node_ip is not None:
+        break
+    eprint('Failed to fetch own clusterIP on {} iteration'.format(i))
+    time.sleep(RETRY_PAUSE)
 
-    _, hostname = name.split('kuberdock-logs-', 1)
-    ip = pod['podIP']
-    if hostname == NODENAME:
-        node_ip = ip
-        # skip self in unicast.hosts
-        continue
-    if ip:
-        cluster_ips.append(ip)
-    else:
-        cluster_ips.append(hostname)
+if not node_ip:
+    sys.exit('Failed to fetch own cluster IP. Exit.')
 
-if node_ip:
-    print('network.publish_host: {}'.format(node_ip))
+print('network.publish_host: {}'.format(node_ip))
 print('network.bind_host: 0.0.0.0')
 
 print('discovery.zen.ping.multicast.enabled: false')

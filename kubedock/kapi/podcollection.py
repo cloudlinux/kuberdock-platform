@@ -910,7 +910,16 @@ class PodCollection(object):
         :return: direct_access dict. see :meth:`._direct_access`
 
         """
-        direct_access = self._direct_access(pod.id, origin_pass)
+        try:
+            direct_access = self._direct_access(pod.id, origin_pass)
+        except APIError as e:
+            # Level is not error because it's maybe temporary problem on the
+            # cluster (node reboot) and we don't want to receive all such
+            # events in Sentry
+            current_app.logger.warning(
+                "Can't update direct access attributes: {}".format(e))
+            return
+
         pod.direct_access = json.dumps(direct_access)
         pod.save()
         if not silent:

@@ -40,6 +40,8 @@ import zipfile
 
 from contextlib import contextmanager
 
+LOCKFILE = '/var/lock/kd-ceph-backup.lock'
+
 logger = logging.getLogger("kd_master_backup")
 logger.setLevel(logging.INFO)
 
@@ -52,7 +54,7 @@ formatter = logging.Formatter(
 stdout_handler.setFormatter(formatter)
 
 
-class BackupException(Exception):
+class BackupError(Exception):
     pass
 
 
@@ -61,6 +63,28 @@ def zipdir(path, ziph):
         for fn in files:
             full_fn = os.path.join(root, fn)
             ziph.write(full_fn, os.path.relpath(full_fn, path))
+
+
+def lock(lockfile):
+    def decorator(clbl):
+        def wrapper(*args, **kwargs):
+            try:
+                # Create or fail
+                os.open(lockfile, os.O_CREAT | os.O_EXCL)
+            except OSError:
+                raise BackupError(
+                    "Another backup/restore process already running."
+                    " If it is not, try to remove `{0}` and "
+                    "try again.".format(lockfile))
+            try:
+                result = clbl(*args, **kwargs)
+            finally:
+                os.unlink(lockfile)
+            return result
+
+        return wrapper
+
+    return decorator
 
 
 def mountpoint_is_busy(mountpoint):
@@ -80,7 +104,7 @@ def get_local_keyring_path(keyring):
     return os.path.join(CONF_PATH, basename)
 
 
-def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors,
+def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors, callback,
                    **kwargs):
     """ Backup all CEPH drives for pool
     """
@@ -102,16 +126,16 @@ def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors,
 
     mountpoint = os.environ.get('KD_CEPH_BACKUP_MOUNTPOINT', '/mnt')
     if not os.path.exists(mountpoint):
-        raise BackupException("Mountpoint `{0}` not exists. Please, "
+        raise BackupError("Mountpoint `{0}` not exists. Please, "
                               "create it or specify free mount point via"
                               " KD_CEPH_BACKUP_MOUNTPOINT".format(mountpoint))
     if mountpoint_is_busy(mountpoint):
-        raise BackupException("Mountpoint `{0}` already mounted. Please, "
+        raise BackupError("Mountpoint `{0}` already mounted. Please, "
                               "release it or specify free mount point via"
                               " KD_CEPH_BACKUP_MOUNTPOINT".format(mountpoint))
 
     if not all([pool, monitors, keyring, auth_user]):
-        raise BackupException("Insufficient ceph parameters")
+        raise BackupError("Insufficient ceph parameters")
 
     rbd_with_creds = ['rbd', '-n', 'client.{0}'.format(auth_user),
                       '--keyring={0}'.format(keyring), '-m', monitors]
@@ -124,7 +148,7 @@ def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors,
     @contextmanager
     def clone(drive):
         if get_image_format(drive) < 2:
-            raise BackupException(
+            raise BackupError(
                 "Looks like your Ceph cluster uses images format 1. We "
                 "require image format 2 to do a backup. Please migrate "
                 "cluster to image format 2 yourself (http://ceph.com/planet/"
@@ -192,6 +216,15 @@ def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors,
             subprocess.check_call(['xfs_repair', device], stdout=devnull,
                                   stderr=devnull)
 
+    def handle(handler, result):
+        try:
+            subprocess.check_call("{0} {1}".format(callback, result),
+                                  shell=True)
+        except subprocess.CalledProcessError as err:
+            raise BackupError(
+                "Callback handler has failed with `{0}`".format(err))
+
+    @lock(LOCKFILE)
     def run_backup(drive):
         with clone(drive) as drive:
             with rbd_device_context(drive) as device:
@@ -212,6 +245,8 @@ def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors,
                         raise
                     os.rename(tmp_result, result)
                     logger.info('Backup created: {0}'.format(result))
+                    if callback:
+                        handle(callback, result)
 
     logger.info('Gathering images list')
     drives = subprocess.check_output(rbd_with_creds + ['ls', pool]).split()
@@ -228,7 +263,7 @@ def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors,
         logger.info('Proceed drive {0}'.format(drive))
         try:
             run_backup(drive)
-        except BackupException as err:
+        except BackupError as err:
             if not skip_errors:
                 raise
             logger.warning("Drive `{0}` not backuped due error '{1}'. "
@@ -255,6 +290,9 @@ def parse_args(args):
     parser.add_argument('-m', '--monitors', help="monitors to connect")
     parser.add_argument('-k', '--keyring')
     parser.add_argument('-n', '--id', dest='auth_user', help="auth user")
+    parser.add_argument("-e", '--callback',
+                        help='Callback for each backup file (backup path '
+                        'passed as a 1st arg)')
     parser.set_defaults(func=do_ceph_backup)
 
     return parser.parse_args(args)
@@ -269,7 +307,7 @@ def main():
 
     try:
         args.func(**vars(args))
-    except BackupException as err:
+    except BackupError as err:
         logger.error(err)
         exit(1)
 

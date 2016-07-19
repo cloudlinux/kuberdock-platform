@@ -2,6 +2,7 @@ import ConfigParser
 import collections
 import json
 import logging
+import hashlib
 import operator
 import os
 import stat
@@ -12,6 +13,9 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 GLOBAL_CONFIG = '/etc/kubecli.conf'
+
+logging.basicConfig()
+requests_logger = logging.getLogger('requests_logger')
 
 
 class NullHandler(logging.Handler):
@@ -38,13 +42,16 @@ class KubeQuery(object):
         self.password = password
         self.jsonify_errors = jsonify_errors
         self.token = token
+        self.conn = requests.Session()
+        self.conn.verify = False
+        self.request_logger = RequestsLogger(self.conn, requests_logger)
+        if kwargs.get('debug', False):
+            requests_logger.setLevel(logging.DEBUG)
 
     def _compose_args(self):
         args = {}
         if not self.token or self.token == 'None':
             args['auth'] = HTTPBasicAuth(self.user, self.password)
-        if self.url.startswith('https'):
-            args['verify'] = False
         return args
 
     def _raise_error(self, error_string):
@@ -109,19 +116,18 @@ class KubeQuery(object):
         :param res: resource to PUT request
         """
         args = self._compose_args()
-        return self._run('del', res, args)
+        return self._run('delete', res, args)
 
     def _run(self, act, res, args):
-        dispatcher = {
-            'get': requests.get,
-            'post': requests.post,
-            'put': requests.put,
-            'del': requests.delete
-        }
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                req = dispatcher.get(act, 'get')(self._make_url(res), **args)
+                url = self._make_url(res)
+                request_object = requests.Request(method=act, url=url, **args)
+                request_object = self.conn.prepare_request(request_object)
+                self.request_logger.log_curl_request(request_object)
+                req = self.conn.send(request_object)
+                self.request_logger.log_http_response(req)
                 return self._return_request(req)
         except requests.exceptions.ConnectionError as e:
             return self._raise_error(str(e))
@@ -220,6 +226,62 @@ class PrintOut(object):
             fmt = ''.join(
                 ['{{{0[0]}:<{0[1]}}}'.format(i) for i in self.fields])
             print fmt.format(**data)
+
+
+class RequestsLogger(object):
+    def __init__(self, session, logger):
+        self.session = session
+        self.logger = logger
+        if logger.level > logging.DEBUG:
+            def _do_nothing(*args, **kwargs):
+                pass
+            self.log_curl_request = _do_nothing
+            self.log_http_response = _do_nothing
+            self.req = _do_nothing
+            self.end = _do_nothing
+
+    def log_curl_request(self, request):
+        self.logger.debug('#################### Request ####################')
+        curl = ['curl -i -L -X %s' % request.method]
+
+        for (key, value) in request.headers.items():
+            header = '-H \'%s: %s\'' % self._process_header(key, value)
+            curl.append(header)
+
+        if not self.session.verify:
+            curl.append('-k')
+        elif isinstance(self.session.verify, basestring):
+            curl.append('--cacert %s' % self.session.verify)
+
+        if self.session.cert:
+            curl.append('--cert %s' % self.session.cert[0])
+            curl.append('--key %s' % self.session.cert[1])
+
+        if request.body:
+            curl.append('-d \'%s\'' % request.body)
+
+        curl.append('"%s"' % request.url)
+        self.logger.debug(' '.join(curl))
+
+    def log_http_response(self, resp):
+        self.logger.debug('#################### Response ###################')
+        status = (resp.raw.version / 10.0, resp.status_code, resp.reason)
+        dump = ['\nHTTP/%.1f %s %s' % status]
+        dump.extend(['%s: %s' % (k, v) for k, v in resp.headers.items()])
+        dump.append('')
+        dump.extend([resp.text, ''])
+        self.logger.debug('\n'.join(dump))
+        self.logger.debug('###################### End ######################')
+
+    @staticmethod
+    def _process_header(name, value):
+        if name in ('X-Auth-Token',):
+            v = value.encode('utf-8')
+            h = hashlib.sha1(v)
+            d = h.hexdigest()
+            return name, "{SHA1}%s" % d
+        else:
+            return name, value
 
 
 def make_config(args):

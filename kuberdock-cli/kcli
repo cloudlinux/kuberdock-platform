@@ -12,6 +12,7 @@ def process_args():
     parser.add_argument('-c', '--config', default='~/.kubecli.conf')
     parser.add_argument(
         '-j', '--json', action="store_true", help="Output data as JSON")
+    parser.add_argument('-d', '--debug', action="store_true", help="Turn on curl logging")
 
     subs = parser.add_subparsers(
         help="Commands",

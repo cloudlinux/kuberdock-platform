@@ -231,10 +231,11 @@ class _U151(_Update):
         # Patch RC specs
         upd.print_log('Restart pods to support ssh access...')
         pc = PodCollection()
+        query = Pod.query.filter(Pod.status != 'deleted')
         user = User.filter_by(username=settings.KUBERDOCK_INTERNAL_USER).one()
         dns_pod = Pod.filter_by(name='kuberdock-dns', owner=user).first()
-        query = Pod.query.filter(
-            Pod.status != 'deleted').filter(Pod.id != dns_pod.id)
+        if dns_pod:
+            query.filter(Pod.id != dns_pod.id)
         for dbpod in query:
             pod = pc._get_by_id(dbpod.id)
             pc._stop_pod(pod, block=True)

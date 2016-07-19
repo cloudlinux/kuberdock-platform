@@ -1082,6 +1082,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 period: App.userPackage.get('period'),
                 price: this.model.price,
                 kubesLimit: this.kubesLimit,
+                showDelete: !this.model.getPod().editOf()  // it's a new pod or...
+                    || this.model.collection.length > 1,  // there is more then one container
             };
         },
         onRender: function(){ this.ui.tooltip.tooltip(); },
@@ -1114,7 +1116,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
             // TODO: package change, package-kube relationship change
             this.listenTo(App.kubeTypeCollection, 'change update reset', this.pricingChanged);
-            this.on('show', function(){ this.checkKubeTypes(/*ensureSelected*/false);});
+            this.on('show', function(){ this.checkKubeTypes(/*ensureSelected*/false); });
         },
 
         templateHelpers: function() {
@@ -1226,7 +1228,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         checkKubeTypes: function(ensureSelected){
             if (this.model.get('kube_type') === Model.KubeType.noAvailableKubeTypes.id){
-                if (App.userPackage.getKubeTypes().any( function(kt){return kt.get('available'); }))
+                if (_.any(App.userPackage.getKubeTypes().pluck('available')))
                     Model.KubeType.noAvailableKubeTypes.notifyConflict();
                 else
                     Model.KubeType.noAvailableKubeTypes.notify();
@@ -1301,20 +1303,20 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         changeReplicas: function(evt){
             evt.stopPropagation();
-            this.model.set('replicas', parseInt($(evt.target).val().trim()));
+            this.model.set('replicas', parseInt($(evt.target).val().trim(), 10));
         },
 
         changeKubeType: function(evt){
             evt.stopPropagation();
-            var kube_id = parseInt(evt.target.value);
-            this.model.set('kube_type', kube_id);
+            var kubeID = parseInt(evt.target.value, 10);
+            this.model.set('kube_type', kubeID);
             this.render();
         },
 
         changePolicy: function(evt){
             evt.stopPropagation();
-            var restart_policy = $(evt.target).val();
-            this.model.set('restartPolicy', restart_policy);
+            var restartPolicy = $(evt.target).val();
+            this.model.set('restartPolicy', restartPolicy);
         },
 
         /**

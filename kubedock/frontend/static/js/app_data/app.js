@@ -254,6 +254,11 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
             App.controller.detachNotification(data);
         };
 
+        events.refresh = function(ev) {
+            App.cleanUp();
+            document.location.reload(true);
+        };
+
         _.mapObject(events, function(handler, eventName){
             source.addEventListener(eventName, handler, false);
         });
@@ -272,9 +277,14 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
             if (source.readyState !== 2)
                 return;
             source.close();
-            var lastEventId = that.lastEventId || options.lastID,
-                newOptions = _.extend(_.clone(options), {lastID: lastEventId});
-            setTimeout(_.bind(that.eventHandler, that, newOptions), timeOut);
+
+            // Try to ping API first: if the token has expired or got blocked,
+            // the user will be automatically redirected to the "log in" page.
+            App.currentUser.fetch().always(function(){
+                var lastEventId = that.lastEventId || options.lastID,
+                    newOptions = _.extend(_.clone(options), {lastID: lastEventId});
+                setTimeout(_.bind(that.eventHandler, that, newOptions), timeOut);
+            });
         };
     };
 

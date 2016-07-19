@@ -520,7 +520,7 @@ def listen_fabric(watch_url, list_url, func, verbose=1,
                                                    {'message': message},
                                                    'Admin')
                                 current_app.logger.error(
-                                    'skip event {}'.format(data))
+                                    'skip event {}'.format(data), exc_info=True)
 
                         redis.set(redis_key, evt_version)
                     retry = 0
@@ -584,7 +584,8 @@ def listen_fabric_etcd(url, func, list_func=None, verbose=1):
                             (see Settings, the License page)"
                         send_event_to_role(
                             'notify:error', {'message': message}, 'Admin')
-                        current_app.logger.error('skip event {}'.format(data))
+                        current_app.logger.error(
+                            'skip event {}'.format(data), exc_info=True)
                     index = int(data['node']['modifiedIndex']) + 1
                     retry = 0
                 except KeyboardInterrupt:

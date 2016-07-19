@@ -824,30 +824,9 @@
         }
         &.logs-tab{
             .export-logs {
-                color: #4e5665;
-                font-size: 13px;
-                line-height: 17px;
-                position: relative;
-                padding-left: 24px;
+                color: #1d1d1d;
                 margin-bottom: 20px;
                 text-decoration: none;
-                &:hover{
-                    color: #428bca;
-                    &:before{
-                        background-position: 0 -18px;
-                    }
-                }
-                &:before{
-                    top: 0;
-                    left: 0;
-                    bottom: 0;
-                    content: '';
-                    width: 15px;
-                    height: 17px;
-                    margin: auto;
-                    position: absolute;
-                    background: url('../img/export-ico.png') 0 0 no-repeat;
-                }
                 &.disabled{
                     .opacity(0.5);
                     &:hover{

@@ -468,7 +468,6 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             'click @ui.updateContainer'    : 'updateContainer',
             'click @ui.checkForUpdate'     : 'checkContainerForUpdate',
             'click @ui.changeKubeQty'      : 'changeKubeQty',
-            'click @ui.editContainerKubes' : 'editContainerKubes',
             'click @ui.cancelChange'       : 'closeChange',
             'keyup @ui.kubeVal'            : 'kubeVal'
         },
@@ -560,12 +559,6 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                     that.render();
                 }
             });
-        },
-
-        editContainerKubes: function(){
-            this.model.get('before').editKubesQty = true;
-            this.model.get('before').kubeVal = this.model.get('before').get('kubes');
-            this.render();
         },
 
         kubeVal: function(){

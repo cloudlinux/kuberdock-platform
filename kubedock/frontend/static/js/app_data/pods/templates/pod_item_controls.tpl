@@ -32,8 +32,10 @@
 </div>
 <div class="control-icons col-md-10 col-md-offset-2 col-sm-12 clearfix">
     <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 info">
-        <% if (publicIP) { %>
+        <% if (publicIP && publicIP !== 'true') { %>
             <div>Public IP: <a class="" href="http://<%- publicIP %>/" target="_blank"><%- publicIP %></a></div>
+        <% } else if (publicIP && publicIP === 'true') {%>
+            <div>Public IP: Public IP is not assigned yet</div>
         <% } %>
         <% if (publicName) { %>
             <div>Public name: <%- publicName %></div>

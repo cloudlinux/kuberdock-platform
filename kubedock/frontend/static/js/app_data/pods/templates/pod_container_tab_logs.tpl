@@ -42,7 +42,7 @@
                             <div>Kube Type: <%- kube_type.get('name') %></div>
                             <div>Restart policy: <%- restart_policy %></div>
                             <div class="editGroup">
-                                Number of Kubes: <!-- <span class="editContainerKubes"> --><%- kubes %><!--</span>-->
+                                Number of Kubes: <%- kubes %>
                                 <div class="editForm <%- editKubesQty === undefined ? 'hide' : '' %>">
                                     <input type="text" value="<%- kubeVal %>"/>
                                     <button class="cancel">Cancel</button>
@@ -74,13 +74,13 @@
                             <a class="export-logs pull-right disabled"
                                     data-toggle="tooltip" data-placement="top"
                                     title="Export container log to txt file (currently not available: <%= logsError %>)">
-                                Export
+                                <span>Export</span>
                             </a>
                         <% } else{ %>
                             <a class="export-logs pull-right" title="Export container log to txt file"
                                     download="<%= parentID %>_<%= id %>_logs.txt" target="_blank"
                                     href="/api/logs/container/<%= parentID %>/<%= id %>?size=200&text=true&token2=<%= token %>">
-                                Export
+                                <span>Export</span>
                             </a>
                         <% } %>
                     </div>

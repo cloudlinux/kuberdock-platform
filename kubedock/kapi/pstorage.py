@@ -238,8 +238,11 @@ class PersistentStorage(object):
 
     @classmethod
     def are_pod_volumes_compatible(cls, volumes, owner_id, pod_params):
-        """Should check if volumes of one pod can be created."""
-        return True
+        """Should check if volumes of one pod can be created.
+        Returns tuple of compatibility flag and pinned node name (
+        if volumes must be placed to that node only)
+        """
+        return True, None
 
     @classmethod
     def is_volume_of_the_class(cls, vol):
@@ -562,9 +565,8 @@ def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False,
     if result.return_code != 0:
         if not catch_exitcodes or result.return_code not in catch_exitcodes:
             raise NodeCommandError(
-                'Remote command `{0}` execution failed (exit code = {1})'.format(
-                    command, result.return_code
-                )
+                'Remote command `{0}` execution failed (exit code = {1})'
+                .format(command, result.return_code)
             )
         raise NodeCommandWrongExitCode(code=result.return_code)
     if jsonresult:
@@ -1295,9 +1297,11 @@ class LocalStorage(PersistentStorage):
     def are_pod_volumes_compatible(cls, volumes, owner_id, pod_params):
         """Should check if volumes of one pod can be created.
         For local storage all volumes must be on one node.
+        Returns tuple of compatibility flag and pinned node name (
+        if volumes must be placed to that node)
         """
         if not volumes:
-            return True
+            return True, None
         node = None
         for vol in volumes:
             pd = vol.get('persistentDisk', {})
@@ -1314,16 +1318,20 @@ class LocalStorage(PersistentStorage):
                 continue
             if persistent_disk.node_id:
                 if node is not None and node != persistent_disk.node_id:
-                    return False
+                    return False, None
                 node = persistent_disk.node_id
+
         if node is not None:
-            node = Node.query.filter(Node.id == node).first()
+            dbnode = Node.query.filter(Node.id == node).first()
             kube_type = pod_params.get(
                 'kube_type', Kube.get_default_kube_type()
             )
-            if kube_type != node.kube_id:
-                return False
-        return True
+            if kube_type != dbnode.kube_id:
+                return False, None
+            nodename = dbnode.hostname
+        else:
+            nodename = None
+        return True, nodename
 
     def _is_drive_exist(self, pd):
         """Checks if directory of local storage exists on the node.

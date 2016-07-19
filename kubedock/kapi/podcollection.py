@@ -106,9 +106,13 @@ class PodCollection(object):
         if storage_cls:
             persistent_volumes = [vol for vol in params['volumes']
                                   if 'persistentDisk' in vol]
-            if not storage_cls.are_pod_volumes_compatible(
-                    persistent_volumes, self.owner.id, params):
+            is_compatible, pinned_node_name = \
+                storage_cls.are_pod_volumes_compatible(
+                    persistent_volumes, self.owner.id, params)
+            if not is_compatible:
                 raise APIError("Invalid combination of persistent disks")
+            if pinned_node_name is not None:
+                params['node'] = pinned_node_name
 
         if not skip_check:
             self._check_trial(params)
@@ -251,7 +255,7 @@ class PodCollection(object):
         """Assign some free IP address to the pod."""
         conf = pod.get_dbconfig()
         if (conf.get('public_ip', False) or
-            not PodCollection.needs_public_ip(conf)):
+                not PodCollection.needs_public_ip(conf)):
             return
         if AWS:
             conf.setdefault('public_aws', UNKNOWN_ADDRESS)

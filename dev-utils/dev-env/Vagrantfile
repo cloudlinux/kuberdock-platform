@@ -1,11 +1,13 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 #
+# TODO: AC-3944 Refactor it
 
 defaultBuildDir =File.expand_path('../../../builds', __FILE__)
 buildDir = ENV['KD_BUILD_DIR'] || defaultBuildDir
 
 nodesCount = Integer(ENV['KD_NODES_COUNT'] || '1')
+rhostsCount = Integer(ENV['KD_RHOSTS_COUNT'] || '0')
 
 masterMemory = Integer(ENV['KD_MASTER_MEMORY'] || '2048')
 masterCpus = Integer(ENV['KD_MASTER_CPUS'] || '1')
@@ -71,6 +73,26 @@ Vagrant.configure(2) do |config|
       end
   end
 
+  if rhostsCount > 0
+      (1..rhostsCount).each do |i|
+          config.vm.define "kd_rhost#{i}" do |rhost|
+              rhost.vm.hostname = "rhost#{i}"
+            rhost.vm.network "private_network", ip: "192.168.77.#{10+i}"
+              rhost.vm.provider "virtualbox" do |vb, override|
+                vb.memory = nodeMemory
+                vb.cpus = nodeCpus
+              end
+              config.vm.provider :opennebula do |one, override|
+                one.cpu = nodeCpus
+                one.vcpu = nodeCpus
+                one.memory = nodeMemory
+                one.title = 'rhost'
+              end
+              rhost.vm.synced_folder "../../kuberdock-cli", "/vagrant", type: "rsync"
+          end
+      end
+  end
+
   config.vm.define "kd_master" do |master|
       master.vm.hostname = "master"
       master.vm.network "private_network", ip: "192.168.77.10"
@@ -103,6 +125,7 @@ Vagrant.configure(2) do |config|
         ansible.groups = {
             "master" => ["kd_master"],
             "node" => ["kd_node[1:#{nodesCount}]"],
+            "rhost" => ["kd_rhost[1:#{rhostsCount}]"],
         }
         extra_vars = {
             "install_type" => ENV['KD_INSTALL_TYPE'],

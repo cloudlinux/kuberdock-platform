@@ -1,0 +1,4 @@
+- name: Deploy
+  shell: echo "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" | bash kcli-deploy.sh chdir=/vagrant
+  tags:
+      - deploy

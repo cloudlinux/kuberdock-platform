@@ -24,6 +24,12 @@
   roles:
       - node
 
+- name: Setup rhosts
+  hosts: rhost
+  any_errors_fatal: true
+  become: yes
+  roles:
+      - rhost
 
 - hosts: master
   tasks:

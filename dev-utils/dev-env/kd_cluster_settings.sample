@@ -23,13 +23,22 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # default: 1
 #export KD_NODES_COUNT=2
 
+# Registered hosts count (cPanel hosts, etc)
+# default: 0
+#export KD_RHOSTS_COUNT=1
+
 # Resources allocation for node
 # Memory
 # default: 2048
 #export KD_NODE_MEMORY=4096
+
 # CPU count
 # default: 1
 #export KD_NODE_CPUS=2
+
+# Uncomment to excpicitly define kube type for each mode
+# default: nothing
+#export KD_NODE_TYPES='node1=standard,node2=tiny'
  
 # Path to private key for vagrant autentication in the OpenNebula
 # default: "~/.ssh/id_rsa"
@@ -92,8 +101,4 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # Uncomment to enable NONFLOATING_PUBLIC_IPS mode
 # default: nothing
 #export KD_NONFLOATING_PUBLIC_IPS=true
-#
 
-# Uncomment to excpicitly define kube type for each mode
-# default: nothing
-#export KD_NODE_TYPES='node1=standard,node2=tiny'

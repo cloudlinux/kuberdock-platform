@@ -10,7 +10,10 @@ import subprocess
 from fabric.api import run, env, output, local as fabric_local
 
 from kubedock import settings
+from kubedock.core import db
+from kubedock.rbac.models import Role
 from kubedock.sessions import SessionData
+from kubedock.utils import send_event_to_role
 
 # For convenience to use in update scripts:
 from flask.ext.migrate import upgrade
@@ -213,9 +216,13 @@ def start_service(service):
     return subprocess.call(['systemctl', 'start', service])
 
 
-# do it inside update scripts
+# Will be executed after successful upgrade only
 def close_all_sessions():
-    return SessionData.query.delete()
+    for (role_id, ) in db.session.query(Role.id).all():
+        send_event_to_role('refresh', {}, role_id)
+    deleted = SessionData.query.delete()
+    db.session.commit()
+    return deleted
 
 
 def reboot_node(db_upd):

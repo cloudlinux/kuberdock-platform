@@ -18,7 +18,7 @@ onePassword = ENV['KD_ONE_PASSWORD'] || ''
 oneURL      = ENV['KD_ONE_URL'] || 'https://some.nebula.host.com:2633/RPC2'
 privateKey  = ENV['KD_ONE_PRIVATE_KEY'] || '~/.ssh/id_rsa'
 
-nebulaTemplateId = Integer(ENV['KD_NEBULA_TEMPLATE_ID'] || '84')
+nebulaTemplateId = Integer(ENV['KD_NEBULA_TEMPLATE_ID'] || '174')
 
 Vagrant.configure(2) do |config|
   config.vm.box = "bento/centos-7.2"

@@ -19,11 +19,19 @@
             <% if (persistentDrives){ persistentDrives.each(function(pd){ %>
                 <% var self = persistentDisk === pd,
                        conflicts = pd.conflictsWith(pod, /*ignored=*/persistentDisk) %>
-                <option value="<%- pd.get('name') %>" <%- !self && pd.get('in_use') ? 'disabled' : '' %>>
-                    <%- pd.get('name') %> <%= self && pd.isNewPD          ? '(new)'
-                                              : !self && pd.get('in_use') ? '(busy)'
-                                                  : conflicts.length      ? '(conflict)'
-                                                  : '' %>
+                <option value="<%- pd.get('name') %>" <%- !self && pd.get('in_use') ||
+                                                          !pd.get('available')
+                                                          ? 'disabled' : '' %>>
+                    <%- pd.get('name') %>
+                    <% if (self && pd.isNewPD) {%>
+                        (new)
+                    <% } else if (!pd.get('available')) { %>
+                        (unavailable)
+                    <% } else if (!self && pd.get('in_use')){ %>
+                        (busy)
+                    <% } else if (conflicts.length) { %>
+                        (conflict)
+                    <% }%>
                 </option>
             <% })} %>
         </select>

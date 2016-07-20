@@ -1,9 +1,10 @@
 from flask import Blueprint, current_app, jsonify, request, session
 
 from ..exceptions import APIError, NotAuthorized, PermissionDenied
-from ..login import auth_required, current_user, login_user
+from ..login import auth_required, current_user, login_user, get_remote_addr
 from ..sessions import create_token
 from ..users.models import User, load_user_by_token
+from ..users.signals import user_logged_in
 
 auth = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -46,7 +47,7 @@ def token2():
         raise NotAuthorized
     login_user(user)
     token2 = create_token(session)
-
+    user_logged_in.send((user.id, get_remote_addr()))
     return jsonify({'status': 'OK', 'token': token2})
 
 

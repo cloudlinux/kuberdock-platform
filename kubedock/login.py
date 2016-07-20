@@ -105,7 +105,7 @@ class LoginManager(object):
             ctx.user = user
 
 
-def _get_remote_addr():
+def get_remote_addr():
     address = request.headers.get('X-Forwarded-For', request.remote_addr)
     if address is not None:
         address = address.encode('utf-8')
@@ -116,7 +116,7 @@ def create_identifier():
     user_agent = request.headers.get('User-Agent')
     if user_agent is not None:
         user_agent = user_agent.encode('utf-8')
-    base = '{0}|{1}'.format(_get_remote_addr(), user_agent)
+    base = '{0}|{1}'.format(get_remote_addr(), user_agent)
     if str is bytes:
         base = unicode(base, 'utf-8', errors='replace')  # pragma: no cover
     h = md5()
@@ -133,7 +133,8 @@ def login_user(user, DB=True):
     if session.sid is None:
         session.sid = str(uuid4())
     if DB and current_app.login_manager.adder_callback:
-        current_app.login_manager.adder_callback(session.sid, user_id, user.role_id)
+        current_app.login_manager.adder_callback(
+            session.sid, user_id, user.role_id)
     return True
 
 

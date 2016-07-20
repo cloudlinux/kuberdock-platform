@@ -8,11 +8,12 @@ from flask import current_app, _request_ctx_stack
 from uuid import uuid4
 
 from .users.models import SessionData
+from .users.signals import user_logged_in
 from .billing.models import Package
 from .kapi.users import UserCollection, User
 from .system_settings.models import SystemSettings
 from .core import db
-from .login import create_identifier
+from .login import create_identifier, get_remote_addr
 
 
 def get_secret_key():
@@ -56,6 +57,7 @@ def add_and_auth_user(data):
         '_id': create_identifier()}
     current_app.login_manager.adder_callback(sid, user.id, user.role_id)
     _request_ctx_stack.top.user = user
+    user_logged_in.send((user.id, get_remote_addr()))
     return ManagedSession(sid=sid, initial=session_data)
 
 

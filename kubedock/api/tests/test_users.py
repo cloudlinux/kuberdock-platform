@@ -26,7 +26,11 @@ class UserCRUDTestCase(APITestCase):
             full=True)
         user['join_date'] = user['join_date'].replace(
             tzinfo=pytz.utc).isoformat()
+        user['last_login'] = user['last_login'].replace(
+            tzinfo=pytz.utc).isoformat()
         admin['join_date'] = admin['join_date'].replace(
+            tzinfo=pytz.utc).isoformat()
+        admin['last_login'] = admin['last_login'].replace(
             tzinfo=pytz.utc).isoformat()
         user_short, admin_short = self.user.to_dict(), self.admin.to_dict()
         self_actions = {'lock': False, 'suspend': False, 'delete': False}
@@ -51,7 +55,13 @@ class UserCRUDTestCase(APITestCase):
         self.assertAPIError(response, 404, 'UserNotFound')
         response = self.admin_open(self.item_url(self.user.id))
         self.assert200(response)
-        self.assertEqual(user, response.json['data'])
+
+        # temporary workaround.
+        # response login time differs from user's by fractions of a second
+        resp = response.json['data']
+        resp['last_login'] = user['last_login']
+        self.assertEqual(user, resp)
+
         # short
         response = self.admin_open(self.item_url(12345) + '?short=true')
         self.assertAPIError(response, 404, 'UserNotFound')
@@ -321,9 +331,9 @@ class TestUsers(APITestCase):
         login_ts = {'ts': login.ts.replace(tzinfo=pytz.UTC).isoformat()}
         logout_ts = {'ts': logout.ts.replace(tzinfo=pytz.UTC).isoformat()}
         self.assertEqual(login.to_dict(include=login_ts),
-                         response.json['data'][-2])
+                         response.json['data'][-3])
         self.assertEqual(logout.to_dict(include=logout_ts),
-                         response.json['data'][-1])
+                         response.json['data'][-2])
 
 
 class TestSelf(APITestCase):

@@ -234,6 +234,13 @@ class KubeTypePipeline(Pipeline):
     }
 
 
+class FailConditions(Pipeline):
+    NAME = 'fail_conditions'
+    ROUTABLE_IP_COUNT = 1
+    ENV = {
+        'KD_NODES_COUNT': '1',
+    }
+
 pipelines = defaultdict(list)
 
 

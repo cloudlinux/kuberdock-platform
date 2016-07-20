@@ -41,22 +41,20 @@ py_get_env_args="import sys, os;
 print '\n'.join(['%s=%s' % (k,os.environ.get(k)) for k in sys.argv[1:] if os.environ.get(k)])"
 env_cluster_settings=$(python -c "$py_get_env_args" $pass_env)
 
-VAGRANT_HOME=${VAGRANT_HOME:-"$HOME/.vagrant.d"}
-VAGRANT_DOTFILE_PATH=${VAGRANT_DOTFILE_PATH:-".vagrant"} # this is relative to Vagrantfile
-
-SSH_KEY=${KD_ONE_PRIVATE_KEY:-"$HOME/.ssh/id_rsa"}
-DOT_FILES=${KD_DOT_FILES:-"$HOME"}
-HOOK=${KD_MASTER_HOOK:-""}
 
 if [ "$EUID" -eq 0 ]
-  then arg_priv="--privileged"
-  else arg_priv=""
+    then arg_priv="--privileged"
+    else arg_priv=""
 fi
 
 if [ -t 1 ] ;
     then arg_tty="-it"
     else arg_tty=""
 fi
+
+SSH_KEY=${KD_ONE_PRIVATE_KEY:-"$HOME/.ssh/id_rsa"}
+vol_ssh_key="-v $SSH_KEY:/root/id_rsa"
+env_ssh_key="KD_ONE_PRIVATE_KEY=/root/id_rsa"
 
 if [ -n "$SSH_AUTH_SOCK" ]
   then
@@ -67,6 +65,17 @@ if [ -n "$SSH_AUTH_SOCK" ]
     env_auth_sock=""
 fi
 
+DOT_FILES=${KD_DOT_FILES:-""}
+if [ -n "$DOT_FILES" ]
+  then
+    vol_dotfiles="-v $DOT_FILES:/root/dotfiles"
+    env_dotfiles="KD_DOT_FILES=/root/dotfiles"
+  else
+    vol_dotfiles=""
+    vol_dotfiles=""
+fi
+
+HOOK=${KD_MASTER_HOOK:-""}
 if [ -n "$HOOK" ]
   then
     vol_hook="-v $HOOK:/root/hook.sh"
@@ -76,21 +85,23 @@ if [ -n "$HOOK" ]
     env_hook=""
 fi
 
+VAGRANT_DOTFILE_PATH=${VAGRANT_DOTFILE_PATH:-".vagrant"} # this is relative to Vagrantfile
+
 mkdir -p dev-utils/dev-env/$VAGRANT_DOTFILE_PATH/
 # Env have to be passed through file due to possible special chars in vars.
 docker_env=dev-utils/dev-env/$VAGRANT_DOTFILE_PATH/.docker.env
 # Order matters - env_cluster_settings partially overriden below.
 echo "$env_cluster_settings" > $docker_env
-echo "KD_ONE_PRIVATE_KEY=/root/id_rsa" >> $docker_env
+echo $env_ssh_key >> $docker_env
 echo "$env_auth_sock" >> $docker_env
-echo "KD_DOT_FILES=/root/dotfiles" >> $docker_env
+echo $env_dotfiles >> $docker_env
 echo "$env_hook" >> $docker_env
 
 docker run --rm $arg_tty $arg_priv \
     -v $PWD:/AppCloud -w="/AppCloud" \
-    -v $SSH_KEY:/root/id_rsa \
+    $vol_ssh_key \
     $vol_auth_sock \
-    -v $DOT_FILES:/root/dotfiles \
+    $vol_dotfiles \
     $vol_hook \
     --env-file $docker_env \
     $IMG vagrant $@

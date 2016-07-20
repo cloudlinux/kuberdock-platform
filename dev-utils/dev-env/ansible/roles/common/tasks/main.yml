@@ -3,6 +3,12 @@
 - include: check_rpms.yml
   when: not is_release_install
 
+- name: Clean repositry cache
+  command: yum clean all
+
+- name: Update repositry cache
+  command: yum makecache
+ 
 - include: ../../../facts.yml
 
 - name: Update global environment variables

@@ -35,3 +35,4 @@
   notify:
     - restart nginx
 
+- include: prices.yml

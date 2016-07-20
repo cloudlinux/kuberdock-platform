@@ -34,7 +34,7 @@
 - include: deploy.yml
 
 - name: Reset password
-  shell: python "{{ src_prefix }}/manage.py" reset-password --set admin
+  shell: python "{{ src_prefix }}/manage.py" reset-password --set "{{ admin_password }}"
 
 - include: dev_postdeploy.yml
   when: is_dev_install

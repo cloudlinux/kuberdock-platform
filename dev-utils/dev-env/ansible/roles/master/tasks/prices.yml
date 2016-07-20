@@ -1,0 +1,33 @@
+---
+
+- name: Get token
+  uri:
+    url: "{{ token_gathering_url }}"
+    method: GET
+    user: admin
+    password: "{{ admin_password }}"
+    validate_certs: false
+    force_basic_auth: true
+  register: token_raw
+  until: token_raw.status == 200
+  retries: 5
+  delay: 30
+
+- name: Set prices for IP and PD
+  uri:
+    url: "https://{{ ansible_hostname }}/api/pricing/packages/0/?token={{ token_raw.json.token }}"
+    method: PUT
+    body: "price_ip=0.59&price_pstorage=0.99"
+    validate_certs: false
+
+- name: Set prices for kubes
+  uri:
+    url: "https://{{ ansible_hostname }}/api/pricing/packages/0/kubes/{{ item.kube }}/?token={{ token_raw.json.token }}"
+    method: PUT
+    body: "kube_price={{ item.price }}"
+    validate_certs: false
+  with_items:
+    - { kube: '0', price: '0.04' }
+    - { kube: '1', price: '0.39' }
+    - { kube: '2', price: '1.25' }
+

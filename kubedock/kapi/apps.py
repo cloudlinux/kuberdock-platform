@@ -319,7 +319,7 @@ class PredefinedApp(object):
         app = PredefinedAppModel.query.get(id)
         if app is None:
             return
-        allowed_fields = set(cls.FIELDS) - set(['id', 'created', 'modified'])
+        allowed_fields = set(cls.FIELDS) - {'id', 'created', 'modified'}
         fields_to_update = allowed_fields & set(kw)
         for attr in fields_to_update:
             setattr(app, attr, kw[attr])

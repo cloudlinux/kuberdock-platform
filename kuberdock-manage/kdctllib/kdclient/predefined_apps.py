@@ -20,16 +20,27 @@ class PredefinedAppsClient(ClientBase):
             params=params
         )
 
-    def create(self, app_data):
+    def create(self, name, origin, template, validate=None):
+        json = {
+            'name': name,
+            'origin': origin,
+            'template': template,
+            'validate': validate,
+        }
         return self.transport.post(
             self._url(),
-            json=app_data
+            json=json
         )
 
-    def update(self, app_id, app_data):
-        return self.transport.put(
+    def update(self, app_id, name=None, template=None, validate=None):
+        json = {
+            'name': name,
+            'template': template,
+            'validate': validate,
+        }
+        return self.transport.post(
             self._url(app_id),
-            json=app_data
+            json=json
         )
 
     def delete(self, app_id):
@@ -38,7 +49,10 @@ class PredefinedAppsClient(ClientBase):
         )
 
     def validate_template(self, template):
+        endpoint = 'validate-template'
+
+        json = {'template': template}
         return self.transport.post(
-            self._url('validate-template'),
-            json={'template': template}
+            self._url(endpoint),
+            json=json
         )

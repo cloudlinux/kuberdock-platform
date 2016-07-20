@@ -7,14 +7,18 @@ def json_type(string):
     return json.loads(string)
 
 
+def text_type(string):
+    return string
+
+
 def data_argument(*args, **kwargs):
     """
     This decorator is combination of two decorators:
     @click.argument(<arg_name>, **kwargs)
     @click.option('-f', '--file', help='Input file.', expose_value=False)
     
-    Only <arg_name> passed to decorated function. If -f specified, it read data
-    from file and pass it to argument <arg_name>.
+    Only <arg_name> and <type> passed to decorated function. If -f specified,
+    it read data from file and pass it to argument <arg_name>.
 
     If you have questions, see examples of usages.
     
@@ -29,6 +33,8 @@ def data_argument(*args, **kwargs):
     """
     target_param_name = args[-1].replace('-', '_')
 
+    kwargs.setdefault('type', json_type)
+
     def wrapper(fn):
 
         def c1(ctx, param, value):
@@ -41,7 +47,7 @@ def data_argument(*args, **kwargs):
             return value
 
         kwargs.update(
-            type=json_type, required=False, callback=c1, expose_value=False
+            required=False, callback=c1, expose_value=False
         )
 
         d1 = click.argument(*args, **kwargs)
@@ -49,7 +55,8 @@ def data_argument(*args, **kwargs):
         def c2(ctx, param, value):
             if value is not None:
                 with open(value) as f:
-                    d = json.load(f)
+                    s = f.read()
+                d = kwargs['type'](s)
                 ctx.params[target_param_name] = d
             return value
 

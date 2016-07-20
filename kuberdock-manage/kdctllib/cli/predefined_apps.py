@@ -1,7 +1,7 @@
 import click
 
 from main import main
-from utils import data_argument
+from utils import text_type, data_argument
 
 
 @main.group('predefined-apps',
@@ -26,7 +26,11 @@ def get(obj, **params):
 
 
 @pa.command()
-@data_argument('app-data')
+@data_argument('template', type=text_type)
+@click.option('--name', required=True, help='Application name.')
+@click.option('--origin', required=False, help='Origin of application.')
+@click.option('--validate', is_flag=True,
+              help='Provide if validation is needed.')
 @click.pass_obj
 def create(obj, **params):
     return obj.kdctl.predefined_apps.create(**params)
@@ -34,7 +38,10 @@ def create(obj, **params):
 
 @pa.command()
 @click.argument('app-id')
-@data_argument('app-data')
+@data_argument('template', type=text_type)
+@click.option('--name', required=True, help='Application name.')
+@click.option('--validate', is_flag=True,
+              help='Provide if validation is needed.')
 @click.pass_obj
 def update(obj, **params):
     return obj.kdctl.predefined_apps.update(**params)
@@ -48,7 +55,7 @@ def delete(obj, **params):
 
 
 @pa.command('validate-template')
-@data_argument('template')
+@data_argument('template', type=text_type)
 @click.pass_obj
 def validate_template(obj, **params):
     return obj.kdctl.predefined_apps.validate_template(**params)

@@ -59,6 +59,7 @@ class POD_STATUSES:
     preparing = 'preparing'
     stopping = 'stopping'
     deleting = 'deleting'
+    deleted = 'deleted'
 
 
 class NODE_STATUSES:

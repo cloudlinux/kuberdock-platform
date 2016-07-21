@@ -27,6 +27,12 @@ LOG = logging.getLogger(__name__)
 
 
 class KDIntegrationTestAPI(object):
+    vm_names = {
+        "master": "kd_master",
+        "node1": "kd_node1",
+        "node2": "kd_node2",
+    }
+
     def __init__(self, override_envs=None,
                  version='latest',
                  upgrade_to='latest', out_cm=None, err_cm=None):
@@ -90,12 +96,7 @@ class KDIntegrationTestAPI(object):
         return [_cut_prefix(n) for n in names]
 
     def get_ssh(self, host):
-        hosts = {
-            "master": "kd_master",
-            "node1": "kd_node1",
-            "node2": "kd_node2",
-        }
-        host = hosts[host]
+        host = self.vm_names[host]
         if host in self._ssh_connections:
             return self._ssh_connections[host]
 
@@ -159,6 +160,20 @@ class KDIntegrationTestAPI(object):
             local_arg = "--local {0}".format(upgrade_to)
         self.ssh_exec("master", "kuberdock-upgrade {0}".format(local_arg))
 
+    def destroy(self):
+        if self._build_cluster_flag("destroy"):
+            self.vagrant.destroy()
+
+    def power_off(self, host):
+        vm_name = self.vm_names[host]
+        LOG.debug("VM Power Off: '{}'".format(vm_name))
+        self.vagrant.halt(vm_name=vm_name)
+
+    def power_on(self, host):
+        vm_name = self.vm_names[host]
+        LOG.debug("VM Power On: '{}'".format(vm_name))
+        self.vagrant.up(vm_name=vm_name)
+
     def delete_all_pods(self):
         for pod in self.get_all_pods():
             name = self._escape_command_arg(pod['name'])
@@ -192,10 +207,6 @@ class KDIntegrationTestAPI(object):
         if hostname is not None:
             cmd += ' --node {}'.format(hostname)
         self.manage(cmd)
-
-    def destroy(self):
-        if self._build_cluster_flag("destroy"):
-            self.vagrant.destroy()
 
     def create_pod(self, image, name, kube_type="Standard", kubes=1,
                    open_all_ports=False, restart_policy="Always", pvs=None,

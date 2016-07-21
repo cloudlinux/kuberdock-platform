@@ -249,6 +249,10 @@ def _check_node_can_be_deleted(node):
         raise APIError("Node '{}' can't be deleted. Reason: {}".format(
             node.hostname, reason
         ))
+    if current_app.config['NONFLOATING_PUBLIC_IPS'] and node.ippool:
+        pools = ' '.join(str(p) for p in node.ippool)
+        raise APIError("Node '{}' can't be deleted. Has active pools "
+                       "assigned: {}".format(node.hostname, pools))
 
 
 def edit_node_hostname(node_id, ip, hostname):

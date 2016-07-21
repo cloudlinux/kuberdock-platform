@@ -251,31 +251,16 @@ class PodCollection(object):
 
     @staticmethod
     @atomic()
-    def _preassign_public_address(pod):
-        """Assign some free IP address to the pod."""
+    def _prepare_for_public_address(pod):
+        """Prepare pod for Public IP assigning"""
         conf = pod.get_dbconfig()
         if (conf.get('public_ip', False) or
                 not PodCollection.needs_public_ip(conf)):
             return
         if AWS:
             conf.setdefault('public_aws', UNKNOWN_ADDRESS)
-        elif current_app.config['NONFLOATING_PUBLIC_IPS']:
-            if not IPPool.get_free_host():
-                raise NoFreeIPs()
-            conf['public_ip'] = pod.public_ip = 'true'
         else:
-            ip_address = IPPool.get_free_host(as_int=True)
-            if ip_address is None:
-                raise NoFreeIPs()
-            network = IPPool.get_network_by_ip(ip_address)
-            if pod.ip is None:
-                db.session.add(PodIP(pod=pod, network=network.network,
-                                     ip_address=ip_address))
-            else:
-                current_app.logger.warning('PodIP {0} is already allocated'
-                                           .format(pod.ip.to_dict()))
-            conf['public_ip'] = pod.public_ip = str(pod.ip)
-            IpState.start(pod.id, pod.ip)
+            conf['public_ip'] = pod.public_ip = 'true'
         pod.set_dbconfig(conf, save=False)
 
     @atomic()
@@ -362,7 +347,7 @@ class PodCollection(object):
             for port in container['ports']:
                 port['isPublic'] = port.pop('isPublic_before_freed', None)
         pod.set_dbconfig(pod_config, save=False)
-        cls._preassign_public_address(pod)
+        cls._prepare_for_public_address(pod)
 
     @atomic()
     def _save_pod(self, obj, db_pod=None):
@@ -388,7 +373,7 @@ class PodCollection(object):
             db_pod.kube_id = obj.kube_type
             db_pod.owner = self.owner
 
-        self._preassign_public_address(db_pod)
+        self._prepare_for_public_address(db_pod)
         return db_pod
 
     def update(self, pod_id, data):
@@ -774,6 +759,24 @@ class PodCollection(object):
             pod, db_config = self._apply_edit(pod, db_pod, db_config)
 
         pod.set_status(POD_STATUSES.preparing)
+
+        if not current_app.config['NONFLOATING_PUBLIC_IPS']:
+            pod_public_ip = getattr(pod, 'public_ip', None)
+            if pod_public_ip == 'true':
+                with atomic():
+                    ip_address = IPPool.get_free_host(as_int=True)
+                    if ip_address is None:
+                        raise NoFreeIPs()
+                    network = IPPool.get_network_by_ip(ip_address)
+                    pod_ip = PodIP(pod_id=pod.id, network=network.network,
+                                   ip_address=ip_address)
+                    db.session.add(pod_ip)
+                    db_config['public_ip'] = pod.public_ip = str(pod_ip)
+                    IpState.start(pod.id, pod_ip)
+                    db_pod.set_dbconfig(db_config, save=False)
+            elif pod_public_ip is not None:
+                current_app.logger.warning('PodIP {0} is already allocated'
+                                           .format(pod_public_ip))
 
         if async_pod_create:
             prepare_and_run_pod_task.delay(pod)

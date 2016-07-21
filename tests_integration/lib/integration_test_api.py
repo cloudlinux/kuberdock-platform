@@ -164,6 +164,11 @@ class KDIntegrationTestAPI(object):
     def _any_vm_is_running(self):
         return any(vm.state != "not_created" for vm in self.vagrant.status())
 
+    def get_node_info(self, name):
+        _, out, _ = self.manage(
+            'node-info -n {}'.format(pipes.quote(name)), out_as_dict=True)
+        return out
+
     def start(self, provider=PROVIDER):
         if not self._build_cluster_flag("start"):
             return

@@ -1,14 +1,17 @@
 import fnmatch
 import os
+import random
 import sys
 import logging
 import threading
 import traceback
 import imp
+import time
 import click
 from collections import defaultdict
 from contextlib import closing
 from threading import Thread
+
 from colorama import Fore, Style
 from pygments import highlight
 from pygments.formatters.terminal256 import Terminal256Formatter
@@ -18,6 +21,7 @@ from tests_integration.lib import multilogger
 from tests_integration.lib.pipelines import pipelines as \
     registered_pipelines, Pipeline
 
+CLUSTER_CREATION_MAX_DELAY = 30
 INTEGRATION_TESTS_PATH = 'tests_integration/'
 # Lock is needed for printing info thread-safely and it's done by two
 # separate print calls
@@ -102,6 +106,11 @@ def run_tests_in_a_pipeline(name, tests):
 
     try:
         pipeline = Pipeline.from_name(name)
+
+        # AC-3914 prevent Nebula from being flooded with requests
+        sleep_seconds = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
+        pipe_log('Sleeping for {} seconds'.format(sleep_seconds))
+        time.sleep(sleep_seconds)
 
         pipeline.create()
         pipe_log('CLUSTER CREATED', Fore.GREEN)

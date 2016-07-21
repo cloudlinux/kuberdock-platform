@@ -52,6 +52,11 @@ class NodeCommandError(Exception):
     pass
 
 
+class NodeCommandTimeoutError(NodeCommandError):
+    """Exceptions during execution commands on nodes."""
+    pass
+
+
 class NodeCommandWrongExitCode(NodeCommandError):
     """Special exception to catch specified exit codes for remote commands."""
 
@@ -190,8 +195,13 @@ def delete_persistent_drives(pd_ids, mark_only=False):
                         )
                         continue
                     # If pd is not exist, then delete it from DB
-                except NodeCommandError:
+                except NodeCommandTimeoutError:
                     current_app.logger.warning(
+                        u'Persistent Disk id:"{0}" is busy or '
+                        u'does not exist.'.format(pd_id))
+                    continue
+                except NodeCommandError:
+                    current_app.logger.exception(
                         u'Persistent Disk id:"{0}" is busy or '
                         u'does not exist.'.format(pd_id))
                     continue
@@ -397,7 +407,7 @@ class PersistentStorage(object):
             with drive_lock(pd.drive_name):
                 rv_code = self._create_drive(pd.drive_name, pd.size)
         except (NoNodesError, DriveIsLockedError) as e:
-            current_app.logger.exception(UNABLE_CREATE_PD_MSG.format(pd.name))
+            current_app.logger.warning(UNABLE_CREATE_PD_MSG.format(pd.name))
             msg = '{}, reason: {}'.format(
                 UNABLE_CREATE_PD_MSG.format(pd.drive_name), e.message)
             send_event_to_role('notify:error', {'message': msg}, 'Admin')
@@ -423,7 +433,13 @@ class PersistentStorage(object):
         try:
             with drive_lock(pd.drive_name):
                 return self._makefs(pd.drive_name, fs)
-        except (DriveIsLockedError, NodeCommandError, NoNodesError) as e:
+        except (DriveIsLockedError, NodeCommandTimeoutError, NoNodesError) as e:
+            current_app.logger.warning(admin_msg)
+            notify_msg = "{}, reason: {}".format(admin_msg, e.message)
+            send_event_to_role(
+                'notify:error', {'message': notify_msg}, 'Admin')
+            raise APIError(user_msg)
+        except NodeCommandError as e:
             current_app.logger.exception(admin_msg)
             notify_msg = "{}, reason: {}".format(admin_msg, e.message)
             send_event_to_role(
@@ -560,7 +576,7 @@ def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False,
     try:
         result = run(command, timeout=timeout)
     except (CommandTimeout, NetworkError):
-        raise NodeCommandError(
+        raise NodeCommandTimeoutError(
             'Timeout reached while execute remote command'
         )
     if result.return_code != 0:
@@ -811,6 +827,11 @@ class CephStorage(PersistentStorage):
                 jsonresult=True,
                 catch_exitcodes=[self.CEPH_NOTFOUND_CODE]
             )
+        except NodeCommandTimeoutError:
+            current_app.logger.warning(
+                "Can't connect to node, while try to get CEPH pool {}".format(
+                    pool))
+            return False
         except NodeCommandWrongExitCode:
             # If the pool is absent, then the drive not exists.
             current_app.logger.exception('CEPH pool "%s" not found', pool)
@@ -1017,6 +1038,11 @@ class CephStorage(PersistentStorage):
         try:
             cmd = self.CMD_LIST_LOCKERS.format(image=image, pool=pool)
             lock = self.run_on_first_node(cmd, jsonresult=True)
+        except NodeCommandTimeoutError:
+            current_app.logger.warning(
+                "Can't connect to node, while try to get list\
+                of locker for drive {}".format(pd.drive_name))
+            return
         except:
             current_app.logger.exception(
                 "Can't get list of locker for drive {}".format(pd.drive_name))
@@ -1028,6 +1054,10 @@ class CephStorage(PersistentStorage):
                 cmd = self.CMD_REMOVE_LOCKER.format(
                     image=image, id=key, locker=lock[key]['locker'], pool=pool)
                 self.run_on_first_node(cmd)
+            except NodeCommandTimeoutError:
+                current_app.logger.warning(
+                    "Can't connect to node,\
+                     while try to unlock drive {}".format(pd.drive_name))
             except:
                 current_app.logger.exception(
                     "Can't unlock drive {}".format(pd.drive_name))

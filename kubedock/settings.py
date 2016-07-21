@@ -96,7 +96,8 @@ def get_sentry_settings():
 
 
 SENTRY_ENABLE, SENTRY_DSN = get_sentry_settings()
-
+SENTRY_PROCESSORS = ('kubedock.kd_sentry.KuberDockSanitize',)
+SENTRY_EXCLUDE_PATHS = ['paramiko']
 DEBUG = True
 # With the following option turned on (by default) and in case of debug mode
 # we will get a couple of 'idle in transaction' states
@@ -149,9 +150,6 @@ KUBE_MASTER_URL = 'http://localhost:8080/api/'
 
 # If None, defaults will be used
 SSH_KEY_FILENAME = '/var/lib/nginx/.ssh/id_rsa'
-
-SERVICES_VERBOSE_LOG = 1
-PODS_VERBOSE_LOG = 1
 
 INFLUXDB_HOST = os.environ.get('INFLUXDB_HOST', '127.0.0.1')
 INFLUXDB_PORT = 8086

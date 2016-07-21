@@ -1,10 +1,10 @@
-import traceback
 import gevent
 import json
 import os
 import requests
 from datetime import datetime
 from socket import error as socket_error
+from paramiko.ssh_exception import SSHException
 from websocket import (create_connection, WebSocketException,
                        WebSocketConnectionClosedException)
 
@@ -14,10 +14,7 @@ from .billing.models import Kube
 from .nodes.models import Node
 from .pods.models import Pod, PersistentDisk
 from .users.models import User
-from .settings import (
-    PODS_VERBOSE_LOG,
-    KUBERDOCK_INTERNAL_USER
-)
+from .settings import KUBERDOCK_INTERNAL_USER
 from .utils import (get_api_url, unregistered_pod_warning,
                     send_event_to_role, send_event_to_user,
                     pod_without_id_warning, k8s_json_object_hook,
@@ -42,6 +39,8 @@ ETCD_POD_STATES = 'pod_states'
 ETCD_POD_STATES_URL = ETCD_URL.format('/'.join([
     ETCD_KUBERDOCK, ETCD_POD_STATES]))
 MAX_ATTEMPTS = 10
+# How ofter we will send error about listener reconnection to sentry
+ERROR_TIMEOUT = 3*60 # in seconds
 
 
 def filter_event(data, app):
@@ -75,8 +74,6 @@ def get_pod_state(pod):
 
 
 def process_pods_event(data, app, event_time=None, live=True):
-    if PODS_VERBOSE_LOG >= 2:
-        print 'POD EVENT', data
     if not event_time:
         event_time = datetime.utcnow()
     event_type = data['type']
@@ -122,7 +119,8 @@ def process_pods_event(data, app, event_time=None, live=True):
 def set_limit(host, pod_id, containers, app):
     ssh, errors = ssh_connect(host)
     if errors:
-        print errors
+        current_app.logger.warning(
+            "Can't connect to {}, {}".format(host, errors))
         return False
     spaces = dict(
         (i, (s, u)) for i, s, u in Kube.query.values(
@@ -153,19 +151,22 @@ def set_limit(host, pod_id, containers, app):
         disk_space_str = '{0}{1}'.format(disk_space, disk_space_unit)
         limits.append((containers[container_name], disk_space_str))
     limits_repr = ' '.join('='.join(limit) for limit in limits)
-    _, o, e = ssh.exec_command(
-        'python /var/lib/kuberdock/scripts/fslimit.py containers '
-        '{0}'.format(limits_repr)
-    )
-    exit_status = o.channel.recv_exit_status()
-    if exit_status > 0:
-        if PODS_VERBOSE_LOG >= 2:
-            print 'O', o.read()
-            print 'E', e.read()
-        print 'Error fslimit.py with exit status {0}'.format(exit_status)
-        ssh.close()
+    try:
+        _, o, e = ssh.exec_command(
+            'python /var/lib/kuberdock/scripts/fslimit.py containers '
+            '{0}'.format(limits_repr)
+        )
+        exit_status = o.channel.recv_exit_status()
+        if exit_status > 0:
+            current_app.logger.error(
+                'Error fslimit.py with exit status {}, {},{}'.format(
+                    exit_status, o.read(), e.read()))
+            return False
+    except SSHException:
+        current_app.logger.warning("Can't set fslimit", exc_info=True)
         return False
-    ssh.close()
+    finally:
+        ssh.close()
     return True
 
 
@@ -458,19 +459,19 @@ def prelist_version(url):
                         'Request result is {0}'.format(res.text))
 
 
-def listen_fabric(watch_url, list_url, func, verbose=1,
-                  k8s_json_object_hook=None):
+def listen_fabric(watch_url, list_url, func, k8s_json_object_hook=None):
     fn_name = func.func_name
     redis_key = 'LAST_EVENT_' + fn_name
 
     def result(app):
         retry = 0
+        last_reconnect = datetime.fromtimestamp(0)
         while True:
             try:
-                if verbose >= 2:
-                    print '==START WATCH {0} == pid: {1}'.format(
-                        fn_name, os.getpid())
                 with app.app_context():
+                    current_app.logger.debug(
+                        'START WATCH {0} == pid: {1}'.format(
+                            fn_name, os.getpid()))
                     redis = ConnectionPool.get_connection()
                 last_saved = redis.get(redis_key)
                 try:
@@ -481,18 +482,20 @@ def listen_fabric(watch_url, list_url, func, verbose=1,
                     # Only after connection to ensure last_saved was correct
                     # before save it to redis
                     redis.set(redis_key, last_saved)
-                    if verbose >= 3:
-                        print "{}: start watch on event {}".format(
-                            fn_name, last_saved)
                 except (socket_error, WebSocketException) as e:
-                    print e.__repr__()
+                    with app.app_context():
+                        now = datetime.now()
+                        logger = current_app.logger.warning
+                        if (now-last_reconnect).total_seconds() > ERROR_TIMEOUT:
+                            last_reconnect = now
+                            logger = current_app.logger.error
+                        logger("WebSocker error()".format(fn_name),
+                               exc_info=True)
+
                     gevent.sleep(0.1)
                     continue
                 while True:
                     content = ws.recv()
-                    if verbose >= 3:
-                        print '==EVENT CONTENT {0} ==: {1}'.format(
-                            fn_name, content)
                     data = json.loads(content,
                                       object_hook=k8s_json_object_hook)
                     if data['type'].lower() == 'error' and \
@@ -506,15 +509,9 @@ def listen_fabric(watch_url, list_url, func, verbose=1,
                     if not data:
                         continue
                     evt_version = data['object']['metadata']['resourceVersion']
-                    if verbose >= 3:
-                        print "{}: have new event {}".format(
-                            fn_name, evt_version)
                     last_saved = redis.get(redis_key)
                     if int(evt_version) > int(last_saved or '0'):
                         if retry < MAX_ATTEMPTS:
-                            if verbose >= 3:
-                                print "{}: try to process {}".format(
-                                    fn_name, evt_version)
                             func(data, app)
                         else:
                             message = "Problems in the listeners module have\
@@ -533,33 +530,36 @@ def listen_fabric(watch_url, list_url, func, verbose=1,
                 break
             except Exception as e:
                 retry += 1
-                if verbose >= 3:
-                    print "{}: retry={}".format(fn_name, retry)
                 if not (isinstance(e, WebSocketConnectionClosedException) and
                         e.message == 'Connection is already closed.'):
-                    print('{0}\n...restarting listen {1}...'
-                          .format(traceback.format_exc(), fn_name))
+                    with app.app_context():
+                        now = datetime.now()
+                        logger = current_app.logger.warning
+                        if (now-last_reconnect).total_seconds() > ERROR_TIMEOUT:
+                            last_reconnect = now
+                            logger = current_app.logger.error
+                        logger('restarting listen: {1}' .format(fn_name),
+                               exc_info=True)
                 gevent.sleep(0.2)
     return result
 
 
-def listen_fabric_etcd(url, func, list_func=None, verbose=1):
+def listen_fabric_etcd(url, func, list_func=None):
     fn_name = func.func_name
 
     def result(app):
         retry = 0
         index = 0
+        last_reconnect = datetime.fromtimestamp(0)
         with app.app_context():
             while True:
                 try:
-                    if verbose >= 2:
-                        print '==START WATCH {0}==pid:{1}'.format(
-                            fn_name, os.getpid())
+                    current_app.logger.debug(
+                        'START WATCH {0}==pid:{1}'.format(fn_name, os.getpid()))
                     if not index and list_func:
                         index = list_func(app)
-                    if verbose >= 3:
-                        print "{}: start watch on event {}".format(
-                            fn_name, index)
+                    current_app.logger.debug(
+                        "{}: start watch on event {}".format(fn_name, index))
                     r = requests.get(url, params={'wait': True,
                                                   'recursive': True,
                                                   'waitIndex': index})
@@ -568,20 +568,15 @@ def listen_fabric_etcd(url, func, list_func=None, verbose=1):
                             "{}: Can't connect to etcd".format(fn_name))
                         gevent.sleep(1)
                         continue
-                    if verbose >= 3:
-                        print '==EVENT CONTENT {0} ==: {1}'.format(
-                            fn_name, r.text)
                     data = r.json()
                     # The event in requested index is outdated and cleared
                     if data.get('errorCode') == 401:
-                        print "The event in requested index is outdated and "\
-                              "cleared. Skip all events and wait for new one"
+                        current_app.logger.warning(
+                            "The event in requested index is outdated and \
+                            cleared. Skip all events and wait for new one")
                         index = 0
                         continue
                     if retry < MAX_ATTEMPTS:
-                        if verbose >= 3:
-                            print "{}: try to process {}".format(
-                                fn_name, index)
                         func(data, app)
                     else:
                         message = "Problems in the listeners module have been\
@@ -596,15 +591,19 @@ def listen_fabric_etcd(url, func, list_func=None, verbose=1):
                 except KeyboardInterrupt:
                     break
                 except requests.exceptions.RequestException:
-                    current_app.logger.exception('Error while etcd connect')
+                    now = datetime.now()
+                    logger = current_app.logger.warning
+                    if (now-last_reconnect).total_seconds() > ERROR_TIMEOUT:
+                        last_reconnect = now
+                        logger = current_app.logger.exception
+                    logger('Error while etcd connect({})'.format(fn_name))
                     gevent.sleep(1)
                     continue
                 except Exception as e:
                     retry += 1
-                    if verbose >= 3:
-                        print "{}: retry={}".format(fn_name, retry)
-                    print repr(e), \
-                        '...restarting listen {0}...'.format(fn_name)
+                    current_app.logger.warning(
+                        'restarting listen: {0}'.format(fn_name),
+                        exc_info=True)
                     gevent.sleep(0.2)
     return result
 
@@ -640,14 +639,14 @@ def process_extended_statuses(data, app):
     key = data['node']['key']
     _, namespace, pod = key.rsplit('/', 2)
     status = data['node']['value']
-    print '=== Namespace: {0} | Pod: {1} | Status: {2} ==='.format(
-        namespace, pod, status)
+    current_app.logger.debug('Namespace: {0} | Pod: {1} | Status: {2}'.format(
+        namespace, pod, status))
     # TODO: don't do this if we have several pods in one namespace
     r = requests.delete(
         ETCD_URL.format(key.rsplit('/', 1)[0]),
         params={'recursive': True, 'dir': True})
     if not r.ok:
-        print "error while delete:{}".format(r.text)
+        current_app.logger.warning("error while delete:{}".format(r.text))
 
 
 def prelist_pod_states(app):
@@ -694,47 +693,41 @@ def process_pod_states(data, app, live=True):
         process_pods_event(k8s_obj, app, event_time, live)
     r = requests.delete(ETCD_URL.format(key))
     if not r.ok:
-        print "error while delete:{}".format(r.text)
+        current_app.logger.debug.warning("error while delete:{}".format(r.text))
 
 
 listen_pods = listen_fabric(
     get_api_url('pods', namespace=False, watch=True),
     get_api_url('pods', namespace=False),
-    process_pods_event_k8s,
-    PODS_VERBOSE_LOG
+    process_pods_event_k8s
 )
 
 listen_services = listen_fabric(
     get_api_url('services', namespace=False, watch=True),
     get_api_url('services', namespace=False),
-    process_service_event_k8s,
-    PODS_VERBOSE_LOG
+    process_service_event_k8s
 )
 
 listen_nodes = listen_fabric(
     get_api_url('nodes', namespace=False, watch=True),
     get_api_url('nodes', namespace=False),
-    process_nodes_event,
-    0
+    process_nodes_event
 )
 
 listen_events = listen_fabric(
     get_api_url('events', namespace=False, watch=True),
     get_api_url('events', namespace=False),
-    process_events_event,
-    1
+    process_events_event
 )
 
 listen_extended_statuses = listen_fabric_etcd(
     ETCD_EXTENDED_STATUSES_URL,
     process_extended_statuses,
-    prelist_extended_statuses,
-    1
+    prelist_extended_statuses
 )
 
 listen_pod_states = listen_fabric_etcd(
     ETCD_POD_STATES_URL,
     process_pod_states,
-    prelist_pod_states,
-    PODS_VERBOSE_LOG
+    prelist_pod_states
 )

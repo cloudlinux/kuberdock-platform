@@ -48,7 +48,9 @@ application = DispatcherMiddleware(
 )
 if SENTRY_ENABLE:
     import socket
-    from kubedock.settings import SENTRY_DSN, MASTER_IP
+    from kubedock.settings import MASTER_IP
+    from kubedock.settings import SENTRY_DSN, SENTRY_PROCESSORS
+    from kubedock.settings import SENTRY_EXCLUDE_PATHS
     from raven.contrib.flask import Sentry
     from kubedock.utils import get_version
     from kubedock.kapi.licensing import get_license_info
@@ -57,6 +59,8 @@ if SENTRY_ENABLE:
     back_app.config['SENTRY_RELEASE'] = get_version('kuberdock')
     back_app.config['SENTRY_NAME'] = hostname
     back_app.config['SENTRY_TAGS'] = {'installation_id': authkey}
+    back_app.config['SENTRY_PROCESSORS'] = SENTRY_PROCESSORS
+    back_app.config['SENTRY_EXCLUDE_PATHS'] = SENTRY_EXCLUDE_PATHS
     sentry = Sentry(back_app, logging=True, level=logging.ERROR, dsn=SENTRY_DSN)
 # Remove all locks remained after previous server run.
 try:

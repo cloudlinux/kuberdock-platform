@@ -5,6 +5,8 @@ import uuid
 
 from flask import current_app
 
+from paramiko.ssh_exception import SSHException
+
 from ..nodes.models import Node, NodeFlag, LocalStorageDevices
 from ..system_settings.models import SystemSettings
 from ..utils import from_binunit, from_siunit, get_api_url, NODE_STATUSES
@@ -350,10 +352,16 @@ def get_external_node_ip(node_ip, ssh_to_node, raise_on_error):
             'curl {}'.format(aws_external_ipv4_endpoint),
             timeout=20)
         exit_status = o.channel.recv_exit_status()
-    except Exception:
+    except SSHException:
         # May happens in case of connection lost during operation
+        current_app.logger.warning(
+            'Network error while try to get external IP for AWS node: %s',
+            node_ip)
+        raise raise_on_error
+    except Exception:
         current_app.logger.exception(
-            'Failed to get external IP for AWS node: %s', node_ip)
+            'Unknown error while try to get external IP for AWS node: %s',
+            node_ip)
         raise raise_on_error
     if exit_status != 0:
         current_app.logger.error(

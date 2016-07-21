@@ -1009,14 +1009,15 @@ class PodCollection(object):
             exit_status = o.channel.recv_exit_status()
         except Exception as e:
             # May happens in case of connection lost during operation
-            current_app.logger.error(
+            current_app.logger.warning(
                 'Looks like connection error to the node: %s', e,
                 exc_info=True)
             raise APIError(DIRECT_SSH_ERROR)
         if exit_status != 0:
             current_app.logger.error(
-                "Can't update kd-ssh-user on the node. Exited with: %s",
-                exit_status)
+                "Can't update kd-ssh-user on the node.\
+                Exited with: {}, ({}, {})".format(
+                    exit_status, i.read(), o.read()))
             raise APIError(DIRECT_SSH_ERROR)
 
     @staticmethod

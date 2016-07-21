@@ -291,7 +291,11 @@ class User(BaseModelMixin, UserMixin, db.Model):
             db.session.commit()
 
     def __repr__(self):
-        return "<User(username='{0}', email='{1}')>".format(self.username, self.email)
+        """We don't want to show private user information here, like email,
+        because it will be visible in logs and sentry events.
+
+        """
+        return "<User(username='{0}')>".format(self.username)
 
 
 class UserActivity(BaseModelMixin, db.Model):

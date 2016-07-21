@@ -6,6 +6,7 @@ import tempfile
 import unittest
 
 import mock
+from flask import current_app
 
 from kubedock import settings
 from kubedock.billing.models import Kube
@@ -13,8 +14,10 @@ from kubedock.core import db
 from kubedock.exceptions import APIError
 from kubedock.kapi import nodes
 from kubedock.nodes.models import Node
+from kubedock.pods.models import IPPool
 from kubedock.testutils.testcases import DBTestCase
 from kubedock.utils import NODE_STATUSES
+
 
 class TestNodes(DBTestCase):
     def setUp(self):
@@ -105,6 +108,24 @@ class TestNodes(DBTestCase):
 
         with self.assertRaises(APIError):
             nodes.delete_node(id1)
+
+    @mock.patch.object(nodes, 'remove_ls_volume')
+    @mock.patch.object(nodes.tasks, 'remove_node_by_host')
+    def test_node_cant_be_deleted_in_nonfloating_mode_with_active_ip_pools(
+            self, remove_by_host_mock, remove_ls_volume_mock):
+        remove_ls_volume_mock.return_value = ''
+        current_app.config['NONFLOATING_PUBLIC_IPS'] = True
+
+        node1, node2 = self.add_two_nodes()
+        pool = IPPool(network='192.168.1.0/24', node=node2)
+        db.session.add(pool)
+        db.session.commit()
+
+        # Has no IP pools, removed successfully
+        nodes.delete_node(node1.id)
+        # Has 1 active IP pool, should raise APIError
+        with self.assertRaisesRegexp(APIError, 'active pools'):
+            nodes.delete_node(node2.id)
 
     @mock.patch.object(nodes.socket, 'gethostbyname')
     def test_edit_node_hostname(self, gethostbyname_mock):

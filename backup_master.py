@@ -34,6 +34,29 @@ KNOWN_TOKENS = '/etc/kubernetes/known_tokens.csv'
 SSH_KEY = '/var/lib/nginx/.ssh/id_rsa'
 ETCD_PKI = '/etc/pki/etcd/'
 LICENSE = '/var/opt/kuberdock/.license'
+LOCKFILE = '/var/lock/kd-master-backup.lock'
+
+
+def lock(lockfile):
+    def decorator(clbl):
+        def wrapper(*args, **kwargs):
+            try:
+                # Create or fail
+                os.open(lockfile, os.O_CREAT | os.O_EXCL)
+            except OSError:
+                raise BackupError(
+                    "Another backup/restore process already running."
+                    " If it is not, try to remove `{0}` and "
+                    "try again.".format(lockfile))
+            try:
+                result = clbl(*args, **kwargs)
+            finally:
+                os.unlink(lockfile)
+            return result
+
+        return wrapper
+
+    return decorator
 
 
 class BackupError(Exception):
@@ -65,6 +88,17 @@ def pg_dump(src, dst, username="postgres"):
 def etcd_backup(src, dst):
     cmd = nice(["etcdctl", "backup", "--data-dir", src, "--backup-dir", dst],
                NICENESS)
+    subprocess.check_call(cmd, stdout=subprocess.PIPE)
+
+
+def pg_restore(src, username="postgres"):
+    cmd = sudo(["pg_restore", "-U", username, "-n", "public",
+                "-c", "-1", "-d", "kuberdock", src], "postgres")
+    subprocess.check_call(cmd)
+
+
+def etcd_restore(src, dst):
+    cmd = ["etcdctl", "backup", "--data-dir", src, "--backup-dir", dst]
     subprocess.check_call(cmd, stdout=subprocess.PIPE)
 
 
@@ -268,6 +302,7 @@ restore_chain = (PostgresResource, EtcdResource, SSHKeysResource,
                  SharedNginxConfigResource)
 
 
+@lock(LOCKFILE)
 def do_backup(backup_dir, callback, skip_errors, **kwargs):
     timestamp = datetime.datetime.today().isoformat()
     logger.info('Backup started {0}'.format(backup_dir))
@@ -296,17 +331,7 @@ def do_backup(backup_dir, callback, skip_errors, **kwargs):
     return result
 
 
-def pg_restore(src, username="postgres"):
-    cmd = sudo(["pg_restore", "-U", username, "-n", "public",
-                "-c", "-1", "-d", "kuberdock", src], "postgres")
-    subprocess.check_call(cmd)
-
-
-def etcd_restore(src, dst):
-    cmd = ["etcdctl", "backup", "--data-dir", src, "--backup-dir", dst]
-    subprocess.check_call(cmd, stdout=subprocess.PIPE)
-
-
+@lock(LOCKFILE)
 def do_restore(backup_file, skip_errors, **kwargs):
     logger.info('Restore started {0}'.format(backup_file))
 
@@ -347,8 +372,9 @@ def parse_args(args):
     parser_backup = subparsers.add_parser('backup', help='backup')
     parser_backup.add_argument('backup_dir',
                                help="Destination for all created files")
-    parser_backup.add_argument("-e", '--callback',
-                               help='Callback for each file')
+    parser_backup.add_argument(
+        "-e", '--callback', help='Callback for each backup file'
+        ' (backup path passed as a 1st arg)')
     parser_backup.set_defaults(func=do_backup)
 
     parser_restore = subparsers.add_parser('restore', help='restore')

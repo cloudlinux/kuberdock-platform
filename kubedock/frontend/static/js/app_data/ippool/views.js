@@ -291,12 +291,39 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         childViewContainer: "tbody",
         initialize: function(){
             this.isAWS = this.model.collection.ipPoolMode === 'aws';
+            this.collection.on('change', function(){ this.fullCollection.sort(); });
+            this.originCollection = this.collection.fullCollection.models;
+        },
+        ui:{
+            'visibility' : '.visibility'
+        },
+        events: {
+            'click @ui.visibility' : 'toggleVisibility'
         },
         childViewOptions: function(){
             return { isAWS: this.isAWS };
         },
         templateHelpers: function(){
-            return { isAWS: this.isAWS };
+            return {
+                isAWS           : this.isAWS,
+                showExcludedIps : this.showExcludedIps
+            };
+        },
+        toggleVisibility: function () {
+            var collection,
+                fakeCollection = _.filter(this.originCollection, function(model){
+                    return model.get('status') === 'free';
+                });
+
+            if (this.showExcludedIps){
+                collection = this.originCollection;
+                delete this.showExcludedIps;
+            } else {
+                collection = fakeCollection;
+                this.showExcludedIps = true;
+            }
+            this.collection.fullCollection.reset(collection);
+            this.render();
         }
     });
 

@@ -176,6 +176,19 @@
 }
 .close{ .mdi('close',20px, @defaultIconColor, @hoverIconColor); }
 
+.ips-list-control{
+    .button{
+        &.visibility{
+            .mdi('visibility',18px, #B5BBC1, @defaultIconColorDarken);
+            &.active{
+                &::before{
+                    content: 'visibility_off';
+                }
+            }
+        }
+    }
+}
+
 // table icons
 table{
     span{ .statuses(); }

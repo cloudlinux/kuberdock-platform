@@ -1,12 +1,10 @@
-import traceback
-
 import context
 import kdclick
 from io import IO
 from kdclick.access import ALL
 from kdctl import KDCtl
 from subs import (images, ippool, nodes, pods, predefined_apps, pricing,
-                  pstorage, restore, system_settings, users)
+                  pstorage, system_settings, users)
 from utils.misc import ContextObj
 from ..api_client import APIError, UnknownAnswer
 
@@ -99,6 +97,5 @@ main.add_command(pods.pods)
 main.add_command(predefined_apps.pa)
 main.add_command(pricing.pricing)
 main.add_command(pstorage.pstorage)
-main.add_command(restore.restore)
 main.add_command(system_settings.ss)
 main.add_command(users.users)

@@ -1,7 +1,8 @@
 from flask import Blueprint
 from flask.views import MethodView
 
-from kubedock.api.utils import use_kwargs
+from .utils import use_kwargs
+from ..backups import pods as backup_pods
 from ..decorators import maintenance_protected
 from ..exceptions import PermissionDenied
 from ..kapi.podcollection import PodCollection, PodNotFound
@@ -11,7 +12,7 @@ from ..rbac import check_permission
 from ..system_settings.models import SystemSettings
 from ..utils import KubeUtils, register_api, catch_error
 from ..validation import check_new_pod_data, check_change_pod_data, \
-    owner_optional_schema
+    owner_optional_schema, owner_mandatory_schema
 
 podapi = Blueprint('podapi', __name__, url_prefix='/podapi')
 
@@ -181,3 +182,52 @@ def reset_access_container(pod_id, owner=None):
     else:
         check_permission('get_non_owned', 'pods').check()
     return PodCollection(owner).reset_direct_access_pass(pod_id)
+
+
+@podapi.route('/<pod_id>/dump', methods=['GET'], strict_slashes=False)
+@auth_required
+@maintenance_protected
+@check_permission('dump', 'pods')
+@KubeUtils.jsonwrap
+def dump(pod_id):
+    return PodCollection().dump(pod_id)
+
+
+@podapi.route('/dump', methods=['GET'], strict_slashes=False)
+@auth_required
+@maintenance_protected
+@check_permission('dump', 'pods')
+@KubeUtils.jsonwrap
+@use_kwargs({'owner': owner_optional_schema})
+def batch_dump(owner=None):
+    return PodCollection(owner).dump()
+
+
+restore_args_schema = {
+    'pod_dump': {
+        'type': 'dict',
+        'required': True
+    },
+    'owner': owner_mandatory_schema,
+    'pv_backups_location': {
+        'type': 'string',
+        'required': False,
+        'nullable': True
+    },
+    'pv_backups_path_template': {
+        'type': 'string',
+        'required': False,
+        'nullable': True
+    }
+}
+
+
+@podapi.route('/restore', methods=['POST'], strict_slashes=False)
+@auth_required
+@maintenance_protected
+@check_permission('create_non_owned', 'pods')
+@KubeUtils.jsonwrap
+@use_kwargs(restore_args_schema)
+def restore(pod_dump, owner, **kwargs):
+    with check_permission('own', 'pods', user=owner):
+        return backup_pods.restore(pod_dump=pod_dump, owner=owner, **kwargs)

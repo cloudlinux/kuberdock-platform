@@ -175,7 +175,7 @@ def _verify_pipelines(ctx, param, items):
     return items.split(',')
 
 
-@click.command()
+@click.command(context_settings={'help_option_names': ['-h', '--help']})
 @click.argument('paths', nargs=-1, callback=_verify_paths)
 @click.option('--pipelines', callback=_verify_pipelines,
               help='Comma separated pipeline names to use')

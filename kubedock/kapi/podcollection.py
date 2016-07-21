@@ -1,47 +1,42 @@
 import json
-from crypt import crypt
-from base64 import urlsafe_b64encode, urlsafe_b64decode
 from collections import defaultdict
+from crypt import crypt
 from os import path
 from uuid import uuid4
 
+import ipaddress
+from celery.exceptions import MaxRetriesExceededError
 from flask import current_app
 
-from celery.exceptions import MaxRetriesExceededError
+import helpers
+import ingress_resource
+import licensing
+import node_utils
+import pod_domains
+import podutils
+import pstorage
+from helpers import KubeQuery, K8sSecretsClient, K8sSecretsBuilder
+from images import Image
 from kubedock.exceptions import (
     NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError)
-from kubedock.utils import ssh_connect, randstr, ip2int
-from . import helpers
-from . import podutils
-from .helpers import KubeQuery
-from .images import Image
-from .lbpoll import LoadBalanceService
-from .licensing import is_valid as license_valid
-from .node import Node as K8SNode
-from .pod import Pod
-from .pstorage import (get_storage_class_by_volume_info, get_storage_class,
-                       delete_drive_by_id)
-from .node_utils import node_status_running, get_nodes_collection
+from lbpoll import LoadBalanceService
+from node import Node as K8SNode
+from pod import Pod
+from .. import billing
 from .. import dns_management
-from ..billing import repr_limits
+from .. import settings
+from .. import utils
 from ..core import db
 from ..domains.models import PodDomain
 from ..exceptions import APIError, PodStartFailure
 from ..kd_celery import celery
+from ..nodes.models import Node
 from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
-from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
-                        DEFAULT_REGISTRY, AWS)
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
-from ..utils import (POD_STATUSES, NODE_STATUSES, atomic, update_dict,
-                     send_event_to_user, send_event_to_role, retry)
-from .node_utils import get_external_node_ip
-from ..nodes.models import Node
-from .pod_domains import set_pod_domain, check_domain
-from .ingress_resource import create_ingress
+from ..utils import POD_STATUSES, NODE_STATUSES
 
-DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
 UNKNOWN_ADDRESS = 'Unknown'
 
 # We use only 30 because useradd limits name to 32, and ssh client limits
@@ -50,6 +45,30 @@ UNKNOWN_ADDRESS = 'Unknown'
 # will be copied to each node at deploy stage
 DIRECT_SSH_USERNAME_LEN = 30
 DIRECT_SSH_ERROR = "Error retrieving ssh access, please contact administrator"
+
+
+def _check_license():
+    if not licensing.is_valid():
+        raise APIError("Action forbidden. Please contact support.")
+
+
+def _secrets_dict_to_list(d):
+    """Takes secrets as dict and convert it to list of tuples.
+
+    Result items has structure (username, password, registry).
+
+    Input dict has following structure:
+    {registry:
+       {'auth':
+          {'username': username,
+           'password': password
+          }
+       },
+       ...
+    }
+    """
+    return [(v['auth']['username'], v['auth']['password'], k)
+            for k, v in d.iteritems()]
 
 
 def get_user_namespaces(user):
@@ -85,28 +104,163 @@ class PodCollection(object):
             edit, not creation.
         :param skip_check: use it if you trust the source or need to break some
             rules (usually for kuberdock-internal)
-        :returns: prepared pod config and list of secrets
+        :returns: prepared pod config and list of secrets. Secret is
+            a tuple(username, password, registry).
         """
-        if not skip_check and not license_valid():
-            raise APIError("Action forbidden. Please contact support.")
-
         secrets = extract_secrets(params['containers'])
         if original_pod is not None:
             # use old secrets too, so user won't need to re-enter credentials
-            secrets.update(self._get_secrets(original_pod).values())
+            secrets.update(self.get_secrets(original_pod).values())
         secrets = sorted(secrets)
-        fix_relative_mount_paths(params['containers'])
 
-        # TODO: with cerberus 0.10 use "default" normalization rule
-        for container in params['containers']:
-            container.setdefault('sourceUrl',
-                                 Image(container['image']).source_url)
-            container.setdefault('kubes', 1)
-        params.setdefault('volumes', [])
+        self._preprocess_containers(params['containers'], secrets, skip_check,
+                                    original_pod=original_pod)
 
         params['owner'] = self.owner
 
-        storage_cls = get_storage_class()
+        return params, secrets
+
+    def _preprocess_pod_dump(self, dump, skip_check=False):
+        hidden_fields = ['node', 'podIP', 'status', 'db_status', 'k8s_status',
+                         'service', 'serviceAccount']
+
+        pod_data = {k: v
+                    for k, v in dump['pod_data'].iteritems()
+                    if k not in hidden_fields}
+        k8s_secrets = dump['k8s_secrets']
+        # k8s_secrets has following structure
+        # {secret_name:
+        #   {registry:
+        #     {'auth':
+        #        {'username': username,
+        #         'password': password
+        #        }
+        #     },
+        #   ...
+        #   }
+        # }
+
+        # flatten
+        secrets = [s
+                   for secret_name, secret_dict in k8s_secrets.iteritems()
+                   for s in _secrets_dict_to_list(secret_dict)]
+
+        containers = pod_data['containers']
+
+        self._preprocess_containers(containers, secrets, skip_check)
+
+        pod_data['owner'] = self.owner
+        return pod_data, secrets
+
+    def _preprocess_containers(self, containers, secrets, skip_check,
+                               original_pod=None):
+        fix_relative_mount_paths(containers)
+
+        # TODO: with cerberus 0.10 use "default" normalization rule
+        for container in containers:
+            container.setdefault('sourceUrl',
+                                 Image(container['image']).source_url)
+            container.setdefault('kubes', 1)
+
+        if not skip_check:
+            self._check_trial(containers, original_pod=original_pod)
+            Image.check_containers(containers, secrets)
+
+    def _check_status(self, pod_data):
+        billing_type = SystemSettings.get_by_name('billing_type').lower()
+        if billing_type != 'no billing' and self.owner.fix_price:
+            # All pods created by fixed-price users initially must have
+            # status "unpaid". Status may be changed later (using command
+            # "set").
+            pod_data['status'] = POD_STATUSES.unpaid
+
+    def _add_pod(self, data, secrets, skip_check, reuse_pv):
+        self._preprocess_volumes(data)
+
+        data['namespace'] = data['id'] = str(uuid4())
+        data['sid'] = str(uuid4())  # TODO: do we really need this field?
+
+        if not skip_check:
+            self._check_status(data)
+
+        data.setdefault('status', POD_STATUSES.stopped)
+
+        pod = Pod(data)
+        pod.check_name()
+
+        # AC-3256 Fix.
+        # Wrap {PD models}/{public IP}/{Pod creation} in a db inside
+        # a single db transaction, i.e. if anything goes wrong - rollback.
+        with utils.atomic():
+            # create PD models in db and change volumes schema in config
+            pod.compose_persistent(reuse_pv=reuse_pv)
+            set_public_ip = self.needs_public_ip(data)
+            db_pod = self._save_pod(pod)
+            if set_public_ip:
+                if getattr(db_pod, 'public_ip', None):
+                    pod.public_ip = db_pod.public_ip
+                if getattr(db_pod, 'public_aws', None):
+                    pod.public_aws = db_pod.public_aws
+                if getattr(db_pod, 'domain', None):
+                    pod.domain = db_pod.domain
+            pod.forge_dockers()
+
+        namespace = pod.namespace
+
+        self._make_namespace(namespace)
+
+        secret_ids = self._save_k8s_secrets(secrets, namespace)
+        pod.secrets = secret_ids
+
+        pod_config = db_pod.get_dbconfig()
+        pod_config['secrets'] = pod.secrets
+        # Update config
+        db_pod.set_dbconfig(pod_config, save=True)
+        return pod.as_dict()
+
+    def add(self, params, skip_check=False, reuse_pv=True):  # TODO: celery
+        if not skip_check:
+            _check_license()
+
+        params, secrets = self._preprocess_new_pod(
+            params, skip_check=skip_check)
+
+        return self._add_pod(params, secrets, skip_check, reuse_pv)
+
+    def add_from_dump(self, dump, skip_check=False):
+        if not skip_check:
+            _check_license()
+
+        pod_data, secrets = self._preprocess_pod_dump(dump, skip_check)
+
+        return self._add_pod(pod_data, secrets, skip_check, reuse_pv=False)
+
+    def _save_k8s_secrets(self, secrets, namespace):
+        """Save secrets to k8s.
+        :param secrets: List of tuple(username, password, registry)
+        :param namespace: Namespace
+        :return: List of secrets ids.
+        """
+        secrets_client = K8sSecretsClient(self.k8squery)
+        secrets_builder = K8sSecretsBuilder
+
+        secret_ids = []
+        for secret in secrets:
+            secret_data = secrets_builder.build_secret_data(*secret)
+            secret_id = str(uuid4())
+
+            try:
+                secrets_client.create(secret_id, secret_data, namespace)
+            except secrets_client.ErrorBase as e:
+                raise APIError('Cannot save k8s secrets due to: %s'
+                               % e.message)
+
+            secret_ids.append(secret_id)
+        return secret_ids
+
+    def _preprocess_volumes(self, params):
+        params.setdefault('volumes', [])
+        storage_cls = pstorage.get_storage_class()
         if storage_cls:
             persistent_volumes = [vol for vol in params['volumes']
                                   if 'persistentDisk' in vol]
@@ -118,58 +272,7 @@ class PodCollection(object):
             if pinned_node_name is not None:
                 params['node'] = pinned_node_name
 
-        if not skip_check:
-            self._check_trial(params['containers'], original_pod=original_pod)
-            Image.check_containers(params['containers'], secrets)
-
-        return params, secrets
-
-    def add(self, params, skip_check=False, reuse_pv=True):  # TODO: celery
-        params, secrets = self._preprocess_new_pod(
-            params, skip_check=skip_check)
-
-        params['namespace'] = params['id'] = str(uuid4())
-        params['sid'] = str(uuid4())  # TODO: do we really need this field?
-
-        billing_type = SystemSettings.get_by_name('billing_type').lower()
-        if (not skip_check and billing_type != 'no billing' and
-                self.owner.fix_price):
-            # All pods created by fixed-price users initially must have status
-            # "unpaid". Status may be changed later (using command "set").
-            params['status'] = POD_STATUSES.unpaid
-        params.setdefault('status', POD_STATUSES.stopped)
-
-        pod = Pod(params)
-        pod.check_name()
-
-        # AC-3256 Fix.
-        # Wrap {PD models}/{public IP}/{Pod creation} in a db inside
-        # a single db transaction, i.e. if anything goes wrong - rollback.
-        with atomic():
-            # create PD models in db and change volumes schema in config
-            pod.compose_persistent(reuse_pv=reuse_pv)
-            set_public_ip = self.needs_public_ip(params)
-            db_pod = self._save_pod(pod)
-            if set_public_ip:
-                if getattr(db_pod, 'public_ip', None):
-                    pod.public_ip = db_pod.public_ip
-                if getattr(db_pod, 'public_aws', None):
-                    pod.public_aws = db_pod.public_aws
-                if getattr(db_pod, 'domain', None):
-                    pod.domain = db_pod.domain
-            pod._forge_dockers()
-
-        self._make_namespace(pod.namespace)
-        # create secrets in k8s and add IDs in config
-        pod.secrets = [self._make_secret(pod.namespace, *secret)
-                       for secret in secrets]
-        pod_config = db_pod.get_dbconfig()
-        pod_config['secrets'] = pod.secrets
-        # Update config
-        db_pod.set_dbconfig(pod_config, save=True)
-        return pod.as_dict()
-
-    @atomic(nested=False)
+    @utils.atomic(nested=False)
     def edit(self, original_pod, data, skip_check=False):
         """
         Preprocess and add new pod config in db.
@@ -198,12 +301,13 @@ class PodCollection(object):
             if key in original_db_pod_config}))
         # create PD models in db and change volumes schema in config
         pod.compose_persistent()
+
         # get old secrets, like mapping {secret: id-of-the-secret-in-k8s}
-        exist = {v: k for k, v in self._get_secrets(original_pod).iteritems()}
+        exist = {v: k for k, v in self.get_secrets(original_pod).iteritems()}
         # create missing secrets in k8s and add IDs in config
-        pod.secrets = [
-            exist.get(secret) or self._make_secret(pod.namespace, *secret)
-            for secret in secrets]
+        secrets_to_create = set(secrets) - set(exist.keys())
+        new_ids = self._save_k8s_secrets(secrets_to_create, pod.namespace)
+        pod.secrets = sorted(new_ids + exist.values())
 
         # add in kapi-Pod
         original_pod.edited_config = vars(pod).copy()
@@ -216,19 +320,23 @@ class PodCollection(object):
         return original_pod.as_dict()
 
     def get(self, pod_id=None, as_json=True):
-        owner_id = None
-        if self.owner is not None:
-            owner_id = self.owner.id
         if pod_id is None:
-            if self.owner is None:
-                pods = [p.as_dict() for p in self._collection.values()]
-            else:
-                pods = [p.as_dict() for p in self._collection.values()
-                        if p.owner.id == owner_id]
+            pods = [p.as_dict() for p in self._get_owned()]
         else:
             pods = self._get_by_id(pod_id).as_dict()
         if as_json:
             return json.dumps(pods)
+        return pods
+
+    def dump(self, pod_id=None):
+        """Get full information about pods.
+        ATTENTION! Do not use it in methods allowed for user! It may contain
+        secret information. FOR ADMINS ONLY!
+        """
+        if pod_id is None:
+            pods = [p.dump() for p in self._get_owned()]
+        else:
+            pods = self._get_by_id(pod_id).dump()
         return pods
 
     def _get_by_id(self, pod_id):
@@ -244,6 +352,15 @@ class PodCollection(object):
             raise PodNotFound()
         return pod
 
+    def _get_owned(self):
+        if self.owner is None:
+            pods = [p for p in self._collection.values()]
+        else:
+            owner_id = self.owner.id
+            pods = [p for p in self._collection.values()
+                    if p.owner.id == owner_id]
+        return pods
+
     @staticmethod
     def needs_public_ip(conf):
         """
@@ -256,7 +373,7 @@ class PodCollection(object):
         return False
 
     @staticmethod
-    @atomic()
+    @utils.atomic()
     def _prepare_for_public_address(pod, config=None):
         """Prepare pod for Public IP assigning"""
         conf = pod.get_dbconfig() if config is None else config
@@ -266,10 +383,12 @@ class PodCollection(object):
             return
         domain_name = conf.get('domain', None)
         if domain_name is None:
-            if AWS:
+            if settings.AWS:
                 conf.setdefault('public_aws', UNKNOWN_ADDRESS)
             else:
-                IPPool.get_free_host(as_int=True)
+                ip_address = IPPool.get_free_host(as_int=True)
+                if ip_address is None:
+                    raise NoFreeIPs()
                 # 'true' indicates that this Pod needs Public IP to be assigned
                 conf['public_ip'] = pod.public_ip = 'true'
         else:
@@ -282,14 +401,14 @@ class PodCollection(object):
                         u'DNS management system is misconfigured. '
                         u'Please, contact administrator.')
                 )
-            domain = check_domain(domain_name)
-            pod_domain = set_pod_domain(pod, domain.id)
+            domain = pod_domains.check_domain(domain_name)
+            pod_domain = pod_domains.set_pod_domain(pod, domain.id)
             conf['domain'] = pod.domain = u'{}.{}'.format(
                 pod_domain.name, domain.name)
         if config is None:
             pod.set_dbconfig(conf, save=False)
 
-    @atomic()
+    @utils.atomic()
     def _set_entry(self, pod, data):
         """Immediately set fields "status", "name", "postDescription" in DB."""
         db_pod = DBPod.query.get(pod.id)
@@ -310,7 +429,7 @@ class PodCollection(object):
         return pod.as_dict()
 
     @staticmethod
-    @atomic()
+    @utils.atomic()
     def _remove_public_ip(pod_id=None, ip=None):
         """Free ip (remove PodIP from database and change pod config).
 
@@ -329,7 +448,8 @@ class PodCollection(object):
             if pod_id:
                 query = query.filter_by(pod_id=pod_id)
             if ip:
-                query = query.filter_by(ip_address=ip2int(ip))
+                query = query.filter_by(
+                    ip_address=int(ipaddress.ip_address(ip)))
             ip = query.first()
             if ip is None:
                 return
@@ -355,7 +475,7 @@ class PodCollection(object):
         db.session.delete(ip)
 
     @staticmethod
-    @atomic(nested=False)
+    @utils.atomic(nested=False)
     def unbind_publicIP(pod_id):
         """Temporary unbind publicIP, on next pod start publicIP will be
         reassigned. Unbinded publicIP saved in pod config as
@@ -382,10 +502,10 @@ class PodCollection(object):
 
         IpState.end(pod_id, ip.ip_address)
         db.session.delete(ip)
-        send_event_to_user('pod:change', {'id': pod_id}, pod.owner_id)
+        utils.send_event_to_user('pod:change', {'id': pod_id}, pod.owner_id)
 
     @classmethod
-    @atomic()
+    @utils.atomic()
     def _return_public_ip(cls, pod_id):
         """
         If pod had public IP, and it was removed, return it back to the pod.
@@ -407,7 +527,7 @@ class PodCollection(object):
         pod.set_dbconfig(pod_config, save=False)
         cls._prepare_for_public_address(pod)
 
-    @atomic()
+    @utils.atomic()
     def _save_pod(self, obj, db_pod=None):
         """
         Save pod data to db.
@@ -469,7 +589,9 @@ class PodCollection(object):
 
     def delete(self, pod_id, force=False):
         pod = self._get_by_id(pod_id)
-        if pod.owner.username == KUBERDOCK_INTERNAL_USER and not force:
+
+        if pod.owner.username == settings.KUBERDOCK_INTERNAL_USER \
+                and not force:
             podutils.raise_('Service pod cannot be removed', 400)
 
         pod.set_status(POD_STATUSES.deleting, send_update=True, force=True)
@@ -491,7 +613,7 @@ class PodCollection(object):
                 current_app.logger.error(
                     u'Failed to delete A DNS record for pod "{}": {}'
                     .format(pod.id, message))
-                send_event_to_role(
+                utils.send_event_to_role(
                     'notify:error', {'message': message}, 'Admin')
         # all deleted asynchronously, now delete namespace, that will ensure
         # delete all content
@@ -517,7 +639,7 @@ class PodCollection(object):
         image_id = container.get('imageID')
         if image_id is None:
             return False
-        secrets = self._get_secrets(pod).values()
+        secrets = self.get_secrets(pod).values()
         image_id_in_registry = Image(image).get_id(secrets)
         if image_id_in_registry is None:
             raise APIError('Image not found in registry')
@@ -538,64 +660,24 @@ class PodCollection(object):
         if data is None:
             config = {
                 "kind": "Namespace",
-                "apiVersion": KUBE_API_VERSION,
+                "apiVersion": settings.KUBE_API_VERSION,
                 "metadata": {"name": namespace}}
             self.k8squery.post(
                 ['namespaces'], json.dumps(config), rest=True, ns=False)
             # TODO where raise ?
             # current_app.logger.debug(rv)
 
-    def _make_secret(self, namespace, username, password,
-                     registry=DEFAULT_REGISTRY):
-        # only index.docker.io in .dockercfg allowes to use
-        # image url without the registry, like wncm/mynginx
-        if registry.endswith('docker.io'):
-            registry = DOCKERHUB_INDEX
-        auth = urlsafe_b64encode('{0}:{1}'.format(username, password))
-        secret = urlsafe_b64encode(
-            '{{"{0}": {{"auth": "{1}", "email": "a@a.a" }}}}'.format(
-                registry, auth))
-
-        name = str(uuid4())
-        config = {'apiVersion': KUBE_API_VERSION,
-                  'kind': 'Secret',
-                  'metadata': {'name': name, 'namespace': namespace},
-                  'data': {'.dockercfg': secret},
-                  'type': 'kubernetes.io/dockercfg'}
-
-        rv = self.k8squery.post(['secrets'], json.dumps(config), rest=True,
-                                ns=namespace)
-        if rv['kind'] == 'Status' and rv['status'] == 'Failure':
-            raise APIError(rv['message'])
-        return name
-
-    def _get_secrets(self, pod):
+    @staticmethod
+    def get_secrets(pod):
         """
         Retrieve from kubernetes all secrets attached to the pod.
 
         :param pod: kubedock.kapi.pod.Pod
         :returns: mapping of secrets name to (username, password, registry)
         """
-        secrets = {}
-        secrets_ids = set(pod.secrets)
-        if getattr(pod, 'edited_config', None):
-            secrets_ids.update(pod.edited_config.get('secrets'))
-        for secret in secrets_ids:
-            rv = self.k8squery.get(['secrets', secret], ns=pod.namespace)
-            if rv['kind'] == 'Status':
-                raise APIError(rv['message'])
-            dockercfg = json.loads(urlsafe_b64decode(
-                str(rv['data']['.dockercfg'])))
-            for registry, data in dockercfg.iteritems():
-                username, password = urlsafe_b64decode(
-                    str(data['auth'])).split(':', 1)
-                # only index.docker.io in .dockercfg allowes to use image url
-                # without the registry, like wncm/mynginx.
-                # Replace it back to default registry
-                if registry == DOCKERHUB_INDEX:
-                    registry = DEFAULT_REGISTRY
-                secrets[secret] = (username, password, registry)
-        return secrets
+        pod_secrets = pod.get_secrets()
+        return {k: _secrets_dict_to_list(v)[0]
+                for k, v in pod_secrets.iteritems()}
 
     def _get_namespace(self, namespace):
         data = self.k8squery.get(ns=namespace)
@@ -690,7 +772,7 @@ class PodCollection(object):
         """Check if public address not set and try to get it from
         services. Update public address if found one.
         """
-        if AWS:
+        if settings.AWS:
             if getattr(pod, 'public_aws', UNKNOWN_ADDRESS) == UNKNOWN_ADDRESS:
                 dns = LoadBalanceService().get_dns_by_pods(pod.id)
                 if pod.id in dns:
@@ -715,7 +797,7 @@ class PodCollection(object):
                 # to DB record.
                 if db_pod.status == POD_STATUSES.stopping:
                     pod.set_status(POD_STATUSES.stopped)
-                pod._forge_dockers()
+                pod.forge_dockers()
                 self._collection[pod.id, namespace] = pod
             else:
                 pod = self._collection[db_pod.id, namespace]
@@ -765,8 +847,8 @@ class PodCollection(object):
                     else:
                         container['state'] = 'failed'
                 container.pop('resources', None)
-                container['limits'] = repr_limits(container['kubes'],
-                                                  pod.kube_type)
+                container['limits'] = billing.repr_limits(container['kubes'],
+                                                          pod.kube_type)
 
     def _resize_replicas(self, pod, data):
         # FIXME: not working for now
@@ -780,7 +862,7 @@ class PodCollection(object):
             podutils.raise_if_failure(rv, "Could not resize a replica")
         return len(replicas)
 
-    @atomic()
+    @utils.atomic()
     def _apply_edit(self, pod, db_pod, db_config):
         if db_config.get('edited_config') is None:
             return pod, db_config
@@ -812,7 +894,7 @@ class PodCollection(object):
             self._remove_public_ip(pod_id=db_pod.id)
         pod.name = db_pod.name
         pod.kube_type = db_pod.kube_id
-        pod._forge_dockers()
+        pod.forge_dockers()
         return pod, db_pod.get_dbconfig()
 
     def _start_pod(self, pod, data=None):
@@ -851,30 +933,23 @@ class PodCollection(object):
 
         pod.set_status(POD_STATUSES.preparing)
 
-        try:
-            if not current_app.config['NONFLOATING_PUBLIC_IPS']:
-                pod_public_ip = getattr(pod, 'public_ip', None)
-                if pod_public_ip == 'true':
-                    with atomic():
-                        ip = db_config.get('public_ip_before_freed')
-                        ip_address = IPPool.get_free_host(as_int=True, ip=ip)
-                        network = IPPool.get_network_by_ip(ip_address)
-                        pod_ip = PodIP(pod_id=pod.id, network=network.network,
-                                       ip_address=ip_address)
-                        db.session.add(pod_ip)
-                        db_config['public_ip'] = pod.public_ip = str(pod_ip)
-                        IpState.start(pod.id, pod_ip)
-                    db_pod.set_dbconfig(db_config)
-                elif pod_public_ip is not None:
-                    current_app.logger.warning(
-                        'PodIP {0} is already allocated'.format(pod_public_ip))
-        except NoFreeIPs:
-            pod.set_status(POD_STATUSES.stopped, send_update=True)
-            raise
-        except Exception:
-            current_app.logger.exception('Failed to bind publicIP: %s', pod)
-            pod.set_status(POD_STATUSES.stopped, send_update=True)
-            raise
+        if not current_app.config['NONFLOATING_PUBLIC_IPS']:
+            pod_public_ip = getattr(pod, 'public_ip', None)
+            if pod_public_ip == 'true':
+                with utils.atomic():
+                    ip_address = IPPool.get_free_host(as_int=True)
+                    if ip_address is None:
+                        raise NoFreeIPs()
+                    network = IPPool.get_network_by_ip(ip_address)
+                    pod_ip = PodIP(pod_id=pod.id, network=network.network,
+                                   ip_address=ip_address)
+                    db.session.add(pod_ip)
+                    db_config['public_ip'] = pod.public_ip = str(pod_ip)
+                    IpState.start(pod.id, pod_ip)
+                db_pod.set_dbconfig(db_config)
+            elif pod_public_ip is not None:
+                current_app.logger.warning('PodIP {0} is already allocated'
+                                           .format(pod_public_ip))
 
         if async_pod_create:
             prepare_and_run_pod_task.delay(pod)
@@ -904,13 +979,13 @@ class PodCollection(object):
                 else:
                     scale_replicationcontroller_task.apply_async((pod.id,))
                 return pod.as_dict()
-            # FIXME: else: ??? (what if pod has no "sid"?)
+                # FIXME: else: ??? (what if pod has no "sid"?)
         elif raise_:
             raise APIError('Pod is already stopped')
 
     def _change_pod_config(self, pod, data):
         db_config = helpers.get_pod_config(pod.id)
-        update_dict(db_config, data)
+        utils.update_dict(db_config, data)
         helpers.replace_pod_config(pod, db_config)
 
         # get pod again after change
@@ -1024,8 +1099,9 @@ class PodCollection(object):
         pod.direct_access = json.dumps(direct_access)
         pod.save()
         if not silent:
-            send_event_to_role('pod:change', {'id': pod.id}, 'Admin')
-            send_event_to_user('pod:change', {'id': pod.id}, self.owner.id)
+            utils.send_event_to_role('pod:change', {'id': pod.id}, 'Admin')
+            utils.send_event_to_user('pod:change', {'id': pod.id},
+                                     self.owner.id)
         return direct_access
 
     def _direct_access(self, pod_id, orig_pass=None):
@@ -1049,7 +1125,7 @@ class PodCollection(object):
             raise APIError(
                 'Pod is not assigned to node yet, please try later. '
                 'SSH access is impossible')
-        ssh, err = ssh_connect(node)
+        ssh, err = utils.ssh_connect(node)
         if err:
             # Level is not error because it's maybe temporary problem on the
             # cluster (node reboot) and we don't want to receive all such
@@ -1058,9 +1134,9 @@ class PodCollection(object):
             raise APIError(DIRECT_SSH_ERROR)
 
         if not orig_pass:
-            orig_pass = randstr(30, secure=True)
-        crypt_pass = crypt(orig_pass, randstr(2, secure=True))
-        node_external_ip = get_external_node_ip(
+            orig_pass = utils.randstr(30, secure=True)
+        crypt_pass = crypt(orig_pass, utils.randstr(2, secure=True))
+        node_external_ip = node_utils.get_external_node_ip(
             node, ssh, APIError(DIRECT_SSH_ERROR))
 
         clinks = {}
@@ -1129,7 +1205,7 @@ class PodCollection(object):
                     .filter(DBPod.id != original_pod.id)
             user_kubes = sum([pod.kubes for pod in pods_collection
                               if not pod.is_deleted])
-            kubes_left = TRIAL_KUBES - user_kubes
+            kubes_left = settings.TRIAL_KUBES - user_kubes
             pod_kubes = sum(c['kubes'] for c in containers)
             if pod_kubes > kubes_left:
                 podutils.raise_(
@@ -1159,9 +1235,9 @@ class PodCollection(object):
         node_hostname = dbPod.pinned_node
         if node_hostname is not None:
             k8snode = Node.get_by_name(node_hostname)
-            return node_status_running(k8snode)
+            return node_utils.node_status_running(k8snode)
 
-        nodes_list = get_nodes_collection(kube_type=pod.kube_type)
+        nodes_list = node_utils.get_nodes_collection(kube_type=pod.kube_type)
         running_nodes = [node for node in nodes_list
                          if node['status'] == NODE_STATUSES.running]
         return len(running_nodes) > 0
@@ -1184,7 +1260,7 @@ def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
         if pod.status == wait_status:
             return pod
 
-    return retry(
+    return utils.retry(
         check_status, interval, max_retries,
         APIError(error_message or (
             "Pod {0} did not become {1} after a given timeout. "
@@ -1230,9 +1306,10 @@ def finish_redeploy(self, pod_id, data, start=True):
     try:
         pod_collection._stop_pod(pod, block=True)
     except APIError as e:
-        send_event_to_user('notify:error', {'message': e.message},
-                           db_pod.owner_id)
-        send_event_to_role('notify:error', {'message': e.message}, 'Admin')
+        utils.send_event_to_user('notify:error', {'message': e.message},
+                                 db_pod.owner_id)
+        utils.send_event_to_role('notify:error', {'message': e.message},
+                                 'Admin')
         return
 
     command_options = data.get('commandOptions') or {}
@@ -1243,7 +1320,7 @@ def finish_redeploy(self, pod_id, data, start=True):
                 pd = PersistentDisk.get_all_query().filter(
                     PersistentDisk.name == pd['pdName']
                 ).first()
-                delete_drive_by_id(pd.id)
+                pstorage.delete_drive_by_id(pd.id)
 
     if start:  # start updated pod
         PodCollection(db_pod.owner).update(
@@ -1279,9 +1356,9 @@ def restore_containers_host_ports_config(pod_containers, db_containers):
         if not (ports and db_ports):
             continue
         container_ports_map = {
-            item.get(container_port_key): item for item in ports
-            if item.get(container_port_key)
-        }
+            item.get(container_port_key): item
+            for item in ports if item.get(container_port_key)
+            }
         for port in db_ports:
             container_port = port.get(container_port_key)
             src_port = container_ports_map.get(container_port)
@@ -1379,14 +1456,14 @@ def prepare_and_run_pod(pod):
             ok, message = dns_management.create_or_update_type_A_record(
                 pod.domain)
             if ok:
-                ok, message = create_ingress(
+                ok, message = ingress_resource.create_ingress(
                     pod.containers, pod.namespace, pod.domain, pod.service)
             if not ok:
-                send_event_to_role(
+                utils.send_event_to_role(
                     'notify:error',
                     {
                         'message': u'Failed to run pod with domain "{}": {}'
-                                   .format(pod.domain, message)
+                            .format(pod.domain, message)
                     },
                     'Admin'
                 )
@@ -1401,10 +1478,11 @@ def prepare_and_run_pod(pod):
             # We need to update db_pod in case if the pod status was changed
             # since the last retrieval from DB
             db.session.refresh(db_pod)
-            if (not isinstance(err, PodStartFailure) or
-                not db_pod.is_deleted()):
-                send_event_to_user('notify:error', {'message': err.message},
-                                   db_pod.owner_id)
+            if (not isinstance(err, PodStartFailure)
+                    or not db_pod.is_deleted()):
+                utils.send_event_to_user(
+                    'notify:error', {'message': err.message},
+                    db_pod.owner_id)
         pod.set_status(POD_STATUSES.stopped, send_update=True)
         raise
     pod.set_status(POD_STATUSES.pending, send_update=True)
@@ -1436,7 +1514,7 @@ def update_service(pod):
 
 def update_public_ports(pod_id, namespace, ports):
     k8squery = KubeQuery()
-    if AWS:
+    if settings.AWS:
         services = LoadBalanceService().get_by_pods(pod_id)
         if pod_id in services:
             # TODO: can have several services
@@ -1525,7 +1603,7 @@ def ingress_local_ports(pod_id, namespace, ports, cluster_ip=None):
     if not db_config.get('service') and ports:
         conf = {
             'kind': 'Service',
-            'apiVersion': KUBE_API_VERSION,
+            'apiVersion': settings.KUBE_API_VERSION,
             'metadata': {
                 'generateName': 'service-',
                 'labels': {'name': pod_id[:54] + '-service'},
@@ -1534,7 +1612,7 @@ def ingress_local_ports(pod_id, namespace, ports, cluster_ip=None):
                 'selector': {'kuberdock-pod-uid': pod_id},
                 'ports': ports,
                 'type': 'ClusterIP',
-                'sessionAffinity': 'None'   # may be ClientIP is better
+                'sessionAffinity': 'None'  # may be ClientIP is better
             }
         }
         if cluster_ip:
@@ -1553,12 +1631,12 @@ def ingress_public_ports(pod_id, namespace, ports):
         ports (list): list of ports to ingress, see get_ports
 
     """
-    if AWS:
+    if settings.AWS:
         services = LoadBalanceService().get_by_pods(pod_id)
         if not services and ports:
             conf = {
                 'kind': 'Service',
-                'apiVersion': KUBE_API_VERSION,
+                'apiVersion': settings.KUBE_API_VERSION,
                 'metadata': {
                     'generateName': 'lbservice-',
                     'labels': {'kuberdock-type': 'public',
@@ -1585,7 +1663,7 @@ def set_public_address(hostname, pod_id, send=False):
     conf['public_aws'] = hostname
     pod.set_dbconfig(conf)
     if send:
-        send_event_to_user('pod:change', {'id': pod_id}, pod.owner_id)
+        utils.send_event_to_user('pod:change', {'id': pod_id}, pod.owner_id)
     return hostname
 
 
@@ -1598,7 +1676,7 @@ def _process_persistent_volumes(pod, volumes):
     # extract PDs from volumes
     drives = {}
     for v in volumes:
-        storage_cls = get_storage_class_by_volume_info(v)
+        storage_cls = pstorage.get_storage_class_by_volume_info(v)
         if storage_cls is None:
             continue
         storage = storage_cls()

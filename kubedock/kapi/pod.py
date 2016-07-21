@@ -1,23 +1,23 @@
 import json
 import os
 import shlex
+import uuid
 from copy import deepcopy
 
 from flask import current_app
-import uuid
 
+import pstorage
 from . import helpers
-from ..exceptions import APIError
-from .images import Image
-from .pstorage import get_storage_class
-from ..billing import kubes_to_limits
-from ..billing.models import Kube
-from ..pods.models import (
-    db, PersistentDisk, PersistentDiskStatuses, Pod as DBPod)
-from ..settings import KUBE_API_VERSION, KUBERDOCK_INTERNAL_USER, \
-    NODE_LOCAL_STORAGE_PREFIX
-from ..utils import POD_STATUSES
 from . import podutils
+from .helpers import KubeQuery, K8sSecretsClient, K8sSecretsBuilder
+from .images import Image
+from .. import billing
+from .. import settings
+from ..billing.models import Kube
+from ..exceptions import APIError
+from ..pods.models import (db, PersistentDisk, PersistentDiskStatuses,
+                           Pod as DBPod)
+from ..utils import POD_STATUSES
 
 ORIGIN_ROOT = 'originroot'
 OVERLAY_PATH = u'/var/lib/docker/overlay/{}/root'
@@ -70,6 +70,7 @@ class Pod(object):
     ...
 
     """
+
     def __init__(self, data=None):
         self.k8s_status = None
         owner = None
@@ -163,15 +164,51 @@ class Pod(object):
                     container['containerID'] = None
                     container['imageID'] = None
         else:
-            pod._forge_dockers(status=pod.status)
+            pod.forge_dockers(status=pod.status)
 
         pod.ready = all(container.get('ready')
                         for container in pod.containers)
         return pod
 
-    def as_dict(self):
-        # unneeded fields in API output
-        hide_fields = ['node', 'labels', 'namespace', 'secrets']
+    def dump(self):
+        """Get full information about pod.
+        ATTENTION! Do not use it in methods allowed for user! It may contain
+        secret information. FOR ADMINS ONLY!
+        """
+        pod_data = self.as_dict()
+        owner = self.owner
+        k8s_secrets = self.get_secrets()
+
+        rv = {
+            'pod_data': pod_data,
+            'owner': owner,
+            'k8s_secrets': k8s_secrets
+        }
+
+        return rv
+
+    def get_secrets(self):
+        """Retrieve secrets of type '.dockercfg' from kubernetes.
+
+        Returns dict {secret_name: parsed_secret_data, ...}.
+        Structure of parsed_secret_data see in :class:`K8sSecretsBuilder`.
+        """
+        secrets_client = K8sSecretsClient(KubeQuery())
+
+        try:
+            resp = secrets_client.list(namespace=self.namespace)
+        except secrets_client.ErrorBase as e:
+            raise APIError('Cannot get k8s secrets due to: %s' % e.message)
+
+        parse = K8sSecretsBuilder.parse_secret_data
+
+        rv = {x['metadata']['name']: parse(x['data'])
+              for x in resp['items']
+              if x['type'] == K8sSecretsClient.SECRET_TYPE}
+
+        return rv
+
+    def _as_dict(self):
         data = vars(self).copy()
 
         data['volumes'] = data.pop('volumes_public', [])
@@ -197,9 +234,18 @@ class Pod(object):
         if data.get('edited_config') is not None:
             data['edited_config'] = Pod(data['edited_config']).as_dict()
 
+        return data
+
+    def as_dict(self):
+        # unneeded fields in API output
+        hide_fields = ['node', 'labels', 'namespace', 'secrets', 'owner']
+
+        data = self._as_dict()
+
         for field in hide_fields:
             if field in data:
                 del data[field]
+
         return data
 
     def as_json(self):
@@ -252,7 +298,7 @@ class Pod(object):
             persistent_disk.state = PersistentDiskStatuses.PENDING
         if volume_public['persistentDisk'].get('pdSize') is None:
             volume_public['persistentDisk']['pdSize'] = persistent_disk.size
-        pd_cls = get_storage_class()
+        pd_cls = pstorage.get_storage_class()
         if not pd_cls:
             return
         pd_cls().enrich_volume_info(volume, persistent_disk)
@@ -266,7 +312,7 @@ class Pod(object):
         if isinstance(local_storage, dict) and 'path' in local_storage:
             path = local_storage['path']
         else:
-            path = os.path.join(NODE_LOCAL_STORAGE_PREFIX, self.id,
+            path = os.path.join(settings.NODE_LOCAL_STORAGE_PREFIX, self.id,
                                 volume['name'])
         volume['hostPath'] = {'path': path}
 
@@ -315,7 +361,7 @@ class Pod(object):
 
         config = {
             "kind": "ReplicationController",
-            "apiVersion": KUBE_API_VERSION,
+            "apiVersion": settings.KUBE_API_VERSION,
             "metadata": {
                 "name": self.sid,
                 "namespace": self.namespace,
@@ -408,7 +454,7 @@ class Pod(object):
         except (KeyError, ValueError):
             pass
         else:  # if we create pod, not start stopped
-            data.update(kubes_to_limits(kubes, kube_type))
+            data.update(billing.kubes_to_limits(kubes, kube_type))
 
         wd = data.get('workingDir', '.')
         if type(wd) is list:
@@ -424,7 +470,7 @@ class Pod(object):
             owner_name = self.owner
         else:
             owner_name = self.owner.username
-        if owner_name != KUBERDOCK_INTERNAL_USER:
+        if owner_name != settings.KUBERDOCK_INTERNAL_USER:
             for p in data.get('ports', []):
                 p.pop('hostPort', None)
 
@@ -472,7 +518,7 @@ class Pod(object):
         except ValueError:
             podutils.raise_('Incorrect cmd string')
 
-    def _forge_dockers(self, status='stopped'):
+    def forge_dockers(self, status='stopped'):
         for container in self.containers:
             container.update({
                 'containerID': container['name'],

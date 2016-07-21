@@ -1,4 +1,5 @@
 from functools import wraps
+from pods_subs import dump, restore
 
 from .. import kdclick
 from ..kdclick.access import ADMIN, USER
@@ -66,6 +67,12 @@ class Update(SimpleCommandWithIdNameArgs):
 @kdclick.pass_obj
 class Delete(SimpleCommandWithIdNameOwnerArgs):
     pass
+
+
+pods.add_command(dump.dump)
+pods.add_command(dump.batch_dump)
+
+pods.add_command(restore.pod)
 
 
 ###############################################################################

@@ -327,11 +327,11 @@ class KDIntegrationTestAPI(object):
             pod.healthcheck()
         return pod
 
-    def restore_pod(self, user, file_path=None, pod_description=None,
+    def restore_pod(self, user, file_path=None, pod_dump=None,
                     pv_backups_location=None, pv_backups_path_template=None,
                     flags=None, return_as_json=False, wait_for_status=None):
 
-        pod = KDPod.restore(self, user, file_path, pod_description,
+        pod = KDPod.restore(self, user, file_path, pod_dump,
                             pv_backups_location, pv_backups_path_template,
                             flags, return_as_json)
         if wait_for_status:
@@ -560,21 +560,21 @@ class KDPod(RESTMixin):
                               open_all_ports, restart_policy, pvs, owner)
 
     @classmethod
-    def restore(cls, cluster, user, file_path=None, pod_description=None,
+    def restore(cls, cluster, user, file_path=None, pod_dump=None,
                 pv_backups_location=None, pv_backups_path_template=None,
                 flags=None, return_as_json=False):
         """
-        Restore pod using "kdctl restore pod" command
+        Restore pod using "kdctl pods restore" command
         :return: instance of KDPod object.
         """
 
-        def get_image(file_path=None, pod_description=None):
-            if pod_description == None:
-                _, pod_description, _ = cluster.ssh_exec("master",
+        def get_image(file_path=None, pod_dump=None):
+            if pod_dump is None:
+                _, pod_dump, _ = cluster.ssh_exec("master",
                                                          "cat {}".format(
                                                              file_path))
-            pod_description = json.loads(pod_description)
-            container = pod_description["containers"]
+            pod_dump = json.loads(pod_dump)
+            container = pod_dump['pod_data']["containers"]
             if len(container) > 1:
                 # In current implementation of KDPod class we cannot
                 # manage consisting of more than on container, therefore
@@ -592,19 +592,19 @@ class KDPod(RESTMixin):
             cmd = "-j "
         else:
             cmd = ""
-        if file_path and pod_description:
+        if file_path and pod_dump:
             raise IncorrectPodDescription(
                 "Only file_path OR only pod_description should be "
                 "privoded. Hoverwer provided both parameters."
             )
         elif file_path:
             image = get_image(file_path=file_path)
-            cmd += "restore pod -f {}" \
+            cmd += "pods restore -f {}" \
                 .format(file_path)
-        elif pod_description:
-            image = get_image(pod_description=pod_description)
-            cmd += "restore pod \'{}\'" \
-                .format(pod_description)
+        elif pod_dump:
+            image = get_image(pod_dump=pod_dump)
+            cmd += "pods restore \'{}\'" \
+                .format(pod_dump)
         else:
             raise IncorrectPodDescription(
                 "Either file_path or pod_description should not be empty")
@@ -710,6 +710,12 @@ class KDPod(RESTMixin):
             "describe pods {}".format(self.escaped_name), out_as_dict=True,
             user=self.owner)
         return out
+
+    def get_dump(self):
+        cmd = "pods dump {pod_id}".format(pod_id=self.pod_id)
+        _, out, _ = self.cluster.kdctl(cmd, out_as_dict=True)
+        rv = out['data']
+        return rv
 
     @property
     def pod_id(self):

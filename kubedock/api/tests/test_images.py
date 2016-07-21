@@ -46,7 +46,7 @@ class TestImages(APITestCase):
         }
         image = '1-regist.ry/qwerty'
         get_container_config.return_value = {'a': 'b'}
-        PodCollection.return_value._get_secrets.return_value = secrets
+        PodCollection.return_value.get_secrets.return_value = secrets
         PodCollection.return_value._get_by_id.return_value.containers = [
             {'image': image}, {'image': 'other_image'}]
         PodCollection.return_value._get_by_id.return_value.edited_config = None
@@ -56,19 +56,19 @@ class TestImages(APITestCase):
         self.assert200(response)
         PodCollection.assert_called_once_with(current_user)
         PodCollection.return_value._get_by_id.assert_called_once_with('pod-id')
-        PodCollection.return_value._get_secrets.assert_called_once_with(
+        PodCollection.return_value.get_secrets.assert_called_once_with(
             PodCollection.return_value._get_by_id.return_value)
         get_container_config.assert_called_once_with(
             auth=None, refresh_cache=None, secrets=secrets.values())
 
         # no such image in pod
-        PodCollection.return_value._get_secrets.reset_mock()
+        PodCollection.return_value.get_secrets.reset_mock()
         get_container_config.reset_mock()
         response = self.user_open(
             '/images/new', method='POST', json={'image': 'image-not-from-pod',
                                                 'podID': 'pod-id'})
         self.assert200(response)
-        self.assertFalse(PodCollection.return_value._get_secrets.called)
+        self.assertFalse(PodCollection.return_value.get_secrets.called)
         get_container_config.assert_called_once_with(
             auth=None, refresh_cache=None, secrets=None)
 

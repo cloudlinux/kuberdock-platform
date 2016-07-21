@@ -11,23 +11,10 @@ from kubedock.utils import nested_dict_utils
 DEFAULT_BACKUP_PATH_TEMPLATE = '/{owner_id}/{volume_name}.zip'
 
 
-def _extract_needed_information(full_pod_config):
-    fields = [
-        'containers',
-        'kube_type',
-        'name',
-        'replicas',
-        'restartPolicy',
-        'template_id',
-        'volumes',
-    ]
-    return {k: full_pod_config.get(k, None)
-            for k in fields}
-
-
 def _filter_persistent_volumes(pod_spec):
-    def is_local_storage(x):
-        return bool(x.get('persistentDisk', {}).get('pdName'))
+    def is_local_storage(volume_spec):
+        return bool(nested_dict_utils.get(volume_spec,
+                                          'persistentDisk.pdName'))
 
     return [v for v in pod_spec['volumes'] if is_local_storage(v)]
 
@@ -62,9 +49,9 @@ class BackupUrlFactory(object):
 
 
 class _PodRestoreCommand(object):
-    def __init__(self, pod_data, owner, pv_backups_location,
+    def __init__(self, pod_dump, owner, pv_backups_location,
                  pv_backups_path_template):
-        self.pod_data = pod_data
+        self.pod_dump = pod_dump
         self.owner = owner
         self.pv_backups_location = pv_backups_location
         if pv_backups_path_template is None:
@@ -73,19 +60,21 @@ class _PodRestoreCommand(object):
         template_dict = {
             'owner_id': owner.id,
             'owner_name': owner.username,
-            'original_owner_id': nested_dict_utils.get(pod_data, 'owner.id'),
+            'original_owner_id': nested_dict_utils.get(pod_dump, 'owner.id'),
             'original_owner_name': nested_dict_utils.get(
-                pod_data, 'owner.username'),
+                pod_dump, 'owner.username'),
         }
 
         self.backup_url_factory = BackupUrlFactory(
             pv_backups_location, pv_backups_path_template, **template_dict)
 
     def __call__(self):
-        pod_spec = _extract_needed_information(self.pod_data)
-        pod_spec = validation.check_new_pod_data(pod_spec, allow_unknown=True)
+        pod_dump = self.pod_dump
+        validation.check_pod_dump(pod_dump, user=self.owner,
+                                  allow_unknown=True)
 
-        persistent_volumes = _filter_persistent_volumes(pod_spec)
+        pod_data = pod_dump['pod_data']
+        persistent_volumes = _filter_persistent_volumes(pod_data)
         # we have to restore all specified pv.
         # may be it will be changed later.
         pv_restore_needed = bool(persistent_volumes)  # if pv list is not empty
@@ -95,8 +84,9 @@ class _PodRestoreCommand(object):
                                'but backups location was not specified')
             self._extend_pv_specs_with_backup_info(persistent_volumes)
 
-        self._check_for_conflicts(pod_spec)
-        restored_pod_dict = self._restore_pod(pod_spec)
+        self._check_for_conflicts(pod_data)
+
+        restored_pod_dict = self._restore_pod(pod_dump)
         restored_pod_dict = self._start_pod_if_needed(restored_pod_dict)
         return restored_pod_dict
 
@@ -106,14 +96,14 @@ class _PodRestoreCommand(object):
             backup_url = self.backup_url_factory.get_url(pd_name)
             nested_dict_utils.set(pv_spec, 'annotation.backupUrl', backup_url)
 
-    def _check_for_conflicts(self, pod_spec):
+    def _check_for_conflicts(self, pod_data):
         errors = []
-        pod_name = nested_dict_utils.get(pod_spec, 'name')
+        pod_name = nested_dict_utils.get(pod_data, 'name')
         e = self._check_pod_name(pod_name)
         if e:
             errors.append(e)
 
-        vols = _filter_persistent_volumes(pod_spec)
+        vols = _filter_persistent_volumes(pod_data)
         for vol in vols:
             volume_name = nested_dict_utils.get(vol, 'persistentDisk.pdName')
             e = self._check_volume_name(volume_name)
@@ -148,27 +138,28 @@ class _PodRestoreCommand(object):
         if persistent_disk:
             return VolumeExists(persistent_disk.name, persistent_disk.id)
 
-    def _restore_pod(self, pod_spec):
+    def _restore_pod(self, pod_dump):
         pod_collection = PodCollection(owner=self.owner)
-        restored_pod_dict = pod_collection.add(pod_spec, reuse_pv=False)
+        restored_pod_dict = pod_collection.add_from_dump(pod_dump)
         return restored_pod_dict
 
     def _start_pod_if_needed(self, restored_pod_dict):
-        if self.pod_data['status'] == 'running':
-            pod_collection = PodCollection(owner=self.owner)
-            restored_pod_dict = pod_collection.update(
-                pod_id=restored_pod_dict['id'], data={'command': 'start'}
+        saved_status = self.pod_dump['pod_data']['status']
+
+        if saved_status == 'running':
+            restored_pod_id = restored_pod_dict['id']
+            restored_pod_dict = PodCollection(owner=self.owner).update(
+                pod_id=restored_pod_id, data={'command': 'start'}
             )
         return restored_pod_dict
 
 
-def restore(pod_data, owner, pv_backups_location=None,
+def restore(pod_dump, owner, pv_backups_location=None,
             pv_backups_path_template=None):
-    """
-    Restore pod from backup.
+    """Restore pod from backup.
 
     Args:
-        pod_data (dict): Dictionary with full pod description.
+        pod_dump (dict): Pod dump.
         owner (User): Pod's owner.
         pv_backups_location (str): Url where backups are stored.
         pv_backups_path_template (str): Template of path to backup at backups
@@ -183,8 +174,7 @@ def restore(pod_data, owner, pv_backups_location=None,
         dict: Dictionary with restored pod's data.
 
     Notes:
-        Expected that pod_config contains full information
-        got from postgres.
+        Expected that pod_dump contains data got from `/api/dump/pods`.
     """
     return _PodRestoreCommand(
-        pod_data, owner, pv_backups_location, pv_backups_path_template)()
+        pod_dump, owner, pv_backups_location, pv_backups_path_template)()

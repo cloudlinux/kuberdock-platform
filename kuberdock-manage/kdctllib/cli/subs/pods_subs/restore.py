@@ -1,14 +1,7 @@
-from .. import kdclick
+from ... import kdclick
 
-from ..kdclick.access import ADMIN
-from ...api_client import APIError
-
-
-@kdclick.group(help='Commands for restore objects from backups.',
-               available_for=ADMIN)
-def restore():
-    pass
-
+from ...kdclick.access import ADMIN
+from ....api_client import APIError
 
 # bit flags
 _NOT_FORCE = 0
@@ -17,12 +10,12 @@ _FORCE_NOT_DELETE = 2
 
 
 class _RestorePodCommand(object):
-    def __init__(self, kdctl, io, pod_data, owner, pv_backups_location,
+    def __init__(self, kdctl, io, pod_dump, owner, pv_backups_location,
                  pv_backups_path_template, force, max_tries):
         assert force in [_NOT_FORCE, _FORCE_DELETE, _FORCE_NOT_DELETE]
         self.kdctl = kdctl
         self.io = io
-        self.pod_data = pod_data
+        self.pod_dump = pod_dump
         self.owner = owner
         self.pv_backups_location = pv_backups_location
         self.pv_backups_path_template = pv_backups_path_template
@@ -34,8 +27,8 @@ class _RestorePodCommand(object):
 
     def _apply(self, try_number):
         try:
-            return self.kdctl.restore.pod(
-                self.pod_data, self.owner, self.pv_backups_location,
+            return self.kdctl.pods.restore(
+                self.pod_dump, self.owner, self.pv_backups_location,
                 self.pv_backups_path_template)
         except APIError as e:
             if self.force == _FORCE_NOT_DELETE or try_number >= self.max_tries:
@@ -119,8 +112,8 @@ def _collect_force(force_delete, force_not_delete):
     return force
 
 
-@restore.command(help='Restore pod.')
-@kdclick.data_argument('pod-data')
+@kdclick.command('restore', help='Restore pod from dump.', available_for=ADMIN)
+@kdclick.data_argument('pod-dump')
 @kdclick.option('--owner', required=True, help="Pod's owner name.")
 @kdclick.option('--pv-backups-location', help='Url where backups are stored.')
 @kdclick.option('--pv-backups-path-template',
@@ -138,13 +131,13 @@ def _collect_force(force_delete, force_not_delete):
                 default=2, show_default=True,
                 help='Maximal number of tries, 0 for infinity.')
 @kdclick.pass_obj
-def pod(obj, pod_data, owner, pv_backups_location, pv_backups_path_template,
+def pod(obj, pod_dump, owner, pv_backups_location, pv_backups_path_template,
         force_delete, force_not_delete, max_tries):
     kdctl = obj.kdctl
     io = obj.io
     force = _collect_force(force_delete, force_not_delete)
     _check_params(io, force)
     command = _RestorePodCommand(
-        kdctl, io, pod_data, owner, pv_backups_location,
+        kdctl, io, pod_dump, owner, pv_backups_location,
         pv_backups_path_template, force, max_tries)
     return command()

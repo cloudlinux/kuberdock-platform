@@ -23,10 +23,10 @@ def data_argument(*args, **kwargs):
     or specify input json file.
 
     Example:
-       kdctl restore pod --owner test_user '{"pod": "data"}'
+       kdctl pods restore --owner test_user '{"pod": "data"}'
        or
-       kdctl restore pod --owner test_user -f pod_data.json
-
+       kdctl pods restore --owner test_user -f pod_data.json
+       
     """
     target_param_name = args[-1].replace('-', '_')
 

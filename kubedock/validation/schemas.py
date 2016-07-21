@@ -1,10 +1,10 @@
 import re
-from copy import deepcopy
+from copy import deepcopy, copy
 
 import pytz
 
-from kubedock.users import User
 from kubedock.constants import DOMAINNAME_LENGTH
+from kubedock.users import User
 from .coerce import extbool, get_user
 
 PATH_LENGTH = 512
@@ -448,6 +448,44 @@ new_pod_schema.update({
         'allowed': ['stopped', 'unpaid']
     },
 })
+
+
+pod_dump_data_schema = copy(new_pod_schema)  # deepcopy doesn't work
+del pod_dump_data_schema['node']
+del pod_dump_data_schema['podIP']
+del pod_dump_data_schema['serviceAccount']
+del pod_dump_data_schema['status']
+
+pod_dump_schema = {
+    'pod_data': {
+        'type': 'dict',
+        'schema': pod_dump_data_schema,
+    },
+    'k8s_secrets': {
+        'type': 'dict',
+        'valueschema': {
+            'type': 'dict',
+            'valueschema': {
+                'type': 'dict',
+                'schema': {
+                    'auth': {
+                        'type': 'dict',
+                        'schema': {
+                            'username': {'type': 'string', 'required': True},
+                            'password': {'type': 'string', 'required': True},
+                        }}
+                }
+            }
+        }
+    },
+    'owner': {
+        'type': 'dict',
+        'schema': {
+            'id': {'type': 'integer', 'required': True},
+            'username': {'type': 'string', 'required': True}
+        }
+    }
+}
 
 
 command_pod_schema = {

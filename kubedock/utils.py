@@ -793,29 +793,15 @@ def parse_datetime_str(instr):
     """
     DATE_FMT = '%Y-%m-%d'
     TIME_FMT = '%H:%M:%S'
-    dt_re = re.compile(r'^\d{4}-\d{2}-\d{2}((T|\s)\d{2}:\d{2}:\d{2}Z?)?$')
-    match = dt_re.match(instr)
-    if not match:
-        return None
-    if match.group(0):
+    formats = [DATE_FMT,
+               DATE_FMT + ' ' + TIME_FMT,
+               DATE_FMT + 'T' + TIME_FMT,
+               DATE_FMT + 'T' + TIME_FMT + 'Z']
+    for format in formats:
         try:
-            return datetime.datetime.strptime(instr, DATE_FMT)
+            return datetime.datetime.strptime(instr, format)
         except ValueError:
             pass
-        try:
-            return datetime.datetime.strptime(instr, DATE_FMT + ' ' + TIME_FMT)
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.strptime(instr, DATE_FMT + 'T' + TIME_FMT)
-        except ValueError:
-            pass
-        try:
-            return datetime.datetime.strptime(
-                instr, DATE_FMT + 'T' + TIME_FMT + 'Z')
-        except ValueError:
-            pass
-    return None
 
 
 LOCALTIME = '/etc/localtime'

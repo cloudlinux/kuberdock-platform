@@ -242,7 +242,7 @@ class KubeTypePipeline(Pipeline):
     }
 
 
-class FailConditions(Pipeline):
+class FailConditionsPipeline(Pipeline):
     NAME = 'fail_conditions'
     ROUTABLE_IP_COUNT = 1
     ENV = {

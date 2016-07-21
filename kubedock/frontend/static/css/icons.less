@@ -161,9 +161,16 @@
     }
 }
 /* end sidebar icons*/
+.logs-tab{
+    .export-logs{
+        display: inline-block;
+        .mdi('unarchive',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
+    }
+}
 .complete{
     .help{
-        .mdi('help_outline',20px, defaultIconColor, @defaultIconColorDarken);
+        .mdi('help_outline',20px, @defaultIconColor, @defaultIconColorDarken);
         &:hover{ cursor: default; }
     }
 }
@@ -326,14 +333,7 @@ table{
     }
 }
 .podsControl{
-    .removePods{
-        .mdi('delete',21px, @defaultIconColor, @defaultIconColorDarken);
-        &:hover{
-            &:before{
-                content: 'delete_forever'
-            }
-        }
-    }
+    .removePods{ .mdi('delete',21px, @defaultIconColor, @defaultIconColorDarken); }
     .stopPods{ .mdi('stop',21px, @defaultIconColor, @defaultIconColorDarken); }
     .runPods{  .mdi('play_arrow',21px, @defaultIconColor, @defaultIconColorDarken); }
     .restartPods{ .mdi('autorenew',21px, @defaultIconColor, @defaultIconColorDarken); }

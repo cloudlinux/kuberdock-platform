@@ -1,13 +1,7 @@
 <div id="item-controls" class="licenseTab">
     <div class="status-line">
-        <span class="icon <%= status %>"><span>License status: <%= status ? status : 'unknown'%></span></span>
-        <span class="award"><span>License type:
-            <% if (type){ %>
-                <%= type %>
-            <% } else { %>
-                unknown
-            <% }%></span>
-        </span>
+        <span class="icon <%= status %>"><span>License status: <span class="text-capitalize"><%= status ? status : 'unknown'%></span></span></span>
+        <span class="award"><span>License type:<span class="text-capitalize"><% if (type){ %> <%= type %> <% } else { %>unknown<% }%></span></span></span>
     </div>
     <div class="row">
         <div class="col-md-10 col-md-offset-1 control-icons">

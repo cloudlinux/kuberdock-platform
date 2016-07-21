@@ -98,20 +98,18 @@ def run_tests_in_a_pipeline(name, tests):
     :param tests: list of callables
     """
 
-    # Just a helper function to make code less verbose
+    # Helper function to make code less verbose
     def pipe_log(msg, color=Fore.MAGENTA):
         print_msg('{} -> {}'.format(name, msg), color)
 
-    pipe_log('CREATING CLUSTER', Fore.MAGENTA)
+    # Prevent Nebula from being flooded by vm-create requests (AC-3914)
+    delay = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
+    pipe_log('CREATING CLUSTER (delay {} seconds)'.format(delay),
+             Fore.MAGENTA)
+    time.sleep(delay)
 
     try:
         pipeline = Pipeline.from_name(name)
-
-        # AC-3914 prevent Nebula from being flooded with requests
-        sleep_seconds = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
-        pipe_log('Sleeping for {} seconds'.format(sleep_seconds))
-        time.sleep(sleep_seconds)
-
         pipeline.create()
         pipe_log('CLUSTER CREATED', Fore.GREEN)
     except:

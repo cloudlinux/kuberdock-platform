@@ -12,10 +12,14 @@ from kubedock.settings import SSH_KEY_FILENAME, SESSION_LIFETIME
 
 
 class InvalidAPIVersion(APIError):
-    def __init__(self, *args, **kwargs):
-        super(InvalidAPIVersion, self).__init__(*args, **kwargs)
-        self.details.setdefault('apiVersion', g.get('api_version'))
-        self.details.setdefault('acceptableVersions', API_VERSIONS.acceptable)
+    def __init__(self, apiVersion=None,
+                 acceptableVersions=API_VERSIONS.acceptable):
+        if apiVersion is None:
+            apiVersion = g.get('api_version')
+        super(InvalidAPIVersion, self).__init__(details={
+            'apiVersion': apiVersion,
+            'acceptableVersions': acceptableVersions,
+        })
 
     @property
     def message(self):
@@ -132,7 +136,7 @@ def _jsonify_api_error(e):
             'details': e.details,
             'type': e.type,
         }), e.status_code
-    elif api_version == API_VERSIONS.v2:
+    else:
         return jsonify({
             'status': 'error',
             'message': e.message,
@@ -190,4 +194,4 @@ class check_api_version(object):
     def check(self):
         if not self:
             raise InvalidAPIVersion(
-                details={'acceptableVersions': self.acceptable_versions})
+                acceptableVersions=self.acceptable_versions)

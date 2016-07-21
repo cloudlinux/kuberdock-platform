@@ -20,6 +20,10 @@ class NodeNotRunning(APIError):
     message = 'Node is not running'
 
 
+class InternalStatsError(InternalAPIError):
+    pass
+
+
 @stats.route('/nodes/<hostname>', methods=['GET'])
 @auth_required
 @check_permission('get', 'nodes')
@@ -44,7 +48,7 @@ def nodes(hostname):
     else:
         # We have checked that node is running, but no resources means
         # that node is not running
-        raise InternalAPIError(
+        raise InternalStatsError(
             'DBNode is running, but k8s says it does not. Unknown error')
 
     diagrams = [

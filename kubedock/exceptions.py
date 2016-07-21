@@ -1,6 +1,7 @@
 """
 Defines and exports global kuberdock exceptions
 """
+from abc import ABCMeta
 
 
 class APIError(Exception):
@@ -8,6 +9,7 @@ class APIError(Exception):
     Base API error class. DO NOT USE IT DIRECTLY. Create inheritors.
 
     :param message_template: Template for human-readable `message`.
+        Will be filled with `details` by `str.format`.
     :param status_code: HTTP status code
     :param type: Error type. Do not use this unless you really have to.
         Create inheritors.
@@ -17,10 +19,11 @@ class APIError(Exception):
     message_template = 'Unknown error'
     status_code = 400
 
-    def __init__(self, message_template=None, status_code=None, type=None,
+    def __init__(self, message=None, status_code=None, type=None,
                  details=None):
-        if message_template is not None:
-            self.message_template = message_template
+        if message is not None:
+            self._message = message
+
         if status_code is not None:
             self.status_code = status_code
 
@@ -37,6 +40,8 @@ class APIError(Exception):
     @property
     def message(self):
         """Human-readable message"""
+        if hasattr(self, '_message'):
+            return self._message
         return self.message_template.format(**self.details)
 
     def __str__(self):
@@ -49,8 +54,11 @@ class APIError(Exception):
 
 
 class InternalAPIError(APIError):
-    """Message of this type is not shown to user, but to admin only."""
+    """Message of this type is not shown to user, but to admin only.
 
+    Do not use it directly. Create inheritors.
+    """
+    __metaclass__ = ABCMeta
     status_code = 500
 
 

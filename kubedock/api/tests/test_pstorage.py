@@ -143,14 +143,14 @@ class TestPStorageApiPost(APITestCase):
         }
         self.assertEqual(expected, resp.json)
 
-    def checkValidation(self, data, errors, message='Invalid schema'):
+    def checkValidation(self, data, errors, message='Invalid data: '):
         resp = self.user_open(url, 'POST', data, version=API_VERSIONS.v1)
         self.assertAPIError(resp, 400, 'ValidationError', errors)
         self.assertEqual(resp.json['data'], errors)
 
         resp = self.user_open(url, 'POST', data, version=API_VERSIONS.v2)
         self.assertAPIError(resp, 400, 'ValidationError', errors)
-        self.assertEqual(resp.json['message'], message)
+        self.assertIn(message, resp.json['message'])
 
     def test_size_less_zero(self):
         self.checkValidation({'name': 'some_name', 'size': -1},

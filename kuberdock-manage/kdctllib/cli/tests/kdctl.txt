@@ -31,6 +31,15 @@ pods update --name some_pod {some_json}
 pods update --id 1 -f {some_json_file}
 pods delete --name some_pod --owner some_user
 pods delete --id 1 --owner some_user
+pods dump some_pod_id
+pods batch-dump
+pods batch-dump --owner some-owner
+pods batch-dump --target-dir tmp-target
+pods batch-dump --owner some-owner --target-dir tmp-target
+pods restore --owner some-owner {some_json}
+pods restore --owner some-owner -f {some_json_file}
+pods restore --owner some-owner --pv-backups-location some-location --pv-backups-path-template some-template {some_json}
+pods restore --owner some-owner --pv-backups-location some-location --pv-backups-path-template some-template -f {some_json_file}
 
 predefined-apps list
 predefined-apps get --id 1

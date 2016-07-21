@@ -288,6 +288,23 @@ def check_new_pod_data(data, user=None, **kwargs):
     return data
 
 
+def check_pod_dump(data, user=None, **kwargs):
+    kwargs.setdefault('allow_unknown', True)
+    validator = V(user=None if user is None else user.username, **kwargs)
+    if not validator.validate(data, pod_dump_schema):
+        raise ValidationError(validator.errors)
+
+    # TODO: with cerberus 1.0 use "rename" normalization rule
+    for container in data['pod_data']['containers']:
+        for port in container.get('ports') or []:
+            if port.get('podPort'):
+                port['hostPort'] = port.pop('podPort')
+    volumes_mismatch = check_volumes_match(data['pod_data'])
+    if volumes_mismatch:
+        raise ValidationError(volumes_mismatch)
+    return data
+
+
 def check_internal_pod_data(data, user=None):
     validator = V(user=None if user is None else user.username)
     if not validator.validate(data, new_pod_schema):

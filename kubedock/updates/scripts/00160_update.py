@@ -18,7 +18,6 @@ from kubedock.pods import Pod
 from kubedock.rbac import fixtures as rbac_fixtures
 from kubedock.settings import KUBERDOCK_SETTINGS_FILE
 from kubedock.updates import helpers
-from kubedock.updates.helpers import restart_service, remote_install
 from kubedock.users import User
 from kubedock.utils import POD_STATUSES, randstr
 from kubedock.validation import check_internal_pod_data
@@ -234,7 +233,7 @@ class _U151(_Update):
 
     @classmethod
     def add_kdtools_to_node(cls, with_testing):
-        remote_install('kdtools', testing=with_testing)
+        helpers.remote_install('kdtools', testing=with_testing)
 
     @classmethod
     def _raise_on_failure(cls, service, res):
@@ -400,7 +399,7 @@ class _U152(_Update):
 class _U156(_Update):
     @classmethod
     def upgrade(cls, upd, with_testing):
-        restart_service('nginx')
+        helpers.restart_service('nginx')
 
 
 class _U157(_Update):

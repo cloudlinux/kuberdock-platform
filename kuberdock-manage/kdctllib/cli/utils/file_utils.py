@@ -29,3 +29,9 @@ def save_yaml(d, filename):
 
 def chmod(filename, mode):
     os.chmod(filename, mode)
+
+
+def ensure_dir(path):
+    if os.path.isdir(path):
+        return
+    os.makedirs(path)

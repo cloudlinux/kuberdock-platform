@@ -92,7 +92,8 @@ def check_registry_status(url=DEFAULT_IMAGES_URL, _v2=False):
     url = urlsplit(url)._replace(path='/v2/' if _v2 else '/v1/_ping').geturl()
 
     with raise_registry_error(url):
-        response = requests.get(url, timeout=PING_REQUEST_TIMEOUT, verify=False)
+        response = requests.get(url, timeout=PING_REQUEST_TIMEOUT,
+                                verify=False)
         need_v2 = not _v2 and response.status_code == 404 and \
             response.headers.get(API_VERSION_HEADER) == 'registry/2.0'
         if need_v2:
@@ -151,7 +152,8 @@ class DockerAuth(requests.auth.AuthBase):
         url = urlparse(chal.pop('realm'))
         query = urlencode(dict(parse_qsl(url.query), **chal))
         url = url._replace(query=query).geturl()
-        auth = None if self.username is None else (self.username, self.password)
+        auth = None if self.username is None \
+            else (self.username, self.password)
         response = requests.get(url, auth=auth, timeout=REQUEST_TIMEOUT)
         data = _json_or_none(response)
         if isinstance(data, dict):
@@ -294,7 +296,8 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
     Represents parsed image url with common methods for Docker Registry API.
 
     Instance attributes:
-        full_registry - registry url with schema and empty path, like "https://quay.io"
+        full_registry - registry url with schema and empty path,
+            like "https://quay.io"
         registry - registry host, like "quay.io"
         repo - repository name, like "quay/redis"
         tag - tag name, like "latest"
@@ -311,7 +314,8 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
             May be in the following forms:
              - nginx[:tag] - for offical dockerhub images
              - username/nginx[:tag] - for user's images on dockerhub
-             - some.hub.com/username/nginx[:tag] - for images on 3rd party registries
+             - some.hub.com/username/nginx[:tag] - for images on 3rd party
+                 registries
             if tag is omitted, 'latest' will be used
         """
         if isinstance(image, Image):
@@ -330,7 +334,8 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
                     repo = 'library/{0}'.format(repo)
             else:
                 full_registry = complement_registry(registry)
-            return super(Image, cls).__new__(cls, full_registry, registry, repo, tag)
+            return super(Image, cls).__new__(
+                cls, full_registry, registry, repo, tag)
 
     def __str__(self):
         full_registry, registry, repo, tag = self
@@ -367,15 +372,17 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
             configuration
         :param raise_: raise APIVersionError or just return None
         :returns: full image info (True if just_check=True) or None
-        :raise APIVersionError: for check requests - if registry doesn't support
-            api v2
+        :raise APIVersionError: for check requests - if registry doesn't
+            support api v2
         """
         s = requests.Session()
         s.verify = False  # FIXME: private registries with self-signed certs
 
-        url = get_url(self.full_registry, 'v2', self.repo, 'manifests', self.tag)
+        url = get_url(self.full_registry, 'v2', self.repo, 'manifests',
+                      self.tag)
         try:
-            response = s.get(url, auth=DockerAuth(auth), timeout=REQUEST_TIMEOUT)
+            response = s.get(url, auth=DockerAuth(auth),
+                             timeout=REQUEST_TIMEOUT)
             if response.status_code != 200:
                 version = response.headers.get(API_VERSION_HEADER)
                 if raise_ and version != 'registry/2.0':
@@ -417,7 +424,8 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
                 if just_check:
                     return True
                 url = get_url(registry, 'v1/images', image_id, 'json')
-                response = s.get(url, timeout=REQUEST_TIMEOUT)  # get image info
+                # get image info
+                response = s.get(url, timeout=REQUEST_TIMEOUT)
                 return _json_or_none(response)
         except requests.RequestException:
             pass
@@ -425,17 +433,17 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
 
     def _request_image_info(self, auth=None):
         """
-        Get info about image from image manifest using Docker Registry API v2 or
-        from image/json using Docker Registry API v1.
+        Get info about image from image manifest using Docker Registry API v2
+        or from image/json using Docker Registry API v1.
 
         :param auth: (username, password) or None
         :returns: full image info or None
         """
-        return self._v2_request_image_info(auth) or self._v1_request_image_info(auth)
+        return (self._v2_request_image_info(auth)
+                or self._v1_request_image_info(auth))
 
     def _prepare_response(self, image_info, auth=None):
-        """
-        Create api response using raw container config from docker registry.
+        """Create api response using raw container config from docker registry.
 
         :param image_info: raw data from docker registry api
             /v1/images/(image_id)/json or analogous from
@@ -457,8 +465,11 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
             'args': [] if raw_config.get('Cmd') is None else raw_config['Cmd'],
             'env': [{'name': key, 'value': value} for key, value in
                     (line.split('=', 1) for line in raw_config['Env'])],
-            'ports': [{'number': int(port), 'protocol': proto} for port, proto in
-                      (line.split('/', 1) for line in raw_config['ExposedPorts'])],
+            'ports': [{'number': int(port), 'protocol': proto}
+                      for port, proto
+                      in (line.split('/', 1)
+                          for line
+                          in raw_config['ExposedPorts'])],
             'volumeMounts': ([] if raw_config.get('Volumes') is None else
                              raw_config['Volumes'].keys()),
             'workingDir': raw_config['WorkingDir'],
@@ -493,7 +504,9 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
         cache_enabled = auth is None and secrets is None
         if cache_enabled:
             cached_config = DockerfileCache.query.get(str(self))
-            if not (refresh_cache or cached_config is None or cached_config.outdated):
+            if not (refresh_cache
+                    or cached_config is None
+                    or cached_config.outdated):
                 return cached_config.data
 
         # try to get image data using provided auth data
@@ -534,7 +547,8 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
             if image_info and (fast or 'config' in image_info):
                 return True if fast else image_info['config']
 
-            if registry['v2_available']:  # if v1 didn't work and v2 is available
+            if registry['v2_available']:
+                # v1 didn't work and v2 is available
                 try:
                     image_info = self._v2_request_image_info(
                         auth, just_check=fast, raise_=True)
@@ -564,10 +578,11 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
 
     @classmethod
     def check_containers(cls, containers, secrets=()):
-        """
-        Check if all images are available using provided credentials.
-        Tries to check image availability wihout credentials and if it failed, will
-        try all specified credentials for the registry until successful result.
+        """Check if all images are available using provided credentials.
+
+        Tries to check image availability without credentials and if it failed,
+        will try all specified credentials for the registry until successful
+        result.
 
         Also, if container doesn't specify neither CMD nor ENTRYPOINT, check
         that at least one of them is presented in image config.
@@ -578,7 +593,8 @@ class Image(namedtuple('Image', ['full_registry', 'registry', 'repo', 'tag'])):
             Each secret must be iterable (username, password, registry)
         :raises APIError: if some image is not available
         """
-        registries = defaultdict(lambda: {'v2_available': True, 'auth': [None]})
+        registries = defaultdict(lambda: {'v2_available': True,
+                                          'auth': [None]})
         for username, password, registry in secrets:
             registry = complement_registry(registry)
             registries[registry]['auth'].append((username, password))

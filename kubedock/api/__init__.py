@@ -57,13 +57,11 @@ def create_app(settings_override=None, fake_sessions=False):
     from .logs import logs
     from .hosts import hosts
     from .billing import billing
-    from .restore import restore
     from .domains import domains
 
     for bp in (images, stream, nodes, stats, users, yamlapi,
                usage, pricing, ippool, settings, podapi, auth,
-               pstorage, predefined_apps, logs, hosts, billing,
-               restore, domains):
+               pstorage, predefined_apps, logs, hosts, billing, domains):
         app.register_blueprint(bp)
 
     app.errorhandler(404)(on_404)

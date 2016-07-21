@@ -1,21 +1,22 @@
+import base64
 import json
 import random
 import string
 
 import requests
 
+from .. import settings
+from .. import utils
 from ..core import db
 from ..exceptions import APIError
 from ..pods.models import Pod
-from ..settings import KUBE_BASE_URL, KUBE_API_VERSION
 from ..users.models import User
-from ..utils import get_api_url, send_pod_status_update, POD_STATUSES
+from ..utils import POD_STATUSES
 
 
 class KubeQuery(object):
-
-    def __init__(self, return_json=True, base_url=KUBE_BASE_URL,
-                 api_version=KUBE_API_VERSION):
+    def __init__(self, return_json=True, base_url=settings.KUBE_BASE_URL,
+                 api_version=settings.KUBE_API_VERSION):
         self.return_json = return_json
         self.base_url = base_url
         self.api_version = api_version
@@ -51,10 +52,12 @@ class KubeQuery(object):
         :param res: list -> list of URL path items
         """
         if res is not None:
-            return get_api_url(*res, namespace=ns, base_url=self.base_url,
-                               api_version=self.api_version, **kwargs)
-        return get_api_url(namespace=ns, base_url=self.base_url,
-                           api_version=self.api_version, **kwargs)
+            return utils.get_api_url(
+                *res, namespace=ns, base_url=self.base_url,
+                api_version=self.api_version, **kwargs)
+        return utils.get_api_url(
+            namespace=ns, base_url=self.base_url, api_version=self.api_version,
+            **kwargs)
 
     def _return_request(self, req):
         try:
@@ -69,6 +72,7 @@ class KubeQuery(object):
         GET request wrapper.
         :param res: list of URL path items
         :param params: dict -> request params
+        :param ns: str -> namespace
         """
         args = self._compose_args()
         if params:
@@ -133,7 +137,8 @@ class Services(object):
         self.kq = KubeQuery()
         self.svc_type = svc_type
 
-    def _get_label_selector(self, conditions):
+    @staticmethod
+    def _get_label_selector(conditions):
         return ", ".join(conditions)
 
     def _get(self, conditions=None):
@@ -147,8 +152,7 @@ class Services(object):
         """Return all services filtered by LabelSelector
         Args:
             conditions (str, tuple, list): conditions that goes to
-            LabelSelector(example: 'kuberdock-pod-uid=123')
-
+                LabelSelector(example: 'kuberdock-pod-uid=123')
         """
         if conditions is None:
             conditions = []
@@ -172,10 +176,10 @@ class Services(object):
 
         """
         if not isinstance(pods, (list, tuple)):
-            pods = (pods, )
+            pods = (pods,)
         ls_pods = LABEL_SELECTOR_PODS.format(', '.join(pods))
         svc = self.get_by_type(ls_pods)
-        #TODO: pod can have several services, we need list as value
+        # TODO: pod can have several services, we need list as value
         return {s['metadata']['labels'][KUBERDOCK_POD_UID]: s for s in svc}
 
     def get_by_user(self, user_id):
@@ -219,7 +223,7 @@ def set_pod_status(pod_id, status, send_update=False):
     db_pod.status = status
     db.session.commit()
     if send_update:
-        send_pod_status_update(status, db_pod, 'MODIFIED')
+        utils.send_pod_status_update(status, db_pod, 'MODIFIED')
 
 
 def mark_pod_as_deleted(pod_id):
@@ -246,11 +250,121 @@ def fetch_pods(users=False, live_only=True):
 def replace_pod_config(pod, data):
     """
     Replaces config in DB entirely with provided one
+    :param pod: Pod -> instance of Pod
     :param data: dict -> config to be saved
     """
     db_pod = db.session.query(Pod).get(pod.id)
     try:
         db_pod.config = json.dumps(data)
         db.session.commit()
-    except Exception:
+    except Exception:  # TODO: Fix too broad exception
         db.session.rollback()
+
+
+class K8sSecretsClient(object):
+    SECRET_TYPE = 'kubernetes.io/dockercfg'
+
+    def __init__(self, k8s_query):
+        self.k8s_query = k8s_query
+
+    @classmethod
+    def _build_secret(cls, name, data, namespace):
+        return {'apiVersion': settings.KUBE_API_VERSION,
+                'kind': 'Secret',
+                'metadata': {'name': name, 'namespace': namespace},
+                'data': data,
+                'type': cls.SECRET_TYPE}
+
+    @classmethod
+    def _process_response(cls, resp):
+        if resp['kind'] != 'Status':
+            return resp
+        elif resp['kind'] == 'Status' and resp['status'] == 'Failure':
+            raise cls.K8sApiError(resp)
+        else:
+            raise cls.UnknownAnswer(resp)
+
+    def _run(self, method, url_parts, body=None, namespace=None, **kwargs):
+        m = getattr(self.k8s_query, method)
+        resp = m(url_parts, json.dumps(body), ns=namespace, **kwargs)
+        return self._process_response(resp)
+
+    def create(self, name, data, namespace):
+        secret = self._build_secret(name, data, namespace)
+        return self._run('post', ['secrets'], secret, namespace=namespace,
+                         rest=True)
+
+    def get(self, name, namespace):
+        return self._run('get', ['secrets', name], namespace=namespace)
+
+    def list(self, namespace):
+        return self._run('get', ['secrets'], namespace=namespace)
+
+    def update(self, name, data, namespace):
+        secret = self._build_secret(name, data, namespace)
+        return self._run('put', ['secrets', name], secret, namespace=namespace,
+                         rest=True)
+
+    def delete(self, name, namespace):
+        return self._run('delete', ['secrets', name], namespace=namespace)
+
+    class ErrorBase(Exception):
+        def __init__(self, data):
+            self.data = data
+            message = data.get('message')
+            super(K8sSecretsClient.ErrorBase, self).__init__(message)
+
+    class K8sApiError(ErrorBase):
+        pass
+
+    class UnknownAnswer(ErrorBase):
+        def __init__(self, data):
+            self.data = data
+            message = data.get('message')
+            if message is None:
+                message = data
+            super(K8sSecretsClient.UnknownAnswer, self).__init__(message)
+
+
+class K8sSecretsBuilder(object):
+    DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
+
+    @classmethod
+    def build_secret_data(cls, username, password, registry):
+        """Prepare secret for saving in k8s."""
+        if registry.endswith('docker.io'):
+            registry = cls.DOCKERHUB_INDEX
+        auth = base64.urlsafe_b64encode('{0}:{1}'.format(username, password))
+        secret = {registry: {'auth': auth, 'email': 'a@a.a'}}
+        encoded_secret = base64.urlsafe_b64encode(json.dumps(secret))
+        return {'.dockercfg': encoded_secret}
+
+    @classmethod
+    def parse_secret_data(cls, secret_data):
+        """Parse secret got from k8s.
+
+        Returns dict
+        {registry:
+          {'auth':
+            {'username': username,
+             'password': password
+            }
+          },
+          ...
+        }
+        """
+        rv = {}
+        dockercfg = json.loads(base64.urlsafe_b64decode(
+            str(secret_data.get('.dockercfg'))))
+        for registry, data in dockercfg.iteritems():
+            username, password = base64.urlsafe_b64decode(
+                str(data['auth'])).split(':', 1)
+            # only index.docker.io in .dockercfg allowes to use image url
+            # without the registry, like wncm/mynginx.
+            # Replace it back to default registry
+            if registry == cls.DOCKERHUB_INDEX:
+                registry = settings.DEFAULT_REGISTRY
+            rv[registry] = {
+                'auth': {'username': username, 'password': password}
+            }
+        return rv

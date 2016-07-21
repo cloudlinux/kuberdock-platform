@@ -1,26 +1,31 @@
 import json
 
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.integration_test_utils import \
-    assert_in, assert_raises, assert_eq, assert_not_eq, hooks, http_share
+from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
+from tests_integration.lib.integration_test_utils import (
+    assert_in, assert_raises, assert_eq, assert_not_eq, hooks, http_share)
 from tests_integration.lib.pipelines import pipeline
 
-BACKUP_FILES = {
-    "nginx_with_pv": "/nginx_pv.json",
-    "nginx_without_pv": "/nginx_no_pv.json",
-}
 USER = "test_user"
 USER_ID = 3
-nginx_without_pv = 'nginx_without_pv'
-nginx_with_pv = 'nginx_with_pv'
-nginx_container_name = "server_with_backup_archive"
+
+NGINX_WITHOUT_PV = 'nginx_without_pv'
+NGINX_WITH_PV = 'nginx_with_pv'
+NGINX_CONTAINER_NAME = "server_with_backup_archive"
+
+BACKUP_FILES = {
+    NGINX_WITH_PV: "/nginx_pv.json",
+    NGINX_WITHOUT_PV: "/nginx_no_pv.json",
+}
 
 
 def setup_non_pv_test(cluster):
+    """:type cluster: KDIntegrationTestAPI"""
     _generate_restore_file_without_pv(cluster)
 
 
 def setup_pv_test(cluster):
+    """:type cluster: KDIntegrationTestAPI"""
     _prepare_server_with_backup_archive(cluster)
     _generate_restore_file_with_pv(cluster)
 
@@ -29,15 +34,16 @@ def setup_pv_test(cluster):
 @pipeline('pod_restore_upgraded')  # TODO: Drop in 1.4 release
 @hooks(setup=setup_non_pv_test)
 def test_restore_pod_from_cmd(cluster):
-    """
-    Test that pod can be restored from the cmd and
-    that pod can't be restored if is't name is already in use
+    """Test that pod can be restored from the cmd
+    and that pod can't be restored if is't name is already in use.
+
+    :type cluster: KDIntegrationTestAPI
     """
     # Test that pod can be restored from the cmd
-    file_name = BACKUP_FILES[nginx_without_pv]
-    _, pod_description, _ = cluster.ssh_exec("master",
-                                             "cat {}".format(file_name))
-    pod = cluster.restore_pod(USER, pod_description=pod_description)
+    file_name = BACKUP_FILES[NGINX_WITHOUT_PV]
+    _, pod_dump, _ = cluster.ssh_exec("master",
+                                      "cat {}".format(file_name))
+    pod = cluster.restore_pod(USER, pod_dump=pod_dump)
     pod.wait_for_ports()
 
 
@@ -45,10 +51,11 @@ def test_restore_pod_from_cmd(cluster):
 @pipeline('pod_restore_upgraded')  # TODO: Drop in 1.4 release
 @hooks(setup=setup_non_pv_test)
 def test_restore_from_file(cluster):
+    """Test that pod without PVs can be restored from json-file.
+
+    :type cluster: KDIntegrationTestAPI
     """
-    Test that pod without PVs can be restored from json-file
-    """
-    file_name = BACKUP_FILES[nginx_without_pv]
+    file_name = BACKUP_FILES[NGINX_WITHOUT_PV]
     pod = cluster.restore_pod(USER, file_path=file_name)
     pod.wait_for_ports()
     cluster.assert_pods_number(1)
@@ -58,7 +65,11 @@ def test_restore_from_file(cluster):
 @pipeline('pod_restore_upgraded')  # TODO: Drop in 1.4 release
 @hooks(setup=setup_pv_test)
 def test_pod_with_pv_restore(cluster):
-    file_name = BACKUP_FILES[nginx_with_pv]
+    """Test that pod with PVs can be restored.
+
+    :type cluster: KDIntegrationTestAPI
+    """
+    file_name = BACKUP_FILES[NGINX_WITH_PV]
     backup_url = "http://node1/backups"
     path_template = '{owner_id}/{volume_name}.tar.gz'
     # Test that pod with persistent volume can be restored
@@ -99,31 +110,36 @@ def test_pod_with_pv_restore(cluster):
 
 
 def _generate_restore_file_with_pv(cluster):
-    file_name = BACKUP_FILES[nginx_with_pv]
+    """:type cluster: KDIntegrationTestAPI"""
+
+    file_name = BACKUP_FILES[NGINX_WITH_PV]
     if not _exists_on_master(cluster, file_name):
         pod_with_pv, pv = _create_nginx_pod_with_pv(cluster)
-        pod_spec = pod_with_pv.get_spec()
+        pod_dump = pod_with_pv.get_dump()
         with open('tests_integration/assets/pod_backups{}'
                           .format(file_name), "w") as f:
-            json.dump(pod_spec, f)
+            json.dump(pod_dump, f)
         _copy_backup_to_master(cluster, file_name)
         pod_with_pv.delete()
         pv.delete()
 
 
 def _generate_restore_file_without_pv(cluster):
-    file_name = BACKUP_FILES[nginx_without_pv]
+    """:type cluster: KDIntegrationTestAPI"""
+
+    file_name = BACKUP_FILES[NGINX_WITHOUT_PV]
     if not _exists_on_master(cluster, file_name):
         pod_without_pv = _create_nginx_pod_without_pv(cluster)
-        pod_spec = pod_without_pv.get_spec()
+        pod_dump = pod_without_pv.get_dump()
         with open('tests_integration/assets/pod_backups{}'
                           .format(file_name), "w") as f:
-            json.dump(pod_spec, f)
+            json.dump(pod_dump, f)
         _copy_backup_to_master(cluster, file_name)
         pod_without_pv.delete()
 
 
 def _exists_on_master(cluster, file_path):
+    """:type cluster: KDIntegrationTestAPI"""
     cmd = "[ -f {} ]".format(file_path)
     try:
         # if file is not accessible by the path, then RetCode will be 1
@@ -134,6 +150,7 @@ def _exists_on_master(cluster, file_path):
 
 
 def _create_nginx_pod_with_pv(cluster):
+    """:type cluster: KDIntegrationTestAPI"""
     pv_name = "disk_to_restore"
     mount_path = "/usr/share/nginx/html"
     pod_name = "nginx_with_pv"
@@ -145,6 +162,7 @@ def _create_nginx_pod_with_pv(cluster):
 
 
 def _create_nginx_pod_without_pv(cluster):
+    """:type cluster: KDIntegrationTestAPI"""
     pod_name = "nginx_without_pv"
     pod = cluster.create_pod("nginx", pod_name, start=True,
                              wait_for_status='running',
@@ -153,6 +171,7 @@ def _create_nginx_pod_without_pv(cluster):
 
 
 def _copy_backup_to_master(cluster, file_name):
+    """:type cluster: KDIntegrationTestAPI"""
     ssh = cluster.get_ssh("master")
     sftp = ssh.open_sftp()
     sftp.get_channel().settimeout(10)
@@ -165,26 +184,22 @@ def _prepare_server_with_backup_archive(cluster):
     Create folders for backup archive on master.
     Copy archive with backup archive to master.
     Start web server on master.
+    :type cluster: KDIntegrationTestAPI
     """
+
     # create folders
     node = "node1"
-    try:
-        cmd = "cd /usr;" \
-              "mkdir backups;" \
-              "mkdir backups/{};" \
-              "mkdir backups/{};".format(USER, USER_ID)
-        cluster.ssh_exec(node, cmd)
-    except NonZeroRetCodeException:
-        # Exception means that dirs are already created
-        pass
+    cmd = 'mkdir -p /usr/backups/{} /usr/backups/{}'.format(USER, USER_ID)
+    cluster.ssh_exec(node, cmd)
+    # exception means real error, because flag -p suppress AlreadyExists error
 
     # copy archives to node
     sftp = cluster.get_sftp(node)
     path = '/usr/backups'
     sftp.put('tests_integration/assets/pod_backups/disk_to_restore.tar.gz',
-             path + '/3/disk_to_restore.tar.gz')
+             '{}/{}/disk_to_restore.tar.gz'.format(path, USER_ID))
     sftp.put('tests_integration/assets/pod_backups/disk_to_restore.zip',
-             path + '/test_user/disk_to_restore.zip')
+             '{}/{}/disk_to_restore.zip'.format(path, USER))
 
     # launch nginx container on node if it's not launched yet
     http_share(cluster, node, path)

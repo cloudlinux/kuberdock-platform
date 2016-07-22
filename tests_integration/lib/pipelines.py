@@ -91,7 +91,7 @@ class Pipeline(object):
             yield self.vagrant_log
 
         try:
-            # Reserve Pod IPs in Nebula so that they are not taken by other VMs/Pods
+            # Reserve Pod IPs in Nebula so that they are not taken by otherVMs/Pods
             ips = self.routable_ip_pool.reserve_ips(
                 INTEGRATION_TESTS_VNET, self.routable_ip_count)
             # Tell reserved IPs to cluster so it creates appropriate IP Pool
@@ -106,6 +106,8 @@ class Pipeline(object):
         except:
             self.destroy()
             raise
+        finally:
+            self._print_vagrant_log()
 
     def cleanup(self):
         """
@@ -124,8 +126,6 @@ class Pipeline(object):
             self.routable_ip_pool.free_reserved_ips()
         with suppress():
             self.cluster.destroy()
-
-        self._print_vagrant_log()
 
     def set_up(self):
         """
@@ -175,11 +175,15 @@ class Pipeline(object):
         self.vagrant_log.seek(0)
         log = self.vagrant_log.read() or '>>> EMPTY <<<'
 
+        message = '\n\n{header}\n{log}\n{footer}\n\n'
         logger.debug(
-            '\n-----------------> {name} VAGRANT LOGS ----------------->\n'
-            '{log}'
-            '\n<----------------- {name} VAGRANT LOGS <-----------------\n'
-                .format(name=self.name, log=log)
+            message.format(
+                header=center_text_message(
+                    'BEGIN {} VAGRANT LOGS'.format(self.name)),
+                log=log,
+                footer=center_text_message(
+                    'END {} VAGRANT LOGS'.format(self.name)),
+            )
         )
 
 

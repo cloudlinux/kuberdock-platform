@@ -1,95 +1,38 @@
-import fnmatch
+import logging
 import os
 import random
 import sys
-import logging
 import threading
-import traceback
-import imp
 import time
-import click
-from collections import defaultdict
 from contextlib import closing
 from threading import Thread
 
-from colorama import Fore, Style
-from pygments import highlight
-from pygments.formatters.terminal256 import Terminal256Formatter
-from pygments.lexers.python import PythonLexer
+import click
+from colorama import Fore
 
 from tests_integration.lib import multilogger
+from tests_integration.lib.integration_test_runner import TestResultCollection, \
+    discover_integration_tests, format_exception
+from tests_integration.lib.integration_test_utils import get_test_full_name, \
+    center_text_message
 from tests_integration.lib.pipelines import pipelines as \
     registered_pipelines, Pipeline
+
+logger = logging.getLogger()
+logger.setLevel(logging.DEBUG)
 
 CLUSTER_CREATION_MAX_DELAY = 30
 INTEGRATION_TESTS_PATH = 'tests_integration/'
 # Lock is needed for printing info thread-safely and it's done by two
 # separate print calls
 print_lock = threading.Lock()
-# Not the best way of determining that any error occurred in tests
-integration_tests_failed = False
-
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+test_results = TestResultCollection()
 
 
-def print_msg(msg, color=Fore.MAGENTA):
-    print('\n{}{}{}'.format(color, msg, Style.RESET_ALL))
-    sys.stdout.flush()
-
-
-def print_exception(exc_info):
-    # TODO: Probably include the context/source code caused the exception
-    trace = ''.join(traceback.format_exception(*exc_info))
-    message = highlight_code(trace)
-    print_msg(message, color='')
-
-
-def highlight_code(code):
-    """
-    Returns highlighted via pygments version of a given source code
-
-    :param code: string containing a source code
-    :return: colorized string
-    """
-    return highlight(code, PythonLexer(), Terminal256Formatter(style='manni'))
-
-
-def discover_integration_tests(paths, mask='test_*.py'):
-    """
-    Tests are located in python files. Each test has a pipeline decorator
-    which registers a test when the source code is parsed (imported). So
-    this method goes through files given a mask and imports them thus
-    triggering the test registration. Will be used later control which tests
-    to execute
-
-    :param paths: a path or a list of paths. If path is a directory then
-        it's walked recursively
-    :param mask: filename mask which is used to determine if it's a test file
-    """
-
-    discovered = []
-
-    def process_file(path):
-        filename = os.path.basename(path)
-        imp.load_source(os.path.splitext(filename)[0], path)
-        discovered.append(path)
-
-    def process_dir(path):
-        for root, _, file_names in os.walk(path):
-            for filename in fnmatch.filter(file_names, mask):
-                name = os.path.join(root, filename)
-                imp.load_source(os.path.splitext(filename)[0], name)
-                discovered.append(name)
-
-    for path in paths:
-        if os.path.isdir(path):
-            process_dir(path)
-        elif os.path.isfile(path):
-            process_file(path)
-
-    message = 'Discovered tests in:\n{}'.format('\n'.join(discovered))
-    print_msg(message)
+def print_msg(msg='', color=Fore.MAGENTA):
+    with print_lock:
+        print('{}{}{}'.format(color, msg, Fore.RESET))
+        sys.stdout.flush()
 
 
 def run_tests_in_a_pipeline(name, tests):
@@ -100,12 +43,11 @@ def run_tests_in_a_pipeline(name, tests):
 
     # Helper function to make code less verbose
     def pipe_log(msg, color=Fore.MAGENTA):
-        print_msg('{} -> {}'.format(name, msg), color)
+        print_msg('{} -> {}\n'.format(name, msg), color)
 
     # Prevent Nebula from being flooded by vm-create requests (AC-3914)
     delay = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
-    pipe_log('CREATING CLUSTER (delay {} seconds)'.format(delay),
-             Fore.MAGENTA)
+    pipe_log('CREATING CLUSTER (delay {} seconds)'.format(delay), Fore.MAGENTA)
     time.sleep(delay)
 
     try:
@@ -113,43 +55,27 @@ def run_tests_in_a_pipeline(name, tests):
         pipeline.create()
         pipe_log('CLUSTER CREATED', Fore.GREEN)
     except:
-        register_test_failure()
-        with print_lock:
-            pipe_log('CLUSTER CREATION FAILED', Fore.RED)
-            exc_info = sys.exc_info()
-            print_exception(exc_info)
+        test_results.register_pipeline_error(name, tests)
+        msg = format_exception(sys.exc_info())
+        pipe_log('CLUSTER CREATION FAILED\n{}'.format(msg), Fore.RED)
         return
 
-    results = defaultdict(list)
     for test in tests:
-        test_name = '{}::{}'.format(test.__module__, test.__name__)
+        test_name = get_test_full_name(test)
         pipe_log('{} -> STARTED'.format(test_name))
+
         try:
             pipeline.run_test(test)
+            test_results.register_success(test_name, name)
+
             pipe_log('{} -> PASSED'.format(test_name), Fore.GREEN)
-            results['passed'].append(test_name)
         except:
-            register_test_failure()
-            with print_lock:
-                pipe_log('{} -> FAILED'.format(test_name), Fore.RED)
-                exc_info = sys.exc_info()
-                print_exception(exc_info)
-            results['failed'].append(test_name)
+            test_results.register_failure(test_name, name)
+            msg = format_exception(sys.exc_info())
+            pipe_log('{} -> FAILED\n{}'.format(test_name, msg), Fore.RED)
 
     pipeline.destroy()
-    print_tests_summary(name, results)
-
-
-def print_tests_summary(name, results):
-    # TODO: Maybe add some more sophisticated reporting
-    failed, passed = len(results['failed']), len(results['passed'])
-    print_msg('{} -> TEST RESULTS: {} failed, {} passed'.format(
-        name, failed, passed))
-
-
-def register_test_failure():
-    global integration_tests_failed
-    integration_tests_failed = True
+    print_msg(test_results.pipeline_test_summary(name))
 
 
 def start_test(pipeline, tests):
@@ -168,17 +94,25 @@ def start_test(pipeline, tests):
     return t
 
 
-def print_pipeline_logs(handler):
+def get_pipeline_logs(handler):
     """
     Prints logs generated by each pipeline
     :param handler: logger handler instance
     """
-    with print_lock:
-        print_msg('{:=^100}'.format(' PIPELINE DETAILED LOGS '))
-        for name, fp in handler.files.items():
-            fp.seek(0)
-            print_msg('{:-^50}'.format(' ' + name + ' '))
-            print(fp.read())
+
+    def _format_log(name, fp):
+        fp.seek(0)
+        arr = [
+            center_text_message(name, color=Fore.MAGENTA),
+            fp.read(),
+        ]
+        return '\n'.join(arr)
+
+    entries = (_format_log(name, fp) for name, fp in handler.files.items())
+    msg = '\n' + '\n'.join(entries)
+
+    return center_text_message(
+        'PIPELINE DETAILED LOGS', fill_char='=', color=Fore.MAGENTA) + msg
 
 
 def _verify_paths(ctx, param, items):
@@ -202,7 +136,11 @@ def _verify_pipelines(ctx, param, items):
 @click.option('--live-log', is_flag=True)
 def main(paths, pipelines, live_log):
     with closing(multilogger.init_handler(logger, live_log)) as handler:
-        discover_integration_tests(paths or [INTEGRATION_TESTS_PATH])
+        discovered = discover_integration_tests(
+            paths or [INTEGRATION_TESTS_PATH])
+
+        message = 'Discovered tests in:\n{}\n'.format('\n'.join(discovered))
+        print_msg(message)
 
         if not pipelines:
             requested = registered_pipelines
@@ -219,9 +157,11 @@ def main(paths, pipelines, live_log):
 
         # If live log was enabled all the logs were already printed
         if not live_log:
-            print_pipeline_logs(handler)
+            print(get_pipeline_logs(handler))
 
-        if integration_tests_failed:
+        print(test_results.get_tests_report())
+
+        if test_results.has_any_failures():
             sys.exit(1)
 
 

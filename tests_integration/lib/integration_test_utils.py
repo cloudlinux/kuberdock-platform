@@ -186,7 +186,7 @@ def pod_factory(image, **create_kwargs):
     return _factory
 
 
-def center_text_message(message, width=120, fill_char='-'):
+def center_text_message(message, width=120, fill_char='-', color=''):
     """
     Returns a string where the message is centered relative to the specified
     width filling the empty space around text with the given character
@@ -197,7 +197,8 @@ def center_text_message(message, width=120, fill_char='-'):
     :return: formatted message
     """
     message = ' {} '.format(message)
-    return '{{:{}^{}}}'.format(fill_char, width).format(message)
+    return '{}{{:{}^{}}}{}'.format(
+        color, fill_char, width, Fore.RESET).format(message)
 
 
 def retry(f, tries=3, interval=1, _raise=True, *f_args, **f_kwargs):
@@ -379,3 +380,7 @@ def suppress(exc=Exception):
         yield
     except exc:
         pass
+
+
+def get_test_full_name(test):
+    return '{}::{}'.format(test.__module__, test.__name__)

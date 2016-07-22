@@ -9,6 +9,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from itertools import count, islice
 
+import operator
 from colorama import Fore, Style
 from ipaddress import IPv4Address, IPv4Network
 
@@ -134,6 +135,7 @@ def hooks(setup=None, teardown=None):
     :param teardown: teardown callable ref
     :return: None
     """
+
     def decorator(f):
         @wraps(f)
         def wrapper(*args, **kwargs):
@@ -266,6 +268,7 @@ class NebulaIPPool(object):
         return (ip_list - used_ip_list) & allowed_ips
 
     def reserve_ips(self, network_name, count):
+        # type: (str, int) -> list[str]
         """
         Tries to hold the given amount of given IP addresses of a network
         Automatically retries if IP were concurrently taken. Raises if there
@@ -275,19 +278,13 @@ class NebulaIPPool(object):
         :param count: number of IPs to hold
         :return: a set of reserved IPv4 addresses
         """
-        ips = self.get_free_ip_list(network_name)
-        if len(ips) < count:
-            raise NotEnoughFreeIPs(
-                '{} net has {} free IPs but {} requested'.format(network_name,
-                                                                 len(ips),
-                                                                 count))
 
-        net = self.pool.get_by_name(network_name)
-
-        def reserve_ip():
+        def reserve_ip(ips, net):
             """
             Tries to reserve a random free IP. Retries if any OpenNebula
-            related problem occurs.
+            related problem occurs. If ips set is empty or became empty
+            during the while loop consider there is not enough IPs
+
             :return: reserved IP
             """
             while ips:
@@ -305,8 +302,17 @@ class NebulaIPPool(object):
                 'The number of free IPs became less than requested during '
                 'reservation')
 
+        ips = self.get_free_ip_list(network_name)
+        if len(ips) < count:
+            raise NotEnoughFreeIPs(
+                '{} net has {} free IPs but {} requested'.format(network_name,
+                                                                 len(ips),
+                                                                 count))
+
+        net = self.pool.get_by_name(network_name)
+
         for _ in range(count):
-            ip = reserve_ip()
+            ip = reserve_ip(ips, net)
             self.reserved[network_name].add(ip)
 
         return self.reserved[network_name]
@@ -323,10 +329,37 @@ class NebulaIPPool(object):
                 except OpenNebulaException:
                     pass
 
+    @property
+    def reserved_ips(self):
+        return reduce(operator.or_, self.reserved.values())
+
     @classmethod
     def factory(cls, url, username, password):
+        # type: (str, str, str) -> NebulaIPPool
         client = oca.Client('{}:{}'.format(username, password), url)
         return cls(client)
+
+    def store_reserved_ips(self, ip):
+        """
+        Store information about reserved IPs by a VM given it's IP
+
+        This information is needed for a GC script, which removes old VMs.
+        The script should also release IPs which were reserved in this
+        class. It will use this info saved here to extract a list of IPs
+        it should release
+        """
+        vm = self._get_vm_by_ip(ip)
+        reserved_ips = ','.join(self.reserved_ips)
+        vm.update('RESERVED_IPS="{}"'.format(reserved_ips))
+
+    def _get_vm_by_ip(self, ip):
+        # type: (str) -> oca.VirtualMachine
+        vm_pool = oca.VirtualMachinePool(self.client)
+        vm_pool.info()
+        for vm in vm_pool:
+            if ip in (n.ip for n in vm.template.nics):
+                return vm
+        raise OpenNebulaException('VM {} not found'.format(ip))
 
 
 def get_rnd_string(length=10, prefix=""):

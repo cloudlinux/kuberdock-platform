@@ -91,12 +91,18 @@ class Pipeline(object):
             yield self.vagrant_log
 
         try:
+            # Reserve Pod IPs in Nebula so that they are not taken by other VMs/Pods
             ips = self.routable_ip_pool.reserve_ips(
                 INTEGRATION_TESTS_VNET, self.routable_ip_count)
+            # Tell reserved IPs to cluster so it creates appropriate IP Pool
             self._add_public_ips(ips)
+            # Create cluster
             self.cluster = KDIntegrationTestAPI(override_envs=self.settings,
                                                 err_cm=cm, out_cm=cm)
             self.cluster.start()
+            # Write reserved IPs to master VM metadata for future GC
+            master_ip = self.cluster.get_host_ip('master')
+            self.routable_ip_pool.store_reserved_ips(master_ip)
         except:
             self.destroy()
             raise

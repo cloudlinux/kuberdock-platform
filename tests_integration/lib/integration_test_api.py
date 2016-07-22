@@ -31,6 +31,7 @@ class KDIntegrationTestAPI(object):
         "master": "kd_master",
         "node1": "kd_node1",
         "node2": "kd_node2",
+        "rhost1": "kd_rhost1",
     }
 
     def __init__(self, override_envs=None,

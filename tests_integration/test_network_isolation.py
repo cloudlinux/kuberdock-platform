@@ -60,6 +60,7 @@ def test_network_isolation_from_user_container(cluster):
         for name in pods.keys()
         }
 
+    # ------ General tests -------
     # Docker container can have access to the world
     ping(pods['iso1'], container_ids['iso1'], '8.8.8.8')
 
@@ -126,6 +127,17 @@ def test_network_isolation_from_user_container(cluster):
     # with assert_raises(NonZeroRetCodeException, '100% packet loss'):
     #     ping(pods['iso1'], container_ids['iso1'], master_ip)
 
-    # TODO: Isn't reachable. Is this outdated?
     # Docker container should have access to kubernetes over flannel
-    # pod.docker_exec(container_id, 'ping -c 2 10.254.11.1')
+    for name, pod in pods.items():
+        http_check(pod, container_ids[name], 'curl -kv https://10.254.0.1')
+
+    # ------ Registered hosts tests ------
+
+    # Registered host has access to flannel network. Test that by
+    # trying to access container IP and service IP
+    for name, pod in pods.items():
+        cluster.ssh_exec('rhost1', 'ping -c 2 {}'.format(container_ips[name]))
+        cluster.ssh_exec(
+            'rhost1', 'curl -v http://{}'.format(container_ips[name]))
+        cluster.ssh_exec(
+            'rhost1', 'curl -v http://{}'.format(specs[name]['podIP']))

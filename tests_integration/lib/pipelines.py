@@ -203,6 +203,7 @@ class NetworkingPipeline(Pipeline):
         # different nodes correctly communicate with each other raise that
         # number to 2
         'KD_NODES_COUNT': '1',
+        'KD_RHOSTS_COUNT': '1',
     }
 
     def set_up(self):

@@ -120,7 +120,7 @@ def hooks(setup=None, teardown=None):
     Decorator used to link per-test setup & teardown methods to test
     Usage:
 
-    def my_setup()
+    def my_setup(cluster)
         # do setup here
         pass
 
@@ -139,7 +139,7 @@ def hooks(setup=None, teardown=None):
         def wrapper(*args, **kwargs):
             if setup:
                 try:
-                    setup()
+                    setup(*args, **kwargs)
                 except Exception as e:
                     msg = "=== Error in test linked setup: ===\n{}"
                     LOG.error(msg.format(repr(e)))
@@ -149,7 +149,7 @@ def hooks(setup=None, teardown=None):
             finally:
                 if teardown:
                     try:
-                        teardown()
+                        teardown(*args, **kwargs)
                     except Exception as e:
                         msg = "=== Error in test linked teardown: ===\n{}"
                         LOG.error(msg.format(repr(e)))

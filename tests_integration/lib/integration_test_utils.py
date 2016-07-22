@@ -4,6 +4,7 @@ import re
 import socket
 import string
 import time
+from functools import wraps
 from collections import defaultdict
 from contextlib import contextmanager
 from itertools import count, islice
@@ -112,6 +113,51 @@ def merge_dicts(*dictionaries):
     for dictionary in dictionaries:
         result.update(dictionary)
     return result
+
+
+def hooks(setup=None, teardown=None):
+    """
+    Decorator used to link per-test setup & teardown methods to test
+    Usage:
+
+    def my_setup()
+        # do setup here
+        pass
+
+    @pipeline("my_pipeline")
+    @hooks(setup=my_setup)
+    def test_something(cluster):
+        # do test here
+        pass
+
+    :param setup: setup callable ref
+    :param teardown: teardown callable ref
+    :return: None
+    """
+    def decorator(f):
+        @wraps(f)
+        def wrapper(*args, **kwargs):
+            if setup:
+                try:
+                    setup()
+                except Exception as e:
+                    msg = "=== Error in test linked setup: ===\n{}"
+                    LOG.error(msg.format(repr(e)))
+                    raise
+            try:
+                f(*args, **kwargs)
+            finally:
+                if teardown:
+                    try:
+                        teardown()
+                    except Exception as e:
+                        msg = "=== Error in test linked teardown: ===\n{}"
+                        LOG.error(msg.format(repr(e)))
+                        raise
+
+        return wrapper
+
+    return decorator
 
 
 def pod_factory(image, **create_kwargs):

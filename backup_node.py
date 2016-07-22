@@ -70,7 +70,7 @@ def do_node_backup(backup_dir, callback, skip_errors, **kwargs):
 
     def handle(handler, result):
         try:
-            subprocess.check_call("{0} {1}".format(callback, result),
+            subprocess.check_call("{0} {1}".format(handler, result),
                                   shell=True)
         except subprocess.CalledProcessError as err:
             raise BackupError(
@@ -107,7 +107,7 @@ def do_node_backup(backup_dir, callback, skip_errors, **kwargs):
             os.rename(tmp_result, result)
             logger.info('Backup created: {0}'.format(result))
     if callback:
-        handle(callback, result)
+        handle(callback, dst)
 
 
 def parse_args(args):

@@ -579,36 +579,30 @@ log_it echo "CLUSTER_NETWORK has been determined as $CLUSTER_NETWORK"
 
 log_it rpm -q firewalld && firewall-cmd --state
 if [ $? -ne 0 ];then
-    log_it echo 'Firewalld is not running. Skip adding any new rules.'
-else
-    log_it echo 'Adding Firewalld rules...'
-    # nginx
-    do_and_log firewall-cmd --permanent --zone=public --add-port=80/tcp
-    do_and_log firewall-cmd --permanent --zone=public --add-port=443/tcp
-
-    # ntp
-    do_and_log firewall-cmd --permanent --zone=public --add-port=123/udp
-
-    # this ports should be seen only from inside the cluster:
-    log_it echo 'Adding cluster-only visible ports...'
-    # kube-apiserver insecure ro
-    do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="7080" protocol="tcp" accept"
-    # cluster dns
-    do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="53" protocol="tcp" accept"
-    do_and_log firewall-cmd --permanent --zone=public --add-rich-rule="rule family="ipv4" source address=$CLUSTER_NETWORK port port="53" protocol="udp" accept"
-
-    # kube-apiserver secure
-    do_and_log firewall-cmd --permanent --zone=public --add-port=6443/tcp
-    # etcd secure
-    do_and_log firewall-cmd --permanent --zone=public --add-port=2379/tcp
-
-    # open ports for cpanel flannel and kube-proxy
-    do_and_log firewall-cmd --permanent --zone=public --add-port=8123/tcp
-    do_and_log firewall-cmd --permanent --zone=public --add-port=8118/tcp
-
-    log_it echo 'Reload firewall...'
-    do_and_log firewall-cmd --reload
+    log_it echo 'Firewalld is not running, installing...'
+    yum_wrapper install -y firewalld
+    do_and_log systemctl restart firewalld
+    do_and_log systemctl reenable firewalld
 fi
+log_it echo 'Adding Firewalld rules...'
+# nginx
+do_and_log firewall-cmd --permanent --zone=public --add-port=80/tcp
+do_and_log firewall-cmd --permanent --zone=public --add-port=443/tcp
+
+# ntp
+do_and_log firewall-cmd --permanent --zone=public --add-port=123/udp
+
+# kube-apiserver secure
+do_and_log firewall-cmd --permanent --zone=public --add-port=6443/tcp
+# etcd secure
+do_and_log firewall-cmd --permanent --zone=public --add-port=2379/tcp
+
+# open ports for cpanel flannel and kube-proxy
+do_and_log firewall-cmd --permanent --zone=public --add-port=8123/tcp
+do_and_log firewall-cmd --permanent --zone=public --add-port=8118/tcp
+
+log_it echo 'Reload firewall...'
+do_and_log firewall-cmd --reload
 
 
 # AC-3318 Remove chrony which prevents ntpd service to start

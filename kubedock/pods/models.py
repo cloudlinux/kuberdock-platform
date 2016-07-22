@@ -201,12 +201,23 @@ def _page(page, pages):
 
 
 def _ip_network_hosts(obj, page=None):
+    """
+    Returns a portion of IP addresses based on page parameter.
+    :returns: IP addresses
+    :rtype: iterator (AC-3531)
+    Previous rtype was a generator
+    """
     pages = obj.pages()
     page = _page(page, pages)
     net_ip = obj.network_address + (page - 1) * 2 ** obj.page_bits
     net_pl = obj.max_prefixlen - obj.page_bits if pages > 1 else obj.prefixlen
     network = ipaddress.ip_network(u'{0}/{1}'.format(net_ip, net_pl))
-    return network.hosts()
+    # This method used to return _BaseNetwork.hosts() generator, however the default
+    # implementation would skip network and broadcast addresses, which made
+    # the final IP pool short of two IP addresses.
+    # As of AC-3531 fix, now it returns the _BaseNetwork.__iter__() instead,
+    # which does not skip any addresses.
+    return iter(network)
 
 
 def _ip_network_iterpages(obj):

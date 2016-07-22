@@ -182,7 +182,9 @@ class UserCRUDTestCase(APITestCase):
         user = self.user
         url = self.item_url(self.user.id)
 
-        ippool = IPPool(network='192.168.1.252/30').save()
+        ippool = IPPool(network='192.168.1.252/30')
+        ippool.block_ip([u'192.168.1.252', u'192.168.1.255'])
+        ippool.save()
         min_pod = {'restartPolicy': 'Always', 'kube_type': 0, 'containers': [{
             'image': 'nginx', 'name': 'fk8i0gai',
             'args': ['nginx', '-g', 'daemon off;'],

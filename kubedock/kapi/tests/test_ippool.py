@@ -90,7 +90,7 @@ class TestIpPool(DBTestCase):
         db.session.add(pool)
         db.session.commit()
         res = ippool.IpAddrPool().get_free()
-        self.assertEqual(res, '192.168.1.1')
+        self.assertEqual(res, '192.168.1.0')
 
     def test_create_raises_if_given_data_is_invalid(self):
         for invalid in (None, {}):
@@ -269,7 +269,7 @@ class TestIpPool(DBTestCase):
         self._create_network(u'192.168.2.0/28')
 
         node = K8SNode(hostname=self.node.hostname)
-        self.assertEqual(node.free_public_ip_count, 14)
+        self.assertEqual(node.free_public_ip_count, 16)
 
     @responses.activate
     def test_create_sets_correctly_public_ip_counter_given_autoblock(self):
@@ -279,7 +279,7 @@ class TestIpPool(DBTestCase):
         self._create_network(u'192.168.2.0/28', autoblock='1-12')
 
         node = K8SNode(hostname=self.node.hostname)
-        self.assertEqual(node.free_public_ip_count, 2)
+        self.assertEqual(node.free_public_ip_count, 4)
 
     @responses.activate
     def test_update_decreases_public_ip_counter_on_block_ip_request(self):
@@ -291,7 +291,7 @@ class TestIpPool(DBTestCase):
         params = {'block_ip': u'192.168.2.1', 'node': self.node.hostname}
         ippool.IpAddrPool().update(network, params)
         node = K8SNode(hostname=self.node.hostname)
-        self.assertEqual(node.free_public_ip_count, 14 - 1)
+        self.assertEqual(node.free_public_ip_count, 16 - 1)
 
     @responses.activate
     def test_update_increases_public_ip_counter_on_unblock_ip_request(self):
@@ -309,7 +309,7 @@ class TestIpPool(DBTestCase):
             ippool.IpAddrPool().update(network, p)
 
         node = K8SNode(hostname=self.node.hostname)
-        self.assertEqual(node.free_public_ip_count, 14 - 1 + 1)
+        self.assertEqual(node.free_public_ip_count, 16 - 1 + 1)
 
     @responses.activate
     def test_delete_correctly_decreases_public_ip_counter(self):
@@ -319,7 +319,7 @@ class TestIpPool(DBTestCase):
             self._create_network(net)
         ippool.IpAddrPool().delete(networks[0])
         node = K8SNode(hostname=self.node.hostname)
-        self.assertEqual(node.free_public_ip_count, 14)
+        self.assertEqual(node.free_public_ip_count, 16)
 
     @responses.activate
     def test_update_fails_on_ip_block_if_free_ip_counter_is_zero(self):

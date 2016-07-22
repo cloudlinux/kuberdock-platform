@@ -25,7 +25,7 @@ def test_can_create_pod_without_public_ip_with_no_ip_pools(cluster):
 def test_cannot_add_pod_if_no_free_ips_available(cluster):
     expected_pod_count = 3
     # 2 IP addresses in a network
-    cluster.add_ip_pool('192.168.0.0/30', 'node1')
+    cluster.add_ip_pool('192.168.0.0/31', 'node1')
     # 1 IP address in a network
     cluster.add_ip_pool('192.168.1.0/32', 'node2')
 

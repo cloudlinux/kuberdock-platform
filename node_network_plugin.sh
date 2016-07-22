@@ -278,7 +278,7 @@ case "$ACTION" in
     iptables_ -I FORWARD -t filter -j KUBERDOCK
     iptables_ -I PREROUTING -t nat -j KUBERDOCK
     iptables_ -I PREROUTING -t nat -j KUBERDOCK-PUBLIC-IP
-    iptables_ -I POSTROUTING -t nat -j KUBERDOCK-PUBLIC-IP-SNAT
+    iptables_ -I POSTROUTING -t nat ! -o flannel.1 -j KUBERDOCK-PUBLIC-IP-SNAT
     MSG=$(/usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" init)
     log "$MSG"
     iptables_ -I KUBERDOCK -t filter -i docker0 ! -o docker0 -m set ! --match-set kuberdock_cluster dst -j ACCEPT

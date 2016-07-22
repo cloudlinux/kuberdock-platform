@@ -534,6 +534,29 @@ class _U165(_Update):
             run(PUBLIC_IP_POSTROUTING_RULE.format('I', pod_ip, public_ip))
 
 
+class _U168(_Update):
+
+    @classmethod
+    def upgrade_node(cls, upd, with_testing, env):
+        upd.print_log('Update iptables rule...')
+
+        # check if new rule already exists
+        rv_n = run('iptables -w -C POSTROUTING -t nat ! -o flannel.1 '
+                   '-j KUBERDOCK-PUBLIC-IP-SNAT')
+
+        if rv_n.failed:
+            # add new rule
+            run('iptables -w -I POSTROUTING -t nat ! -o flannel.1 '
+                '-j KUBERDOCK-PUBLIC-IP-SNAT')
+
+        # check if old rule still exists
+        rv_o = run('iptables -w -C POSTROUTING -t nat -j KUBERDOCK-PUBLIC-IP-SNAT')
+
+        if rv_o.succeeded:
+            # delete old rule
+            run('iptables -w -D POSTROUTING -t nat -j KUBERDOCK-PUBLIC-IP-SNAT')
+
+
 updates = [
     _UpgradeDB,
     _UpdatePermissions,
@@ -546,6 +569,7 @@ updates = [
     _U162,
     _U164,
     _U165,
+    _U168,
 ]
 
 

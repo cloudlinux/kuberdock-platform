@@ -36,3 +36,9 @@
     - restart nginx
 
 - include: prices.yml
+
+- name: Increase session lifetime
+  lineinfile:
+    dest: "{{ src_prefix }}/kubedock/settings.py"
+    regexp: ^SESSION_LIFETIME =
+    line: "SESSION_LIFETIME = {{ 24*60*60 }}"

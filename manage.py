@@ -163,7 +163,7 @@ class NodeManager(Command):
         Option('--docker-options', dest='docker_options'),
         Option('--ebs-volume', dest='ebs_volume', required=False),
         Option('--localstorage-device', dest='ls_device', required=False),
-        Option('--verbose', dest='verbose', required=False,
+        Option('-v', '--verbose', dest='verbose', required=False,
                action='store_true'),
     ]
 
@@ -533,7 +533,7 @@ manager.add_command('shell', Shell(make_context=make_shell_context))
 manager.add_command('db', MigrateCommand)
 manager.add_command('createdb', Creator())
 manager.add_command('updatedb', Updater())
-manager.add_command('add_node', NodeManager())
+manager.add_command('add-node', NodeManager())
 manager.add_command('delete-node', DeleteNodeCmd())
 manager.add_command('wait-for-nodes', WaitForNodes())
 manager.add_command('reset-password', ResetPass())

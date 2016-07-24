@@ -1,0 +1,24 @@
+---
+- name: Install additional rpm build packages
+  yum: name={{ item }} state=latest
+  with_items:
+    - rpm-build
+    - nodejs
+    - nodejs-less
+    - nodejs-clean-css
+    - gcc
+
+- name: Building KuberDock RPM from source
+  command: bash "{{ master_kd_src_path }}/dev-utils/build-rpm.sh" "{{ master_kd_src_path }}" "{{ master_rpms_dir }}"
+  environment:
+    KD_GIT_REF: "{{ git_ref | default('') }}"
+
+- name: Building KCLI RPM from source
+  command: bash "{{ master_kd_src_path }}/dev-utils/build-kdcli-rpm.sh" "{{ master_kd_src_path }}/kuberdock-cli" "{{ master_rpms_dir }}"
+  environment:
+    KDCLI_GIT_REF: "{{ git_ref | default('') }}"
+
+- name: Building KDCTL RPM from source
+  command: bash "{{ master_kd_src_path }}/dev-utils/build-kdctl-rpm.sh" "{{ master_kd_src_path }}/kuberdock-manage" "{{ master_rpms_dir }}"
+  environment:
+    KDCLI_GIT_REF: "{{ git_ref | default('') }}"

@@ -46,7 +46,7 @@ DATA_TEMPLATE='{'\
 
 isRpmFileNotSigned(){
     package="$@"
-    sig=$(rpm -Kv $package | grep Signature)
+    sig=$(rpm -Kv "$package" | grep Signature)
     if [ -z "$sig" ]; then
         return 0
     else
@@ -71,8 +71,8 @@ sentryWrapper() {
      if [ "$SENTRY_ENABLE" != "y" ];then
          # AC-3591 Do not send anything if package not signed
          package=$(ls -1 | awk '/^kuberdock.*\.rpm$/ {print $1; exit}')
-         if [ ! -z $package ];then
-             if isRpmFileNotSigned $package; then
+         if [ ! -z "$package" ];then
+             if isRpmFileNotSigned "$package"; then
                  return 0
              fi
          else
@@ -91,12 +91,12 @@ sentryWrapper() {
      echo
      if [ ! -z ${KD_OWNER_EMAIL} ] ;then
          logs=$(while read line; do echo -n "${line}\\n"; done < $DEPLOY_LOG_FILE)
-         logs=$(echo $logs | tr -d '"')
+         logs=$(echo "$logs" | tr -d '"')
          uname=$(uname -a)
          hostname=$(cat /etc/hostname)
          ip_address=$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')
          release=$(rpm -q --queryformat "%{VERSION}-%{RELEASE}" kuberdock)
-         data=$(eval echo $DATA_TEMPLATE)
+         data=$(eval echo "$DATA_TEMPLATE")
          echo
          curl -s -H --fail "Content-Type: application/json" -X POST --data "$data" "$SENTRYURL/api/$SENTRYPROJECTID/store/"\
 "?sentry_version=$SENTRYVERSION&sentry_client=test&sentry_key=$SENTRYKEY&sentry_secret=$SENTRYSECRET" > /dev/null
@@ -296,7 +296,7 @@ do_and_log()
     "$@" 2>&1 | tee -a $DEPLOY_LOG_FILE
     temp=$PIPESTATUS
     if [ $temp -ne 0 ];then
-      echo $EXIT_MESSAGE
+      echo "$EXIT_MESSAGE"
       exit $temp
     fi
 }
@@ -308,7 +308,7 @@ log_errors()
     "$@" 2> >(tee -a $DEPLOY_LOG_FILE)
     temp=$PIPESTATUS
     if [ $temp -ne 0 ];then
-      echo $EXIT_MESSAGE
+      echo "$EXIT_MESSAGE"
       exit $temp
     fi
 }
@@ -571,7 +571,7 @@ fi
 CLUSTER_NETWORK=$(get_network $MASTER_IP)
 if [ $? -ne 0 ];then
     log_it echo "Error during get cluster network via $MASTER_IP"
-    echo $EXIT_MESSAGE
+    echo "$EXIT_MESSAGE"
     exit 1
 fi
 log_it echo "CLUSTER_NETWORK has been determined as $CLUSTER_NETWORK"
@@ -944,8 +944,8 @@ STP=yes
 BRIDGING_OPTS=priority=32768
 TYPE=Bridge
 BOOTPROTO=none
-IPADDR=$(echo $FLANNEL_SUBNET | cut -f 1 -d /)
-PREFIX=$(echo $FLANNEL_SUBNET | cut -f 2 -d /)
+IPADDR=$(echo "$FLANNEL_SUBNET" | cut -f 1 -d /)
+PREFIX=$(echo "$FLANNEL_SUBNET" | cut -f 2 -d /)
 MTU=$FLANNEL_MTU
 DEFROUTE=yes
 IPV4_FAILURE_FATAL=no

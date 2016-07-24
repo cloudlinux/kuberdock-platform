@@ -4,4 +4,4 @@
     network: "{{ ansible_default_ipv4.network }}/{{ansible_default_ipv4.netmask}}"
 
 - name: Create IP pool
-  shell: python "{{ src_prefix }}/manage.py" create-ip-pool -s "{{ network | ipaddr('net') }}" -i {{ public_ips }}
+  shell: python "{{ master_kd_src_path }}/manage.py" create-ip-pool -s "{{ network | ipaddr('net') }}" -i {{ public_ips }}

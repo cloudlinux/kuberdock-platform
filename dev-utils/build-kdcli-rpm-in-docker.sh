@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+IMG=lobur/rpm-build:v1
+
 if [ ! -d "dev-utils" ]
 then
     echo "Must be run from AppCloud dir, like:"
@@ -7,13 +9,11 @@ then
     exit 1
 fi
 
-DST=${KD_BUILD_DIR:-"./builds/"}
-
-IMG=rpm-build_$(echo $RANDOM | tr '[0-9]' '[a-zA-Z]')
+DST="./builds/"
 CONT=rpm-build_$(echo $RANDOM | tr '[0-9]' '[a-zA-Z]')
+workdir="/docker_rpmbuild"
 
-docker build -t $IMG -f dev-utils/Dockerfile.kd-rpm-build --rm=true --no-cache=true .
-docker run --name $CONT $IMG bash dev-utils/build-kdcli-rpm.sh
-docker cp $CONT:/vagrant/kcli.rpm $DST
-docker rm -f $CONT
-docker rmi $IMG
+docker run --name "$CONT" -v "$PWD":"$workdir":ro -w "$workdir" "$IMG" \
+    bash dev-utils/build-kdcli-rpm.sh "$workdir/kuberdock-cli" "/"
+docker cp "$CONT":/kcli.rpm "$DST"
+docker rm -f "$CONT"

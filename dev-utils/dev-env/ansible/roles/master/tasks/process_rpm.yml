@@ -1,6 +1,6 @@
 ---
 
-- find: paths=/vagrant/ patterns="{{ item }}*.rpm"
+- find: paths={{ master_rpms_dir }} patterns="{{ item }}*.rpm"
   register: _rpm_exist
   with_items: "{{ rpms_to_check }}"
   tags:
@@ -18,5 +18,10 @@
       - rpm_packages
       - deploy
 
+- name: Copy get_rpm_deploy_script.sh script to master RPMs dir
+  copy:
+      src: "{{ host_proj_root }}/dev-utils/get_rpm_deploy_script.sh"
+      dest: "{{ master_rpms_dir }}"
+
 - name: Unpack deploy.sh
-  command: bash /vagrant/dev-utils/get_rpm_deploy_script.sh
+  command: "bash {{ master_rpms_dir }}/get_rpm_deploy_script.sh {{ master_rpms_dir }} {{ master_rpms_dir }}"

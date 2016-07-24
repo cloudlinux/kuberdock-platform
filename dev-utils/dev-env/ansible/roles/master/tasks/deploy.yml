@@ -1,8 +1,7 @@
 ---
 
 - name: Deploy
-  shell: echo "{{ ansible_default_ipv4.address }}" | KD_OWNER_EMAIL=vagrant@dummy.com bash deploy.sh {{ add_testing_repo }} {{ non_floating_ips_mode }} {{ ceph_params|default("") }} chdir=/vagrant
-  no_log: True
+  shell: echo "{{ ansible_default_ipv4.address }}" | KD_OWNER_EMAIL=vagrant@dummy.com bash deploy.sh {{ add_testing_repo }} {{ non_floating_ips_mode }} {{ ceph_params|default("") }} chdir="{{ master_rpms_dir }}"
   register: deploy_result
   ignore_errors: True
   tags:

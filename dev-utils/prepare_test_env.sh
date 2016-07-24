@@ -21,4 +21,3 @@ pip install virtualenv
 
 sudo -u postgres psql -c "CREATE DATABASE testkuberdock OWNER kuberdock ENCODING 'UTF8'"
 
-# nosetests -a /vagrant

@@ -2,4 +2,3 @@
 
 #dotfiles: ""
 #hook: ""
-add_ssh_pub_keys: False

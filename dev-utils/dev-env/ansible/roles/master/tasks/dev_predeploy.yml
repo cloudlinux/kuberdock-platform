@@ -1,29 +1,10 @@
-- name: Install additional dev packages
-  yum: name={{ item }} state=latest
-  with_items:
-      - rpm-build
-      - nodejs
-      - nodejs-less
-      - nodejs-clean-css
-      - gcc
+---
 
-- name: Building Kuberdock RPM from source
-  command: bash /vagrant/dev-utils/build-rpm.sh
-  environment:
-    KD_GIT_REF: "{{ git_ref | default('') }}"
+- name: Create src directory on master
+  file: path="{{ master_kd_src_path }}" state=directory
 
-- name: Building KCLI RPM from source
-  command: bash /vagrant/dev-utils/build-kdcli-rpm.sh
-  environment:
-    KDCLI_GIT_REF: "{{ git_ref | default('') }}"
+- name: Copy project source files to src directory on master
+  synchronize: src="{{ host_proj_root }}" dest="{{ master_kd_src_path }}"
 
-- name: Building KDCTL RPM from source
-  command: bash /vagrant/dev-utils/build-kdctl-rpm.sh
-  environment:
-    KDCTL_GIT_REF: "{{ git_ref | default('') }}"
-
-- name: Override src path
-  set_fact:
-      src_prefix: /vagrant
-
+- include: build_rpm.yml
 - include: process_rpm.yml

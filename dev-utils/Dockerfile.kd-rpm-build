@@ -1,4 +1,0 @@
-FROM lobur/rpm-build-base:v2
-
-COPY . /vagrant
-WORKDIR /vagrant

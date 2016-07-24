@@ -1,4 +1,10 @@
-- name: Deploy
-  shell: echo "{{ admin_password }}" | bash kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" chdir=/vagrant
+- name: Create deploy directory on remote host (rhost)
+  file: path="{{ rhost_deploy_path }}" state=directory
+
+- name: Copy kcli-deploy.sh to deploy directory on remote host (rhost)
+  copy: src="{{ host_proj_root }}/kuberdock-cli/kcli-deploy.sh" dest="{{ rhost_deploy_path }}"
+
+- name: Deploy kcli on rhost
+  shell: echo "{{ admin_password }}" | bash kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" chdir="{{ rhost_deploy_path }}"
   tags:
       - deploy

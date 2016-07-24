@@ -5,7 +5,7 @@
   tags:
    - kcli
 
-- stat: path=/vagrant/kcli.rpm
+- stat: path="{{ master_rpms_dir }}/kcli.rpm"
   register: kcli_rpm
 
 - fail: msg="kcli.rpm was not found"
@@ -13,8 +13,8 @@
   tags:
    - kcli
 
-- name: Install KCLI
-  yum: name=/vagrant/kcli.rpm state=present
+- name: Install kcli
+  yum: name="{{ master_rpms_dir }}/kcli.rpm" state=present
   tags:
    - kcli
 
@@ -35,13 +35,13 @@
   tags:
    - kcli
 
-- name: Duplicate KCLI configs for test users
+- name: Duplicate kcli configs for test users
   command: "cp /etc/kubecli.conf /etc/kubecli_{{ item.item.username }}.conf"
   with_items: "{{ tokens.results }}"
   tags:
    - kcli
 
-- name: Write auth tokens to the KCLI configs for each test user
+- name: Write auth tokens to the kcli configs for each test user
   lineinfile:
     dest: "/etc/kubecli_{{ item.item.username }}.conf"
     line: "token = {{ item.json.token }}"
@@ -50,7 +50,7 @@
   tags:
    - kcli
 
-- name: Make test_user a default user for KCLI
+- name: Make test_user a default user for kcli
   command: cp /etc/kubecli_test_user.conf /etc/kubecli.conf
   tags:
    - kcli

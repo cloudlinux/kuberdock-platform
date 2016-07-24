@@ -1,10 +1,5 @@
 - include: ../../../facts.yml
 
-- name: Override src path
-  set_fact:
-      src_prefix: /vagrant
-  when: is_dev_install
-
 - name: Docker options
   set_fact:
       docker_options: --insecure-registry dockerhub-proxy.cloudlinux.com:5000 --registry-mirror=https://dockerhub-proxy.cloudlinux.com:5000

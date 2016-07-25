@@ -1543,6 +1543,19 @@ class TestRemoveAndReturnIP(DBTestCase):
                                                       ip=int(self.ip))
         self._check_removed_and_retrun_back()
 
+    def test_return_fails_when_no_free_ips_available(self):
+        podcollection.PodCollection._remove_public_ip(pod_id=self.pod.id,
+                                                      ip=int(self.ip))
+        self.ippool.block_ip(self.ippool.hosts(as_int=True))
+
+        if not podcollection.AWS:
+            with self.assertRaises(Exception):
+                podcollection.PodCollection._return_public_ip(
+                    pod_id=self.pod.id)
+        self.ippool.unblock_ip(self.ippool.hosts(as_int=True))
+        self.db.session.flush()
+        self._check_removed_and_retrun_back()
+
 
 class TestPodComposePersistent(DBTestCase):
     @mock.patch('kubedock.kapi.pod.get_storage_class')

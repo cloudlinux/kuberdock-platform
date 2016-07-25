@@ -168,7 +168,6 @@ class UserCRUDTestCase(APITestCase):
         data = {'package': package1.name}
         self.assert400(self.admin_open(url=url, method='PUT', json=data))
 
-    @unittest.skip('Suspended Pod IPs will be returned during next Pod start')
     @mock.patch.object(kapi_podcollection, 'license_valid', lambda: True)
     @mock.patch.object(kapi_podcollection.KubeQuery, '_run')
     def test_suspend(self, _run):

@@ -82,6 +82,8 @@ def add_debug_info(pipeline):
     """
     Save information about when cluster is going to be destroyed by Jenkins GC
     """
+    if not pipeline.build_cluster:
+        return
     master_ip = pipeline.cluster.get_host_ip('master')
     msg = 'Pipeline {} has failed tests, it remains alive until about ' \
           '{} so that you can debug it. Master IP: {}'

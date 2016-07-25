@@ -5,5 +5,5 @@ export PATH=dev-utils:$PATH # enables docker-based vagrant
 export KD_ONE_URL=https://some.nebula.host.com:2633/RPC2
 export KD_ADD_SHARED_PUB_KEYS=1
 # Bump templates explicitly (yum update), before making each new release branch.
-export KD_NEBULA_TEMPLATE_ID=226 # enables SSD disks, visible from Jenkins account only!
-export KD_NEBULA_RHOST_TEMPLATE_ID=240 # cent6 template, visible from Jenkins account only!
+export KD_NEBULA_TEMPLATE_ID=226
+export KD_NEBULA_RHOST_TEMPLATE_ID=240 # cent6 template

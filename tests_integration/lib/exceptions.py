@@ -16,7 +16,7 @@ class NonZeroRetCodeException(Exception):
         super(NonZeroRetCodeException, self).__init__(message)
 
     def __str__(self):
-        return '\n'.join([self.message, self.stdout, self.stderr])
+        return '\n'.join([self.message, str(self.stdout), str(self.stderr)])
 
 
 class NotEnoughFreeIPs(Exception):

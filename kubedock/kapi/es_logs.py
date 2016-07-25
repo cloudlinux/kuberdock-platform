@@ -13,6 +13,8 @@ from ..nodes.models import Node
 from ..usage.models import ContainerState as CS
 from ..users.models import User
 from ..utils import NODE_STATUSES
+from ..settings import KUBERDOCK_INTERNAL_USER
+from ..login import current_user
 
 
 CONTAINER_POSTFIX = 'Contact the administrator if the problem persists.'
@@ -47,18 +49,24 @@ def get_container_logs(pod_id, container_name, owner_id=None, size=100,
                              [{'term': {'container_id': docker_id}}],
                              host, size, start, end)
         except LogsError as err:
+            # Show detailed error messages for kuberdock-internal user and
+            # a generic one for other users in case of
+            # LogsError.CONNECTION_ERROR and LogsError.INTERNAL_ERROR
+            err_msg = CONTAINER_POSTFIX
+            if current_user.username == KUBERDOCK_INTERNAL_USER:
+                err_msg = err.message
             if err.error_code == LogsError.NO_LOGS:
                 logs = {}
             elif err.error_code == LogsError.CONNECTION_ERROR:
                 raise APIError(
-                    'Failed to get logs. {0}'.format(CONTAINER_POSTFIX),
+                    'Failed to get logs. {0}'.format(err_msg),
                     status_code=503
                 )
             elif err.error_code == LogsError.POD_ERROR:
                 raise APIError(err.message, status_code=502)
             elif err.error_code == LogsError.INTERNAL_ERROR:
                 raise APIError(
-                    'Internal logs error. {0}'.format(CONTAINER_POSTFIX),
+                    'Internal logs error. {0}'.format(err_msg),
                     status_code=500
                 )
             else:

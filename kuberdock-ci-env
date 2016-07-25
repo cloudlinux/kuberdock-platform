@@ -4,3 +4,4 @@ export BUILD_CLUSTER=1
 export PATH=dev-utils:$PATH # enables docker-based vagrant
 export KD_NEBULA_TEMPLATE_ID=173 # enables SSD disks
 export KD_ONE_URL=https://some.nebula.host.com:2633/RPC2
+export KD_ADD_SHARED_PUB_KEYS=1

@@ -5,6 +5,7 @@ import pipes
 import sys
 import time
 import urllib2
+from datetime import datetime
 
 import paramiko
 import vagrant
@@ -87,7 +88,7 @@ class KDIntegrationTestAPI(object):
                                        env=kd_env, out_cm=out_cm,
                                        err_cm=err_cm)
         self.kd_env = kd_env
-        self._ssh_connections = {}
+        self.created_at, self._ssh_connections = None, {}
 
     @staticmethod
     def _cut_vm_name_prefix(name):
@@ -184,9 +185,11 @@ class KDIntegrationTestAPI(object):
         if provider == OPENNEBULA:
             retry(self.vagrant.up, tries=3,
                   provider=provider, no_provision=True)
+            self.created_at = datetime.utcnow()
             self.vagrant.provision()
         else:
-            self.vagrant.up(provider=provider)
+            self.vagrant.up(provider=provider, no_provision=True)
+            self.created_at = datetime.utcnow()
 
     def upgrade(self, upgrade_to='latest'):
         if not self._build_cluster_flag("upgrade"):

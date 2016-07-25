@@ -9,6 +9,7 @@ from threading import Thread
 
 import click
 from colorama import Fore
+from datetime import timedelta
 
 from tests_integration.lib import multilogger
 from tests_integration.lib.integration_test_runner import TestResultCollection, \
@@ -23,10 +24,12 @@ logger.setLevel(logging.DEBUG)
 
 CLUSTER_CREATION_MAX_DELAY = 30
 INTEGRATION_TESTS_PATH = 'tests_integration/'
+JENKINS_GC_TIME_INTERVAL = 2  # hours
 # Lock is needed for printing info thread-safely and it's done by two
 # separate print calls
 print_lock = threading.Lock()
 test_results = TestResultCollection()
+debug_messages = []
 
 
 def print_msg(msg='', color=Fore.MAGENTA):
@@ -35,15 +38,15 @@ def print_msg(msg='', color=Fore.MAGENTA):
         sys.stdout.flush()
 
 
-def run_tests_in_a_pipeline(name, tests):
+def run_tests_in_a_pipeline(pipeline_name, tests):
     """
-    :param name: pipeline name
+    :param pipeline_name: pipeline name
     :param tests: list of callables
     """
 
     # Helper function to make code less verbose
     def pipe_log(msg, color=Fore.MAGENTA):
-        print_msg('{} -> {}\n'.format(name, msg), color)
+        print_msg('{} -> {}\n'.format(pipeline_name, msg), color)
 
     # Prevent Nebula from being flooded by vm-create requests (AC-3914)
     delay = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
@@ -51,11 +54,11 @@ def run_tests_in_a_pipeline(name, tests):
     time.sleep(delay)
 
     try:
-        pipeline = Pipeline.from_name(name)
+        pipeline = Pipeline.from_name(pipeline_name)
         pipeline.create()
         pipe_log('CLUSTER CREATED', Fore.GREEN)
     except:
-        test_results.register_pipeline_error(name, tests)
+        test_results.register_pipeline_error(pipeline_name, tests)
         msg = format_exception(sys.exc_info())
         pipe_log('CLUSTER CREATION FAILED\n{}'.format(msg), Fore.RED)
         return
@@ -66,16 +69,33 @@ def run_tests_in_a_pipeline(name, tests):
 
         try:
             pipeline.run_test(test)
-            test_results.register_success(test_name, name)
+            test_results.register_success(test_name, pipeline_name)
 
             pipe_log('{} -> PASSED'.format(test_name), Fore.GREEN)
         except:
-            test_results.register_failure(test_name, name)
+            test_results.register_failure(test_name, pipeline_name)
             msg = format_exception(sys.exc_info())
             pipe_log('{} -> FAILED\n{}'.format(test_name, msg), Fore.RED)
 
-    pipeline.destroy()
-    print_msg(test_results.pipeline_test_summary(name))
+    if test_results.has_any_failures(pipeline_name):
+        add_debug_info(pipeline)
+    else:
+        pipeline.destroy()
+
+    print_msg(test_results.pipeline_test_summary(pipeline_name))
+
+
+def add_debug_info(pipeline):
+    """
+    Save information about when cluster is going to be destroyed by Jenkins GC
+    """
+    master_ip = pipeline.cluster.get_host_ip('master')
+    msg = 'Pipeline {} has failed tests, it remains alive until about ' \
+          '{} so that you can debug it. Master IP: {}'
+    destroy_time = pipeline.cluster.created_at + timedelta(
+        hours=JENKINS_GC_TIME_INTERVAL)
+    debug_messages.append(
+        msg.format(pipeline.name, destroy_time.isoformat(' '), master_ip))
 
 
 def start_test(pipeline, tests):
@@ -108,7 +128,9 @@ def get_pipeline_logs(handler):
         ]
         return '\n'.join(arr)
 
-    entries = (_format_log(name, fp) for name, fp in handler.files.items())
+    entries = (
+        _format_log(name, fp) for name, fp in handler.files.items()
+        if test_results.has_any_failures(name))
     msg = '\n' + '\n'.join(entries)
 
     return center_text_message(
@@ -160,6 +182,10 @@ def main(paths, pipelines, live_log):
             print(get_pipeline_logs(handler))
 
         print(test_results.get_tests_report())
+
+        if debug_messages:
+            print(center_text_message('Debug messages'))
+            print('\n'.join(debug_messages))
 
         if test_results.has_any_failures():
             sys.exit(1)

@@ -65,14 +65,24 @@ class TestResultCollection(object):
         return '{} -> TEST RESULTS: {} failed, {} passed'.format(
             name, failed, passed)
 
-    def has_any_failures(self):
-        # type: () -> bool
-        return any(
-            r.status in ['pipeline_error', 'failed'] for r in self._results)
+    def has_any_failures(self, pipeline=None):
+        # type: (str) -> bool
+        """
+        Indicates if a result collection has any failed test. Optionally can be
+        filtered by a full pipeline name
+
+        :param pipeline: optional full name of a pipeline to check
+        :return: True of there is any failed test, False otherwise
+        """
+
+        results = self._results
+        if pipeline is not None:
+            results = (r for r in results if r.pipeline == pipeline)
+        return any(r.status in ['pipeline_error', 'failed'] for r in results)
 
     def get_tests_report(self):
         """
-        Returns a formatted report which contain information about all tests
+        Returns a formatted report which contains information about all tests
         """
 
         def _make_report_entry(test):
@@ -87,7 +97,9 @@ class TestResultCollection(object):
 
     def _color_from_status(self, status):
         mapping = {
-            'failed': Fore.RED, 'passed': Fore.GREEN, 'error': Fore.RED
+            'failed': Fore.RED,
+            'passed': Fore.GREEN,
+            'pipeline_error': Fore.RED
         }
         return mapping[status]
 

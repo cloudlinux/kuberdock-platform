@@ -22,6 +22,10 @@ def http_check(pod, container_id, host):
     pod.docker_exec(container_id, 'curl -k http://{}'.format(host))
 
 
+def https_check(pod, container_id, host):
+    pod.docker_exec(container_id, 'curl -k https://{}'.format(host))
+
+
 @pipeline('networking')
 def test_network_isolation_from_user_container(cluster):
     # type: (KDIntegrationTestAPI) -> None
@@ -129,7 +133,7 @@ def test_network_isolation_from_user_container(cluster):
 
     # Docker container should have access to kubernetes over flannel
     for name, pod in pods.items():
-        http_check(pod, container_ids[name], 'curl -kv https://10.254.0.1')
+        https_check(pod, container_ids[name], '10.254.0.1')
 
     # ------ Registered hosts tests ------
 

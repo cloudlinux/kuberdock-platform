@@ -1,9 +1,12 @@
+import os
 from kubedock.updates import helpers
 from kubedock.settings import MASTER_IP
+
+HOSTNAME = os.environ.get("HOSTNAME")
 KUBERNETES_CERTS_DIR = '/etc/kubernetes/certs'
 
-K8S_TLS_CERT=KUBERNETES_CERTS_DIR + '/master.crt'
-K8S_TLS_PRIVATE_KEY=KUBERNETES_CERTS_DIR + '/master.key'
+K8S_TLS_CERT = "{0}/{1}.crt".format(KUBERNETES_CERTS_DIR, HOSTNAME)
+K8S_TLS_PRIVATE_KEY = "{0}/{1}.key".format(KUBERNETES_CERTS_DIR, HOSTNAME)
 K8S_CA_CERT=KUBERNETES_CERTS_DIR + '/ca.crt'
 
 def upgrade(upd, with_testing, *args, **kwargs):

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-ERRORS_TRESHOLD=929
-
+ERRORS_TRESHOLD=950
 
 tmpfile=$(mktemp /tmp/shellcheck-parse.XXXXXX)
 find -iname '*.sh' | xargs shellcheck -s bash | tee $tmpfile

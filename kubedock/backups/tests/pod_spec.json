@@ -1,0 +1,17 @@
+{
+  "kind": "Pod",
+  "apiVersion": "v1",
+  "metadata": {
+    "labels": {
+      "kuberdock-pod-uid": "36eace87-f197-443f-a9b9-4bf3780df53c",
+      "kuberdock-user-uid": "3"
+    },
+    "annotations": {
+      "kuberdock-container-kubes": "{\"mg0a3ppn\": 1}",
+      "kuberdock-pod-ports": "[[{\"isPublic\": false, \"protocol\": \"tcp\", \"containerPort\": 6379, \"hostPort\": null}]]",
+      "kuberdock-volume-annotations": "[{\"localStorage\": {\"path\": \"{STORAGE}\", \"name\": \"{NAME}\", \"size\": 1}, \"backupUrl\": \"{BACKUP_URL}\"}]",
+      "kuberdock_resolve": ""
+    }
+  }
+}
+

@@ -18,7 +18,8 @@ from ..nodes.models import Node, NodeFlagNames
 from ..pods.models import PersistentDisk, PersistentDiskStatuses, Pod
 from ..users.models import User
 from ..usage.models import PersistentDiskState
-from ..utils import send_event_to_role, atomic, NODE_STATUSES
+from ..utils import send_event_to_role, atomic, nested_dict_utils, \
+    NODE_STATUSES
 from ..settings import (
     SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR,
     NODE_LOCAL_STORAGE_PREFIX, CEPH_CLIENT_USER, CEPH_KEYRING_PATH)
@@ -435,7 +436,7 @@ class PersistentStorage(object):
     def delete_by_id(self, drive_id):
         """
         Deletes a user drive
-        :param name: string -> drive id
+        :param drive_id: string -> drive id
         Raises DriveIsLockedError if drive is locked by another operation at
         the moment.
         """
@@ -493,7 +494,7 @@ class PersistentStorage(object):
 
         You need to provide `name` and `user` or `sys_drive_name`
         :param name: string -> user's drive name
-        :param user: object -> user object
+        :param user_id: int -> user object
         """
         PersistentDiskState.end(user_id, name)
 
@@ -953,7 +954,7 @@ class CephStorage(PersistentStorage):
     def _unmap_drive(self, device):
         """
         Maps drive to a node
-        :param drive: string -> drive name
+        :param device: string -> drive name
         """
         self.run_on_first_node(
             'rbd {0} unmap {1}'.format(get_ceph_credentials(), device)
@@ -1377,13 +1378,11 @@ class LocalStorage(PersistentStorage):
         # be used by node_network_plugin to create local storage on node
         # and set fs limits for it. Also annotation with localStorage key means
         # that volume is a persistent disk with local storage backend.
-        volume['annotation'] = {
-            'localStorage': {
+        nested_dict_utils.set(volume, 'annotation.localStorage', {
                 'size': pd.size,
                 'path': full_path,
                 'name': pd.name,
-            }
-        }
+            })
         return volume
 
     def extract_volume_info(self, volume):
@@ -1510,7 +1509,9 @@ def _get_alive_nodes():
     """
     nodes = node_utils.get_nodes_collection()
     return {
-        item['id']: item['ip'] for item in nodes if item['status'] == NODE_STATUSES.running
+        item['id']: item['ip']
+        for item in nodes
+        if item['status'] == NODE_STATUSES.running
     }
 
 

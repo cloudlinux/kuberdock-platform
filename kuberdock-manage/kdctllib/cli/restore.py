@@ -17,14 +17,15 @@ _FORCE_NOT_DELETE = 2
 
 
 class _RestorePodCommand(object):
-    def __init__(self, kdctl, io, pod_data, owner, volumes_dir_url, force,
-                 max_tries):
+    def __init__(self, kdctl, io, pod_data, owner, pv_backups_location,
+                 pv_backups_path_template, force, max_tries):
         assert force in [_NOT_FORCE, _FORCE_DELETE, _FORCE_NOT_DELETE]
         self.kdctl = kdctl
         self.io = io
         self.pod_data = pod_data
         self.owner = owner
-        self.volumes_dir_url = volumes_dir_url
+        self.pv_backups_location = pv_backups_location
+        self.pv_backups_path_template = pv_backups_path_template
         self.force = force
         self.max_tries = max_tries
 
@@ -34,7 +35,8 @@ class _RestorePodCommand(object):
     def _apply(self, try_number):
         try:
             return self.kdctl.restore.pod(
-                self.pod_data, self.owner, self.volumes_dir_url)
+                self.pod_data, self.owner, self.pv_backups_location,
+                self.pv_backups_path_template)
         except APIError as e:
             if self.force == _FORCE_NOT_DELETE or try_number >= self.max_tries:
                 raise
@@ -107,7 +109,7 @@ def _collect_force(force_delete, force_not_delete):
             (force_not_delete and _FORCE_NOT_DELETE)
 
     # check if only one flag or no flags specified
-    if force & (force - 1) != 0:
+    if force not in [_NOT_FORCE, _FORCE_DELETE, _FORCE_NOT_DELETE]:
         raise click.UsageError('"force-delete" and "force-not-delete" '
                                'are mutually exclusive options')
 
@@ -117,8 +119,15 @@ def _collect_force(force_delete, force_not_delete):
 
 @restore.command(help='Restore pod.')
 @data_argument('pod-data')
-@click.option('--owner')
-@click.option('--volumes-dir-url')
+@click.option('--owner', required=True, help="Pod's owner name.")
+@click.option('--pv-backups-location', help='Url where backups are stored.')
+@click.option('--pv-backups-path-template',
+              help='Template of path to backup at backups location. '
+                   'Standard python template in form of '
+                   '"some text with {some_key}". '
+                   'Available keys are: owner_id, owner_name, '
+                   'original_owner_id, original_owner_name, volume_name. '
+                   'Default template is `/{owner_id}/{volume_name}.tar.gz`.')
 @click.option('--force-delete', is_flag=True,
               help='Force delete pods and persistent volumes.')
 @click.option('--force-not-delete', is_flag=True,
@@ -127,12 +136,13 @@ def _collect_force(force_delete, force_not_delete):
               default=2, show_default=True,
               help='Maximal number of tries, 0 for infinity.')
 @click.pass_obj
-def pod(obj, pod_data, owner, volumes_dir_url, force_delete, force_not_delete,
-        max_tries):
+def pod(obj, pod_data, owner, pv_backups_location, pv_backups_path_template,
+        force_delete, force_not_delete, max_tries):
     kdctl = obj.kdctl
     io = obj.io
     force = _collect_force(force_delete, force_not_delete)
     _check_params(io, force)
     command = _RestorePodCommand(
-        kdctl, io, pod_data, owner, volumes_dir_url, force, max_tries)
+        kdctl, io, pod_data, owner, pv_backups_location,
+        pv_backups_path_template, force, max_tries)
     return command()

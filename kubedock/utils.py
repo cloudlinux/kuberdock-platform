@@ -9,6 +9,7 @@ import subprocess
 import sys
 import time
 from collections import namedtuple
+from contextlib import contextmanager
 from functools import wraps
 from itertools import chain
 from json import JSONEncoder
@@ -940,3 +941,78 @@ def send_pod_status_update(pod_status, db_pod, event_type):
                      'pod:change')
             send_event_to_role(event, {'id': db_pod.id}, 'Admin')
             send_event_to_user(event, {'id': db_pod.id}, user_id)
+
+
+class NestedDictUtils(object):
+    """Set of utils for working with dictionaries."""
+
+    @classmethod
+    def get(cls, d, path):
+        """Get nested field from dict suppressing KeyError.
+        E.g.: get(d, 'persistentDisk.pdName')
+        """
+        if not path:
+            raise ValueError
+        parts = path.split('.')
+        with cls._check_nested_types_context():
+            for p in parts:
+                d = d.get(p)
+                if d is None:
+                    return None
+            return d
+
+    @classmethod
+    def set(cls, d, path, value):
+        """Set nested dict field creating nested dicts if necessary.
+        E.g.: set(d, 'persistentDisk.pdName', 'nginx_volume')
+        """
+        if not path:
+            raise ValueError
+        parts = path.split('.')
+        with cls._check_nested_types_context():
+            for p in parts[:-1]:
+                d = d.setdefault(p, {})
+            d[parts[-1]] = value
+
+    @classmethod
+    def delete(cls, d, path, remove_empty_keys=False):
+        """Delete nested field from dict suppressing KeyError.
+        E.g.: delete(d, 'persistentDisk.pdName')
+        """
+        if not path:
+            raise ValueError
+        parts = path.split('.')
+        nodes = []
+        with cls._check_nested_types_context():
+            for p in parts:
+                parent = d
+                d = d.get(p)
+                if d is None:
+                    return
+                nodes.append(cls._dict_node(p, d, parent))
+            if nodes:
+                n = nodes.pop()
+                del n.parent[n.key]
+                if remove_empty_keys:
+                    for n in reversed(nodes):
+                        if not n.value:
+                            del n.parent[n.key]
+
+    _dict_node = namedtuple('_dict_node', ('key', 'value', 'parent'))
+
+    @classmethod
+    @contextmanager
+    def _check_nested_types_context(cls):
+        try:
+            yield
+        except (AttributeError, TypeError):
+            raise cls.StructureError
+
+    class StructureError(Exception):
+        """Raised if expected nested dict is not dict,
+        e.g. `d = {'x': {'y': 2}}` and user tries to get path `x.y.z` --
+        in this case expected that `y` is dict, but it is not.
+        """
+        message = 'All nested dicts must be instance of dict'
+
+nested_dict_utils = NestedDictUtils

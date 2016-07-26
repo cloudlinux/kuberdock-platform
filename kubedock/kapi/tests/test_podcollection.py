@@ -391,9 +391,9 @@ class TestPodCollection(DBTestCase, TestCaseMixin):
 
         self.pods_output = copy.deepcopy(self.pods)
         for pod in self.pods_output:
+            pod['owner'] = {'id': self.user.id, 'username': self.user.username}
             # Some fields excluded from output due to security
             pod.pop('namespace', None)
-            pod.pop('owner', None)
 
         self.mock_methods(podcollection.PodCollection, '_get_namespaces',
                           '_get_pods', '_merge')

@@ -12,3 +12,4 @@ rpms_to_check:
     - kuberdock
     - kcli
     - kdctl
+admin_password: admin

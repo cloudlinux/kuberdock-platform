@@ -1,0 +1,4 @@
+FROM python:2.7
+
+RUN apt-get update -y && apt-get install -y nmap \
+  && pip install robotframework-selenium2library requests

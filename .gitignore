@@ -24,3 +24,4 @@ Dockerfile.local
 .python-version
 
 .tox/
+tests_integration/web-ui/report/

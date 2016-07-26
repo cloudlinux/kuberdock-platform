@@ -1,0 +1,36 @@
+version: '2'
+services:
+  appcloud-web-ui-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test-web-ui
+    links:
+      - selenium-hub
+    depends_on:
+      - phantomjs-node
+      - firefox-node
+      - chrome-node
+
+  selenium-hub:
+    image: selenium/hub:2.53.0
+
+  phantomjs-node:
+    environment:
+      PHANTOMJS_OPTS: '--ignore-ssl-errors=true'
+    links:
+      - selenium-hub:hub
+    image: quay.io/sergey_gruntovsky/selenium-node-phantomjs:v1
+
+  firefox-node:
+    links:
+      - selenium-hub:hub
+    environment:
+      HUB_PORT_4444_TCP_ADDR: hub
+    image: selenium/node-firefox:2.53.0
+
+  chrome-node:
+    links:
+      - selenium-hub:hub
+    environment:
+      HUB_PORT_4444_TCP_ADDR: hub
+    image: selenium/node-chrome:2.53.0

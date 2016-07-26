@@ -1,0 +1,4 @@
+FROM quay.io/sergey_gruntovsky/test-web-ui-base:v1
+
+COPY ./tests /tests
+WORKDIR /tests

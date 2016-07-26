@@ -116,6 +116,7 @@ def load_update(upd):
         3) downgrade_func
         4) upgrade_node_func or None
         5) downgrade_node_func or None (Must present if upgrade_node_func is)
+        6) post_nodes_func or None (optional func)
     """
     try:
         module = import_module('scripts.' + upd.rsplit('.py')[0])
@@ -153,8 +154,13 @@ def load_update(upd):
     else:
         upgrade_node_func = None
 
+    post_nodes_func = None
+    if hasattr(module, 'post_upgrade_nodes') \
+       and callable(module.post_upgrade_nodes):
+        post_nodes_func = module.post_upgrade_nodes
+
     return in_db_update, upgrade_func, downgrade_func, upgrade_node_func,\
-        downgrade_node_func
+        downgrade_node_func, post_nodes_func
 
 
 def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
@@ -168,6 +174,11 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
     :param with_testing: Boolean, whether testing repo is enabled during upgrade
     :return: Boolean, True if all nodes upgraded, False if one or more failed.
     """
+    if db_upd.status == UPDATE_STATUSES.post_nodes_failed:
+        # Skip nodes upgrade if only post_nodes_hook needed
+        db_upd.print_log('Skipped already upgraded nodes')
+        return True
+
     successful = True
     if db_upd.status == UPDATE_STATUSES.nodes_failed:
         nodes = db.session.query(Node).filter(
@@ -231,8 +242,10 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
     """
     :return: True if success else False
     """
-    if db_upd.status == UPDATE_STATUSES.nodes_failed:
-        # only nodes upgrade needed case
+    if (db_upd.status == UPDATE_STATUSES.nodes_failed) or \
+       (db_upd.status == UPDATE_STATUSES.post_nodes_failed):
+        # Skip master update if only nodes upgrade or post_nodes_hook needed
+        db_upd.print_log('Skipped already upgraded master')
         return True
     db_upd.status = UPDATE_STATUSES.started
     db_upd.print_log('Started master upgrade...')
@@ -262,6 +275,18 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
     return True
 
 
+def post_nodes_hook(func, db_upd, with_testing):
+    db_upd.print_log("Post_nodes_hook started... ")
+    try:
+        func(db_upd, with_testing)
+        db_upd.print_log("Post_nodes_hook completed successfully")
+        return True
+    except Exception:
+        db_upd.status = UPDATE_STATUSES.post_nodes_failed
+        db_upd.capture_traceback("Error during post_nodes_hook")
+        return False
+
+
 def run_script(upd, with_testing):
     """
     :param upd: update script file name
@@ -269,22 +294,35 @@ def run_script(upd, with_testing):
     :return: True if successful else False
     """
     db_upd, upgrade_func, downgrade_func, upgrade_node_func,\
-        downgrade_node_func = load_update(upd)
+        downgrade_node_func, post_nodes_func = load_update(upd)
     if not db_upd:
         print >> sys.stderr, "Failed to load upgrade script file"
         return False
 
     master_ok = upgrade_master(upgrade_func, downgrade_func, db_upd,
                                with_testing)
+    # TODO refactor this to reduce nesting and some logic duplication
     if master_ok:
         if upgrade_node_func:
             nodes_ok = upgrade_nodes(upgrade_node_func, downgrade_node_func,
                                      db_upd, with_testing)
             if nodes_ok:
                 db_upd.status = UPDATE_STATUSES.applied
-                db_upd.print_log('{0} successfully applied. '
-                                 'All nodes are upgraded'.format(upd))
+                db_upd.print_log('All nodes are upgraded')
                 res = True
+
+                if post_nodes_func:
+                    # Last hook in chain
+                    post_n_ok = post_nodes_hook(post_nodes_func, db_upd,
+                                                with_testing)
+                    if not post_n_ok:
+                        db_upd.print_log(
+                            "{0} failed. Unable to complete post_nodes_hook"
+                            .format(upd))
+                        res = False
+                    else:
+                        db_upd.status = UPDATE_STATUSES.applied
+                        res = True
             else:
                 db_upd.status = UPDATE_STATUSES.nodes_failed
                 db_upd.print_log("{0} failed. Unable to upgrade some nodes"
@@ -292,10 +330,11 @@ def run_script(upd, with_testing):
                 res = False
         else:
             db_upd.status = UPDATE_STATUSES.applied
-            db_upd.print_log('{0} successfully applied'.format(upd))
             res = True
     else:
         res = False
+    if res:
+        db_upd.print_log('{0} successfully applied'.format(upd))
     db_upd.end_time = datetime.utcnow()
     db.session.commit()
     return res
@@ -392,6 +431,7 @@ def post_upgrade(for_successful=True, reason=None):     # teardown
         helpers.restart_service(settings.KUBERDOCK_SERVICE)
         helpers.set_maintenance(False)
         redis = ConnectionPool.get_connection()
+        # We should clear cache for licencing info after successful upgrade:
         redis.delete('KDCOLLECTION')
         print SUCCESSFUL_UPDATE_MESSAGE
     else:

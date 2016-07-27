@@ -477,7 +477,11 @@ class Pod(object):
 
     def set_status(self, status, send_update=False, force=False):
         """Updates pod status in database"""
-        if self.status == POD_STATUSES.unpaid and not force:
+        # We can't be sure the attribute is already assigned, because
+        # attributes of Pod class not defined in __init__.
+        # For example attr 'status' will not be defined if we just
+        # create Pod object from db config of model Pod.
+        if getattr(self, 'status', None) == POD_STATUSES.unpaid and not force:
             # TODO: remove  status "unpaid", use separate field/flag,
             # then remove this block
             raise APIError('Not allowed to change "unpaid" status.',

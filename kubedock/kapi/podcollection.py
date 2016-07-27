@@ -652,6 +652,14 @@ class PodCollection(object):
             if (db_pod.id, namespace) not in self._collection:
                 pod = Pod(db_pod_config)
                 pod.id = db_pod.id
+                # Now pod status 'stopping' is changed to 'stopped' only by
+                # 'DELETED' event in listeners. If we have missed such event
+                # for any reason, then the pod will be in status 'stopping'
+                # forever. So, If we have met pod in DB with status 'stopping'
+                # and this pod is absent in k8s, then set proper status
+                # to DB record.
+                if db_pod.status == POD_STATUSES.stopping:
+                    pod.set_status(POD_STATUSES.stopped)
                 pod._forge_dockers()
                 self._collection[pod.id, namespace] = pod
             else:
@@ -1068,6 +1076,9 @@ def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
         # we need a fresh status
         db.session.expire(DBPod.query.get(pod_id), ['status'])
         pod = PodCollection()._get_by_id(pod_id)
+        current_app.logger.debug(
+            'Current pod status: {}, wait for {}, pod_id: {}'.format(
+                pod.status, wait_status, pod_id))
         if pod.status == wait_status:
             return pod
 

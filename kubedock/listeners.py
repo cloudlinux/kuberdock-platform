@@ -95,12 +95,10 @@ def process_pods_event(data, app, event_time=None, live=True):
         return
 
     # if live, we need to send events to frontend
-    if live:
-        if db_pod.status == POD_STATUSES.stopping and event_type == 'DELETED':
-            helpers.set_pod_status(pod_id, POD_STATUSES.stopped,
-                                   send_update=True)
-        else:
-            send_pod_status_update(get_pod_state(pod), db_pod, event_type)
+    if db_pod.status == POD_STATUSES.stopping and event_type == 'DELETED':
+        helpers.set_pod_status(pod_id, POD_STATUSES.stopped, send_update=live)
+    elif live:
+        send_pod_status_update(get_pod_state(pod), db_pod, event_type)
 
     host = pod['spec'].get('nodeName')
 

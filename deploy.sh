@@ -512,6 +512,7 @@ else
   PD_NAMESPACE="$PD_CUSTOM_NAMESPACE"
 fi
 
+install_repos
 
 if [ "$ISAMAZON" = true ];then
     AVAILABILITY_ZONE=$(curl -s connect-timeout 1 http://169.254.169.254/latest/meta-data/placement/availability-zone)
@@ -528,7 +529,6 @@ if [ "$ISAMAZON" = true ];then
     fi
 
     if [ -z "$ROUTE_TABLE_ID" ];then
-        install_repos
         yum_wrapper install awscli -y   # only after epel is installed
         INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
         INSTANCE_DATA=$(aws ec2 describe-instances --region=$REGION --instance-id $INSTANCE_ID)
@@ -611,7 +611,6 @@ yum erase -y chrony
 
 # 3 Install ntp, we need correct time for node logs
 # for now, etcd-ca and bridge-utils needed during deploy only
-install_repos
 yum_wrapper install -y ntp
 yum_wrapper install -y etcd-ca
 yum_wrapper install -y bridge-utils

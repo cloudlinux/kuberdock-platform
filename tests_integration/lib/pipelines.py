@@ -4,6 +4,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from functools import wraps
 from tempfile import NamedTemporaryFile
+from datetime import datetime
 
 from tests_integration.lib.exceptions import PipelineNotFound
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI

@@ -128,6 +128,7 @@ Vagrant.configure(2) do |config|
             "rhost" => ["kd_rhost[1:#{rhostsCount}]"],
         }
         extra_vars = {
+            "add_ssh_pub_keys" => ENV['KD_ADD_SHARED_PUB_KEYS'],
             "install_type" => ENV['KD_INSTALL_TYPE'],
             "build_dir" => buildDir,
             "dotfiles" => ENV['KD_DOT_FILES'],

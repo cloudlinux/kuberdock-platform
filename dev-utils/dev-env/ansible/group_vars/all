@@ -13,3 +13,4 @@ rpms_to_check:
     - kcli
     - kdctl
 admin_password: admin
+ssh_pub_keys_path: ../shared_pub_keys

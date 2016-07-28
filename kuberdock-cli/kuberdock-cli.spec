@@ -57,6 +57,7 @@ rm -rf %{buildroot}
 %changelog
 
 * Thu Jul 07 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aleksandr Skorodumov <askorodumov@cloudlinux.com> 1.0-4
+- AC-3990 KCLI. Add upgrade option to deploy script
 - AC-3488 Fixed volume name generation
 - AC-3648 KCLI. After upgrade kcli don't rewrite global config
 - AC-3348 Add integration tests for nonfloating IP feature

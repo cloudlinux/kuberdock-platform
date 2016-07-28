@@ -9,6 +9,12 @@ pod-url: /kdorder.php?a=orderPod
 app-url: /kdorder.php?a=orderApp
 common-headers:
     User-Agent: Mozilla/5.0
+response:
+    status:
+        key: result
+        success: success
+        error: error
+    error-message: message
 methods:
     getkuberdockinfo:
         args:

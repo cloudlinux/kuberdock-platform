@@ -6,7 +6,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 from urlparse import urlparse
 import yaml
-
+from kubedock.exceptions import BillingExc
 from kubedock.utils import KubeUtils
 from kubedock.system_settings.models import SystemSettings
 
@@ -128,10 +128,27 @@ class Billing(object):
             for key in ret:
                 try:
                     composed_ret = composed_ret[key]
-                except (KeyError, IndexError):
+                except (KeyError, IndexError, TypeError):
                     return composed_ret
             return composed_ret
         return rv
+
+    def _check_for_errors(self, data):
+        resp = self._structure.get('response')
+        if resp is None or resp.get('status') is None:
+            return data
+        if not isinstance(resp['status'], dict):
+            return data
+        status = resp['status']
+        key, success, error = map(status.get, ('key', 'success', 'error'))
+        if key is None:
+            return data
+        result = data.get(key)
+        if result == error or result != success:
+            if 'error-message' in resp and resp['error-message'] in data:
+                raise BillingExc.BillingError(data[resp['error-message']])
+            raise BillingExc.BillingError
+        return data
 
     def _fill_params(self, params, kw):
         _data = {}
@@ -160,12 +177,15 @@ class Billing(object):
                 raise TypeError('Improper number of arguments')
             filled_params = self._fill_params(params, prepared_args)
             request_args = self._compose_args(m, filled_params)
-            r = f(url, **request_args)
             try:
+                r = f(url, **request_args)
                 rv = r.json()
             except ValueError:
                 return r.text
-            return self._get_return_value(data, rv)
+            except Exception, e:
+                raise BillingExc.InternalBillingError(
+                    details={'message': str(e)})
+            return self._get_return_value(data, self._check_for_errors(rv))
         return method
 
     def __getattr__(self, name):

@@ -112,3 +112,12 @@ class PredefinedAppExc(object):
 
     class InternalPredefinedAppError(InternalAPIError):
         message_template = 'An internal error occurred: {message}'
+
+
+class BillingExc(object):
+
+    class BillingError(APIError):
+        message_template = 'Billing could not process request'
+
+    class InternalBillingError(InternalAPIError):
+        message_template = 'An internal error occurred: {message}'

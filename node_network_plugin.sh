@@ -283,6 +283,8 @@ case "$ACTION" in
     log "$MSG"
     iptables_ -I KUBERDOCK -t filter -i docker0 ! -o docker0 -m set ! --match-set kuberdock_cluster dst -j ACCEPT
     iptables_ -I KUBERDOCK -t nat -m set ! --match-set kuberdock_cluster dst -j ACCEPT
+    # reject outgoing not authorized smtp packets, to prevent spamming from containers
+    iptables_ -I KUBERDOCK -t filter -p tcp --dport 25 -i docker0 -m set ! --match-set kuberdock_cluster dst -j REJECT
     protect_cluster_drop
     ;;
   "setup")

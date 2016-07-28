@@ -27,6 +27,6 @@
     </div>
     <div class="buttons pull-right">
         <a href="#ippool" class="gray">Cancel</a>
-        <button id="network-add-btn" class="blue <%= nodelist.length !== 0 ? '' : 'disabled' %>">Add</button>
+        <button id="network-add-btn" class="blue <%= !nodelist.length && !isFloating ? 'disabled' : '' %>">Add</button>
     </div>
 </div>

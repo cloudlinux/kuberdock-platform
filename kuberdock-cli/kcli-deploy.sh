@@ -2,6 +2,7 @@
 
 FLANNEL_CONFIG=/etc/sysconfig/flanneld
 PROXY_CONFIG=/etc/kubernetes/config
+PROXY_CONFIG_ARGS=/etc/kubernetes/proxy
 GLOBAL_KCLI_CONFIG=/etc/kubecli.conf
 KCLI_CONFIG=.kubecli.conf
 DEPLOY_LOG_FILE=/var/log/kuberdock_client_deploy.log
@@ -21,39 +22,14 @@ fi
 
 
 show_help() {
+    echo "-U|--upgrade   : Upgrade kuberdock packages"
     echo "-u|--user      : Specify kuberdock admin username (if not specified 'admin' is used)"
     echo "-t|--testing   : Use testing repositories"
     echo "-k|--kuberdock : Specify KuberDock master hostname or IP address (if not specified '127.0.0.1' is used)"
-    echo "-i|--interface   : Network interface to use"
+    echo "-i|--interface : Network interface to use"
     echo "-h|--help      : Show this help"
     exit 0
 }
-
-
-TEMP=$(getopt -o k:u:i:th -l kuberdock:,user:,interface:,testing,help -n 'kcli-deploy.sh' -- "$@")
-eval set -- "$TEMP"
-
-
-while true;do
-    case "$1" in
-        -k|--kuberdock)
-            KD_HOST=$2;shift 2;
-        ;;
-        -u|--user)
-            KD_USER=$2;shift 2;
-        ;;
-        -t|--testing)
-            TESTING=true;shift;
-        ;;
-        -i|--interface)
-            IFACE=$2;shift 2;
-        ;;
-        -h|--help)
-            show_help;break
-        ;;
-        --) shift;break;
-    esac
-done
 
 
 do_and_log() {
@@ -84,6 +60,44 @@ yum_wrapper() {
         log_errors yum --enablerepo=kube-client --enablerepo=kube-client-testing $@
     fi
 }
+
+
+upgrade() {
+    yum_wrapper -y update flannel kubernetes-proxy kuberdock-cli kuberdock-plugin
+    sed -i "s/^#\?KUBE_PROXY_ARGS=.*$/KUBE_PROXY_ARGS=\"--proxy-mode userspace\"/" $PROXY_CONFIG_ARGS
+    do_and_log service flanneld restart
+    do_and_log service kube-proxy restart
+    exit 0
+}
+
+
+TEMP=$(getopt -o k:u:i:th,U -l kuberdock:,user:,interface:,testing,help,upgrade -n 'kcli-deploy.sh' -- "$@")
+eval set -- "$TEMP"
+
+
+while true;do
+    case "$1" in
+        -k|--kuberdock)
+            KD_HOST=$2;shift 2;
+        ;;
+        -u|--user)
+            KD_USER=$2;shift 2;
+        ;;
+        -t|--testing)
+            TESTING=true;shift;
+        ;;
+        -i|--interface)
+            IFACE=$2;shift 2;
+        ;;
+        -h|--help)
+            show_help;break
+        ;;
+         -U|--upgrade)
+            upgrade;break
+        ;;
+        --) shift;break;
+    esac
+done
 
 
 if [ -z "$KD_HOST" ];then
@@ -184,6 +198,7 @@ if [ -n "$IFACE" ];then
    sed -i "s/^#\?FLANNEL_OPTIONS=.*$/FLANNEL_OPTIONS=\"--iface=$IFACE\"/" $FLANNEL_CONFIG
 fi
 
+sed -i "s/^#\?KUBE_PROXY_ARGS=.*$/KUBE_PROXY_ARGS=\"--proxy-mode userspace\"/" $PROXY_CONFIG_ARGS
 
 VER=$(cat /etc/redhat-release|sed -e 's/[^0-9]//g'|cut -c 1)
 if [ "$VER" == "7" ];then

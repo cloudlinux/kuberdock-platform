@@ -52,6 +52,7 @@ class UPDATE_STATUSES:
     failed_downgrade = 'downgrade failed too'
     nodes_started = 'nodes started'
     nodes_failed = 'nodes failed'
+    post_nodes_failed = 'post_nodes_hook failed'
 
 
 class POD_STATUSES:

@@ -9,7 +9,7 @@
         <div class="row">
             <div class="form-group col-sm-5 sol-xs-12">
                 <label for="autoblock">Exclude IPs</label>
-                <input type="text" name="autoblock" placeholder="eg 2,3,4 or 2-4 or both">
+                <input type="text" name="autoblock" placeholder="eg 10.0.0.1,10.0.0.3 or 10.0.1.3-10.0.2.43 or both">
             </div>
         </div>
         <% if (!isFloating){ %>

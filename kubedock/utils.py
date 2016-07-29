@@ -19,6 +19,7 @@ from urlparse import urlsplit, urlunsplit, urljoin
 import bitmath
 import boto.ec2
 import boto.ec2.elb
+import ipaddress
 import nginx
 from flask import (current_app, request, jsonify, g, has_app_context, Response,
                    session, has_request_context)
@@ -919,6 +920,14 @@ def retry(f, retry_pause, max_retries, exc=None, *f_args, **f_kwargs):
         time.sleep(retry_pause)
     if exc:
         raise exc
+
+
+def ip2int(ip):
+    return int(ipaddress.IPv4Address(ip))
+
+
+def int2ip(number):
+    return unicode(ipaddress.IPv4Address(number))
 
 
 def send_pod_status_update(pod_status, db_pod, event_type):

@@ -1,9 +1,7 @@
 ---
-
-- name: Calclulate IP excludes
+- name: Calculate network
   set_fact:
-      excludes: "{{ range(1,255)|map('string')|difference(public_ips.split(','))|join(',') }}"
-  when: is_nebula
+    network: "{{ ansible_default_ipv4.network }}/{{ansible_default_ipv4.netmask}}"
 
 - name: Create IP pool
-  shell: python "{{ src_prefix }}/manage.py" create-ip-pool -s "{{ (ansible_default_ipv4.address).split('.')[:3]|join('.')}}.0/24" -e {{ excludes | default('1-30')}}
+  shell: python "{{ src_prefix }}/manage.py" create-ip-pool -s "{{ network | ipaddr('net') }}" -i {{ public_ips }}

@@ -261,12 +261,7 @@ class NebulaIPPool(object):
             for lease in r.leases:
                 used_ip_list.add(lease.ip)
 
-        # TODO: AC-3928 Right now ansible can only use /24 network while we
-        # have /22 Remove this as soon as ansible can deal with that
-        allowed_ips = {
-            str(h) for h in IPv4Network(u'192.168.113.0/24').hosts()}
-
-        return (ip_list - used_ip_list) & allowed_ips
+        return ip_list - used_ip_list
 
     def reserve_ips(self, network_name, count):
         # type: (str, int) -> list[str]

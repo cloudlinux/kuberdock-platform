@@ -199,7 +199,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             var data,
                 ok = true,
                 that = this,
-                pattern = /^\d+(?:-\d+)?(?:\s*,\s*(?:\d+(?:-\d+)?))*$/;
+                pattern = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:-\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})?(?:\s*,\s*(?:\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:-\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})?))*$/;
 
             if (this.ipPoolMode && this.nodelist.length === 0) return;
             App.getIPPoolCollection().done(function(ipCollection){
@@ -209,18 +209,19 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     utils.notifyWindow('Wrong IP-address');
                     that.ui.network.addClass('error');
                     ok = false;
-                } else if (network.indexOf('/') < 0){
+                } else if (network.indexOf('/') < 0 || network.slice(-1) == '/'){
                     utils.notifyWindow('Wrong mask');
                     that.ui.network.addClass('error');
                     ok = false;
                 } else if(parseInt(network.split('/')[1]) > 32){
                     utils.notifyWindow('Wrong network');
-                    that.ui.network.addClass('erorr');
+                    that.ui.network.addClass('error');
                     ok = false;
                 } else if ( that.ui.autoblock.val() !== ''
                             && !pattern.test(that.ui.autoblock.val()) ){
                     utils.notifyWindow('Exclude IP\'s are expected to be in '
-                        + 'the form of 5,6,7 or 6-134 or both comma-separated');
+                        + 'the form of 10.0.0.1,10.0.0.2 or' +
+                        ' 10.0.1.1-10.0.2.30 or both comma-separated');
                     that.ui.autoblock.addClass('error');
                     ok = false;
                 }

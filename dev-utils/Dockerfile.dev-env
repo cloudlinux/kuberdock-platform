@@ -2,7 +2,7 @@ FROM centos:7
 
 RUN yum -y install epel-release && \
     yum -y update && \
-    yum -y install ansible rsync wget git gcc make && \
+    yum -y install ansible rsync wget python-netaddr git gcc make && \
     wget https://releases.hashicorp.com/vagrant/1.8.4/vagrant_1.8.4_x86_64.rpm && \
     yum -y localinstall vagrant_1.8.4_x86_64.rpm && \
     vagrant plugin install vagrant-gatling-rsync && \

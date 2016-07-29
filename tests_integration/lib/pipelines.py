@@ -165,9 +165,7 @@ class Pipeline(object):
         :param ip_list: array of IPv4 in x.x.x.x format
         """
 
-        # KD_ONE_PUB_IPS is a list of last IP octets
-        kd_pub_ips = ','.join(i.split('.')[-1] for i in ip_list)
-        self.settings['KD_ONE_PUB_IPS'] = kd_pub_ips
+        self.settings['KD_ONE_PUB_IPS'] = ','.join(ip_list)
 
     def _print_vagrant_log(self):
         """

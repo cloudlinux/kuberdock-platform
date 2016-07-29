@@ -16,7 +16,8 @@ class TestIPPool(APITestCase):
         network = u'192.168.1.0/30'
         self.node = self.fixtures.node()
         IpAddrPool().create(
-            {'network': network, 'autoblock': '1', 'node': self.node.id})
+            {'network': network, 'autoblock': '192.168.1.1', 'node':
+                self.node.id})
         self.ippool = IPPool.query.get(network)
         self.pod = self.fixtures.pod(owner_id=self.user.id)
         self.pod_ip = PodIP(

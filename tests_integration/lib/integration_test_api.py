@@ -10,6 +10,7 @@ from datetime import datetime
 import paramiko
 import vagrant
 import yaml
+from ipaddress import IPv4Network
 
 from tests_integration.lib.exceptions import StatusWaitException, \
     UnexpectedKubectlResponse, DiskNotFoundException, PodIsNotRunning
@@ -142,15 +143,8 @@ class KDIntegrationTestAPI(object):
         """
         _, main_ip, _ = self.ssh_exec('master', cmd)
 
-        # TODO: AC-3928 Right now ansible can only use /24 network while we
-        # have /22 Remove this as soon as ansible can deal with that
-        # Cut the actual prefix length and replace it with /24
-        ip_pool = str(main_ip.rsplit('.', 1)[0]) + '.0/24'
-        requested_ip_octets = set(self.kd_env['KD_ONE_PUB_IPS'].split(','))
-        all_ip_octets = set(str(i) for i in range(0, 256))
-
-        excludes = ','.join(all_ip_octets - requested_ip_octets)
-        self.add_ip_pool(ip_pool, excludes=excludes)
+        ip_pool = str(IPv4Network(unicode(main_ip), strict=False))
+        self.add_ip_pool(ip_pool, includes=self.kd_env['KD_ONE_PUB_IPS'])
 
     def _build_cluster_flag(self, op_name):
         build_flag = "BUILD_CLUSTER"
@@ -251,11 +245,12 @@ class KDIntegrationTestAPI(object):
     def delete_ip_pool(self, pool):
         self.manage('delete-ip-pool -s {}'.format(pool['network']))
 
-    def add_ip_pool(self, subnet, hostname=None, excludes=''):
+    def add_ip_pool(self, subnet, hostname=None, excludes='', includes=''):
         cmd = 'create-ip-pool -s {}'.format(subnet)
         if hostname is not None:
             cmd += ' --node {}'.format(hostname)
         cmd += ' -e "{}"'.format(excludes)
+        cmd += ' -i "{}"'.format(includes)
         self.manage(cmd)
 
     def create_pod(self, image, name, kube_type="Standard", kubes=1,

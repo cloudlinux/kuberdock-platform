@@ -9,6 +9,8 @@ from datetime import datetime
 import json
 import argparse
 
+from ipaddress import IPv4Network
+
 from kubedock.api import create_app
 from kubedock.exceptions import APIError
 from kubedock.kapi.nodes import create_node, delete_node
@@ -336,11 +338,24 @@ class CreateIPPool(Command):
                help='Network with mask'),
         Option('-e', '--exclude', dest='exclude', required=False,
                help='Excluded ips'),
+        Option('-i', '--include', dest='include', required=False,
+               help='Included ips'),
         Option('--node', dest='node', required=False,
                help='Node name'),
     )
 
-    def run(self, subnet, exclude, node=None):
+    def run(self, subnet, exclude, include, node=None):
+        if exclude and include:
+            raise InvalidCommand('Can\'t specify both -e and -i')
+
+        if include:
+            to_include = ippool.IpAddrPool().parse_autoblock(include)
+            net = IPv4Network(unicode(subnet))
+            hosts = {str(i) for i in net.hosts()}
+            # .hosts() does not include the network address
+            hosts.add(str(net.network_address))
+            exclude = ','.join(hosts - to_include)
+
         ippool.IpAddrPool().create({
             'network': subnet.decode(),
             'autoblock': exclude,

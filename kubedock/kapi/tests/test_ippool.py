@@ -138,7 +138,7 @@ class TestIpPool(DBTestCase):
             u'192.168.2.5', u'192.168.2.7'
         ]
 
-        block = '1,3-5,7'
+        block = '192.168.2.1,192.168.2.3-192.168.2.5,192.168.2.7'
 
         data = {
             'network': u'192.168.2.0/24',
@@ -182,7 +182,7 @@ class TestIpPool(DBTestCase):
         db.session.add(pool)
         db.session.commit()
 
-        block = '1,3-5,7'
+        block = '192.168.2.1,192.168.2.3-192.168.2.5,192.168.2.7'
         data = {
             'network': network,
             'autoblock': block,
@@ -276,7 +276,8 @@ class TestIpPool(DBTestCase):
         # Network contains 14 IPs
         # 192.168.2.1 - 192.168.2.14
         # Autoblock leaves only 192.168.2.13, 192.168.2.14
-        self._create_network(u'192.168.2.0/28', autoblock='1-12')
+        self._create_network(
+            u'192.168.2.0/28', autoblock='192.168.2.1-192.168.2.12')
 
         node = K8SNode(hostname=self.node.hostname)
         self.assertEqual(node.free_public_ip_count, 4)

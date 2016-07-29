@@ -49,8 +49,8 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # Default value are team shared IPs. If you use them, you may intersect with others, thus
 # it's recommended to set this variable. Reserve your IPs in the doc below before changing:
 # ***REMOVED***
-# default: "200,201,202"
-#export KD_ONE_PUB_IPS="200,201,202"
+# default: "192.168.33.200,192.168.33.201,192.168.33.202"
+#export KD_ONE_PUB_IPS="192.168.33.200,192.168.33.201,192.168.33.202"
 
 # Custom OpenNebula template ID
 # default: 84

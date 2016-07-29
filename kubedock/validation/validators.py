@@ -1,6 +1,7 @@
 import socket
 
 import cerberus
+from ipaddress import ip_network
 from sqlalchemy import func
 
 from kubedock.billing.models import Kube, Package
@@ -149,6 +150,12 @@ class V(cerberus.Validator):
             socket.inet_pton(socket.AF_INET, value)
         except socket.error:
             self._error(field, 'Invalid ipv4 address')
+
+    def _validate_type_ipv4_net(self, field, value):
+        try:
+            ip_network(value)
+        except (ValueError, AttributeError) as e:
+            self._error(field, 'Invalid IPv4 network')
 
     def _validate_type_strnum(self, field, value):
         try:

@@ -1,6 +1,7 @@
 from itertools import imap
 
 import ipaddress
+import operator
 import sqlalchemy
 
 from flask import current_app
@@ -9,7 +10,7 @@ from ..core import db
 from ..exceptions import APIError, NoFreeIPs
 from .podcollection import PodCollection
 from ..pods.models import IPPool, PodIP, ip_network, Pod
-from ..utils import atomic
+from ..utils import atomic, ip2int, int2ip
 from ..validation import ValidationError, V, ippool_schema
 from ..nodes.models import Node
 from ..kapi.node import Node as K8SNode, NodeException
@@ -18,7 +19,6 @@ from ..settings import AWS, KUBERDOCK_INTERNAL_USER
 
 
 class IpAddrPool(object):
-
     def get(self, net=None, page=None):
         """Returns list of networks or a single network.
         :param net: network ('x.x.x.x/x') optional. If it is not specified,
@@ -55,37 +55,30 @@ class IpAddrPool(object):
         return IPPool.get_free_host()
 
     def create(self, data):
+        # type: (dict) -> dict
         """Creates network instance in db pool of networks.
         :param data: dict with fields 'network' ('x.x.x.x/x'), and optional
-            'autoblock' - string of comma separated integers, which define
-            lowest octet of an ip address in the network. For example 1,4-6
-            will exclude 192.168.1.1, 192.168.1.4, 192.168.1.5, 192.168.1.6
-            addresses from 192.168.1.0/24 network.
-            It's a design feature, for example for subnet
-            '192.168.0.0/23' exclusion '1' will exclude two addresses -
-            '192.168.0.1', '192.168.1.1'. It seems like non-obvious and
-            unexpected behavior.
-            TODO: at least redesign ip excluding.
+            'autoblock' - string of comma separated IPs or IP ranges,
+            which define a list of IP addresses to exclude. IP range has a
+            following format 10.0.0.1-10.0.0.32. You can mix ranges with
+            single IPs, like 10.0.0.1,10.0.0.30-10.0.1.32,10.0.0.2
         :return: dict with fields 'network' and 'autoblock'
 
         """
         data = V()._api_validation(data or {}, ippool_schema)
-        try:
-            network = ip_network(data.get('network'))
-        except (ValueError, AttributeError) as e:
-            raise ValidationError(str(e))
 
-        self._check_if_network_exists(network)
+        self._check_if_network_exists(data['network'])
 
-        autoblock = self._parse_autoblock(data.get('autoblock'))
         node_name = data.get('node')
         node = Node.query.filter_by(hostname=node_name).first()
         if node_name is not None and node is None:
             raise APIError('Node is not exists ({0})'.format(node_name))
-        pool = IPPool(network=str(network), node=node)
+        pool = IPPool(network=data['network'], node=node)
 
-        block_list = self._create_autoblock(autoblock, network)
+        auto_block = data.get('autoblock', '').replace(' ', '')
+        block_list = self.parse_autoblock(auto_block) if auto_block else []
         pool.block_ip(block_list)
+
         pool.save()
 
         if node_name and current_app.config['NONFLOATING_PUBLIC_IPS']:
@@ -151,14 +144,6 @@ class IpAddrPool(object):
             raise APIError('Node is not exists ({0})'.format(node_name))
         return node
 
-    def _create_autoblock(self, autoblock, network):
-        block_list = [
-            int(ipaddress.ip_address(i))
-            for i in imap(unicode, network.hosts())
-            if int(i.split('.')[-1]) in autoblock
-            ]
-        return block_list
-
     def _check_if_network_exists(self, network):
         net = ipaddress.IPv4Network(network)
         for pool in IPPool.all():
@@ -180,10 +165,10 @@ class IpAddrPool(object):
                     for k, v in elb_dict.items()]
 
         return [{
-            'id': str(ipaddress.ip_address(i.ip_address)),
-            'pod': pods[i.pod_id],
-            'pod_id': i.pod_id
-        } for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
+                    'id': str(ipaddress.ip_address(i.ip_address)),
+                    'pod': pods[i.pod_id],
+                    'pod_id': i.pod_id
+                } for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
 
     @atomic(nested=False)
     def delete(self, network):
@@ -215,22 +200,28 @@ class IpAddrPool(object):
             raise APIError("Network '{0}' does not exist".format(network), 404)
         return net
 
-    def _parse_autoblock(self, data):
-        blocklist = set()
-        if not data:
-            return blocklist
-        for term in (i.strip() for i in data.split(',')):
-            if term.isdigit():
-                blocklist.add(int(term))
-                continue
+    def parse_autoblock(self, data):
+        # type: (str) -> set
+        def _parse(item):
+            # Try to parse item as a single IP
             try:
-                first, last = [int(x) for x in term.split('-')]
-                blocklist.update(set(range(first, last + 1)))
+                ipaddress.IPv4Address(item)
+                return {item}
+            except ipaddress.AddressValueError:
+                pass
+
+            # Try parse item as ip range: ip1-ip2
+            try:
+                first_ip, last_ip = [ip2int(i) for i in item.split('-')]
+                return {int2ip(n) for n in range(first_ip, last_ip + 1)}
             except ValueError:
                 raise APIError(
-                    "Exclude IP's are expected to be in the form of "
-                    "5,6,7 or 6-134 or both comma-separated")
-        return blocklist
+                    'Exclude IP\'s are expected to be in the form of '
+                    '10.0.0.1,10.0.0.4 or 10.1.0.10-10.1.1.54 or both '
+                    'comma-separated')
+
+        ip_sets = (_parse(unicode(d)) for d in data.split(','))
+        return reduce(operator.or_, ip_sets)
 
     def assign_ip_to_pod(self, pod_id, node_hostname=None):
         """

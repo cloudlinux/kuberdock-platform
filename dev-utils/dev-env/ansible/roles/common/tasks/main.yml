@@ -38,5 +38,5 @@
 
 - name: Inject SSH public keys
   authorized_key: user=root key={{ item }}
-  when: add_ssh_pub_keys is defined and add_ssh_pub_keys
+  when: add_ssh_pub_keys
   with_items: "{{ lookup('file', ssh_pub_keys_path).splitlines() }}"

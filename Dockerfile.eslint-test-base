@@ -1,0 +1,3 @@
+FROM node
+RUN npm install -g eslint
+ENV NODE_PATH /usr/local/lib/node_modules

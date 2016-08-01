@@ -238,16 +238,24 @@ class _U151(_Update):
             query.filter(Pod.id != dns_pod.id)
         for dbpod in query:
             pod = pc._get_by_id(dbpod.id)
-            if pod.status == POD_STATUSES.pending:
+            if pod.status in (POD_STATUSES.pending, POD_STATUSES.stopping,
+                              POD_STATUSES.stopped):
                 # Workaround for AC-3386 issue: just don't restart
                 # pending pods, because it may lead to error during pod start,
                 # and upgrade script fail as a result.
+                # Also do not restart already stopped pods.
                 upd.print_log(
-                    'Skip restart of pending pod "{}". '
+                    'Skip restart of {} pod "{}". '
                     'It may need manual restart to enable ssh access.'.format(
-                        dbpod.name))
+                        pod.status, dbpod.name))
                 continue
-            pc._stop_pod(pod, block=True)
+            try:
+                pc._stop_pod(pod, block=True)
+            except APIError as e:
+                upd.print_log(
+                    'Error: Failed to stop pod {}. It may be needed to manual '
+                    'restart the pod.\n{}'.format(dbpod.name, e))
+                continue
             pc._start_pod(pod, {'async_pod_create': False})
             upd.print_log('Restart pod: {}'.format(dbpod.name))
 

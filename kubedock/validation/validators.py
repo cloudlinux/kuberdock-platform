@@ -319,6 +319,10 @@ def check_system_settings(data):
         if not validator.validate({'value': value},
                                   {'value': memory_multiplier_schema}):
             raise APIError('Incorrect value for Memory multiplier')
+    elif name == 'email':
+        if not validator.validate({'value': value},
+                                  {'value': {'type': 'email'}}):
+            raise APIError('Incorrect value for email')
 
 
 class UserValidator(V):

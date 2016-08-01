@@ -17,7 +17,6 @@ BuildRequires: python
 
 Requires: python
 Requires: python-requests
-Requires: python-argparse
 Requires: python-click
 Requires: PyYAML
 

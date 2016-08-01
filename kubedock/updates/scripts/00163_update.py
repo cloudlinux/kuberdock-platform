@@ -11,7 +11,7 @@ K8S_CA_CERT=KUBERNETES_CERTS_DIR + '/ca.crt'
 
 def upgrade(upd, with_testing, *args, **kwargs):
     # upd.print_log("Generating key for service account")
-    sans="IP:{0},DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:$(hostname)".format(MASTER_IP)
+    sans="IP:{0},IP:10.254.0.1,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:$(hostname)".format(MASTER_IP)
     helpers.local("""
 cd `mktemp -d`
 curl -L -O --connect-timeout 20 --retry 6 --retry-delay 2 https://storage.googleapis.com/kubernetes-release/easy-rsa/easy-rsa.tar.gz
@@ -54,7 +54,7 @@ chmod -R 0440 {certs_dir}/*
         {
             "KUBE_CONTROLLER_MANAGER_ARGS":
                 {
-                    "--service_account_private_key_file=": K8S_TLS_CERT,
+                    "--service-account-private-key-file=": K8S_TLS_CERT,
                     "--root-ca-file=": K8S_CA_CERT
                 }
         }

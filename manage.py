@@ -352,8 +352,11 @@ class CreateIPPool(Command):
             to_include = ippool.IpAddrPool().parse_autoblock(include)
             net = IPv4Network(unicode(subnet))
             hosts = {str(i) for i in net.hosts()}
-            # .hosts() does not include the network address
+            # Do not include network and broadcast IP address
+            # TODO: Fix according to AC-4044
             hosts.add(str(net.network_address))
+            hosts.add(str(net.broadcast_address))
+
             exclude = ','.join(hosts - to_include)
 
         ippool.IpAddrPool().create({

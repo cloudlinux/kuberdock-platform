@@ -245,19 +245,19 @@ class _U151(_Update):
                 # and upgrade script fail as a result.
                 # Also do not restart already stopped pods.
                 upd.print_log(
-                    'Skip restart of {} pod "{}". '
-                    'It may need manual restart to enable ssh access.'.format(
+                    u'Skip restart of {} pod "{}". '
+                    u'It may need manual restart to enable ssh access.'.format(
                         pod.status, dbpod.name))
                 continue
             try:
                 pc._stop_pod(pod, block=True)
             except APIError as e:
                 upd.print_log(
-                    'Error: Failed to stop pod {}. It may be needed to manual '
-                    'restart the pod.\n{}'.format(dbpod.name, e))
+                    u'Error: Failed to stop pod {}. It may be needed to '
+                    u'manual restart the pod.\n{}'.format(dbpod.name, e))
                 continue
             pc._start_pod(pod, {'async_pod_create': False})
-            upd.print_log('Restart pod: {}'.format(dbpod.name))
+            upd.print_log(u'Restart pod: {}'.format(dbpod.name))
 
     @classmethod
     def add_kdtools_to_node(cls, with_testing):

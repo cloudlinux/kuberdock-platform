@@ -146,17 +146,6 @@ class KDIntegrationTestAPI(object):
         ip_pool = str(IPv4Network(unicode(main_ip), strict=False))
         self.add_ip_pool(ip_pool, includes=self.kd_env['KD_ONE_PUB_IPS'])
 
-    def _build_cluster_flag(self, op_name):
-        build_flag = "BUILD_CLUSTER"
-        if os.environ.get(build_flag):
-            LOG.info(
-                "{0} flag passed. {1} call is executed.".format(build_flag,
-                                                                op_name))
-            return True
-        LOG.info("{0} flag not passed. Reusing existing cluster "
-                 "({1} call is skipped).".format(build_flag, op_name))
-        return False
-
     def _any_vm_is_running(self):
         return any(vm.state != "not_created" for vm in self.vagrant.status())
 
@@ -166,15 +155,16 @@ class KDIntegrationTestAPI(object):
         return out
 
     def start(self, provider=PROVIDER):
-        if not self._build_cluster_flag("start"):
-            return
-
         if self._any_vm_is_running():
             raise VagrantIsAlreadyUpException(
                 "Vagrant is already up. Either perform \"vagrant destroy\" "
                 "if you want to run tests on new cluster, or make sure you do "
                 "not pass BUILD_CLUSTER env variable if you want run tests on "
                 "the existing one.")
+
+        settings = '\n'.join('{}: {}'.format(k, v)
+                             for k, v in self.kd_env.items())
+        LOG.debug('Cluster settings: {}'.format(settings))
 
         if provider == OPENNEBULA:
             retry(self.vagrant.up, tries=3,
@@ -186,17 +176,13 @@ class KDIntegrationTestAPI(object):
             self.created_at = datetime.utcnow()
 
     def upgrade(self, upgrade_to='latest'):
-        if not self._build_cluster_flag("upgrade"):
-            return
-
         local_arg = ''
         if upgrade_to != 'latest':
             local_arg = "--local {0}".format(upgrade_to)
         self.ssh_exec("master", "kuberdock-upgrade {0}".format(local_arg))
 
     def destroy(self):
-        if self._build_cluster_flag("destroy"):
-            self.vagrant.destroy()
+        self.vagrant.destroy()
 
     def power_off(self, host):
         vm_name = self.vm_names[host]

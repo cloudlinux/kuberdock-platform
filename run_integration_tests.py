@@ -22,7 +22,6 @@ from tests_integration.lib.pipelines import pipelines as \
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
-CLUSTER_CREATION_MAX_DELAY = 30
 INTEGRATION_TESTS_PATH = 'tests_integration/'
 JENKINS_GC_TIME_INTERVAL = 2  # hours
 # Lock is needed for printing info thread-safely and it's done by two
@@ -48,13 +47,9 @@ def run_tests_in_a_pipeline(pipeline_name, tests):
     def pipe_log(msg, color=Fore.MAGENTA):
         print_msg('{} -> {}\n'.format(pipeline_name, msg), color)
 
-    # Prevent Nebula from being flooded by vm-create requests (AC-3914)
-    delay = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
-    pipe_log('CREATING CLUSTER (delay {} seconds)'.format(delay), Fore.MAGENTA)
-    time.sleep(delay)
-
     try:
         pipeline = Pipeline.from_name(pipeline_name)
+        pipe_log('CREATING CLUSTER', Fore.MAGENTA)
         pipeline.create()
         pipe_log('CLUSTER CREATED', Fore.GREEN)
     except:

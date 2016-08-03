@@ -1,10 +1,11 @@
 import logging
 import os
+import random
+import time
 from collections import defaultdict
 from contextlib import contextmanager
 from functools import wraps
 from tempfile import NamedTemporaryFile
-from datetime import datetime
 
 from tests_integration.lib.exceptions import PipelineNotFound
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
@@ -13,6 +14,7 @@ from tests_integration.lib.integration_test_utils import merge_dicts, \
 
 PIPELINES_PATH = '.pipelines/'
 INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
+CLUSTER_CREATION_MAX_DELAY = 30
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
@@ -49,8 +51,12 @@ class Pipeline(object):
         }
         self.name = name
         self.settings = merge_dicts(self.defaults, getattr(self, 'ENV', {}))
-        self.settings['VAGRANT_DOTFILE_PATH'] = os.path.join(
-            PIPELINES_PATH, self.name)
+
+        if self.build_cluster:
+            # Allow to build multiple pipelines in parallel
+            self.settings['VAGRANT_DOTFILE_PATH'] = os.path.join(
+                PIPELINES_PATH, self.name)
+
         self.routable_ip_count = getattr(self, 'ROUTABLE_IP_COUNT', 0)
         self.vagrant_log = NamedTemporaryFile(delete=False)
 
@@ -59,6 +65,10 @@ class Pipeline(object):
             os.environ['KD_ONE_USERNAME'],
             os.environ['KD_ONE_PASSWORD'])
         self.cluster = None
+
+    @property
+    def build_cluster(self):
+        return os.environ.get('BUILD_CLUSTER', '0') == '1'
 
     def run_test(self, test):
         """
@@ -91,8 +101,21 @@ class Pipeline(object):
             """
             yield self.vagrant_log
 
+        # Do not reserve IPs and do not create cluster if wasn't requested
+        if not self.build_cluster:
+            self.cluster = KDIntegrationTestAPI(
+                override_envs=self.settings, err_cm=cm, out_cm=cm)
+            logger.info('BUILD_CLUSTER flag not passed. Pipeline create '
+                        'call skipped.')
+            return
+
+        # Prevent Nebula from being flooded by vm-create requests (AC-3914)
+        delay = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
+        time.sleep(delay)
+
         try:
-            # Reserve Pod IPs in Nebula so that they are not taken by otherVMs/Pods
+            # Reserve Pod IPs in Nebula so that they are not taken by other
+            # VMs/Pods
             ips = self.routable_ip_pool.reserve_ips(
                 INTEGRATION_TESTS_VNET, self.routable_ip_count)
             # Tell reserved IPs to cluster so it creates appropriate IP Pool
@@ -123,6 +146,11 @@ class Pipeline(object):
         """
         Destroys KD cluster
         """
+        if not self.build_cluster:
+            logger.info('BUILD_CLUSTER flag not passed. Pipeline destroy '
+                        'call skipped')
+            return
+
         with suppress():
             self.routable_ip_pool.free_reserved_ips()
         with suppress():

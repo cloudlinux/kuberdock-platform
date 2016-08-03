@@ -10,14 +10,13 @@ from contextlib import contextmanager
 from itertools import count, islice
 
 import operator
+import oca
+from oca import OpenNebulaException
 from colorama import Fore, Style
-from ipaddress import IPv4Address, IPv4Network
+from ipaddress import IPv4Address
 
 from tests_integration.lib.exceptions import PublicPortWaitTimeoutException, \
     NonZeroRetCodeException, NotEnoughFreeIPs
-# TODO: Use upstream version. Look AC-3849 for details
-from tests_integration.lib.vendor import oca
-from tests_integration.lib.vendor.oca import OpenNebulaException
 
 NO_FREE_IPS_ERR_MSG = 'no free public IP-addresses'
 LOG = logging.getLogger(__name__)

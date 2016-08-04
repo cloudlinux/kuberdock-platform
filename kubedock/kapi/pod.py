@@ -30,7 +30,7 @@ PodOwnerTuple = namedtuple('PodOwnerTuple', ['id', 'username'])
 
 
 class VolumeExists(APIError):
-    message_template = 'Volume with name "{name}" already exists'
+    message_template = u'Volume with name "{name}" already exists'
     status_code = 409
 
     def __init__(self, volume_name=None, volume_id=None):
@@ -470,7 +470,7 @@ class Pod(object):
                                  DBPod.id != self.id).first()
         if pod:
             raise APIError(
-                'Pod with name "{0}" already exists.'.format(self.name),
+                u'Pod with name "{0}" already exists.'.format(self.name),
                 status_code=409, type='PodNameConflict',
                 details={'id': pod.id, 'name': pod.name}
             )

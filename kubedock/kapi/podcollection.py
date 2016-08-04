@@ -1,5 +1,4 @@
 import json
-import time
 from crypt import crypt
 from base64 import urlsafe_b64encode, urlsafe_b64decode
 from collections import defaultdict
@@ -9,6 +8,7 @@ from uuid import uuid4
 import ipaddress
 from flask import current_app
 
+from celery.exceptions import MaxRetriesExceededError
 from kubedock.exceptions import NoFreeIPs, NoSuitableNode
 from kubedock.utils import ssh_connect, randstr
 from . import helpers
@@ -32,8 +32,8 @@ from ..settings import (KUBERDOCK_INTERNAL_USER, TRIAL_KUBES, KUBE_API_VERSION,
                         DEFAULT_REGISTRY, AWS)
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
-from ..utils import (POD_STATUSES, NODE_STATUSES, atomic, update_dict, send_event_to_user,
-                     send_event_to_role, retry)
+from ..utils import (POD_STATUSES, NODE_STATUSES, atomic, update_dict,
+                     send_event_to_user, send_event_to_role, retry)
 from .node_utils import get_external_node_ip
 from ..nodes.models import Node
 
@@ -1098,7 +1098,17 @@ def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
     )
 
 
-def scale_replicationcontroller(pod_id, size=0, interval=1, max_retries=10):
+@celery.task(bind=True, default_retry_delay=1, max_retries=10)
+def wait_for_rescaling_task(self, pod, size):
+    rc = get_replicationcontroller(pod.namespace, pod.sid)
+    if rc['status']['replicas'] != size:
+        try:
+            self.retry()
+        except MaxRetriesExceededError:
+            current_app.logger.error("Can't scale rc: max retries exceeded")
+
+
+def scale_replicationcontroller(pod_id, size=0):
     """Set new replicas size and wait until replication controller increase or
     decrease real number of pods or max retries exceed
     """
@@ -1108,13 +1118,9 @@ def scale_replicationcontroller(pod_id, size=0, interval=1, max_retries=10):
     rc = pc.k8squery.patch(
         ['replicationcontrollers', pod.sid], data, ns=pod.namespace)
     podutils.raise_if_failure(rc, "Couldn't set replicas to {}".format(size))
-    retry_count = 0
-    while rc['status']['replicas'] != size and retry_count < max_retries:
-        retry_count += 1
-        rc = get_replicationcontroller(pod.namespace, pod.sid)
-        time.sleep(interval)
-    if retry_count >= max_retries:
-        current_app.logger.error("Can't scale rc: max retries exceeded")
+
+    if rc['status']['replicas'] != size:
+        wait_for_rescaling_task.apply_async((pod, size))
 
 
 @celery.task(ignore_results=True)

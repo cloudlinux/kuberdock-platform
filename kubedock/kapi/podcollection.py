@@ -812,9 +812,9 @@ class PodCollection(object):
                     pod = wait_pod_status(
                         pod.id, POD_STATUSES.stopped,
                         error_message=(
-                            'During restart, Pod "{0}" did not become stopped '
-                            'after a given timeout. It may become later.'
-                            .format(pod.name)))
+                            u'During restart, Pod "{0}" did not become '
+                            u'stopped after a given timeout. It may become '
+                            u'later.'.format(pod.name)))
                 else:
                     scale_replicationcontroller_task.apply_async((pod.id,))
                 return pod.as_dict()
@@ -1523,7 +1523,7 @@ def _process_persistent_volumes(pod, volumes):
             free_on_exit = True
 
             def make_msg(item):
-                return 'PD: {0}, Pod: {1}'.format(item.name, item.pod.name)
+                return u'PD: {0}, Pod: {1}'.format(item.name, item.pod.name)
 
             raise APIError(
                 u'For now two pods cannot share one Persistent Disk. '

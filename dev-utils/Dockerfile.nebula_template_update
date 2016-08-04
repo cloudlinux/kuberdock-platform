@@ -1,0 +1,19 @@
+FROM centos:7
+
+RUN yum -y install epel-release && \
+    yum -y update && \
+    yum -y install python-pip git gcc python-devel openssl-devel && \
+    yum clean all
+
+COPY ./requirements-integration.txt ./
+
+RUN pip install --upgrade pip && \
+    pip install -r requirements-integration.txt
+
+# Rebuild & push with:
+# docker build -t lobur/nebula_template_update:vX -f dev-utils/Dockerfile.nebula_template_update --rm=true --no-cache=true --pull .
+# docker push lobur/rpm-build-base:vX
+
+# Always bump X, this is
+# needed to make sure the new image gets pulled on Jenkins
+# If you are not lobur use your own hub.docker.com account

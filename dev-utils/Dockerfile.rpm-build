@@ -6,9 +6,9 @@ RUN yum -y install epel-release && \
     yum clean all
 
 # Rebuild & push with:
-# docker build -t lobur/rpm-build-base:vX -f dev-utils/Dockerfile.rpm-build-base --rm=true --no-cache=true --pull .
-# docker push lobur/rpm-build-base:vX
+# docker build -t lobur/rpm-build:vX -f dev-utils/Dockerfile.rpm-build --rm=true --no-cache=true --pull .
+# docker push lobur/rpm-build:vX
 
-# Always bump X, including Dockerfile.kd-rpm-build, this is
+# Always bump X, this is
 # needed to make sure the new image gets pulled on Jenkins
 # If you are not lobur use your own hub.docker.com account

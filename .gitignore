@@ -25,4 +25,6 @@ Dockerfile.local
 
 .tox/
 tests_integration/web-ui/report/
-artifacts/
+./artifacts
+dev-utils/update_template.log
+dev-utils/.docker.nebula_template_update.env

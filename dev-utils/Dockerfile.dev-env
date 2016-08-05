@@ -7,7 +7,7 @@ RUN yum -y install epel-release && \
     yum -y localinstall vagrant_1.8.4_x86_64.rpm && \
     vagrant plugin install vagrant-gatling-rsync && \
     vagrant plugin install vagrant-rsync-back && \
-    vagrant plugin install opennebula-provider --plugin-version 1.0.4 && \
+    vagrant plugin install opennebula-provider --plugin-version 1.1.0 && \
     yum clean all
 
 # Remove annoying "duplicated key at line 132 ignored: :nic" warning

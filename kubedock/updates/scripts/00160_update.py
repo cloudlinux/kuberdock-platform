@@ -1,3 +1,4 @@
+import os
 from abc import ABCMeta
 from time import sleep
 
@@ -328,9 +329,14 @@ class _U152(_Update):
         def upgrade(cls, upd):
             upd.print_log('Update influxdb...')
 
-            # remove old version with all settings
+            # remove old version with all settings and all data
+            helpers.stop_service('influxdb')
             helpers.local('rm -rf /opt/influxdb')
             helpers.local('rm /etc/systemd/system/influxdb.service')
+
+            if os.path.isdir('/var/lib/influxdb/'):
+                helpers.local('chown -R influxdb /var/lib/influxdb/')
+                helpers.local('chgrp -R influxdb /var/lib/influxdb/')
             helpers.local('systemctl daemon-reload')
 
             # install new version

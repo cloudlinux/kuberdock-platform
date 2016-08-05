@@ -89,6 +89,18 @@ def test_nginx_with_healthcheck(cluster):
                        wait_for_status='running')
 
 
+@pipeline('main')
+def test_recreate_pod_with_real_ip(cluster):
+    pod = cluster.create_pod("nginx", "test_nginx_pod_4", open_all_ports=True,
+                             start=True, wait_for_status='running')
+    pod.healthcheck()
+    pod.delete()
+    pod = cluster.create_pod("nginx", "test_nginx_pod_4", open_all_ports=True,
+                             start=True, wait_for_status='running')
+    pod.healthcheck()
+    pod.delete()
+
+
 @pipeline('networking')
 def test_pod_ip_resource(cluster):
     # It's not possible to create a POD with public IP with no IP pools

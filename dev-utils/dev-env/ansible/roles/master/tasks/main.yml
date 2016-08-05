@@ -1,5 +1,13 @@
 - include: ../../../facts.yml
 
+- debug: msg="Builds directory on host - {{ host_builds_path }}"
+- debug: msg="Install type - {{ install_type }}"
+
+- name: Inject shared SSH pub keys
+  authorized_key: user=root key={{ item }}
+  when: add_ssh_pub_keys
+  with_items: "{{ lookup('file', ssh_pub_keys_path).splitlines() }}"
+
 - name: Install epel-release
   yum: name=epel-release state=latest
 
@@ -13,6 +21,9 @@
 - name: start haveged
   service: name=haveged state=started
 
+- name: Create master RPMs directory
+  file: path="{{ master_rpms_dir }}" state=directory
+
 - include: dev_predeploy.yml
   when: is_dev_install
 
@@ -22,9 +33,8 @@
 - include: release_predeploy.yml
   when: is_release_install
 
-
-- name: Cleanup
-  shell: echo "yes" | bash /vagrant/deploy.sh --cleanup
+- name: Running cleanup (deploy.sh --cleanup)
+  shell: echo "yes" | bash deploy.sh --cleanup chdir="{{ master_rpms_dir }}"
   tags:
       - cleanup
 
@@ -34,7 +44,7 @@
 - include: deploy.yml
 
 - name: Reset password
-  shell: python "{{ src_prefix }}/manage.py" reset-password --set "{{ admin_password }}"
+  shell: python "{{ master_kd_src_path }}/manage.py" reset-password --set "{{ admin_password }}"
 
 - include: dev_postdeploy.yml
   when: is_dev_install
@@ -54,9 +64,11 @@
   fetch: src={{ pub_key }} dest=/tmp/kd_rsa.pub fail_on_missing=yes flat=yes
 
 - include: ip_pool.yml
+  tags:
+    - ippool
 
 - name: Create users
-  shell: python "{{ src_prefix }}/manage.py" create-user -u {{ item }} -p {{ item }} -r User
+  shell: python "{{ master_kd_src_path }}/manage.py" create-user -u {{ item }} -p {{ item }} -r User
   with_items:
       - test_user
       - alt_test_user

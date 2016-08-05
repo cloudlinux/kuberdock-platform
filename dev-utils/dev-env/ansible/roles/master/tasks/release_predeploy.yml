@@ -1,14 +1,23 @@
 ---
 
-- get_url:
-    url: http://repo.cloudlinux.com/kuberdock/deploy.sh
-    dest: /vagrant/deploy.sh
+- name: In release build all pre-built RPMs will be at "/tmp/prebuilt_rpms/", release RPMs are at "{{ master_rpms_dir }}"
+  set_fact:
+    prebuilt_rpms_dir: "/tmp/prebuilt_rpms/"
+
+- name: Create pre-built RPMs dir
+  file: path="{{ prebuilt_rpms_dir }}" state=directory
+
+# All pre-built RPMs are still copied for possible future upgrade
+- include: copy_rpm.yml
+
+- name: Move all pre-built RPMs to "{{ prebuilt_rpms_dir }}"
+  shell: mv {{ master_rpms_dir }}/kuberdock.rpm {{ prebuilt_rpms_dir }}
+
+# TODO: AC-3861 Take release RPMs for kcli and kdctl as well
+# (move prebuilt kdctl & kcli and download from repo.cloudlinux.com)
+
+- name: Download release version of deploy.sh
+  get_url:
+    url: "{{ deploy_script_url }}"
+    dest: "{{ master_rpms_dir }}/deploy.sh"
     force: true
-
-# TODO: AC-3861 Take release RPMs for kcli and kdctl for "release" build
-- name: Copy additional rpm packages
-  copy: src="{{ build_dir }}/{{ item }}.rpm" dest=/vagrant
-  with_items:
-    - kcli
-    - kdctl
-

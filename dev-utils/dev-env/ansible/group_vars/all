@@ -1,16 +1,24 @@
+host_proj_root: "{{ playbook_dir }}/../../../"
+host_builds_path: ../../../builds
+ssh_pub_keys_path: ../shared_pub_keys
+
+master_kd_src_path: /var/opt/kuberdock
+
 add_testing_repo: "{{ '-t' if (testing_repo is defined and testing_repo) else '' }}"
 non_floating_ips_mode: "{{ '--nonfloating-ip' if (non_floating_ips is defined and non_floating_ips) else '' }}"
-src_prefix: /var/opt/kuberdock
+
 install_type: qa
 is_dev_install: "{{ install_type == 'dev'}}"
 is_release_install: "{{ install_type == 'release'}}"
 is_qa_install: "{{ install_type == 'qa'}}"
+
 use_ceph: false
 pd_namespace_param: "{{ ('-n \"'+pd_namespace+'\"') if (pd_namespace is defined and pd_namespace) else ''}}"
-build_dir: ../../../builds
+
 rpms_to_check:
     - kuberdock
     - kcli
     - kdctl
 admin_password: admin
-ssh_pub_keys_path: ../shared_pub_keys
+
+add_node_command: add-node

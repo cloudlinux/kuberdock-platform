@@ -16,7 +16,7 @@
 
 - name: Patching a licensing
   lineinfile:
-      dest: "{{ src_prefix }}/kubedock/kapi/licensing.py"
+      dest: "{{ master_kd_src_path }}/kubedock/kapi/licensing.py"
       line: "def is_valid(): return True" 
       state: present
   when: license_path == 'patch'

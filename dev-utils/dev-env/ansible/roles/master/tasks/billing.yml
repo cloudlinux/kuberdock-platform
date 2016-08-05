@@ -1,6 +1,6 @@
 - name: Patching a UI
   lineinfile:
-      dest: "{{ src_prefix }}/kubedock/frontend/templates/apps/index.html"
+      dest: "{{ master_kd_src_path }}/kubedock/frontend/templates/apps/index.html"
       regexp: "{{ item }}"
       state: absent
   with_items:

@@ -4,9 +4,6 @@
   hosts: all
   become: yes
   any_errors_fatal: true
-  pre_tasks:
-      - debug: msg="Build directory {{ build_dir }}"
-      - debug: msg="Install type {{ install_type }}"
   roles:
       - common
 

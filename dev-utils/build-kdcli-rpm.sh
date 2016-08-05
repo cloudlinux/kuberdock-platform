@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-SOURCES_DIR=/vagrant/kuberdock-cli
+SOURCES_DIR=${1:-"./kuberdock-cli/"}
+DST=${2:-"./builds/"}
+
 VERSION=$(grep "Version:" $SOURCES_DIR/kuberdock-cli.spec | grep -oP "\d+\.\d+.*")
 BUILD_VER=$(grep "Release:" $SOURCES_DIR/kuberdock-cli.spec | sed -rn 's/.*: (.*)%\{\?dist\}(.*)/\1.el7\2/p' | tr -d '[:blank:]')
 NAME=kuberdock-cli
@@ -30,6 +32,6 @@ mv /tmp/$NAME-$VERSION.tar.bz2 /root/rpmbuild/SOURCES/
 echo "########## Starting the RPM build ##########"
 rpmbuild --define="dist .el7" --quiet -bb /root/rpmbuild/SPECS/kuberdock-cli.spec
 EXTRA_NAME=".x86_64.rpm"
-cp -f /root/rpmbuild/RPMS/x86_64/$NAME-$VERSION-$BUILD_VER$EXTRA_NAME /vagrant/kcli.rpm
+cp -f /root/rpmbuild/RPMS/x86_64/$NAME-$VERSION-$BUILD_VER$EXTRA_NAME "$DST/kcli.rpm"
 echo "########## Done RPM build. Find kcli.rpm ##########"
 cd $NOW

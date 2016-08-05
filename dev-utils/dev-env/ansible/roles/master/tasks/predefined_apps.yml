@@ -13,7 +13,7 @@
   - predefined_apps
 
 - name: Add predefined apps
-  shell: for i in {{ predefined_apps_dest }}/*.yaml; do name=$(basename "$i"); python /vagrant/manage.py add-predefined-app --name "$name" -t "$i"; done
+  shell: for i in {{ predefined_apps_dest }}/*.yaml; do name=$(basename "$i"); python "{{ master_kd_src_path }}"/manage.py add-predefined-app --name "$name" -t "$i"; done
   async: 3600
   poll: 0
   register: pa_async_results

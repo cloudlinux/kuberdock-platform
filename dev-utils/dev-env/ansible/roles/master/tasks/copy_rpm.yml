@@ -1,0 +1,16 @@
+---
+
+- find: paths="{{ host_builds_path }}" patterns="{{ item }}*.rpm"
+  become: False
+  delegate_to: localhost
+  register: _rpms
+  with_items: "{{ rpms_to_check }}"
+
+- set_fact:
+    rpms_list: "{{ rpms_list | default([]) | union(item.files) }}"
+  with_items: "{{ _rpms.results }}"
+  no_log: True
+
+- name: Copy pre-built RPMs to master
+  copy: src={{ item.path }} dest="{{ master_rpms_dir }}"
+  with_items: "{{ rpms_list }}"

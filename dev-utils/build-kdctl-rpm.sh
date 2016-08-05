@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 set -e
 
-SOURCES_DIR=/vagrant/kuberdock-manage
+SOURCES_DIR=${1:-"./kuberdock-manage/"}
+DST=${2:-"./builds/"}
+
 VERSION=$(grep "Version:" $SOURCES_DIR/kuberdock-manage.spec | grep -oP "\d+\.\d+.*")
 BUILD_VER=$(grep "Release:" $SOURCES_DIR/kuberdock-manage.spec | sed -rn 's/.*: (.*)%\{\?dist\}(.*)/\1.el7\2/p' | tr -d '[:blank:]')
 NAME=kuberdock-manage
@@ -30,6 +32,6 @@ mv /tmp/$NAME-$VERSION.tar.bz2 /root/rpmbuild/SOURCES/
 echo "########## Starting the RPM build ##########"
 rpmbuild --define="dist .el7" --quiet -bb /root/rpmbuild/SPECS/kuberdock-manage.spec
 EXTRA_NAME=".noarch.rpm"
-cp -f /root/rpmbuild/RPMS/noarch/$NAME-$VERSION-$BUILD_VER$EXTRA_NAME /vagrant/kdctl.rpm
+cp -f /root/rpmbuild/RPMS/noarch/$NAME-$VERSION-$BUILD_VER$EXTRA_NAME "$DST/kdctl.rpm"
 echo "########## Done RPM build. Find kdctl.rpm ##########"
 cd $NOW

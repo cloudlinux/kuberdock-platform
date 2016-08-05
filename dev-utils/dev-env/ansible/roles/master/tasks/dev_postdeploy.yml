@@ -3,33 +3,16 @@
 - name: Disable stuff
   service: name=emperor.uwsgi state=stopped
 
-- name: Update nginx root
-  replace:
-    dest: /etc/nginx/conf.d/kuberdock-ssl.conf
-    regexp: "root /var/opt/kuberdock/kubedock/frontend/;"
-    replace: "root /vagrant/kubedock/frontend/;"
-    backup: yes
-  notify:
-    - restart nginx
-
-- name: Copy CEPH settings
-  file: src=/var/opt/kuberdock/kubedock/ceph_settings.py dest=/vagrant/kubedock/ceph_settings.py state=link
-  when: use_ceph
-
 - name: Create tmux session
   shell: tmux has-session -t '{{ tmux_session_name }}'  || tmux new-session -d -s '{{ tmux_session_name }}'
   tags:
       - tmux
 
 - name: Up wsgi
-  command: tmux new-window -t '{{ tmux_session_name }}' -n wsgi/celery \; send-keys "uwsgi --ini /etc/uwsgi/vassals/kuberdock.ini  --uid nginx --gid nginx --worker-reload-mercy 0 --python-autoreload 1 --reload-on-exception --chdir /vagrant --pythonpath /vagrant" C-m chdir=/vagrant
+  command: tmux new-window -t '{{ tmux_session_name }}' -n wsgi/celery \; send-keys "uwsgi --ini /etc/uwsgi/vassals/kuberdock.ini  --uid nginx --gid nginx --worker-reload-mercy 0 --python-autoreload 1 --chdir {{ master_kd_src_path }} --pythonpath {{ master_kd_src_path }}" C-m chdir="{{ master_kd_src_path }}"
   when: not no_wsgi
   tags:
       - tmux
-
-# AC-3560 Radical speedup by disabling it
-#- name: Prepare test env
-  #command: bash /vagrant/dev-utils/prepare_test_env.sh
 
 - seboolean: name=httpd_can_network_connect state=yes persistent=yes
   notify:
@@ -39,6 +22,6 @@
 
 - name: Increase session lifetime
   lineinfile:
-    dest: "{{ src_prefix }}/kubedock/settings.py"
+    dest: "{{ master_kd_src_path }}/kubedock/settings.py"
     regexp: ^SESSION_LIFETIME =
     line: "SESSION_LIFETIME = {{ 24*60*60 }}"

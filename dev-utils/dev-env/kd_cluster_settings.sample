@@ -105,3 +105,8 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # Add SSH public keys from ./dev-utils/dev-env/shared_pub_keys to each server
 # default: do not add anything
 #export KD_ADD_SHARED_PUB_KEYS=1
+
+# Set timezone
+# default: from host
+#export KD_TIMEZONE=Asia/Shanghai
+

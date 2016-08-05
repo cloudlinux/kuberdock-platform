@@ -1,5 +1,3 @@
-from itertools import imap
-
 import ipaddress
 import operator
 import sqlalchemy
@@ -11,9 +9,9 @@ from ..exceptions import APIError, NoFreeIPs
 from .podcollection import PodCollection
 from ..pods.models import IPPool, PodIP, ip_network, Pod
 from ..utils import atomic, ip2int, int2ip
-from ..validation import ValidationError, V, ippool_schema
+from ..validation import V, ippool_schema
 from ..nodes.models import Node
-from ..kapi.node import Node as K8SNode, NodeException
+from ..kapi.node import Node as K8SNode, NodeException, NodeNotFound
 from .lbpoll import LoadBalanceService
 from ..settings import AWS, KUBERDOCK_INTERNAL_USER
 
@@ -71,20 +69,25 @@ class IpAddrPool(object):
 
         node_name = data.get('node')
         node = Node.query.filter_by(hostname=node_name).first()
-        if node_name is not None and node is None:
-            raise APIError('Node is not exists ({0})'.format(node_name))
-        pool = IPPool(network=data['network'], node=node)
+        if node_name is not None:
+            if node is None:
+                raise APIError('Node does not exist ({})'.format(node_name))
 
-        auto_block = data.get('autoblock', '').replace(' ', '')
-        block_list = self.parse_autoblock(auto_block) if auto_block else []
-        pool.block_ip(block_list)
+        with atomic():
+            pool = IPPool(network=data['network'], node=node)
+            auto_block = data.get('autoblock', '').replace(' ', '')
+            block_list = self.parse_autoblock(auto_block) if auto_block else []
+            pool.block_ip(block_list)
+
+            if node_name and current_app.config['NONFLOATING_PUBLIC_IPS']:
+                try:
+                    node = K8SNode(hostname=node_name)
+                    node.increment_free_public_ip_count(len(pool.free_hosts()))
+                except NodeNotFound:
+                    raise APIError(
+                        'Node isn\'t deployed yet. Please try later.')
 
         pool.save()
-
-        if node_name and current_app.config['NONFLOATING_PUBLIC_IPS']:
-            node = K8SNode(hostname=node_name)
-            node.increment_free_public_ip_count(len(pool.free_hosts()))
-
         return pool.to_dict(page=1)
 
     @atomic(nested=False)
@@ -182,10 +185,15 @@ class IpAddrPool(object):
     def _delete_network(self, network, pool):
         free_ip_count = len(pool.free_hosts())
         IPPool.query.filter_by(network=network).delete()
-        if (pool.node is not None and
-                current_app.config['NONFLOATING_PUBLIC_IPS']):
-            node = K8SNode(hostname=pool.node.hostname)
-            node.increment_free_public_ip_count(-free_ip_count)
+
+        if pool.node and current_app.config['NONFLOATING_PUBLIC_IPS']:
+            try:
+                node = K8SNode(hostname=pool.node.hostname)
+                node.increment_free_public_ip_count(-free_ip_count)
+            except NodeNotFound:
+                # If node is missing in kubernetes it is safe to fail silently
+                # because ip counters are missing too
+                pass
 
     def _check_if_network_used_by_pod(self, network):
         pod_ip = PodIP.filter_by(network=network).first()

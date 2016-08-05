@@ -135,7 +135,8 @@ class Pod(BaseModelMixin, db.Model):
                 self.ip is not None)
 
     def delete(self):
-        self.name += '__' + ''.join(random.sample(string.lowercase + string.digits, 8))
+        self.name += '__' + ''.join(
+            random.sample(string.lowercase + string.digits, 8))
         self.status = 'deleted'
 
     # Such name to distinguish from non-db Pod's get_config() method

@@ -77,12 +77,12 @@ class PodState(BaseModelMixin, db.Model):
     @classmethod
     def save_state(cls, pod_id, event, hostname):
         """Creates new or updates existing one pod state entity.
-        If existing pod entities are closed and/or belongs to another host name,
-        then will be created new state. If there is one not closed state for
-        the same pod_id and host, then it will be updated.
+        If existing pod entities are closed and/or belongs to another host
+        name , then will be created new state. If there is one not closed state
+        for the same pod_id and host, then it will be updated.
         Returns created or updated PodState entity.
-
         """
+
         entity = cls.get_alive_state(pod_id, hostname)
         current_time = datetime.utcnow()
         if entity is None:
@@ -109,8 +109,7 @@ class PodState(BaseModelMixin, db.Model):
     @classmethod
     def get_alive_state(cls, pod_id, hostname):
         """Returns existing PodState entity which is not closed and belongs
-        to the given host name. If there is no such item, then will return None.
-
+        to the given host name. If there is no such item, then will return None
         """
         entity = cls.query.filter(
             cls.pod_id == pod_id,
@@ -182,11 +181,12 @@ class IpState(BaseModelMixin, db.Model):
             .update({'end_time': datetime.utcnow()})
 
     def to_dict(self):
-        return {'pod_id': self.pod_id,
-                'ip_address': str(ipaddress.ip_address(self.ip_address)),
-                'start': to_timestamp(self.start_time),
-                'end': to_timestamp(datetime.utcnow() if self.end_time is None else
-                                    self.end_time)}
+        return {
+            'pod_id': self.pod_id,
+            'ip_address': str(ipaddress.ip_address(self.ip_address)),
+            'start': to_timestamp(self.start_time),
+            'end': to_timestamp(datetime.utcnow() if self.end_time is None else
+                                self.end_time)}
 
 
 class PersistentDiskState(BaseModelMixin, db.Model):
@@ -212,15 +212,18 @@ class PersistentDiskState(BaseModelMixin, db.Model):
     def end(cls, user_id=None, pd_name=None):
         query = cls.query.filter(cls.pd_name == pd_name,
                                  cls.user_id == user_id,
-                                 cls.end_time == None)
+                                 cls.end_time.is_(None))
         query.update({'end_time': datetime.utcnow()})
         db.session.commit()
 
     def to_dict(self, exclude=()):
-        data = {'user_id': self.user_id, 'pd_name': self.pd_name, 'size': self.size,
-                'start': to_timestamp(self.start_time),
-                'end': to_timestamp(datetime.utcnow() if self.end_time is None else
-                                    self.end_time)}
+        data = {
+            'user_id': self.user_id,
+            'pd_name': self.pd_name,
+            'size': self.size,
+            'start': to_timestamp(self.start_time),
+            'end': to_timestamp(datetime.utcnow() if self.end_time is None else
+                                self.end_time)}
         for field in exclude:
             data.pop(field, None)
         return data

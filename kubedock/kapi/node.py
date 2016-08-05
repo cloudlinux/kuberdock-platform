@@ -11,6 +11,10 @@ class NodeException(Exception):
     pass
 
 
+class NodeNotFound(NodeException):
+    pass
+
+
 class NodeExceptionIPCounterMissing(NodeException):
     pass
 
@@ -46,7 +50,9 @@ class Node(object):
         """
         data = self.k8squery.get(['nodes', self.hostname])
         if data.get('status') == 'Failure':
-            raise NodeException('{} {}'.format(data['code'], data['reason']))
+            if data['code'] == 404:
+                raise NodeNotFound(data['message'])
+            raise NodeException('{} {}'.format(data['code'], data['message']))
         self._k8s_data = data
 
     def update_data_on_k8s(self):

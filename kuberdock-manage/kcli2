@@ -12,7 +12,7 @@ if __name__ == '__main__':
     requests.packages.urllib3.disable_warnings()
 
     from kdctllib.cli import access, settings, initialize
-    initialize(access.ADMIN, settings.KDCtlSettings)
+    initialize(access.USER, settings.KCliSettings)
 
     from kdctllib.cli.main import main
     main()

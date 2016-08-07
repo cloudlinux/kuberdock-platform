@@ -5,7 +5,7 @@
 Name:       kuberdock-manage
 Version:    1.0
 Release:    2%{?dist}
-Summary:    Kuberdock admin command line interface
+Summary:    Kuberdock command line utilities
 Group:      System Environment/Libraries
 License:    CloudLinux Commercial License
 URL:        http://www.cloudlinux.com
@@ -22,7 +22,7 @@ Requires: PyYAML
 
 
 %description
-Kuberdock admin utilities
+Kuberdock command line utilities
 
 
 %prep
@@ -37,6 +37,7 @@ rm -rf %{buildroot}
 install -d %{buildroot}%{_sysconfdir}/%{name}
 install -d %{buildroot}%{_bindir}
 install -m 0755 -D kdctl %{buildroot}%{_bindir}
+install -m 0755 -D kcli2 %{buildroot}%{_bindir}
 install -D -d -m 755 %{buildroot}%{python_sitelib}/kdctllib
 cp -r kdctllib/* %{buildroot}%{python_sitelib}/kdctllib
 

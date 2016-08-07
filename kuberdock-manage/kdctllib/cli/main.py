@@ -1,90 +1,108 @@
-from collections import namedtuple
+import context
+import kdclick
+from io import IO
+from kdclick.access import ALL
+from kdctl import KDCtl
+from subs import (images, ippool, nodes, pods, predefined_apps, pricing,
+                  pstorage, restore, system_settings, users)
+from ..api_client import APIError, UnknownAnswer
 
-import click
-
-from . import KDCtl, IO
-from ..kdclient.exceptions import APIError, UnknownAnswer
-
-ContextObj = namedtuple('ContextObj', ('kdctl', 'io'))
+settings = context.settings
 
 
-class MainGroup(click.Group):
+class ContextObj(object):
+    def __init__(self, kdctl=None, io=None):
+        """
+        :type kdctl: KDCtl
+        :type io: IO
+        """
+        self.kdctl = kdctl
+        self.io = io
+
+
+class Group(kdclick.Group):
     def invoke(self, ctx):
         try:
-            return super(MainGroup, self).invoke(ctx)
+            return super(Group, self).invoke(ctx)
         except APIError as e:
             ctx.obj.io.out_json(e.json, err=True)
             raise SystemExit(1)
         except UnknownAnswer as e:
             ctx.obj.io.out_json(e.as_dict(), err=True)
             raise SystemExit(1)
-        except click.ClickException:
+        except kdclick.ClickException:
             # caught in super().main()
             raise
         except Exception as e:
-            raise SystemExit('Error: ' + repr(e))
+            raise SystemExit('Error: %s' % e.message)
 
 
-@click.group(help='Kuberdock admin utilities.', cls=MainGroup,
-             context_settings={
-                 'help_option_names': ['-h', '--help']
-             })
-@click.option(
-    '-c', '--config-dir',
-    type=click.Path(
-        exists=True, dir_okay=True, writable=True,
-        resolve_path=True, allow_dash=True),
-    help='Config directory.')
-@click.option('-d', '--debug', is_flag=True, help='Turn on curl logging.')
-@click.option('-j', '--json-only', is_flag=True,
-              help='Display json data only, no any additional prompts')
-@click.pass_context
+@kdclick.group(help=settings.app_description, cls=Group,
+               context_settings={
+                   'help_option_names': ['-h', '--help']
+               })
+@kdclick.option('-c', '--config-dir',
+                type=kdclick.Path(dir_okay=True, writable=True,
+                                  resolve_path=True, allow_dash=True),
+                help='Config directory. Default is %s'
+                     % settings.working_directory)
+@kdclick.option('-d', '--debug', is_flag=True, help='Turn on curl logging.')
+@kdclick.option('-j', '--json-only', is_flag=True,
+                help='Display json data only, no any additional prompts')
+@kdclick.pass_context
 def main(ctx, config_dir, debug, json_only):
-    kdctl = KDCtl(config_dir, debug)
+    if config_dir is None:
+        config_dir = settings.working_directory
+    kdctl = KDCtl.create(config_dir, debug)
     kdctl.update_config()
     io = IO(json_only)
     ctx.obj = ContextObj(kdctl, io)
 
 
 @main.resultcallback()
-@click.pass_obj
+@kdclick.pass_obj
 def print_result(obj, result, **params):
     if result is None:
         pass
-    elif isinstance(result, dict):
-        obj.io.out_json(result)
     else:
-        obj.io.out_text(str(result))
+        obj.io.out_json(result)
 
 
-@main.command(help='Login to remote server.')
-@click.option('-u', '--username')
-@click.option('-p', '--password')
-@click.pass_obj
+@main.command(help='Login to remote server.', available_for=ALL)
+@kdclick.option('-u', '--username', prompt=True)
+@kdclick.option('-p', '--password', prompt=True, hide_input=True)
+@kdclick.pass_obj
 def login(obj, username, password):
-    if not username:
-        username = obj.io.prompt('Username')
-        password = obj.io.prompt('Password', hide_input=True)
-    elif not password:
-        password = obj.io.prompt('Password', hide_input=True)
     obj.kdctl.login(username, password)
 
 
-@main.group(help='Commands for config management.')
+@main.group(help='Commands for config management.', available_for=ALL)
 def config():
     pass
 
 
-@config.command(help='Show current config.')
-@click.pass_obj
+@config.command(help='Show current config.', available_for=ALL)
+@kdclick.pass_obj
 def show(obj):
     return obj.kdctl.config
 
 
-@config.command(help='Set config key.')
-@click.argument('key')
-@click.argument('value')
-@click.pass_obj
+@config.command(help='Set config key.', available_for=ALL)
+@kdclick.argument('key')
+@kdclick.argument('value')
+@kdclick.pass_obj
 def set(obj, key, value):
     obj.kdctl.update_config(**{key: value})
     return obj.kdctl.config
+
+
+main.add_command(images.images)
+main.add_command(ippool.ippool)
+main.add_command(nodes.nodes)
+main.add_command(pods.pods)
+main.add_command(predefined_apps.pa)
+main.add_command(pricing.pricing)
+main.add_command(pstorage.pstorage)
+main.add_command(restore.restore)
+main.add_command(system_settings.ss)
+main.add_command(users.users)

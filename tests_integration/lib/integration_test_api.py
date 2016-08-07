@@ -13,6 +13,8 @@ import vagrant
 import yaml
 from ipaddress import IPv4Network
 
+from exceptions import NonZeroRetCodeException, NodeWasNotRemoved, \
+    NodeIsNotPresent
 from tests_integration.lib.exceptions import StatusWaitException, \
     UnexpectedKubectlResponse, DiskNotFound, PodIsNotRunning, \
     IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
@@ -168,7 +170,7 @@ class KDIntegrationTestAPI(object):
                 "the existing one.")
 
         settings = '\n'.join('{}: {}'.format(k, v)
-                                 for k, v in self.kd_env.items())
+                             for k, v in self.kd_env.items())
         LOG.debug('Cluster settings: {}'.format(settings))
 
         if provider == OPENNEBULA:
@@ -204,6 +206,57 @@ class KDIntegrationTestAPI(object):
         sys_users = ['kuberdock-internal', 'admin']
         user_names = (u['username'] for u in out['data'])
         return (u for u in user_names if u not in sys_users)
+
+    def create_user(self, name, password, email, role="User", active="True",
+                    package="Standard package"):
+        name = self._escape_command_arg(name)
+        password = self._escape_command_arg(password)
+        email = self._escape_command_arg(email)
+        user = {
+            'active': active,
+            'email': email,
+            'package': package,
+            'rolename': role,
+            'username': name,
+            'password': password
+        }
+        self.kdctl("users create '{}'".format(json.dumps(user)))
+
+    def delete_user(self, name):
+        self.kdctl("users delete {}".format(self._escape_command_arg(name)))
+
+    def delete_all_kd_users(self):
+        for user in self.get_kd_users():
+            self.delete_user(user)
+
+    def add_predefined_application(self, name, file_path, validate=False,
+                                   origin=None):
+        """
+        Add predefined application from yaml-file into list of predefined
+        applications
+        :param file_path: path to the yaml-file on the master (not on the
+        host!)
+        """
+        name = self._escape_command_arg(name)
+        file_path = self._escape_command_arg(file_path)
+        cmd = "predefined-apps create --name {} -f {}".format(name, file_path)
+        if validate:
+            cmd += " --validate"
+        if origin:
+            cmd += " --origin '{}'".format(origin)
+        self.kdctl(cmd)
+
+    def get_predefined_applications(self):
+        _, out, _ = self.kdctl("predefined-apps list", out_as_dict=True)
+        data = out['data']
+        return [pa for pa in data]
+
+    def delete_predefined_application(self, id):
+        self.kdctl("predefined-apps delete {}".format(id))
+
+    def delete_all_predefined_applications(self):
+        for pa in self.get_predefined_applications():
+            self.delete_predefined_application(pa['id'])
 
     def delete_all_pods(self):
         for user in self.get_kd_users():
@@ -374,6 +427,42 @@ class KDIntegrationTestAPI(object):
         _, pvs, _ = self.kcli("drives list", out_as_dict=True, user=owner)
         return pvs
 
+    def delete_node(self, node_name, timeout=60):
+        self.manage("delete-node --hostname {}".format(node_name))
+        end = time.time() + timeout
+        while time.time() < end:
+            if not self.node_exists(node_name):
+                return
+        raise NodeWasNotRemoved("Node {} failed to be removed in past {} "
+                                "seconds".format(node_name, timeout))
+
+    def add_node(self, node_name, kube_type="Standard"):
+        self.manage(
+            'add-node --hostname {} --kube-type {} --do-deploy -t '
+            '--docker-options="--insecure-registry '
+            'dockerhub-proxy.cloudlinux.com:5000 '
+            '--registry-mirror=https://dockerhub-proxy.cloudlinux.com:5000'
+            '"'.format(node_name, kube_type)
+        )
+        self.manage("wait-for-nodes --nodes {}".format(node_name))
+
+    def node_exists(self, hostname):
+        _, out, _ = self.kdctl("nodes list", out_as_dict=True)
+        data = out['data']
+        for node in data:
+            if node['hostname'] == hostname:
+                return True
+        return False
+
+    def set_system_setting(self, setting_id, value):
+        self.kdctl("system-settings update {} {}".format(setting_id,
+                                                         value))
+
+    def get_system_setting(self, setting_id):
+        _, data, _ = self.kdctl("system-settings get {}".format(setting_id),
+                                out_as_dict=True)
+        return data['data']['value']
+
 
 class RESTMixin(object):
     # Expectations:
@@ -426,7 +515,7 @@ class KDPod(RESTMixin):
             return [
                 cls.Port(int(port['number']), port['protocol'])
                 for port in out['ports']
-            ]
+                ]
 
         ports = _get_image_ports(image)
         escaped_name = pipes.quote(name)

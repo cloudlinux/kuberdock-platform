@@ -43,6 +43,10 @@ class PodIsNotRunning(Exception):
     pass
 
 
+class NodeWasNotRemoved(Exception):
+    pass
+
+
 class IncorrectPodDescription(Exception):
     pass
 
@@ -52,4 +56,8 @@ class PodIsNotRunning(Exception):
 
 
 class CannotRestorePodWithMoreThanOneContainer(Exception):
+    pass
+
+
+class NodeIsNotPresent(Exception):
     pass

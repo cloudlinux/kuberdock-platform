@@ -12,7 +12,7 @@ All Service Pods Should Be Running
     Login Into The Kuberdock
     Go To The Users Page
     Login As "kuberdock-internal"
-    Pods View Should Be Open
+    "Pods" View Should Be Open
     All Pods Should Be "running"
     [Teardown]    Run Keywords    Exit Login As Mode
     ...                           Logout

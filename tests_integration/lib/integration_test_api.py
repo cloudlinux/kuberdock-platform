@@ -72,6 +72,7 @@ class KDIntegrationTestAPI(object):
             "KD_PD_NAMESPACE",
             "KD_NONFLOATING_PUBLIC_IPS",
             "KD_NEBULA_TEMPLATE_ID",
+            "KD_NEBULA_RHOST_TEMPLATE_ID"
             "KD_NODE_TYPES",
         ]
 

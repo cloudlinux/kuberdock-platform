@@ -53,8 +53,12 @@ export VAGRANT_CWD=dev-utils/dev-env/
 #export KD_ONE_PUB_IPS="192.168.33.200,192.168.33.201,192.168.33.202"
 
 # Custom OpenNebula template ID
-# default: 84
+# default: calculated basing on KD_NEBULA_TEMPLATE
 #export KD_NEBULA_TEMPLATE_ID=100
+
+# Custom OpenNebula template ID for registered hosts
+# default: 0 - non-valid value. Must be set when KD_RHOSTS_COUNT>0.
+#export KD_NEBULA_RHOST_TEMPLATE_ID=226
 
 # ====== Env group ======
 

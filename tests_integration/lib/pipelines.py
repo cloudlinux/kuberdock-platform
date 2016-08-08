@@ -232,11 +232,25 @@ class NetworkingPipeline(Pipeline):
         # number to 2
         'KD_NODES_COUNT': '1',
         'KD_RHOSTS_COUNT': '1',
+        # rhost: use the same template as for master/nodes - cent7
+        'KD_NEBULA_RHOST_TEMPLATE_ID': os.environ.get('KD_NEBULA_TEMPLATE_ID')
     }
 
     def set_up(self):
         super(NetworkingPipeline, self).set_up()
         self.cluster.recreate_routable_ip_pool()
+
+
+class NetworkingRhostCent6(NetworkingPipeline):
+    NAME = 'networking_rhost_cent6'
+    ENV = {
+        # TODO: AC-3584 When the isolation rules are fixed so pods on
+        # different nodes correctly communicate with each other raise that
+        # number to 2
+        'KD_NODES_COUNT': '1',
+        'KD_RHOSTS_COUNT': '1',
+        # KD_NEBULA_RHOST_TEMPLATE_ID set in kuberdock-ci-env points to cent6
+    }
 
 
 class NonfloatingPipeline(Pipeline):

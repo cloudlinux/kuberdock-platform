@@ -1,3 +1,5 @@
+---
+
 - name: Create deploy directory on remote host (rhost)
   file: path="{{ rhost_deploy_path }}" state=directory
 

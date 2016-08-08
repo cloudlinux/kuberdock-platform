@@ -1,10 +1,20 @@
 import ConfigParser
+import copy
+import json
+from StringIO import StringIO
 
-from fabric.api import run
-from kubedock.updates import helpers
+from fabric.operations import put, run
+
 from kubedock import settings
+from kubedock.kapi import helpers as kapi_helpers
+from kubedock.kapi.podcollection import PodCollection
+from kubedock.pods import Pod
+from kubedock.updates import helpers
+from kubedock.users import User
+from kubedock.utils import POD_STATUSES
+from node_network_plugin import PLUGIN_PATH, KD_CONF_PATH
 
-K8S_VERSION = '1.2.4-1'
+K8S_VERSION = '1.2.4-2'
 K8S = 'kubernetes-{name}-{version}.el7.cloudlinux'
 K8S_NODE = K8S.format(name='node', version=K8S_VERSION)
 SA_KEY = "/etc/pki/kube-apiserver/serviceaccount.key"
@@ -142,6 +152,49 @@ def _downgrade_k8s_node(upd, with_testing):
     run("sed -i '/^KUBE_PROXY_ARGS/ {s|--proxy-mode userspace||}' /etc/kubernetes/proxy")
 
 
+def _update_node_network_plugin(upd, env):
+    upd.print_log('Update network plugin...')
+    put('/var/opt/kuberdock/node_network_plugin.sh',
+        PLUGIN_PATH + 'kuberdock')
+    put('/var/opt/kuberdock/node_network_plugin.py',
+        PLUGIN_PATH + 'kuberdock.py')
+
+    kd_conf = {
+        'nonfloating_public_ips':
+            'yes' if settings.NONFLOATING_PUBLIC_IPS else 'no',
+        'master': settings.MASTER_IP,
+        'node': env.host_string,
+        'token': User.get_internal().get_token()
+    }
+    put(StringIO(json.dumps(kd_conf)), KD_CONF_PATH)
+
+
+def _update_pv_mount_paths(upd):
+    """Migration k8s 1.1.3 -> 1.2.4 requires removing :Z from mount paths"""
+    # Patch RC specs
+    upd.print_log("Updating Pod PV mount paths")
+
+    def remove_trailing_z(pod_config):
+        updated_config = copy.deepcopy(pod_config)
+        for container in updated_config['containers']:
+            for mount in container['volumeMounts']:
+                mp = mount['mountPath']
+                if mp.endswith(":z") or mp.endswith(":Z"):
+                    mount['mountPath'] = mount['mountPath'][:-2]
+        return updated_config
+
+    pc = PodCollection()
+    query = Pod.query.filter(Pod.status != POD_STATUSES.deleted)
+    for dbpod in query:
+        updated_config = remove_trailing_z(dbpod.get_dbconfig())
+
+        # Update config
+        kapi_helpers.replace_pod_config(dbpod, updated_config)
+        pc.patch_running_pod(dbpod.id, {'spec': updated_config}, restart=True)
+
+        upd.print_log(u'Successfully updated pod: {}'.format(dbpod.name))
+
+
 def upgrade(upd, with_testing, *args, **kwargs):
     _upgrade_k8s_master(upd, with_testing)
     service, res = helpers.restart_master_kubernetes()
@@ -155,6 +208,9 @@ def upgrade(upd, with_testing, *args, **kwargs):
     res = helpers.restart_service(settings.KUBERDOCK_SERVICE)
     if res != 0:
         raise helpers.UpgradeError('Failed to restart KuberDock')
+
+    helpers.upgrade_db()
+    _update_pv_mount_paths(upd)
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
@@ -170,6 +226,7 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
     res = helpers.restart_service(settings.KUBERDOCK_SERVICE)
     if res != 0:
         raise helpers.UpgradeError('Failed to restart KuberDock')
+    helpers.downgrade_db(revision='3c832810a33c')
 
 
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
@@ -178,6 +235,8 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     if res != 0:
         raise helpers.UpgradeError('Failed to restart {0}. {1}'
                                    .format(service, res))
+
+    _update_node_network_plugin(upd, env)
 
 
 def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):

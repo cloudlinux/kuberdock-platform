@@ -1,9 +1,7 @@
 import ConfigParser
-from StringIO import StringIO
 import os
 from abc import ABCMeta
 from time import sleep
-import json
 
 import requests
 from contextlib2 import suppress
@@ -24,8 +22,6 @@ from kubedock.updates.helpers import restart_service, remote_install
 from kubedock.users import User
 from kubedock.utils import POD_STATUSES, randstr
 from kubedock.validation import check_internal_pod_data
-from node_network_plugin import KD_CONF_PATH
-from node_network_plugin import PLUGIN_PATH
 from node_network_plugin import PUBLIC_IP_POSTROUTING_RULE
 
 
@@ -47,17 +43,6 @@ class _Update(object):
     @classmethod
     def downgrade_node(cls, upd, with_testing, env, error):
         pass
-
-
-class _UpgradeDB(_Update):
-    @classmethod
-    def upgrade(cls, upd, with_testing):
-        helpers.upgrade_db()
-
-    @classmethod
-    def downgrade(cls, upd, with_testing, error):
-        helpers.downgrade_db(revision='3dc83a81f385')
-        helpers.downgrade_db(revision='3c832810a33c')
 
 
 class _UpdatePermissions(_Update):
@@ -213,15 +198,6 @@ class _U150(_Update):
 
 
 class _U151(_Update):
-    KUBERNETES_PACKAGES = [
-        'kubernetes-client-1.2.4-2.el7.cloudlinux',
-        'kubernetes-node-1.2.4-2.el7.cloudlinux'
-    ]
-
-    OLD_KUBERNETES_PACKAGES = [
-        'kubernetes-client-1.2.4-1.el7.cloudlinux',
-        'kubernetes-node-1.2.4-1.el7.cloudlinux'
-    ]
 
     @classmethod
     def add_kdtools_to_master(cls, upd):
@@ -261,20 +237,6 @@ class _U151(_Update):
         remote_install('kdtools', testing=with_testing)
 
     @classmethod
-    def _upgrade_kubernetes(cls, with_testing):
-        helpers.remote_install(' '.join(cls.KUBERNETES_PACKAGES), with_testing)
-        service, res = helpers.restart_node_kubernetes()
-        cls._raise_on_failure(service, res)
-
-    @classmethod
-    def _downgrade_kubernetes(cls, with_testing):
-        helpers.remote_install(' '.join(cls.OLD_KUBERNETES_PACKAGES),
-                               with_testing,
-                               action='downgrade')
-        service, res = helpers.restart_node_kubernetes()
-        cls._raise_on_failure(service, res)
-
-    @classmethod
     def _raise_on_failure(cls, service, res):
         if res != 0:
             raise helpers.UpgradeError('Failed to restart {0}. {1}'
@@ -284,43 +246,17 @@ class _U151(_Update):
     def upgrade(cls, upd, *args, **kwargs):
         cls.add_kdtools_to_master(upd)
 
-        # merged from 00155_update.py
-        service, res = helpers.restart_master_kubernetes()
-        cls._raise_on_failure(service, res)
-
     @classmethod
     def downgrade(cls, *args, **kwargs):
-        # merged from 00155_update.py
-        service, res = helpers.restart_master_kubernetes()
-        cls._raise_on_failure(service, res)
+        pass
 
     @classmethod
     def upgrade_node(cls, upd, with_testing, env, *args, **kwargs):
         cls.add_kdtools_to_node(with_testing)
 
-        # merged from 00155_update.py
-        upd.print_log('Upgrading kubernetes ...')
-        cls._upgrade_kubernetes(with_testing)
-        upd.print_log('Update network plugin...')
-        put('/var/opt/kuberdock/node_network_plugin.sh',
-            PLUGIN_PATH + 'kuberdock')
-        put('/var/opt/kuberdock/node_network_plugin.py',
-            PLUGIN_PATH + 'kuberdock.py')
-
-        kd_conf = {
-            'nonfloating_public_ips':
-                'yes' if settings.NONFLOATING_PUBLIC_IPS else 'no',
-            'master': settings.MASTER_IP,
-            'node': env.host_string,
-            'token': User.get_internal().get_token()
-        }
-        put(StringIO(json.dumps(kd_conf)), KD_CONF_PATH)
-
     @classmethod
     def downgrade_node(cls, upd, with_testing, *args, **kwargs):
-        # merged from 00155_update.py
-        upd.print_log('Downgrading kubernetes ...')
-        cls._downgrade_kubernetes(with_testing)
+        pass
 
 
 class _U152(_Update):
@@ -581,7 +517,6 @@ class _U168(_Update):
 
 
 updates = [
-    _UpgradeDB,
     _UpdatePermissions,
     _U149,
     _U150,

@@ -10,16 +10,16 @@ from tests_integration.lib.pipelines import pipeline
 def setup_pods(cluster):
     pods = {
         'iso1': cluster.create_pod(
-            'sysradium/cloudlinux', 'iso1', owner='test_user',
+            'hub.kuberdock.com/nginx', 'iso1', owner='test_user',
             open_all_ports=True),
         'iso2': cluster.create_pod(
-            'sysradium/cloudlinux', 'iso2', owner='alt_test_user',
+            'hub.kuberdock.com/nginx', 'iso2', owner='alt_test_user',
             open_all_ports=True),
         'iso3': cluster.create_pod(
-            'sysradium/cloudlinux', 'iso3', owner='test_user',
+            'hub.kuberdock.com/nginx', 'iso3', owner='test_user',
             open_all_ports=False),
         'iso4': cluster.create_pod(
-            'sysradium/cloudlinux', 'iso4', owner='test_user',
+            'hub.kuberdock.com/nginx', 'iso4', owner='test_user',
             open_all_ports=False),
     }
     for pod in pods.values():
@@ -84,6 +84,7 @@ def container_udp_server(pod, container_id):
 # Should be fixed in AC-4158
 # @pipeline('networking_rhost_cent6')
 @pipeline('networking')
+@pipeline('networking_upgraded')
 def test_network_isolation_from_user_container(cluster):
     # type: (KDIntegrationTestAPI) -> None
     user1_pods = ['iso1', 'iso3', 'iso4']

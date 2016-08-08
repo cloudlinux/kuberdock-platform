@@ -5,3 +5,5 @@
 
 - name: Create IP pool
   shell: python "{{ master_kd_src_path }}/manage.py" create-ip-pool -s "{{ network | ipaddr('net') }}" -i {{ public_ips }}
+  tags:
+    - ippool

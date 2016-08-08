@@ -1,5 +1,4 @@
 ---
-
 - name: Setup common tasks
   hosts: all
   become: yes

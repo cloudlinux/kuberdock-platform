@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import zipfile
+import urllib
 
 logger = logging.getLogger("kd_master_backup")
 logger.setLevel(logging.INFO)
@@ -349,7 +350,10 @@ def do_restore(backup_file, skip_errors, **kwargs):
     subprocess.check_call(["systemctl", "start", "etcd"])
     time.sleep(5)
     subprocess.check_call(["systemctl", "start", "kube-apiserver"])
+
     subprocess.check_call(["systemctl", "restart", "nginx"])
+    subprocess.check_call(["systemctl", "restart", "emperor.uwsgi"])
+
     logger.info('Restore finished')
 
 

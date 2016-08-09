@@ -66,6 +66,7 @@ def config_ansible(ansible, nodesCount, rhostsCount)
         "pd_namespace" => ENV['KD_PD_NAMESPACE'],
 
         "node_types" => ENV['KD_NODE_TYPES'],
+        "timezone" => ENV['KD_TIMEZONE'],
     }
 
     # Clean undefined vars

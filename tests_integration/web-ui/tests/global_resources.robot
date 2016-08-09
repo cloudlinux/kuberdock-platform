@@ -11,8 +11,9 @@ Library           Utils
 ${SERVER}                   192.168.33.114
 ${BROWSER}                  Chrome
 ${ADMIN PASSWORD}           admin
-${TIMEOUT}                  8 s
-${MAIN URL}                 http://${SERVER}/
+${TIMEOUT}                  10 s
+${DELAY}                    0
+${MAIN URL}                 https://${SERVER}/
 
 *** Keywords ***
 Open Browser To Kuberdock Page
@@ -23,27 +24,18 @@ Login Page Should Be Open
     Wait Until Page Contains Element    jquery=button:contains(Log in)
 
 
-Input Username "${username}"
-    Input Text    css=#login-form-username-field    ${username}
-
-Input Password "${password}"
-    Input Text    css=#login-form-password-field    ${password}
-
-
 Click
-    [Arguments]    ${locator}    ${timeout}=${TIMEOUT}
+    [Arguments]    ${locator}    ${delay}=${DELAY}    ${timeout}=${TIMEOUT}
     [Documentation]
-    ...    Wait until element is visible and animations are finished then click
+    ...  Wait until element is visible and animations are finished then click
+    Sleep    ${delay}
     Wait Until Keyword Succeeds    ${timeout}    0.1s    Click Element    ${locator}
 
 
-Submit Credentials
-    Click Button    css=button.login
-
 Login into the Kuberdock as "${username}" with password "${password}"
-    Input Username "${username}"
-    Input Password "${password}"
-    Submit Credentials
+    Input Text    css=#login-form-username-field    ${username}
+    Input Text    css=#login-form-password-field    ${password}
+    Click    css=button.login
 
 Login into the Kuberdock
     Login into the Kuberdock as "admin" with password "${ADMIN PASSWORD}"
@@ -54,41 +46,56 @@ Exit Login As Mode
     Breadcrumb Should Contain "Users"
 
 Logout
-    Click    jquery=.profile-menu a
-    Click    jquery=.navbar span:contains(Logout)
+    Click    jquery=.profile-menu > a    1 s
+    Click    jquery=.profile-menu span:contains(Logout)    1 s
     Login Page Should Be Open
 
 
 Breadcrumb Should Contain "${text}"
     Wait Until Page Contains Element    jquery=ul.breadcrumb:contains("${text}")
 
+Breadcrumb Should Contain Button "${text}"
+    Page Should Contain Element    jquery=.breadcrumbs .control-group:contains("${text}")
+
+Breadcrumb Should Not Contain Button "${text}"
+    Page Should Not Contain Element    jquery=.breadcrumbs .control-group:contains("${text}")
+
 "${name}" View Should Be Open
     Breadcrumb Should Contain "${name}"
+    Wait Until Keyword Succeeds    ${timeout}    0.1
+    ...  Element Should Be Visible    jquery=.profile-menu > a    menu in header was not fully rendered
+
+Main View Should Be Open
+    ${nodes}=    Run Keyword And Return Status    "Nodes" View Should Be Open
+    Run Keyword Unless    ${nodes}    "Pods" View Should Be Open
 
 
 Page Should Not Contain Error Messages
-    Page Should Not Contain Element    jquery=.notify-msg
+    Page Should Not Contain Element    jquery=.notifyjs-container
+
+Page Should Contain Inline Error Message "${text}"
+    Wait Until Page Contains Element    jquery=.notifyjs-container span:contains("${text}")
 
 Page Should Contain Error Message "${text}"
-    Wait Until Page Contains Element    jquery=.notify-msg:contains("${text}")
+    Wait Until Page Contains Element    jquery=.notifyjs-container:contains("${text}")
 
 Page Should Contain Only Error Message "${text}"
     Page Should Contain Error Message "${text}"
-    ${elements}=    Get Webelements    jquery=.notify-msg
+    ${elements}=    Get Webelements    jquery=.notifyjs-container
     Length Should Be    ${elements}    1    There is more than one error message.
     Page Should Not Contain Element    jquery=.notify-multi    There is more than one error message.
 
 Close Error Message "${text}"
-    Click    jquery=.notify-msg:contains("${text}") ~ .notify-close
-    Wait Until Page Does Not Contain Element    jquery=.notify-msg:contains("${text}")
+    Click    jquery=.notifyjs-container:contains("${text}") ~ .notify-close
+    Wait Until Page Does Not Contain Element    jquery=.notifyjs-container:contains("${text}")
 
 Click "${button}" In Modal Dialog
     Click    jquery=.modal.in button:contains("${button}")
 
 
 Go to the Users page
-    Click    jquery=.navbar a:contains(Administration)
-    Click    jquery=.navbar a:contains(Users)
+    Click    jquery=.navbar a:contains(Administration)    1 s
+    Click    jquery=.navbar a:contains(Users)    1 s
     "Users" View Should Be Open
 
 Go to the Predefined Apps page

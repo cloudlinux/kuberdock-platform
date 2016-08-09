@@ -68,3 +68,19 @@ class Utils(object):
         map(self.selenium.click_element, elements)
         self.selenium.wait_until_page_does_not_contain_element(
             'css=.notify-close')
+
+    def delete_user(self, username):
+        """Go through all pages on the "Users" view, find and delete user."""
+        delete_button = (
+            'jquery=#userslist-table tr td:first-of-type:contains("{0}") '
+            '~ td.actions .deleteUser'.format(username))
+        while True:
+            try:
+                self.selenium.page_should_contain_element(delete_button)
+            except Exception:
+                BuiltIn().run_keyword(
+                    'Click', 'jquery=.pager li:contains(Next):not(.disabled)')
+            else:
+                BuiltIn().run_keyword('Click', delete_button)
+                BuiltIn().run_keyword('Click "Delete" In Modal Dialog')
+                break

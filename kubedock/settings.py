@@ -18,11 +18,19 @@ LOG = logging.getLogger(__name__)
 def is_production_pkg():
     """
     Checks that current Kuberdock package is one of stable KD releases based
-    on package signature (Any public release signed with key above)
+    on package signature (Any public release signed with CL key) and
+    some folder existence
     :return: Bool
     """
     cloudlinux_sig_key = '8c55a6628608cb71'
     try:
+        # This check is needed for cases when developer install signed
+        # release package and then modify sources with
+        # sshfs/server-side_git/IDE_remote_deploy/etc.
+        # This folder is never exists in production package/env so we can rely
+        # on this check for most such cases
+        if os.path.exists('/var/opt/kuberdock/dev-utils'):
+            return False
         import rpm
         from rpmUtils.miscutils import getSigInfo
         ts = rpm.ts()

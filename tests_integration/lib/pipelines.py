@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import random
@@ -47,7 +48,7 @@ class Pipeline(object):
             'KD_NODE_MEMORY': '3048',
             'KD_LICENSE': 'patch',
             'KD_TESTING_REPO': 'true',
-            'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch',
+            'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch'
         }
         self.name = name
         self.settings = merge_dicts(self.defaults, getattr(self, 'ENV', {}))
@@ -158,7 +159,7 @@ class Pipeline(object):
 
     def set_up(self):
         """
-        Perform a set up for test before running it. Be default it performs a
+        Perform a set up for test before running it. By default it performs a
         cluster cleanup
         """
         self.cleanup()
@@ -287,6 +288,17 @@ class FailConditionsPipeline(Pipeline):
         'KD_NODES_COUNT': '1',
     }
 
+
+class PodRestorePipeline(Pipeline):
+    NAME = 'pod_restore'
+    ROUTABLE_IP_COUNT = 2
+    ENV = {
+        'KD_NODES_COUNT': '1',
+    }
+
+    def cleanup(self):
+        super(PodRestorePipeline, self).cleanup()
+        self.cluster.recreate_routable_ip_pool()
 
 pipelines = defaultdict(list)
 

@@ -13,10 +13,11 @@ import yaml
 from ipaddress import IPv4Network
 
 from tests_integration.lib.exceptions import StatusWaitException, \
-    UnexpectedKubectlResponse, DiskNotFoundException, PodIsNotRunning
+    UnexpectedKubectlResponse, DiskNotFound, PodIsNotRunning, \
+    IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
 from tests_integration.lib.integration_test_utils import \
     ssh_exec, assert_eq, assert_in, kube_type_to_int, wait_net_port, \
-    merge_dicts, retry
+    merge_dicts, retry, kube_type_to_str
 
 OPENNEBULA = "opennebula"
 VIRTUALBOX = "virtualbox"
@@ -122,6 +123,12 @@ class KDIntegrationTestAPI(object):
 
         self._ssh_connections[host] = ssh
         return ssh
+
+    def get_sftp(self, host, timeout=10):
+        ssh = self.get_ssh(host)
+        sftp = ssh.open_sftp()
+        sftp.get_channel().settimeout(timeout)
+        return sftp
 
     def recreate_routable_ip_pool(self):
         self.delete_all_ip_pools()
@@ -242,9 +249,8 @@ class KDIntegrationTestAPI(object):
         assert_in(kube_type, ("Tiny", "Standard", "High memory"))
         assert_in(restart_policy, ("Always", "Never", "OnFailure"))
 
-        pod = self._create_pod_object(image, kube_type, kubes, name,
-                                      open_all_ports, restart_policy, pvs,
-                                      owner)
+        pod = KDPod.create(self, image, name, kube_type, kubes, open_all_ports,
+                           restart_policy, pvs, owner)
         if start:
             pod.start()
         if wait_for_status:
@@ -255,16 +261,16 @@ class KDIntegrationTestAPI(object):
             pod.healthcheck()
         return pod
 
-    def _create_pod_object(self, image, kube_type, kubes, name, open_all_ports,
-                           restart_policy, pvs, owner='test_user'):
-        """
-        Given an image name creates an instance of a corresponding pod class
-        """
-        pod_classes = {c.SRC: c for c in KDPod.__subclasses__()}
+    def restore_pod(self, user, file_path=None, pod_description=None,
+                    pv_backups_location=None, pv_backups_path_template=None,
+                    flags=None, return_as_json=False, wait_for_status=None):
 
-        this_pod_class = pod_classes.get(image, KDPod)
-        return this_pod_class(self, image, name, kube_type, kubes,
-                              open_all_ports, restart_policy, pvs, owner)
+        pod = KDPod.restore(self, user, file_path, pod_description,
+                            pv_backups_location, pv_backups_path_template,
+                            flags, return_as_json)
+        if wait_for_status:
+            pod.wait_for_status(wait_for_status)
+        return pod
 
     def preload_docker_image(self, image, node=None):
         """
@@ -396,30 +402,124 @@ class KDPod(RESTMixin):
         self.restart_policy = restart_policy
         self.public_ip = None
         self.owner = owner
-        self.ports = self._get_ports(image)
-        self.pv_cmd = ''
+        self.pvs = pvs
+        self.open_all_ports = open_all_ports
+        self.ports = None
+
+    @classmethod
+    def create(cls, cluster, image, name, kube_type, kubes,
+               open_all_ports, restart_policy, pvs, owner):
+        """
+        Create new pod in kuberdock
+        :param open_all_ports: if true, open all ports of image (does not mean
+        these are Public IP ports, depends on a cluster setup)
+        :return: object via which Kuberdock pod can be managed
+        """
+
+        def _get_image_ports():
+            _, out, _ = cluster.kcli(
+                'image_info {}'.format(image), out_as_dict=True,
+                user=owner)
+            return [int(p['number']) for p in out['ports']]
+
+        ports = _get_image_ports()
+        escaped_name = pipes.quote(name)
+        pv_cmd = ""
         if pvs is not None:
             # TODO: when kcli allows using multiple PVs for single POD
             # (AC-3722), update the way of pc_cmd creation
-            self.pv_cmd = "-s {} -p {} --mount-path {}".format(
+            pv_cmd = "-s {} -p {} --mount-path {}".format(
                 pvs[0].size, pvs[0].name, pvs[0].mount_path)
-        pv_cmd = self.pv_cmd
-        escaped_name = self.escaped_name
 
-        # Does not mean these are Public IP ports, depends on a cluster setup.
-        self.open_all_ports = open_all_ports
         ports_arg = ''
         if open_all_ports:
-            pub_ports = ",".join(["+{0}".format(p) for p in self.ports])
+            pub_ports = ",".join(["+{0}".format(p) for p in ports])
             ports_arg = "--container-port {0}".format(pub_ports)
-
-        self.cluster.kcli(
+        cluster.kcli(
             "create -C {image} --kube-type {kube_type} --kubes {kubes} "
             "--restart-policy {restart_policy} {ports_arg} {pv_cmd} "
-            "{escaped_name}".format(
-                **locals()), user=self.owner)
-        self.cluster.kcli(
-            "save {0}".format(self.escaped_name), user=self.owner)
+            "{escaped_name}".format(**locals()), user=owner)
+        cluster.kcli(
+            "save {0}".format(escaped_name), user=owner)
+        this_pod_class = cls._get_pod_class(image)
+        return this_pod_class(cluster, image, name, kube_type, kubes,
+                              open_all_ports, restart_policy, pvs, owner)
+
+    @classmethod
+    def restore(cls, cluster, user, file_path=None, pod_description=None,
+                pv_backups_location=None, pv_backups_path_template=None,
+                flags=None, return_as_json=False):
+        """
+        Restore pod using "kdctl restore pod" command
+        :return: instance of KDPod object.
+        """
+
+        def get_image(file_path=None, pod_description=None):
+            if pod_description == None:
+                _, pod_description, _ = cluster.ssh_exec("master",
+                                                      "cat {}".format(
+                                                          file_path))
+            pod_description = json.loads(pod_description)
+            container = pod_description["containers"]
+            if len(container) > 1:
+                # In current implementation of KDPod class we cannot
+                # manage consisting of more than on container, therefore
+                # creation of such container is prohibited
+                raise CannotRestorePodWithMoreThanOneContainer(
+                    "Unfortunately currently we cannot restore pod with more "
+                    "than one container. KDPod class should be overwritten to "
+                    "allow correct managing such containers to nake this "
+                    "operation possible."
+                )
+            return pipes.quote(container[0]["image"])
+
+        owner = pipes.quote(user)
+        if return_as_json:
+            cmd = "-j "
+        else:
+            cmd = ""
+        if file_path and pod_description:
+            raise IncorrectPodDescription(
+                "Only file_path OR only pod_description should be "
+                "privoded. Hoverwer provided both parameters."
+            )
+        elif file_path:
+            image = get_image(file_path=file_path)
+            cmd += "restore pod -f {}" \
+                .format(file_path)
+        elif pod_description:
+            image = get_image(pod_description=pod_description)
+            cmd += "restore pod \'{}\'" \
+                .format(pod_description)
+        else:
+            raise IncorrectPodDescription(
+                "Either file_path or pod_description should not be empty")
+
+        if pv_backups_location is not None:
+            cmd += " --pv-backups-location={}".format(pv_backups_location)
+
+        if pv_backups_path_template is not None:
+            cmd += " --pv-backups-path-template={}".format(
+                pv_backups_path_template)
+
+        if flags is not None:
+            cmd += " {}".format(flags)
+        cmd += " --owner {}".format(owner)
+        _, pod_description, _ = cluster.kdctl(cmd, out_as_dict=True)
+        data = pod_description['data']
+        name = data['name']
+        kube_type = kube_type_to_str(data['kube_type'])
+        restart_policy = data['restartPolicy']
+        this_pod_class = cls._get_pod_class(image)
+        pod = this_pod_class(cluster, "", name, kube_type, "", True,
+                             restart_policy, "", owner)
+        pod.public_ip = data['public_ip']
+        return pod
+
+    @classmethod
+    def _get_pod_class(cls, image):
+        pod_classes = {c.SRC: c for c in cls.__subclasses__()}
+        return pod_classes.get(image, cls)
 
     def _get_ports(self, image):
         _, out, _ = self.cluster.kcli(
@@ -501,6 +601,9 @@ class KDPod(RESTMixin):
             "describe pods {}".format(self.escaped_name), out_as_dict=True,
             user=self.owner)
         return out
+    @property
+    def pod_id(self):
+        return self.get_spec()['id']
 
     def docker_exec(self, container_id, command):
         if self.status != 'running':
@@ -598,8 +701,8 @@ class PV(object):
         # TODO: it can be removed together with exception
         pv = self._get_by_name(self.name)
         if not pv:
-            raise DiskNotFoundException("Disk {0} doesn't exist".
-                                        format(self.name))
+            raise DiskNotFound("Disk {0} doesn't exist".
+                               format(self.name))
         self.size = pv['size']
 
     def _get_by_name(self, name):

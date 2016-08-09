@@ -4,6 +4,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         'tpl!app_data/ippool/templates/subnets/item.tpl',
         'tpl!app_data/ippool/templates/subnets/list.tpl',
 
+        'tpl!app_data/ippool/templates/subnet_ips/empty.tpl',
         'tpl!app_data/ippool/templates/subnet_ips/item.tpl',
         'tpl!app_data/ippool/templates/subnet_ips/list.tpl',
 
@@ -16,6 +17,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 subnetsListItemTpl,
                 subnetsListTpl,
 
+                subnetIpsEmptyTpl,
                 subnetIpsListItemTpl,
                 subnetIpsListTpl,
 
@@ -49,23 +51,21 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         templateHelpers: function(){
             var forbidDeletionMsg,
                 allocation = this.model.get('allocation'),
-                hasBusyIp = _.any(allocation.map(function(i){
-                    return i[2];}), function(i){return i === 'busy';}
-                );
+                busyIPs = _.where(allocation, {2: 'busy'});
 
-            if (!hasBusyIp){
+            if (!busyIPs.length){
                 forbidDeletionMsg = null;
             } else {
-                forbidDeletionMsg = 'Сannot be deleted, because '
-                    + (allocation.length === 1
-                            ? 'pod "' + _.pluck(allocation, '1') + '" use this subnet'
-                            : 'pods: "' + _.pluck(allocation, '1').join('", "')
-                                        + '" use this subnet');
+                var pods = _.pluck(busyIPs, 1);
+                forbidDeletionMsg = 'Сannot be deleted, because ' +
+                    (pods.length === 1
+                        ? 'pod "' + pods[0] + '" uses this subnet'
+                        : 'pods: "' + pods.join('", "') + '" use this subnet');
             }
 
             return {
-                forbidDeletionMsg : forbidDeletionMsg,
-                isFloating : this.isFloating
+                forbidDeletionMsg: forbidDeletionMsg,
+                isFloating: this.isFloating
             };
         },
 
@@ -86,10 +86,12 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                         buttonOk: function(){
                             utils.preloader.show();
                             that.model.destroy({wait: true})
-                                .success(utils.notifyWindow('Subnet "' + network
-                                            + '" deleted', 'success'))
                                 .always(utils.preloader.hide)
-                                .fail(utils.notifyWindow);
+                                .fail(utils.notifyWindow)
+                                .success(function(){
+                                    utils.notifyWindow('Subnet "' + network +
+                                                       '" deleted', 'success');
+                                });
 
                         },
                         buttonCancel: true
@@ -175,11 +177,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                         var ipArray = cep.split(".");
                         for (var i in ipArray){
                             if (ipArray[i].indexOf('/') > 0){
-                                if ( parseInt(ipArray[i].split('/')[1]) > 32){
+                                if (parseInt(ipArray[i].split('/')[1], 10) > 32){
                                     ipArray[i] = ipArray[i].split('/')[0] + '/' + 32;
                                 }
-                            } else if(ipArray[i] !== "" && parseInt(ipArray[i]) > 255){
-                                ipArray[i] =  '255';
+                            } else if (ipArray[i] !== "" && parseInt(ipArray[i], 10) > 255){
+                                ipArray[i] = '255';
                             }
                         }
                         var resultingValue = ipArray.join(".");
@@ -209,11 +211,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     utils.notifyWindow('Wrong IP-address');
                     that.ui.network.addClass('error');
                     ok = false;
-                } else if (network.indexOf('/') < 0 || network.slice(-1) == '/'){
+                } else if (network.indexOf('/') < 0 || network.slice(-1) === '/'){
                     utils.notifyWindow('Wrong mask');
                     that.ui.network.addClass('error');
                     ok = false;
-                } else if(parseInt(network.split('/')[1]) > 32){
+                } else if (parseInt(network.split('/')[1], 10) > 32){
                     utils.notifyWindow('Wrong network');
                     that.ui.network.addClass('error');
                     ok = false;
@@ -289,43 +291,36 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
     views.SubnetIpsListView = Marionette.CompositeView.extend({
         template: subnetIpsListTpl,
         childView: views.SubnetIpsListItemView,
-        childViewContainer: "tbody",
+        childViewContainer: 'tbody',
+        emptyView: Marionette.ItemView.extend(
+            {tagName: 'tr', template: subnetIpsEmptyTpl}),
+
         initialize: function(){
             this.isAWS = this.model.collection.ipPoolMode === 'aws';
-            this.collection.on('change', function(){ this.fullCollection.sort(); });
-            this.originCollection = this.collection.fullCollection.models;
+            if (!this.collection.length){
+                // if there is no free IPs, show all by default
+                this.collection.showExcluded = !this.collection.showExcluded;
+                this.collection.refilter();
+            }
         },
         ui:{
-            'visibility' : '.visibility'
+            visibility: '.visibility',
         },
         events: {
             'click @ui.visibility' : 'toggleVisibility'
         },
-        childViewOptions: function(){
-            return { isAWS: this.isAWS };
-        },
+        childViewOptions: function(){ return {isAWS: this.isAWS}; },
         templateHelpers: function(){
             return {
-                isAWS           : this.isAWS,
-                showExcludedIps : this.showExcludedIps
+                isAWS: this.isAWS,
+                showExcluded: this.collection.showExcluded,
             };
         },
-        toggleVisibility: function () {
-            var collection,
-                fakeCollection = _.filter(this.originCollection, function(model){
-                    return model.get('status') === 'free';
-                });
-
-            if (this.showExcludedIps){
-                collection = this.originCollection;
-                delete this.showExcludedIps;
-            } else {
-                collection = fakeCollection;
-                this.showExcludedIps = true;
-            }
-            this.collection.fullCollection.reset(collection);
+        toggleVisibility: function(){
+            this.collection.showExcluded = !this.collection.showExcluded;
+            this.collection.refilter();
             this.render();
-        }
+        },
     });
 
     views.IppoolLayoutView = Marionette.LayoutView.extend({

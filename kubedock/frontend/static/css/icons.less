@@ -188,7 +188,18 @@
         }
     }
 }
-
+.podlist-control{
+    .button{
+        &.deleted{
+            .mdi('visibility', 18px, #B5BBC1, #3197EE);
+            &.active{
+                &::before{
+                    content: 'visibility_off';
+                }
+            }
+        }
+    }
+}
 // table icons
 table{
     span{ .statuses(); }

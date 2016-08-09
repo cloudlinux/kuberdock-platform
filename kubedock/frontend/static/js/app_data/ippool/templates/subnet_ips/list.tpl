@@ -1,6 +1,8 @@
 <% if (!isAWS){ %>
     <div class="ips-list-control">
-        <span class="button visibility <%- showExcludedIps ? '' : 'active' %>"><span><%- showExcludedIps ? 'Show' : 'Hide' %> excluded IP’s</span></span>
+        <span class="button visibility <%- showExcluded ? 'active' : '' %>">
+            <span><%- showExcluded ? 'Hide' : 'Show' %> excluded IPs</span>
+        </span>
     </div>
 <% } %>
 <table class="table ip_table">

@@ -47,7 +47,7 @@ define(['app_data/app',
         attributes: function(){
             var attrs = {};
             if (this.model.get('status') === 'deleting')
-                attrs['title'] = 'Pod will be deleted soon.';
+                attrs.title = 'Pod will be deleted soon.';
             return attrs;
         },
 
@@ -112,21 +112,23 @@ define(['app_data/app',
         childViewContainer  : 'tbody',
 
         ui: {
-            'runPods'       : '.runPods',
-            'stopPods'      : '.stopPods',
-            'restartPods'   : '.restartPods',
-            'removePods'    : '.removePods',
-            'toggleCheck'   : 'thead label.custom span',
-            'th'            : 'table th'
+            runPods        : '.runPods',
+            stopPods       : '.stopPods',
+            restartPods    : '.restartPods',
+            removePods     : '.removePods',
+            toggleCheck    : 'thead label.custom span',
+            showDeletedBtn : '.deleted',
+            th             : 'table th'
         },
 
         events: {
-            'click @ui.runPods'    : 'runPods',
-            'click @ui.stopPods'   : 'stopPods',
-            'click @ui.restartPods': 'restartPods',
-            'click @ui.toggleCheck': 'toggleCheck',
-            'click @ui.removePods' : 'removePods',
-            'click @ui.th'         : 'toggleSort'
+            'click @ui.runPods'        : 'runPods',
+            'click @ui.stopPods'       : 'stopPods',
+            'click @ui.th'             : 'toggleSort',
+            'click @ui.restartPods'    : 'restartPods',
+            'click @ui.toggleCheck'    : 'toggleCheck',
+            'click @ui.removePods'     : 'removePods',
+            'click @ui.showDeletedBtn' : 'toggleShowDeleted'
         },
 
         onShow: function(){
@@ -137,14 +139,13 @@ define(['app_data/app',
             return {
                 allChecked: this.collection.allChecked(),
                 checked: this.collection.checkedItems(),
-                isCollection : this.collection.fullCollection.length < 1 ? 'disabled' : '',
-                sortingType : this.collection.orderAsDict(),
-                collection: this.collection,
+                isEmpty: this.isEmpty(),
+                sortingType: this.collection.orderAsDict(),
+                showDeleted: this.collection.showDeleted,
             };
         },
 
         initialize: function(options){
-            this.counter = 1;
             this.collection.order = options.order || [
                 // sort by status (asc), but if statuses are equal,
                 // sort by name (asc), and so on...
@@ -152,13 +153,25 @@ define(['app_data/app',
                 {key: 'kube_type', order: 1}, {key: 'kubes', order: -1}
             ];
             this.collection.fullCollection.sort();
-            this.collection.on('change', function(){ this.fullCollection.sort(); });
+            this.collection.on('update reset', function(){
+                this.fullCollection.sort();
+            });
         },
 
-        toggleSort: function(e) {
+        toggleSort: function(e){
             var targetClass = e.target.className;
             if (!targetClass) return;
             this.collection.toggleSort(targetClass);
+            this.render();
+        },
+
+        search: function(data){
+            this.collection.searchString = data;
+            this.collection.refilter();
+        },
+        toggleShowDeleted: function(){
+            this.collection.showDeleted = !this.collection.showDeleted;
+            this.collection.refilter();
             this.render();
         },
 
@@ -198,14 +211,14 @@ define(['app_data/app',
                     _.escape(items[0].get('name')) + '" pod?';
             }
             utils.modalDialogDelete({
-                title: "Delete",
+                title: 'Delete',
                 body: body,
                 small: true,
                 show: true,
                 footer: {
                     buttonOk: function(){
                         utils.preloader.show();
-                        var deferreds = _.map(items, function(item) {
+                        var deferreds = _.map(items, function(item){
                             if (!item.ableTo('delete')) return;
                             return item.destroy({wait: true})
                                 .fail(utils.notifyWindow);
@@ -283,7 +296,7 @@ define(['app_data/app',
             var items = this.collection.checkedItems();
 
             utils.preloader.show();
-            var deferreds = _.map(items, function(item) {
+            var deferreds = _.map(items, function(item){
                 item.is_checked = false;
                 if (!item.ableTo(command)) return;
                 return item.command(command, options)

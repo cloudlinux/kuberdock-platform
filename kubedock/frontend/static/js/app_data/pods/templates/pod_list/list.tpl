@@ -1,4 +1,9 @@
 <div class="col-md-12 no-padding">
+    <div class="podlist-control">
+        <span class="button deleted <%- showDeleted ? 'active' : '' %>">
+            <span><%- showDeleted ? 'Hide' : 'Show' %> deleted pods</span>
+        </span>
+    </div>
     <div class="podsControl" style="display:<%- checked.length ? 'block' : 'none' %>">
         <span class="count"><span><%- checked.length %><%- (checked.length > 1) ? ' Items' : ' Item' %></span></span>
         <% if (_.any(_.invoke(checked, 'ableTo', 'start'))) { %>
@@ -19,15 +24,16 @@
             <tr>
                 <th class="checkboxes">
                     <label class="custom">
-                        <input type="checkbox" <%- allChecked? 'checked' : '' %> <%- isCollection %> >
+                        <input type="checkbox" <%- allChecked ? 'checked' : '' %>
+                                <%- isEmpty ? 'disabled' : '' %> >
                         <span></span>
                     </label>
                 </th>
-                <th class="name">Pod name<b class="caret <%= sortingType.name == -1 ? 'rotate' : '' %>"></th>
+                <th class="name">Pod name<b class="caret <%= sortingType.name == -1 ? 'rotate' : '' %>"></b></th>
                 <!-- <th class="replicas">Replicated<b class="caret <%= sortingType.replicas == -1 ? 'rotate' : '' %>"></b></th> -->
                 <th class="status">Status<b class="caret <%= sortingType.status == -1 ? 'rotate' : '' %>"></b></th>
-                <th class="kube_type">Kube Type<b class="caret <%= sortingType.kube_type == -1 ? 'rotate' : '' %>"></th>
-                <th class="kubes">Number of Kubes<b class="caret <%= sortingType.kubes == -1 ? 'rotate' : '' %>"></th>
+                <th class="kube_type">Kube Type<b class="caret <%= sortingType.kube_type == -1 ? 'rotate' : '' %>"></b></th>
+                <th class="kubes">Number of Kubes<b class="caret <%= sortingType.kubes == -1 ? 'rotate' : '' %>"></b></th>
                 <th>Actions</th>
             </tr>
         </thead>

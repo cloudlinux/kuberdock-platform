@@ -5,13 +5,12 @@ define(['app_data/app', 'tpl!app_data/paginator/paginator.tpl'], function(App, p
     paginator.PaginatorView = Backbone.Marionette.ItemView.extend({
         template: paginatorTpl,
 
-        initialize: function(options) {
+        initialize: function(options){
             this.model = new Backbone.Model({
                 v: options.view,
                 c: options.view.collection
             });
-            this.listenTo(options.view.collection, 'remove', this.render);
-            this.listenTo(options.view.collection, 'reset', this.render);
+            this.listenTo(options.view.collection, 'update reset', this.render);
         },
 
         events: {

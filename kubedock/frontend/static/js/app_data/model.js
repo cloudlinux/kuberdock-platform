@@ -79,7 +79,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         initSortable: function(){
             this.fullCollection.comparator = function(a, b){
                 var order = this.pageableCollection.order;
-                for (var i = 0; i < order.length; i++) {
+                for (var i = 0; i < order.length; i++){
                     var term = order[i],
                         aVal = this.pageableCollection.getForSort(a, term.key),
                         bVal = this.pageableCollection.getForSort(b, term.key);
@@ -98,7 +98,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             return _.mapObject(_.indexBy(this.order, 'key'),
                                function(field){ return field.order; });
         },
-        toggleSort: function(key) {
+        toggleSort: function(key){
             var term = _.findWhere(this.order, {key: key}) || {key: key, order: -1};
             term.order = term.order === 1 ? -1 : 1;
             // sort by this field first, then by others
@@ -106,6 +106,19 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             this.order.unshift(term);
 
             this.fullCollection.sort();
+        },
+        getFiltered: function(condition){
+            var original = this,
+                filtered = new this.constructor();
+            filtered.refilter = function(){
+                var page = this.state.currentPage;
+                this.fullCollection.reset(
+                    original.fullCollection.filter(condition, this));
+                this.getPage(Math.min(page, this.state.lastPage));
+            };
+            filtered.listenTo(original, 'update reset change', filtered.refilter);
+            filtered.refilter();
+            return filtered;
         },
     });
 
@@ -818,11 +831,6 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     function(sum, c){ return sum + c.get('kubes'); }, 0);
             return model.get(key);
         },
-        searchIn: function(val){
-            return this.fullCollection.models.filter(function(i){
-                return i.get('name').indexOf(val) !== -1;
-            });
-        },
         allChecked: function(){
             var checkable = this.fullCollection.filter(
                 function(m){ return m.get('status') !== 'deleting'; });
@@ -1260,13 +1268,19 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     data.IPModel = Backbone.Model.extend({
         idAttribute: 'ip',
     });
-    data.IPsCollection = Backbone.PageableCollection.extend({
+    data.IPsCollection = data.SortableCollection.extend({
         model: data.IPModel,
         parse: unwrapper,
         mode: 'client',
         state: {
             pageSize: 8
-        }
+        },
+        order: [{key: 'ip', order: 1}],
+        getForSort: function(model, key){
+            if (key === 'ip')
+                return model.get('ip').replace(/\b\d{1}\b/g, '00$&').replace(/\b\d{2}\b/g, '0$&');
+            return model.get(key);
+        },
     });
 
     data.UserAddressModel = Backbone.Model.extend({

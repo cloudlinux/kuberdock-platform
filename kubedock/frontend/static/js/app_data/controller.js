@@ -43,9 +43,9 @@ define([
                 }
                 var listLayout = new Views.PodListLayout(),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods']}),
-                    button = App.currentUser.roleIs('User', 'TrialUser')
-                        && {id: 'add_pod', href: '#pods/new', title: 'Add new container',
-                            suspendedTitle: suspendedTitle},
+                    button = App.currentUser.roleIs('User', 'TrialUser') && {
+                        id: 'add_pod', href: '#pods/new', title: 'Add new container',
+                        suspendedTitle: suspendedTitle},
                     breadcrumbsControls = new Breadcrumbs.Controls(
                         {search: true, button: button}),
                     navbar = new Menu.NavList({collection: App.menuCollection});
@@ -57,9 +57,17 @@ define([
                         breadcrumbsLayout.pods.show(new Breadcrumbs.Text({text: 'Pods'}));
                         breadcrumbsLayout.controls.show(breadcrumbsControls);
 
-                        var view = new Views.PodCollection({collection: collection});
+                        var filteredCollection = collection.getFiltered(function(model){
+                            var searchFilter = !this.searchString ||
+                                this.searchString.length < 3 ||
+                                model.get('name').indexOf(this.searchString) !== -1;
+                            return searchFilter && (this.showDeleted ||
+                                model.get('status') !== 'paid_deleted');
+                        });
+                        var view = new Views.PodCollection({collection: filteredCollection});
                         listLayout.list.show(view);
                         listLayout.pager.show(new Pager.PaginatorView({view: view}));
+                        view.listenTo(breadcrumbsControls, 'search', view.search);
                     });
                 });
 
@@ -67,19 +75,6 @@ define([
                     listLayout.pager.empty();
                 });
 
-                that.listenTo(breadcrumbsControls, 'search', function(data){
-                    App.getPodCollection().done(function(collection){
-                        var order = collection.order;
-                        if (data.length > 2) {
-                            collection = new Model.PodCollection(
-                                collection.searchIn(data));
-                        }
-                        var view = new Views.PodCollection(
-                            {collection: collection, order: order});
-                        listLayout.list.show(view);
-                        listLayout.pager.show(new Pager.PaginatorView({view: view}));
-                    });
-                });
                 App.contents.show(listLayout);
             });
         },
@@ -1415,8 +1410,11 @@ define([
                     breadcrumbsLayout.subnetName.show(new Breadcrumbs.Text({text: id}));
                     App.getIPPoolCollection().done(function(ippoolCollection){
                         var item = ippoolCollection.get(id),
+                            filteredIPs = item.getIPs().getFiltered(function(model){
+                                return this.showExcluded || model.get('status') === 'free';
+                            }),
                             view = new Views.SubnetIpsListView(
-                                {model: item, collection: item.getIPs()});
+                                {model: item, collection: filteredIPs});
                         layoutView.main.show(view);
                         layoutView.pager.show(new Pager.PaginatorView({view: view}));
                     });

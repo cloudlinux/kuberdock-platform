@@ -85,3 +85,30 @@ class NoFreeIPs(APIError):
 class NoSuitableNode(APIError):
     message_template = ('There are no suitable nodes for the pod. Please try '
                         'again later or contact KuberDock administrator')
+
+
+class InsufficientData(APIError):
+    message_template = 'Supplied data are incomplete'
+
+
+class PredefinedAppExc(object):
+
+    class NoSuchPredefinedApp(APIError):
+        message_template = 'No such predefined app'
+        status_code = 404
+
+    class NoSuchAppPackage(APIError):
+        message_template = 'No such app package'
+        status_code = 404
+
+    class UnparseableTemplate(APIError):
+        message_template = 'Unable to parse template'
+
+    class InvalidTemplate(APIError):
+        message_template = 'Invalid template structure'
+
+    class NotPredefinedAppPod(APIError):
+        message_template = 'Pod not created from predefined app'
+
+    class InternalPredefinedAppError(InternalAPIError):
+        message_template = 'An internal error occurred: {message}'

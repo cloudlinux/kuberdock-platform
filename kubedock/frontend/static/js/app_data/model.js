@@ -402,7 +402,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     diff.after = getAfter().get('containers');
                     diff.recalc();
                 };
-            diff.listenTo(this, 'change:edited_config', resetDiff);
+            diff.listenTo(this, 'change', resetDiff);
             this._containersDiffCollection = diff;
             return this._containersDiffCollection;
         },

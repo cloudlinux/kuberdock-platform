@@ -35,6 +35,7 @@ class Pod(BaseModelMixin, db.Model):
     kube_id = db.Column(db.Integer, db.ForeignKey('kubes.id'))
     # Not a foreignkey because templates may be deleted at any time
     template_id = db.Column(db.Integer, nullable=True)
+    template_plan_name = db.Column(db.String(24), nullable=True)
     config = db.Column(db.Text)
     direct_access = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(length=32), default='unknown')

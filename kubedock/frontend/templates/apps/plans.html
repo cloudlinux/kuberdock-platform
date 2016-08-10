@@ -8,8 +8,6 @@
 
         <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
         <script src="{{ url_for('static', filename='js/lib/bbCodeParser.min.js') }}" type="text/javascript"></script>
-        <script src="{{ url_for('static', filename='js/lib/js-yaml.min.js') }}" type="text/javascript"></script>
-        <script src="{{ url_for('static', filename='js/PA.js') }}" type="text/javascript"></script>
 {#
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-editable.min.css') }}">
@@ -587,7 +585,6 @@
                         <p><b>Public IP:</b><span class='plan-public'> yes</span></p>
                     </div>
                     <form class="buttons" method="GET">
-                        <input type="hidden" name="pkgid" value="{{ package.id }}">
                         <input type="hidden" name="plan" value="{{ loop.index0 }}">
                         {% if token2 %}
                         <input type="hidden" name="token2" value="{{ token2 }}">
@@ -600,6 +597,7 @@
         </div>
         <script type="text/javascript">
             'use strict';
+
             function setRes(el, resource, text){
                 el = el.getElementsByClassName(resource)[0];
                 while(el.firstChild)
@@ -648,47 +646,31 @@
                 }
             }
 
-            function recalculate(app){
-                var domPlans = document.getElementsByClassName('plan'),
-                    filled = app.filledDefault;
-                filled.kuberdock.appPackages.forEach(function(appPackage, i){
-                    appPackage = app.fillAppPackageWithDefaults(appPackage, filled);
-                    var info = app.calculateInfo(appPackage),
-                        print = info.print,
-                        domPlan = domPlans[i];
-                    setRes(domPlan, 'plan-price', print.price.prefix +
-                        String.fromCharCode(160) + print.price.value.toFixed(2));
-                    setRes(domPlan, 'plan-price-suffix', print.price.suffix);
-                    setRes(domPlan, 'plan-cpu', print.cpu);
-                    setRes(domPlan, 'plan-memory', print.memory);
-                    setRes(domPlan, 'plan-disk', print.diskSpace);
-                    setRes(domPlan, 'plan-pd', print.pd);
-                    setRes(domPlan, 'plan-period', '/' + print.period);
+            function recalculate(plans){
+                var domPlans = document.getElementsByClassName('plan');
+                plans.forEach(function(plan, i){
+                        var domPlan = domPlans[i],
+                            nbsp = String.fromCharCode(160),
+                            kt = plan.info.kubeType;
+                    setRes(domPlan, 'plan-price', plan.info.prefix +
+                        nbsp + plan.info.price.toFixed(2));
+                    setRes(domPlan, 'plan-price-suffix', plan.info.suffix);
+                    setRes(domPlan, 'plan-cpu', plan.info.cpu + nbsp + kt.cpu_units);
+                    setRes(domPlan, 'plan-memory', plan.info.memory + nbsp + kt.memory_units);
+                    setRes(domPlan, 'plan-disk', plan.info.diskSpace + nbsp + kt.disk_space_units);
+                    setRes(domPlan, 'plan-pd', plan.info.totalPD + nbsp + 'GB');
+                    setRes(domPlan, 'plan-period', '/' + plan.info.period);
                     var ipEl = domPlan.getElementsByClassName('plan-public')[0].parentNode,
                         pdEl = domPlan.getElementsByClassName('plan-pd')[0].parentNode;
-                    ipEl.style.display = info.publicIP ? null : 'none';
-                    pdEl.style.display = info.totalPD ? null : 'none';
+                    ipEl.style.display = plan.info.publicIP ? null : 'none';
+                    pdEl.style.display = plan.info.totalPD ? null : 'none';
                 });
             }
 
             window.onload = function(e) {
-                var app = new PA({
-                    defaultKubeType: {{ default_kube_type_id|tojson|safe }},
-                    userPackage: {{ package|tojson|safe }},
-                    template: {{ template|tojson|safe }},
-                });
 
+                var plans = {{ plans|tojson|safe }};
                 var hasError = (window.location.href.indexOf('error') !== -1);
-
-                var yml = app.filledDefault,
-                    el = document.getElementById('pre-description');
-                if (yml.kuberdock.preDescription) {
-                    var parser = new BBCodeParser(BBCodeParser.defaultTags());
-                    el.innerHTML = parser.parseString(yml.kuberdock.preDescription);
-                } else {
-                    el.parentNode.removeChild(el);
-                }
-
                 if (hasError) {
                     var rv = popURLParameter(window.location.href, 'error');
                     if (window.history.pushState) {
@@ -699,7 +681,16 @@
                     }
                 }
 
-                recalculate(app);
+                var el = document.getElementById('pre-description'),
+                    predesc = {{ predesc|tojson|safe }};
+                if (predesc) {
+                    var parser = new BBCodeParser(BBCodeParser.defaultTags());
+                    el.innerHTML = parser.parseString(predesc);
+                } else {
+                    el.parentNode.removeChild(el);
+                }
+
+                recalculate(plans);
 
                 /* show/hide details */
                 var more = document.querySelectorAll('.show-more')
@@ -716,7 +707,6 @@
                         }
                     });
                 }
-
             };
         </script>
     </body>

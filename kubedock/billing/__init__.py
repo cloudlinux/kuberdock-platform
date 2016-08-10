@@ -1,4 +1,5 @@
 from .models import Kube, Package, ExtraTax, PackageKube
+from kubedock.system_settings.models import SystemSettings
 
 
 def kubes_to_limits(count, kube_type):
@@ -21,3 +22,10 @@ def repr_limits(count, kube_type):
     memory = '{0} {1}'.format(count * kube.memory, kube.memory_units)
 
     return {'cpu': cpu, 'memory': memory}
+
+
+def has_billing():
+    billing_type = SystemSettings.get_by_name('billing_type').lower()
+    if billing_type == 'no billing':
+        return False
+    return True

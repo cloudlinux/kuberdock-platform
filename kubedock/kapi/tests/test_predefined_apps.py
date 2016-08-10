@@ -2,11 +2,10 @@
 """
 import unittest
 import mock
-import re
 
-from copy import deepcopy
+from kubedock.kapi import apps
 from kubedock.testutils.testcases import DBTestCase
-from kubedock.kapi import predefined_apps as kapi_papps
+from kubedock.exceptions import PredefinedAppExc
 
 
 VALID_TEMPLATE1 = """---
@@ -135,241 +134,422 @@ spec:
       restartPolicy: Always
 """
 
-INVALID_TEMPLATE_KUBE_TYPE = VALID_TEMPLATE1.replace('kubeType: 0',
-                                                     'kubeType: 424242', 1)
-INVALID_TEMPLATE_2_RECOMMENDED = re.sub(r'name: M(\W+)', r'name: M\1recommended: true\1',
-                                        VALID_TEMPLATE1, 1)
+
+class FakeObj(object):
+    id = 1
+    name = 'test'
+    template = VALID_TEMPLATE1
+
+    def __init__(self, tpl=None):
+        if tpl is not None:
+            self.template = tpl
+
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name, 'template': self.template}
 
 
-class TestValidateTemplate(DBTestCase):
-    """Tests for for kapi.predefined_apps.validate_template"""
+class TestEntitiesFilled(unittest.TestCase):
+    """Test that entities are filled with non-default values"""
+
     def setUp(self):
-        for method in ('preprocess', 'load', 'fill', 'find_root',
-                       'check_kuberdock_section'):
-            patcher = mock.patch.object(kapi_papps, method)
-            self.addCleanup(patcher.stop)
-            patcher.start()
+        patcher = mock.patch('kubedock.kapi.apps.PredefinedAppModel')
+        self.addCleanup(patcher.stop)
+        patcher.start()
+        apps.PredefinedAppModel.query.get = mock.Mock(
+            return_value=FakeObj())
 
-        kapi_papps.preprocess.return_value = (mock.sentinel.PREPARED_TEMPLATE, mock.sentinel.FIELDS)
-        kapi_papps.load.return_value = mock.sentinel.LOADED_TEMPLATE
-        kapi_papps.fill.return_value = mock.sentinel.FILLED_TEMPLATE, mock.sentinel.USED_FIELDS
+    def test_variable_is_substituted(self):
+        """Variable values is replaced with one passed in values"""
+        values = {'MYSQL_PD_SIZE': 200}
+        app = apps.PredefinedApp.get(1)
+        tpl = app.get_filled_template_for_plan(0, values)
+        apps.PredefinedAppModel.query.get.assert_called_once_with(1)
+        vols = tpl['spec']['template']['spec']['volumes']
+        value = [v['persistentDisk']['pdSize'] for v in vols
+                 if v['name'].startswith('mysql-persistent-storage')][0]
+        self.assertEqual(value, 200)
 
-    def test_workflow(self):
-        """Check whole workflow (preprocess -> load -> fill -> check semantics)"""
-        template = VALID_TEMPLATE1
-        self.assertEqual(kapi_papps.validate_template(template), (
-            mock.sentinel.USED_FIELDS, mock.sentinel.FILLED_TEMPLATE,
-            mock.sentinel.LOADED_TEMPLATE, mock.sentinel.PREPARED_TEMPLATE
-        ))
-        kapi_papps.preprocess.assert_called_once_with(template, raise_=True)
-        kapi_papps.load.assert_called_once_with(mock.sentinel.PREPARED_TEMPLATE,
-                                                mock.sentinel.FIELDS)
-        kapi_papps.fill.assert_called_once_with(mock.sentinel.LOADED_TEMPLATE,
-                                                mock.sentinel.FIELDS)
-        kapi_papps.find_root.assert_called_once_with(
-            mock.sentinel.FILLED_TEMPLATE)
-        kapi_papps.check_kuberdock_section.assert_called_once_with(
-            mock.sentinel.FILLED_TEMPLATE)
-
-    def test_preprocess(self):
-        """Convert parse errors from preprocess step to validation errors."""
-        template = VALID_TEMPLATE1
-
-        kapi_papps.preprocess.side_effect = kapi_papps.AppParseError(
-            {'Variable is not defined': 'blahblah'})
-        with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.validate_template(template)
-
-    def test_no_root(self):
-        """Raise validation errors if pod's root cannot be found."""
-        template = VALID_TEMPLATE1
-
-        kapi_papps.find_root.side_effect = kapi_papps.AppParseError(
-            {'Invalid application structure': 'blahblah'})
-        with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.validate_template(template)
-
-    def test_wrong_app_packages(self):
-        """Raise validation errors if smth wrong with app packages."""
-        template = VALID_TEMPLATE1
-
-        kapi_papps.check_kuberdock_section.side_effect = \
-            kapi_papps.ValidationError
-        with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.validate_template(template)
+    def test_variable_is_by_default(self):
+        """Variable values non-presented in values left by default"""
+        app = apps.PredefinedApp.get(1)
+        tpl = app.get_filled_template_for_plan(0, None)
+        apps.PredefinedAppModel.query.get.assert_called_once_with(1)
+        vols = tpl['spec']['template']['spec']['volumes']
+        value = [v['persistentDisk']['pdSize'] for v in vols
+                 if v['name'].startswith('mysql-persistent-storage')][0]
+        self.assertEqual(value, 2)
 
 
-class TestCompare(DBTestCase):
+class TestFillingWorkflow(unittest.TestCase):
+
+    def setUp(self):
+        patcher = mock.patch('kubedock.kapi.apps.PredefinedAppModel')
+        self.addCleanup(patcher.stop)
+        patcher.start()
+        apps.PredefinedAppModel.query.get = mock.Mock(
+            return_value=FakeObj())
+
+    @mock.patch('kubedock.kapi.apps.PredefinedApp'
+                '._get_filled_template_for_plan')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._expand_plans')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._apply_package')
+    def test_when_filling_template_flow_fulfilled(self, ap, ep, ft):
+        ft.return_value = {'kuberdock': {'appPackages': ['a_plan']}}
+        pa = apps.PredefinedApp.get(1)
+        pa.get_filled_template_for_plan(0, {})
+        ft.assert_called_once_with(0, {})
+        ep.assert_called_once_with({'kuberdock': {'kuberdock_template_id': 1}},
+                                   with_info=False)
+        ap.assert_called_once_with({'kuberdock': {'kuberdock_template_id': 1}},
+                                   'a_plan')
+
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._expand_plans')
+    def test_exception_raised_if_no_such_plan(self, ep):
+        pa = apps.PredefinedApp.get(1)
+        with self.assertRaises(PredefinedAppExc.NoSuchAppPackage):
+            pa.get_filled_template_for_plan(8, {})
+        ep.assert_not_called()
+
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._fill_template')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._squeeze_plans')
+    def test_filling_with_values_flow(self, sp, ft):
+        sp.return_value = mock.sentinel.SQUEEZED
+        pa = apps.PredefinedApp.get(1)
+        pa._get_filled_template_for_plan(8, 'test')
+        sp.assert_called_once_with(8)
+        ft.assert_called_once_with(loaded=mock.sentinel.SQUEEZED, values='test')
+
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._fill_template')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._squeeze_plans')
+    def test_filling_defaults_flow(self, sp, ft):
+        sp.return_value = mock.sentinel.SQUEEZED
+        ft.return_value = mock.sentinel.FILLED
+        pa = apps.PredefinedApp.get(1)
+        pa._used_entities_by_plans[8] = mock.sentinel.USED_ENTITIES
+        rv = pa._get_filled_template_for_plan(8)
+        sp.assert_called_once_with(8)
+        ft.assert_called_once_with(loaded=mock.sentinel.SQUEEZED,
+                                   used_entities=mock.sentinel.USED_ENTITIES)
+        self.assertTrue(rv is mock.sentinel.FILLED)
+
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._get_loaded_template')
+    def test_filling_flow(self, lt):
+        pa = apps.PredefinedApp.get(1)
+        lt.return_value = mock.sentinel.LOADED
+        rv = pa._fill_template()
+        self.assertTrue(rv is mock.sentinel.LOADED)
+        lt.assert_called_once_with()
+
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._get_loaded_template')
+    def test_filling_flow_with_provided_loaded_template(self, lt):
+        pa = apps.PredefinedApp.get(1)
+        rv = pa._fill_template(loaded=mock.sentinel.LOADED)
+        self.assertTrue(rv is mock.sentinel.LOADED)
+        lt.assert_not_called()
+
+
+class TestPodIsBaseOfTemplate(unittest.TestCase):
     """
-    kapi.predefined_apps.compare is expected to return False if yaml could not
+    PredefinedApp.is_template_of is expected to return False if yaml could not
     be created using specified template.
     """
     def setUp(self):
-        self.template = VALID_TEMPLATE1
+        patcher = mock.patch('kubedock.kapi.apps.PredefinedAppModel')
+        self.addCleanup(patcher.stop)
+        patcher.start()
+        apps.PredefinedAppModel.query.get = mock.Mock(
+            return_value=FakeObj())
 
-        preprocessed_tpl, fields = kapi_papps.preprocess(self.template)
-        loaded_template = kapi_papps.load(preprocessed_tpl, fields)
-        kapi_papps.apply_package(loaded_template,
-                                 loaded_template['kuberdock']['appPackages'][1])
-        self.filled_template, fields = kapi_papps.fill(loaded_template, fields)
-
-    def test_compare_ok(self):
-        self.assertTrue(kapi_papps.compare(self.template, self.filled_template))
-
-    def test_compare_fails(self):
-        filled_template = deepcopy(self.filled_template)
-        container = filled_template['spec']['template']['spec']['containers'][0]
-        container['kubes'] += 1
-        filled_template['spec']['template']['spec']['containers'][0]['kubes'] += 1
-        self.assertFalse(kapi_papps.compare(self.template, filled_template))
-
-        filled_template = deepcopy(self.filled_template)
-        filled_template['kuberdock']['kube_type'] += 1
-        self.assertFalse(kapi_papps.compare(self.template, filled_template))
-
-        filled_template = deepcopy(self.filled_template)
-        del filled_template['kuberdock']['kube_type']
-        self.assertFalse(kapi_papps.compare(self.template, filled_template))
-
-        filled_template = deepcopy(self.filled_template)
-        container = filled_template['spec']['template']['spec']['containers'][0]
-        container['image'] = 'qwertyuiop'
-        self.assertFalse(kapi_papps.compare(self.template, filled_template))
+    def test_template_is_base_of_data(self):
+        values = {'MYSQL_PD_SIZE': 32}
+        tpl = apps.PredefinedApp.get(1).get_filled_template_for_plan(0, values)
+        self.assertTrue(apps.PredefinedApp.get(1).is_template_for(tpl))
 
 
-class TestCheckPlans(DBTestCase):
-    """Tests for for kapi.predefined_apps.check_kuberdock_section"""
-    def setUp(self):
-        self.prepared_template, self.fields = kapi_papps.preprocess(VALID_TEMPLATE1, raise_=True)
-        self.parsed_template = kapi_papps.load(self.prepared_template, self.fields)
-        self.filled_template, self.fields = kapi_papps.fill(self.parsed_template, self.fields)
+@mock.patch('kubedock.kapi.apps.PredefinedAppModel')
+class TestHowTemplateIsPreprocessed(unittest.TestCase):
 
-    def test_check_kuberdock_section_valid(self):
-        kapi_papps.check_kuberdock_section(self.filled_template)
-
-    def test_check_plans_2_recommended(self):
-        self.filled_template['kuberdock']['appPackages'][1]['recommended'] = True
-        with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.check_kuberdock_section(self.filled_template)
-
-    def test_check_plans_unknown_pod(self):
-        self.filled_template['kuberdock']['appPackages'][0]['pods'][0]['name'] = 'invalid'
-        with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.check_kuberdock_section(self.filled_template)
-
-    def test_check_plans_unknown_container(self):
-        self.filled_template['kuberdock']['appPackages'][0]['pods'][0]\
-            ['containers'][0]['name'] = 'invalid'
-        with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.check_kuberdock_section(self.filled_template)
-
-    def test_check_plans_unknown_pd(self):
-        self.filled_template['kuberdock']['appPackages'][0]['pods'][0]\
-            ['persistentDisks'][0]['name'] = 'invalid'
-        with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.check_kuberdock_section(self.filled_template)
-
-    def test_check_plans_invalid_kube_type(self):
-        self.filled_template['kuberdock']['appPackages'][0]['pods'][0]['kubeType'] = -1
-        with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.check_kuberdock_section(self.filled_template)
-
-    def test_check_kuberdock_section_invalid_package_id(self):
-        other_kube = self.fixtures.kube_type()
-        pod = self.filled_template['kuberdock']['appPackages'][0]['pods'][0]
-        pod['kubeType'] = other_kube.id
-        with self.assertRaises(kapi_papps.ValidationError):
-            kapi_papps.check_kuberdock_section(self.filled_template)
-
-
-class TestPreprocess(unittest.TestCase):
-    """Tests for for kapi.predefined_apps.preprocess"""
-    def test_escaping(self):
-        template, fields = kapi_papps.preprocess("""
+    def test_escaping(self, dbo):
+        tpl = """
         $VAR|default:0|yea$
         $$NOT_VAR|default:0|nope$$
-        $$$VAR_IN_DOLLARS|default:0|wow$$$
-        """, raise_=True)
-
-        self.assertEqual(set(fields.keys()), set(['VAR', 'VAR_IN_DOLLARS']))
-        self.assertEqual(template, """
+        $$$VAR_IN_DOLLARS|default:0|wow$$$"""
+        obj = FakeObj(tpl)
+        dbo.query.get = mock.Mock(return_value=obj)
+        pa = apps.PredefinedApp.get(1)
+        rv = pa._get_preprocessed_template()
+        self.assertEqual(set(pa._entities.keys()), set(
+            ['VAR', 'VAR_IN_DOLLARS']))
+        self.assertEqual(rv, """
         {0}
         $NOT_VAR|default:0|nope$
-        ${1}$
-        """.format(fields['VAR'].uid, fields['VAR_IN_DOLLARS'].uid))
+        ${1}$""".format(
+            pa._entities['VAR'].uid, pa._entities['VAR_IN_DOLLARS'].uid))
 
-    def test_second_definition(self):
-        template, fields = kapi_papps.preprocess("""
+    def test_second_definition(self, dbo):
+        tpl = """
         $VAR|default:0|yea$
-        $VAR|default:1|nope$
-        """, raise_=True)
-        self.assertEqual(fields['VAR'].label, 'yea')
+        $VAR|default:1|nope$"""
+        obj = FakeObj(tpl)
+        dbo.query.get = mock.Mock(return_value=obj)
+        pa = apps.PredefinedApp.get(1)
+        pa._get_preprocessed_template()
+        self.assertEqual(pa._entities['VAR'].label, 'yea')
 
-    def test_undefinined_field_error(self):
-        with self.assertRaises(kapi_papps.AppParseError):
-            template, fields = kapi_papps.preprocess('$VAR$', raise_=True)
+    def test_undefinined_field_raises_exception(self, dbo):
+        tpl = """
+        $VAR$"""
+        obj = obj = FakeObj(tpl)
+        dbo.query.get = mock.Mock(return_value=obj)
+        pa = apps.PredefinedApp.get(1)
+        with self.assertRaises(PredefinedAppExc.InvalidTemplate):
+            pa._get_preprocessed_template()
 
-        template, fields = kapi_papps.preprocess(
-            '$VAR$ $VAR|default:0|just defined later$', raise_=True)
 
+@mock.patch('kubedock.kapi.apps.PredefinedAppModel')
+class TestHowTemplateIsLoaded(unittest.TestCase):
 
-class TestLoad(unittest.TestCase):
-    """Tests for for kapi.predefined_apps.load"""
-    def test_load(self):
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._get_preprocessed_template')
+    def test_load(self, pt, dbo):
+        obj = FakeObj('template')
         fields = {
-            'VAR_1': kapi_papps.TemplateField('VAR_1', '0', 'first var label'),
-            'VAR_2': kapi_papps.TemplateField('VAR_2', '0', 'second var label'),
-        }
-
-        template = kapi_papps.load("""
+            'VAR_1': apps.PredefinedApp.TemplateField(
+                'VAR_1', '0', 'first var label'),
+            'VAR_2': apps.PredefinedApp.TemplateField(
+                'VAR_2', '0', 'second var label')}
+        dbo.query.get = mock.Mock(return_value=obj)
+        pt.return_value = """
         a: {0}
         b: just some string
         c:
           - d: |
               string with {1}
             e: {1}
-        """.format(fields['VAR_1'].uid, fields['VAR_2'].uid), fields)
+        """.format(fields['VAR_1'].uid, fields['VAR_2'].uid)
+        pa = apps.PredefinedApp.get(1)
+        pa._entities = fields
+        pa._entities_by_uid = {fields['VAR_1'].uid: fields['VAR_1'],
+                               fields['VAR_2'].uid: fields['VAR_2']}
+        rv = pa._get_loaded_template()
 
         # All UID that are plain YAML-scalars must be replaced with appropriate
         # TemplateField instace. All UID's inside strings must be left as-is.
-        self.assertEqual(template, {
+        self.assertEqual(rv, {
             'a': fields['VAR_1'],
             'b': 'just some string',
             'c': [{
                 'd': 'string with {0}\n'.format(fields['VAR_2'].uid),
                 'e': fields['VAR_2'],
-            }],
-        })
+            }]})
+        pt.assert_called_once_with()
 
 
-class TestFill(unittest.TestCase):
-    """Tests for for kapi.predefined_apps.fill"""
-    def test_fill(self):
+@mock.patch('kubedock.kapi.apps.PredefinedAppModel')
+class TestHowTemplateIsFilled(unittest.TestCase):
+
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._get_loaded_template')
+    def test_fill_defaults(self, lt, dbo):
+        obj = FakeObj('template')
         fields = {
-            'VAR_1': kapi_papps.TemplateField('VAR_1', 'default-1', 'first var label'),
-            'VAR_2': kapi_papps.TemplateField('VAR_2', 'default-2', 'second var label'),
-            'VAR_3': kapi_papps.TemplateField('VAR_3', 'default-2', 'third var label'),
-        }
-        template = {
+            'VAR_1': apps.PredefinedApp.TemplateField(
+                'VAR_1', 'default-1', 'first var label'),
+            'VAR_2': apps.PredefinedApp.TemplateField(
+                'VAR_2', 'default-2', 'second var label'),
+            'VAR_3': apps.PredefinedApp.TemplateField(
+                'VAR_3', 'default-2', 'third var label')}
+        dbo.query.get = mock.Mock(return_value=obj)
+        lt.return_value = {
             'a': fields['VAR_1'],
             'b': 'just some string',
             'c': [{
                 'd': 'string with {0}\n'.format(fields['VAR_2'].uid),
-                'e': fields['VAR_2'],
-            }],
-        }
-
-        filled_template, used_fields = kapi_papps.fill(template, fields)
-        self.assertEqual(filled_template, {
+                'e': fields['VAR_2']}]}
+        pa = apps.PredefinedApp.get(1)
+        pa._entities = fields
+        pa._entities_by_uid = {fields['VAR_1'].uid: fields['VAR_1'],
+                               fields['VAR_2'].uid: fields['VAR_2'],
+                               fields['VAR_3'].uid: fields['VAR_3']}
+        rv = pa._get_filled_template()
+        self.assertEqual(rv, {
             'a': 'default-1',
             'b': 'just some string',
             'c': [{
                 'd': 'string with default-2\n',
                 'e': 'default-2',
-            }],
-        })
-        self.assertEqual(used_fields, {field.name: field for field in fields.itervalues()
-                                       if field.name != 'VAR_3'})
+            }]})
+        lt.assert_called_once_with()
+        self.assertEqual(
+            pa._used_entities,
+            {f.name: f for f in fields.values() if f.name != 'VAR_3'})
+
+
+@mock.patch('kubedock.kapi.apps.PredefinedAppModel')
+class TestCommonTemplateRoutines(unittest.TestCase):
+
+    def test_get_plans_without_params(self, dbo):
+        tpl = """
+        kuberdock:
+          appPackages: PACKAGES"""
+        obj = FakeObj(tpl)
+        dbo.query.get = mock.Mock(return_value=obj)
+        pa = apps.PredefinedApp.get(1)
+        plans = pa._get_plans()
+        self.assertEqual(plans, 'PACKAGES')
+
+    def test_exception_raised_when_no_plans(self, dbo):
+        tpl = """
+        kuberdock:
+          missingAppPackages: NOPE"""
+        obj = FakeObj(tpl)
+        dbo.query.get = mock.Mock(return_value=obj)
+        pa = apps.PredefinedApp.get(1)
+        with self.assertRaises(PredefinedAppExc.InvalidTemplate):
+            pa._get_plans()
+
+    @mock.patch('kubedock.kapi.apps.yaml.safe_load')
+    def test_when_template_is_passed_yaml_not_processed(self, ysl, dbo):
+        obj = FakeObj()
+        dbo.query.get = mock.Mock(return_value=obj)
+        pa = apps.PredefinedApp.get(1)
+        pa._get_plans({'kuberdock': {'appPackages': [{'one': 'two'}]}})
+        ysl.assert_not_called()
+
+
+class TestLoadedPlans(unittest.TestCase):
+    """
+    PredefinedApp.get_loaded_plans method is expeced to return plans prepared
+    for web-page displaying.
+    """
+    def setUp(self):
+        for mod in 'PredefinedAppModel', 'Kube':
+            patcher = mock.patch.object(apps, mod)
+            self.addCleanup(patcher.stop)
+            patcher.start()
+        apps.PredefinedAppModel.query.get = mock.Mock(
+            return_value=FakeObj())
+        apps.Kube.get_default_kube_type = mock.Mock(
+            return_value=2048)
+
+    @mock.patch('kubedock.kapi.apps.deepcopy')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._fill_template')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._expand_plans')
+    def test_get_plans_flow(self, ep, ft, dc):
+        ft.return_value = mock.sentinel.FILLED
+        dc.return_value = mock.sentinel.DEEPCOPY
+        pa = apps.PredefinedApp.get(1)
+        pa.get_plans()
+        dc.assert_called_once_with(mock.sentinel.FILLED)
+        ep.assert_called_once_with(mock.sentinel.DEEPCOPY)
+        self.assertEqual(ft.call_count, 1)
+
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._get_plans')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._get_template_spec')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._equalize_containers')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._fill_persistent_disks')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._calculate_info')
+    def test_plans_expansion(self, ci, fpd, eq, gts, gp):
+        pod_entity = {'containers': [], 'persistentDisks': [],
+                      'name': None, 'kubeType': 2048}
+        gp.return_value = [{}]
+        gts.return_value = mock.sentinel.SPEC
+        pa = apps.PredefinedApp.get(1)
+        expanded = pa._expand_plans(mock.sentinel.FILLED, with_info=False)
+        gp.assert_called_once_with(mock.sentinel.FILLED)
+        gts.assert_called_once_with(mock.sentinel.FILLED)
+        eq.assert_called_once_with(mock.sentinel.SPEC, pod_entity)
+        fpd.assert_called_once_with(mock.sentinel.SPEC, pod_entity)
+        ci.assert_not_called()
+        self.assertEqual(apps.Kube.get_default_kube_type.call_count, 1)
+        self.assertTrue('goodFor' in expanded[0] and
+                        expanded[0]['goodFor'] == '')
+        self.assertTrue('publicIP' in expanded[0] and
+                        expanded[0]['publicIP'] is True)
+
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._has_public_ports')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._get_package')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._get_kube_by_id')
+    def test_get_plans_calculation(self, gkbi, gp, hpp):
+        gkbi.return_value = {
+            'cpu': 2.0, 'memory': 100, 'disk_space': 4, 'price': 2.0}
+        gp.return_value = type('Package', (object,), {
+            'price_pstorage': 10, 'price_ip': 10, 'period': 'M',
+            'prefix': 'P', 'suffix': 'S'})
+        hpp.return_value = True
+        pa = apps.PredefinedApp.get(1)
+        plan = {'pods': [{'containers': [{'kubes': 2}, {'kubes': 5}],
+                'persistentDisks': [{'pdSize': 4}, {'pdSize': 3}]}]}
+        pa._calculate_info(plan)
+        gkbi.assert_called_once_with(2048)
+        self.assertTrue(hpp.called)
+        self.assertTrue(gp.called)
+        self.assertEqual(gkbi.call_count, 1)
+        self.assertTrue('info' in plan)
+        self.assertEqual(plan['info']['cpu'], 14.0)
+        self.assertEqual(plan['info']['memory'], 700)
+        self.assertEqual(plan['info']['diskSpace'], 28)
+        self.assertEqual(plan['info']['price'], 94.0)
+
+
+class TestCheckPlans(DBTestCase):
+
+    def setUp(self):
+        patcher = mock.patch('kubedock.kapi.apps.PredefinedAppModel')
+        self.addCleanup(patcher.stop)
+        patcher.start()
+        apps.PredefinedAppModel.query.get = mock.Mock(
+            return_value=FakeObj())
+
+    def test_check_kuberdock_section_valid(self):
+        pa = apps.PredefinedApp.get(1)
+        pa._validate_template()
+
+    def test_check_plans_2_recommended(self):
+        pa = apps.PredefinedApp.get(1)
+        pa.get_plans()
+        pa._filled_template['kuberdock']['appPackages'][1]['recommended'] = True
+        with self.assertRaises(PredefinedAppExc.InvalidTemplate):
+            pa._validate_template()
+
+    def test_check_plans_unknown_pod(self):
+        pa = apps.PredefinedApp.get(1)
+        pa.get_plans()
+        pod = pa._filled_template['kuberdock']['appPackages'][0]['pods'][0]
+        pod['name'] = 'invalid'
+        with self.assertRaises(PredefinedAppExc.InvalidTemplate):
+            pa._validate_template()
+
+    def test_check_plans_unknown_container(self):
+        pa = apps.PredefinedApp.get(1)
+        pa.get_plans()
+        pod = pa._filled_template['kuberdock']['appPackages'][0]['pods'][0]
+        pod['containers'][0]['name'] = 'invalid'
+        with self.assertRaises(PredefinedAppExc.InvalidTemplate):
+            pa._validate_template()
+
+    def test_check_plans_unknown_pd(self):
+        pa = apps.PredefinedApp.get(1)
+        pa.get_plans()
+        pod = pa._filled_template['kuberdock']['appPackages'][0]['pods'][0]
+        pod['persistentDisks'][0]['name'] = 'invalid'
+        with self.assertRaises(PredefinedAppExc.InvalidTemplate):
+            pa._validate_template()
+
+    def test_check_plans_invalid_kube_type(self):
+        pa = apps.PredefinedApp.get(1)
+        pa.get_plans()
+        pod = pa._filled_template['kuberdock']['appPackages'][0]['pods'][0]
+        pod['kubeType'] = -8
+        with self.assertRaises(PredefinedAppExc.InvalidTemplate):
+            pa._validate_template()
+
+    def test_check_kuberdock_section_invalid_package_id(self):
+        other_kube = self.fixtures.kube_type()
+        pa = apps.PredefinedApp.get(1)
+        pa.get_plans()
+        pod = pa._filled_template['kuberdock']['appPackages'][0]['pods'][0]
+        pod['kubeType'] = other_kube.id
+        with self.assertRaises(PredefinedAppExc.InvalidTemplate):
+            pa._validate_template()
 
 
 if __name__ == '__main__':

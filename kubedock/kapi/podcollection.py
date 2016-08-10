@@ -251,9 +251,9 @@ class PodCollection(object):
 
     @staticmethod
     @atomic()
-    def _prepare_for_public_address(pod):
+    def _prepare_for_public_address(pod, config=None):
         """Prepare pod for Public IP assigning"""
-        conf = pod.get_dbconfig()
+        conf = pod.get_dbconfig() if config is None else config
         if (conf.get('public_ip', False) or
                 not PodCollection.needs_public_ip(conf)):
             return
@@ -265,7 +265,8 @@ class PodCollection(object):
                 raise NoFreeIPs()
             # 'true' indicates that this Pod needs Public IP to be assigned
             conf['public_ip'] = pod.public_ip = 'true'
-        pod.set_dbconfig(conf, save=False)
+        if config is None:
+            pod.set_dbconfig(conf, save=False)
 
     @atomic()
     def _set_entry(self, pod, data):
@@ -362,6 +363,7 @@ class PodCollection(object):
         :param db_pod: update existing db-Pod
         """
         template_id = getattr(obj, 'kuberdock_template_id', None)
+        template_plan_name = getattr(obj, 'kuberdock_plan_name', None)
         status = getattr(obj, 'status', POD_STATUSES.stopped)
         excluded = ('kuberdock_template_id',  # duplicates of model's fields
                     'owner', 'kube_type', 'status', 'id', 'name')
@@ -369,6 +371,7 @@ class PodCollection(object):
         if db_pod is None:
             db_pod = DBPod(name=obj.name, config=json.dumps(data), id=obj.id,
                            status=status, template_id=template_id,
+                           template_plan_name=template_plan_name,
                            kube_id=obj.kube_type, owner=self.owner)
             db.session.add(db_pod)
         else:

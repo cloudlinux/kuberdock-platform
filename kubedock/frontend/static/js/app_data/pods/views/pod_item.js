@@ -70,7 +70,7 @@ define(['app_data/app', 'app_data/model',
                 imagename = (before || after).get('image'),
                 imagetag = null;
 
-            if (/[^/:]+:[^/:]+$/.test(imagename)) {
+            if (/[^\/:]+:[^\/:]+$/.test(imagename)) {
                 var pos = imagename.lastIndexOf(':');
                 imagetag = imagename.substr(pos + 1);
                 imagename = imagename.substr(0, pos);
@@ -78,9 +78,9 @@ define(['app_data/app', 'app_data/model',
 
             return {
                 changed: !before || before.isChanged(after),
-                startedAt: startedAt
-                    ? App.currentUser.localizeDatetime(startedAt)
-                    : 'Not deployed yet',
+                startedAt: startedAt ?
+                    App.currentUser.localizeDatetime(startedAt) :
+                    'Not deployed yet',
                 updateIsAvailable: this.model.updateIsAvailable,
                 pod: before ? before.getPod() : after.getPod().editOf(),
                 imagename: imagename,
@@ -213,9 +213,9 @@ define(['app_data/app', 'app_data/model',
         },
 
         templateHelpers: function(){
-            var publicName = this.model.has('public_aws')
-                    ? this.model.get('public_aws')
-                    : '',
+            var publicName = this.model.has('public_aws') ?
+                    this.model.get('public_aws') :
+                    '',
                 kubes = this.model.getKubes(),
                 pkg = App.userPackage,
                 kubeId = this.model.get('kube_type'),
@@ -377,7 +377,7 @@ define(['app_data/app', 'app_data/model',
         },
 
         templateHelpers: function(){
-            var image = /^(.+?)(?::([^/:]+))?$/.exec(this.model.get('image')),
+            var image = /^(.+?)(?::([^\/:]+))?$/.exec(this.model.get('image')),
                 imagename = image[1],
                 imagetag = image[2],
                 kube = this.model.getPod().getKubeType(),

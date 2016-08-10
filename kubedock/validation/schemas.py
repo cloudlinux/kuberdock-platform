@@ -388,6 +388,10 @@ new_pod_schema.update({
         'nullable': True,
         'template_exists': True,
     },
+    'kuberdock_plan_name': {
+        'type': 'string',
+        'nullable': True,
+    },
     'dnsPolicy': {
         'type': 'string', 'required': False,
         'allowed': ['ClusterFirst', 'Default']

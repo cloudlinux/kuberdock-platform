@@ -6,7 +6,7 @@ from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from .licensing import is_valid as license_valid
 from .podcollection import PodCollection, POD_STATUSES
-from .predefined_apps import generate
+from .apps import generate
 from .pstorage import delete_persistent_drives_task, PersistentStorage
 from ..billing.models import Package
 from ..core import db

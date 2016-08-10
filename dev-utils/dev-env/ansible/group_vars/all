@@ -22,3 +22,4 @@ rpms_to_check:
 admin_password: admin
 
 add_node_command: add-node
+install_plesk: false

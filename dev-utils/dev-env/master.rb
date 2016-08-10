@@ -22,6 +22,7 @@ def config_master(config, nodesCount, rhostsCount)
 end
 
 def config_ansible(ansible, nodesCount, rhostsCount)
+
     ansible.playbook = "ansible/main.yml"
 
     if ENV['KD_DEPLOY_DEBUG']
@@ -46,6 +47,7 @@ def config_ansible(ansible, nodesCount, rhostsCount)
         "node" => ["kd_node[1:#{nodesCount}]"],
         "rhost" => ["kd_rhost[1:#{rhostsCount}]"],
     }
+
     extra_vars = {
         "add_ssh_pub_keys" => ENV['KD_ADD_SHARED_PUB_KEYS'],
         "install_type" => ENV['KD_INSTALL_TYPE'],
@@ -67,6 +69,9 @@ def config_ansible(ansible, nodesCount, rhostsCount)
 
         "node_types" => ENV['KD_NODE_TYPES'],
         "timezone" => ENV['KD_TIMEZONE'],
+
+        "install_plesk" => ENV['KD_INSTALL_PLESK'],
+        "plesk_license" => ENV['KD_PLESK_LICENSE'],
     }
 
     # Clean undefined vars

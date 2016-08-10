@@ -5,12 +5,11 @@
   debug: msg="{{ timezone }}"
   when: timezone is defined
 
-
 - name: Get timezone from host
   run_once: true
   become: False
   delegate_to: localhost
-  shell: "timedatectl | gawk -F'[: ]+' ' $2 ~ /Time/ {print $4}'"
+  shell: readlink /etc/localtime | cut -d/ -f5,6
   when: timezone is not defined
   register: timezone_raw
 

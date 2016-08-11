@@ -4,6 +4,8 @@
   run_once: true
   debug: msg="{{ timezone }}"
   when: timezone is defined
+  tags:
+    - timezone
 
 - name: Get timezone from host
   run_once: true
@@ -12,10 +14,14 @@
   shell: readlink /etc/localtime | cut -d/ -f5,6
   when: timezone is not defined
   register: timezone_raw
+  tags:
+    - timezone
 
 - set_fact:
     timezone: "{{ timezone_raw.stdout }}"
   when: timezone is not defined
+  tags:
+    - timezone
 
 - name: Set timezone
   file:
@@ -23,3 +29,6 @@
     dest: /etc/localtime
     state: link
     force: yes
+  tags:
+    - timezone
+

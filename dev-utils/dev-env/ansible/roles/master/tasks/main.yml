@@ -73,6 +73,12 @@
       - test_user
       - alt_test_user
 
+- name: Update users timezone
+  become_user: postgres
+  command: psql -d kuberdock -c "UPDATE users SET timezone='{{ timezone }}';"
+  tags:
+    - timezone
+
 - include: predefined_apps.yml
 - include: kdctl.yml
 - include: kcli.yml

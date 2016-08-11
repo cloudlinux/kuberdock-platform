@@ -1310,9 +1310,10 @@ class LocalStorage(PersistentStorage):
             drive_name = pd.get('pdName', None)
             if not drive_name:
                 continue
-            drive_name = compose_pdname(drive_name, owner_id)
-            persistent_disk = PersistentDisk.filter_by(
-                drive_name=drive_name
+            pd_query = PersistentDisk.get_all_query()
+            persistent_disk = pd_query.filter(
+                PersistentDisk.name == drive_name,
+                PersistentDisk.owner_id == owner_id
             ).first()
             if not persistent_disk:
                 continue

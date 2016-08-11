@@ -12,7 +12,14 @@ $compose run --rm appcloud /bin/bash -c \
  source /venv/bin/activate;
  pip install -r requirements.txt -r requirements-dev.txt;
  echo '######################## Run unit tests ########################';
- py.test -v kubedock kuberdock-cli"
+ py.test -v \
+    --cov-config .coveragerc \
+    --cov-report xml:/artifacts/cov.xml \
+    --cov-report term \
+    --cov=kubedock \
+    --cov=kuberdock-cli \
+    --cov=kuberdock-manage \
+    kubedock kuberdock-cli"
 ret=$?
 
 $compose down --rmi local -v

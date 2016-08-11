@@ -4,7 +4,11 @@ source =
     kuberdock-cli
 omit =
     kubedock/updates/*
+    kubedock/vcrpy_test_cassettes/*
     */tests/*
     */env/*
+    tests_integration/*
+    dev-utils/*
+
 [report]
 show_missing = True

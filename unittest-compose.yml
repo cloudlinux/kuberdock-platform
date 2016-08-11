@@ -11,6 +11,8 @@ services:
       REDIS_HOST: redis
       DB_HOST: postgres
       TEST_DB_HOST: postgres
+    volumes:
+      - ./artifacts:/artifacts
 
   redis:
     image: redis:2

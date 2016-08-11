@@ -25,3 +25,4 @@ Dockerfile.local
 
 .tox/
 tests_integration/web-ui/report/
+./artifacts

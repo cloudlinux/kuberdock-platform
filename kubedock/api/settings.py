@@ -100,6 +100,8 @@ class SystemSettingsAPI(KubeUtils, MethodView):
         check_system_settings(params)
         if value is not None:
             SystemSettings.set(sid, value)
+        return self.get(sid)
+
     patch = put
 
     @check_permission('delete', 'system_settings')

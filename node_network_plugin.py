@@ -11,7 +11,7 @@ import json
 import subprocess
 from ConfigParser import ConfigParser
 from StringIO import StringIO
-from collections import OrderedDict, namedtuple
+from collections import OrderedDict
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 
@@ -24,7 +24,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 FSLIMIT_PATH = '/var/lib/kuberdock/scripts/fslimit.py'
 PLUGIN_PATH = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/'
-INI_PATH = PLUGIN_PATH + 'kuberdock.ini'
+KD_CONF_PATH = PLUGIN_PATH + 'kuberdock.json'
 
 PUBLIC_IP_RULE = 'iptables -w -{0} KUBERDOCK-PUBLIC-IP -t nat -d {1} ' \
                  '-p {2} --dport {3} -j DNAT --to-destination {4}:{5}'
@@ -59,7 +59,7 @@ class ETCD(object):
     users_path = 'users'
 
     def __init__(self, path=None):
-        config = get_config('/etc/sysconfig/flanneld')
+        config = read_config_ini('/etc/sysconfig/flanneld')
         self.server = config['flannel_etcd']
         self.cert = config['etcd_certfile']
         self.key = config['etcd_keyfile']
@@ -141,7 +141,7 @@ class ETCD(object):
         )
 
 
-def get_config(filename):
+def read_config_ini(filename):
     section = '__section__'
 
     with open(filename) as config_fp_orig:
@@ -159,6 +159,11 @@ def get_config(filename):
 
     config_dict = dict([(k, v.strip('"')) for k, v in config.items(section)])
     return config_dict
+
+
+def read_config_json(filename):
+    with open(filename) as f:
+        return json.loads(f.read())
 
 
 def set_config(filename, data):
@@ -219,7 +224,7 @@ def get_pod_spec(pod_spec_file):
 
 
 def get_public_ip(pod):
-    config = get_config(INI_PATH)
+    config = read_config_json(KD_CONF_PATH)
     master = config['master']
     node = config['node']
     token = config['token']
@@ -290,7 +295,7 @@ def handle_public_ip(
 
 def is_nonfloating_ip_mode_enabled():
     enabled_options = ('1', 'on', 't', 'true', 'y', 'yes')
-    config = get_config(INI_PATH)
+    config = read_config_json(KD_CONF_PATH)
     return config['nonfloating_public_ips'].lower() in enabled_options
 
 
@@ -331,7 +336,7 @@ def add_ip(container_port, host_port, pod_ip, proto, public_ip):
 
 
 def init():
-    config = get_config('/run/flannel/subnet.env')
+    config = read_config_ini('/run/flannel/subnet.env')
     config_network = config['flannel_network']
     config_subnet = config['flannel_subnet']
     _update_ipset('kuberdock_flannel', [config_network], set_type='hash:net')

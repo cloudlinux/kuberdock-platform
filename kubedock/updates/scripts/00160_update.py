@@ -1,9 +1,11 @@
+import ConfigParser
+from StringIO import StringIO
 import os
 from abc import ABCMeta
 from time import sleep
+import json
 
 import requests
-import ConfigParser
 from contextlib2 import suppress
 from fabric.operations import put, run, local
 
@@ -11,21 +13,20 @@ from kubedock import settings
 from kubedock.exceptions import APIError
 from kubedock.kapi.nodes import get_dns_pod_config, \
     get_dns_pod_config_pre_k8s_1_2
-from kubedock.kapi.pod import add_kdtools
-from kubedock.kapi.podcollection import PodCollection, \
-    get_replicationcontroller
+from kubedock.kapi.podcollection import PodCollection
 from kubedock.kapi.podcollection import wait_pod_status
 from kubedock.nodes.models import Node
 from kubedock.pods import Pod
 from kubedock.rbac import fixtures as rbac_fixtures
+from kubedock.settings import KUBERDOCK_SETTINGS_FILE
 from kubedock.updates import helpers
 from kubedock.updates.helpers import restart_service, remote_install
 from kubedock.users import User
 from kubedock.utils import POD_STATUSES, randstr
 from kubedock.validation import check_internal_pod_data
+from node_network_plugin import KD_CONF_PATH
 from node_network_plugin import PLUGIN_PATH
 from node_network_plugin import PUBLIC_IP_POSTROUTING_RULE
-from kubedock.settings import KUBERDOCK_SETTINGS_FILE
 
 
 class _Update(object):
@@ -222,11 +223,6 @@ class _U151(_Update):
         'kubernetes-node-1.2.4-1.el7.cloudlinux'
     ]
 
-    KUBERDOCK_INI = '''NONFLOATING_PUBLIC_IPS={0}
-    MASTER={1}
-    NODE={2}
-    TOKEN={3}'''
-
     @classmethod
     def add_kdtools_to_master(cls, upd):
         # Patch RC specs
@@ -310,11 +306,15 @@ class _U151(_Update):
             PLUGIN_PATH + 'kuberdock')
         put('/var/opt/kuberdock/node_network_plugin.py',
             PLUGIN_PATH + 'kuberdock.py')
-        token = User.get_internal().get_token()
-        ini = cls.KUBERDOCK_INI.format(
-            'yes' if settings.NONFLOATING_PUBLIC_IPS else 'no',
-            settings.MASTER_IP, env.host_string, token)
-        run('echo "{0}" > "{1}"'.format(ini, PLUGIN_PATH + 'kuberdock.ini'))
+
+        kd_conf = {
+            'nonfloating_public_ips':
+                'yes' if settings.NONFLOATING_PUBLIC_IPS else 'no',
+            'master': settings.MASTER_IP,
+            'node': env.host_string,
+            'token': User.get_internal().get_token()
+        }
+        put(StringIO(json.dumps(kd_conf)), KD_CONF_PATH)
 
     @classmethod
     def downgrade_node(cls, upd, with_testing, *args, **kwargs):

@@ -405,12 +405,12 @@ echo "tinker panic 0" >> /etc/ntp.conf
 systemctl daemon-reload
 systemctl stop ntpd
 
-for _retry in $(seq 5); do
+for _retry in $(seq 3); do
     echo "Attempt $_retry to run ntpd -gq.." && \
-    ntpd -gq && \
+    ntpdate -vd -u ${MASTER_IP} && \
     break || sleep 30;
 done
-ntpd -gq
+ntpdate -vd -u ${MASTER_IP}
 check_status
 
 systemctl start ntpd

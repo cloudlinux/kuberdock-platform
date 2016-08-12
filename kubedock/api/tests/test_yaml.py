@@ -49,7 +49,7 @@ class YamlURL(object):
 class TestYamlAPI(APITestCase):
     def test_invalid_data(self):
         response = self.user_open(YamlURL.post(), 'POST')
-        self.assertAPIError(response, 400, 'APIError')
+        self.assertAPIError(response, 400, 'InsufficientData')
 
     def test_invalid_yml_file(self):
         response = self.user_open(YamlURL.post(), 'POST', {
@@ -58,19 +58,19 @@ class TestYamlAPI(APITestCase):
             b
             """
         })
-        self.assertAPIError(response, 400, 'APIError')
+        self.assertAPIError(response, 400, 'UnparseableTemplate')
 
     def test_no_object(self):
         response = self.user_open(YamlURL.post(), 'POST', {
             'data': ""
         })
-        self.assertAPIError(response, 400, 'APIError')
+        self.assertAPIError(response, 400, 'ValidationError')
 
     def test_no_document(self):
         response = self.user_open(YamlURL.post(), 'POST', {
             'data': "123123"
         })
-        self.assertAPIError(response, 400, 'APIError')
+        self.assertAPIError(response, 400, 'ValidationError')
 
     def test_no_kind(self):
         response = self.user_open(YamlURL.post(), 'POST', {
@@ -78,7 +78,7 @@ class TestYamlAPI(APITestCase):
             apiVersion: 1
             """
         })
-        self.assertAPIError(response, 400, 'APIError')
+        self.assertAPIError(response, 400, 'ValidationError')
 
     def test_no_api_version(self):
         response = self.user_open(YamlURL.post(), 'POST', {
@@ -86,7 +86,7 @@ class TestYamlAPI(APITestCase):
             kind: Pod
             """
         })
-        self.assertAPIError(response, 400, 'APIError')
+        self.assertAPIError(response, 400, 'ValidationError')
 
     def test_usupported_object_kind(self):
         response = self.user_open(YamlURL.post(), 'POST', {
@@ -97,7 +97,7 @@ class TestYamlAPI(APITestCase):
                 - Pod2
             """
         })
-        self.assertAPIError(response, 400, 'APIError')
+        self.assertAPIError(response, 400, 'ValidationError')
 
     def test_duplicate_kind(self):
         for kind in ['Pod', 'ReplicationController', 'Service']:
@@ -109,7 +109,7 @@ class TestYamlAPI(APITestCase):
                         "apiVersion: v1\n"
                         "kind: {0}\n".format(kind)
             })
-            self.assertAPIError(response, 400, 'APIError')
+            self.assertAPIError(response, 400, 'ValidationError')
 
     def test_invalid_pod_and_rc(self):
         # not found pod and rc
@@ -128,7 +128,7 @@ class TestYamlAPI(APITestCase):
             response = self.user_open(YamlURL.post(), 'POST', {
                 'data': item
             })
-            self.assertAPIError(response, 400, 'APIError')
+            self.assertAPIError(response, 400, 'ValidationError')
 
     @mock.patch.object(yaml_api, 'send_event_to_user')
     @mock.patch('kubedock.validation.V._validate_kube_type_exists')

@@ -147,13 +147,13 @@ class User(BaseModelMixin, UserMixin, db.Model):
         return self.token is not None and self.token == token
 
     def is_administrator(self):
-        if self.role.rolename == 'Admin':
-            return True
-        else:
-            return False
+        return self.role.rolename == 'Admin'
 
     def is_trial(self):
         return self.role.rolename == 'TrialUser'
+
+    def is_limited(self):
+        return self.role.rolename == 'LimitedUser'
 
     @property
     def last_activity(self):

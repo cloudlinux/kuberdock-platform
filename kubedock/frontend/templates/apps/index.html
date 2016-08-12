@@ -8,8 +8,6 @@
 
         <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
         <script src="{{ url_for('static', filename='js/lib/bbCodeParser.min.js') }}" type="text/javascript"></script>
-        <script src="{{ url_for('static', filename='js/lib/js-yaml.min.js') }}" type="text/javascript"></script>
-        <script src="{{ url_for('static', filename='js/PA.js') }}" type="text/javascript"></script>
 {#
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
         <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap-editable.min.css') }}">
@@ -350,18 +348,18 @@
                 <div id="app-header"><span>{{ name }}</span></div>
                 <div id="pre-description"></div>
             </div>
-            {% if plan_fields %}
+            {% if plan_entities %}
             <div id="custom-fields">
                 <div class="title">Set up resources amount</div>
                 <div class="body">
-                    {% for field in fields %}
-                        {% if field.name in plan_fields and plan_fields[field.name] == 'kube' %}
+                    {% for entity in entities %}
+                        {% if entity.name in plan_entities and plan_entities[entity.name] == 'kube' %}
                         <div class="custom-field-item">
-                            <label class="custom-field-title">{{ field.label }}</label>
+                            <label class="custom-field-title">{{ entity.label }}</label>
                             <div class="custom-field-body">
-                                <select id="field-{{ field.name }}" class="custom-field">
+                                <select id="field-{{ entity.name }}" class="custom-field">
                                     {% for row in range(1, 11) %}
-                                        {% if row == field.default|int %}
+                                        {% if row == entity.default|int %}
                                         <option selected="selected" value="{{ row }}">{{ row }}</option>
                                         {% else %}
                                         <option value="{{ row }}">{{ row }}</option>
@@ -370,13 +368,13 @@
                                 </select>
                             </div>
                         </div>
-                        {% elif field.name in plan_fields and plan_fields[field.name] == 'kubeType' %}
+                        {% elif entity.name in plan_fields and plan_fields[entity.name] == 'kubeType' %}
                         <div class="custom-field-item">
-                            <label class="custom-field-title">{{ field.label }}</label>
+                            <label class="custom-field-title">{{ entity.label }}</label>
                             <div class="custom-field-body">
-                                <select id="field-{{ field.name }}" class="custom-field">
+                                <select id="field-{{ entity.name }}" class="custom-field">
                                     {% for row in package.kubes %}
-                                        {% if row.id == field.default|int %}
+                                        {% if row.id == entity.default|int %}
                                         <option selected="selected" value="{{ row.id }}">{{ row.name }}</option>
                                         {% else %}
                                         <option value="{{ row.id }}">{{ row.name }}</option>
@@ -385,13 +383,13 @@
                                 </select>
                             </div>
                         </div>
-                        {% elif field.name in plan_fields and plan_fields[field.name] == 'pdSize' %}
+                        {% elif entity.name in plan_entities and plan_entities[entity.name] == 'pdSize' %}
                         <div class="custom-field-item">
-                            <label class="custom-field-title">{{ field.label }}</label>
+                            <label class="custom-field-title">{{ entity.label }}</label>
                             <div class="custom-field-body">
-                                <input id="field-{{ field.name }}" class="custom-field"
-                                    type="number" value="{{ field.default }}"
-                                    min="1" max="{{ max_pd_size }}" step="1">
+                                <input id="field-{{ entity.name }}" class="custom-field"
+                                    type="number" value="{{ entity.default }}"
+                                    min="1" max="{{ persitent_disk_max_size }}" step="1">
                             </div>
                         </div>
                         {% endif %}
@@ -403,16 +401,16 @@
             <div id="recource-fields">
                 <div class="title">Additional configuration</div>
                 <div class="body">
-                {% for field in fields %}
-                    {% if field.name not in plan_fields %}
+                {% for entity in entities %}
+                    {% if entity.name not in plan_entities %}
                     <div class="custom-field-item">
-                        {% if not field.hidden %}
-                        <label class="custom-field-title">{{ field.label }}</label>
+                        {% if not entity.hidden %}
+                        <label class="custom-field-title">{{ entity.label }}</label>
                         {% endif %}
                         <div class="custom-field-body">
-                            <input id="field-{{ field.name }}" class="custom-field"
-                                type="{{ 'hidden' if field.hidden else 'text' }}"
-                                value="{{ field.default }}">
+                            <input id="field-{{ entity.name }}" class="custom-field"
+                                type="{{ 'hidden' if entity.hidden else 'text' }}"
+                                value="{{ entity.default }}">
                         </div>
                     </div>
                     {% endif %}
@@ -446,6 +444,20 @@
             'use strict';
 
             window.onload = function(e) {
+
+                var appPackageID = {{ plan_id|int }},
+                    billingUrl = {{ billing_url|tojson|safe }},
+                    billingType = {{ billing_type|tojson|safe }},
+                    token2 = {{ token2|tojson|safe }} || window.localStorage.authData,
+                    customFields = document.getElementsByClassName('custom-field'),
+                    submitButton = document.getElementById('submit-button'),
+                    backButton = document.getElementById('back-button'),
+                    hasError = (window.location.href.indexOf('error') !== -1),
+                    predesc = {{ predesc|tojson|safe }},
+                    plans = {{ plans|tojson|safe }},
+                    packageId = {{ package_id|tojson|safe }},
+                    template_id = {{ template_id|int }};
+
                 function setRes(el, resource, text){
                     el = el.getElementsByClassName(resource)[0];
                     while(el.firstChild)
@@ -495,161 +507,141 @@
                 }
 
                 function getValues(){
-                    var values = Object.create(null);
+                    var values = {};
                     Array.prototype.forEach.call(customFields, function(field){
                         values[field.id.substr('field-'.length)] = field.value;
                     });
                     return values;
                 }
 
-                function recalculate(app, appPackageID, values){
-                    var filled = app.fill(values).filledTemplate,
-                        appPackage = filled.kuberdock.appPackages[appPackageID],
-                        domPlan = document.getElementById('resource-list');
-                    appPackage = app.fillAppPackageWithDefaults(appPackage, filled);
-
-                    var info = app.calculateInfo(appPackage);
-                    setRes(document, 'plan-price', info.print.price.full);
-                    setRes(document, 'plan-period', '/' + info.print.period);
-                    setRes(domPlan, 'plan-cpu', info.print.cpu);
-                    setRes(domPlan, 'plan-memory', info.print.memory);
-                    setRes(domPlan, 'plan-disk', info.print.diskSpace);
-                    setRes(domPlan, 'plan-pd', info.print.pd);
+                function recalculate(plan){
+                    var domPlan = document.getElementById('resource-list'),
+                            nbsp = String.fromCharCode(160),
+                            kt = plan.info.kubeType;
+                    setRes(document, 'plan-price', plan.info.prefix +
+                        nbsp + plan.info.price);
+                    setRes(document, 'plan-period', '/' + plan.info.period);
+                    setRes(domPlan, 'plan-cpu', plan.info.cpu + nbsp + kt.cpu_units);
+                    setRes(domPlan, 'plan-memory', plan.info.memory + nbsp + kt.memory_units);
+                    setRes(domPlan, 'plan-disk', plan.info.diskSpace + nbsp + kt.disk_space_units);
+                    setRes(domPlan, 'plan-pd', plan.info.totalPD + nbsp + 'GB');
                     var ipEl = domPlan.getElementsByClassName('plan-public')[0].parentNode,
                         pdEl = domPlan.getElementsByClassName('plan-pd')[0].parentNode;
-                    ipEl.style.display = info.publicIP ? null : 'none';
-                    pdEl.style.display = info.totalPD ? null : 'none';
+                    ipEl.style.display = plan.info.publicIP ? null : 'none';
+                    pdEl.style.display = plan.info.totalPD ? null : 'none';
                 }
-
-                //
-                // init
-                //
-
-                var appPackageID = {{ appPackageID|int }},
-                    billingUrl = {{ billing_url|tojson|safe }},
-                    billingType = {{ billing_type|tojson|safe }},
-                    token2 = {{ token2|tojson|safe }} || window.localStorage.authData,
-                    customFields = document.getElementsByClassName('custom-field'),
-                    submitButton = document.getElementById('submit-button'),
-                    backButton = document.getElementById('back-button'),
-                    templateID = {{ template_id|tojson|safe }},
-                    app = new PA({
-                        defaultKubeType: {{ default_kube_type_id|tojson|safe }},
-                        userPackage: {{ package|tojson|safe }},
-                        template: {{ template|tojson|safe }},
-                    });
 
                 if (!customFields.length)
                     submitButton.click();
 
-                var hasError = (window.location.href.indexOf('error') !== -1);
 
-                var yml = app.filledDefault,
-                    el = document.getElementById('pre-description');
-
-                if (yml.kuberdock.appPackages.length === 1){
+                if (plans.length === 1){
                     backButton.parentNode.removeChild(backButton);
                 }
-                if (yml.kuberdock.preDescription) {
-                    var parser = new BBCodeParser(BBCodeParser.defaultTags());
-                    el.innerHTML = parser.parseString(yml.kuberdock.preDescription);
-                } else {
-                    el.parentNode.removeChild(el);
+
+                if (predesc) {
+                    var el = document.getElementById('pre-description'),
+                        parser = new BBCodeParser(BBCodeParser.defaultTags());
+                    el.innerHTML = parser.parseString(predesc);
                 }
 
-
-                recalculate(app, appPackageID, getValues());
+                recalculate(plans[appPackageID]);
 
                 if (hasError) {
                     var rv = popURLParameter(window.location.href, 'error');
-                    if (window.history.pushState) {
-                        window.history.pushState({path:rv[0]/* new url */}, '', rv[0]);
-                    }
+                    //if (window.history.pushState) {
+                    //    window.history.pushState({path:rv[0]/* new url */}, '', rv[0]);
+                    //}
                     if (rv[1]/* error message picked out from query string */) {
                         showError(rv[1]);
                     }
                 }
 
-                //
-                // events
-                //
-
                 Array.prototype.forEach.call(customFields, function(f){
                     f.onchange = function(evt){
-                        recalculate(app, appPackageID, getValues());
+                        recalculate(plans[appPackageID]);
                     };
                 });
 
-                submitButton.onclick = function(evt){
-                    if (billingType.toLowerCase() !== 'no billing' && billingUrl) {
-                        var yml = app.templateToApp(appPackageID, getValues(), templateID),
-                            url = billingUrl
-                                + (billingUrl.indexOf('?') === -1 ? '?' : '&')
-                                + 'yaml=' + encodeURIComponent(jsyaml.safeDump(yml))
-                                + '&pkgid=' + app.userPackage.id
-                                + '&referer=' + window.location.href;
-                        window.location = url;
+                function getfillTemplate(cb) {
+                    var req = new XMLHttpRequest(),
+                        values = JSON.stringify(getValues());
+                    req.open('POST', '/api/yamlapi/fill/'+template_id+'/'+appPackageID);
+                    req.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
+                    req.onreadystatechange = function(){
+                        if (req.readyState === 4) {
+                            if (req.status === 200) {
+                                cb(req.responseText);
+                            }
+                            else {
+                                console.log('Failed to get filled yaml');
+                            }
+                        }
                     }
-                    else if (token2) {
-                        var yml = app.templateToApp(appPackageID, getValues(), templateID),
-                            desc = yml.kuberdock.postDescription,
-                            r = new XMLHttpRequest();
-                        //console.log(jsyaml.safeDump(yml));
-                        //console.log(yml);
-                        r.onreadystatechange = function(){
-                            if (r.readyState == 4) {
-                                //console.log(r);
-                                if(r.status != 200) {
+                    req.send(values);
+                }
+
+                function sendTemplateToBilling(tpl) {
+                    var url = billingUrl
+                        + (billingUrl.indexOf('?') === -1 ? '?' : '&')
+                        + 'yaml=' + encodeURIComponent(tpl)
+                        + '&pkgid=' + packageId
+                        + '&referer=' + window.location.href;
+                    window.location = url;
+                }
+
+                submitButton.onclick = function(evt){
+                    if (billingType.toLowerCase() !== 'no billing' && billingUrl) { // we have billing
+                        getfillTemplate(sendTemplateToBilling); // get filled template and send it to billing
+                    }
+                    else {
+                        var req = new XMLHttpRequest(),
+                            values = JSON.stringify(getValues());
+                        req.onreadystatechange = function(){
+                            if (req.readyState === 4) {
+                                if (req.status !== 200) {
                                     var popup = document.getElementById('popup');
                                     if (popup){
                                         popup.parentNode.removeChild(popup);
                                     }
                                     try {
-                                        var error = JSON.parse(r.responseText);
+                                        var error = JSON.parse(req.responseText);
                                         if (error.type === 'PermissionDenied'){
                                             showError('Permission denied. Note, that '
                                                 + 'you need to be logged in as '
                                                 + 'a User (not Admin).');
                                             return;
                                         }
-                                    } catch (e) {}
-                                    var message = JSON.parse(r.responseText);
-                                    if (typeof message.data === 'object'){
-                                        var totalMessage = [];
-                                        for (var i in message.data){
-                                            if (message.data[i]){
-                                                if (typeof message.data[i] === 'object')
-                                                    message.data[i] = JSON.stringify(message.data[i]);
-                                                totalMessage.push(message.data[i]);
+                                        if (typeof error.data === 'object'){
+                                            var totalError = [];
+                                            for (var i in error.data){
+                                                if (error.data[i]){
+                                                    if (typeof error.data[i] === 'object')
+                                                        error.data[i] = JSON.stringify(error.data[i]);
+                                                    totalError.push(error.data[i]);
+                                                }
                                             }
+                                            showError(totalError.join(', '));
+                                        } else {
+                                            showError(error.data);
                                         }
-                                        totalMessage.join(', ');
-                                        showError(totalMessage);
-                                    } else {
-                                        message = message.data;
-                                        showError(message);
-                                    }
+                                    } catch (e) {}
                                     return;
                                 }
-
-                                var id = JSON.parse(r.response).data.id,
-                                    response_token = r.getResponseHeader('X-Auth-Token'),
+                                var resp = JSON.parse(req.response).data,
+                                    response_token = req.getResponseHeader('X-Auth-Token'),
                                     url = window.location.origin
-                                        + '/?token2='
+                                        + '?token2='
                                         + response_token
                                         + '#pods/'
-                                        + id;
+                                        + resp.id;
                                 window.location = url;
-
                             }
-                        };
-                        r.open('POST', '/api/yamlapi/', true);
-                        r.setRequestHeader("Content-type", "application/json");
-                        r.setRequestHeader("X-Auth-Token", token2)
-                        r.send(window.JSON.stringify({data: jsyaml.safeDump(yml)}));
-                    }
-                    else {
-                        showError('Missing authentication information');
+                        }
+                        req.open('POST', '/api/yamlapi/create/'+template_id+'/'+appPackageID);
+                        req.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
+                        req.setRequestHeader("X-Auth-Token", token2)
+                        req.send(values);
                     }
                 };
 

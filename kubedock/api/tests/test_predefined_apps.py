@@ -30,7 +30,6 @@ class PredefinedAppsTestCase(APITestCase):
         self.assert200(response)
         response_validator.validate(response.json)
         predefined_app = response.json['data'][0]
-        self.assertEqual(predefined_app['user_id'], self.admin.id)
         self.assertEqual(predefined_app['name'], self.name)
         self.assertEqual(predefined_app['template'], self.template)
 
@@ -56,7 +55,6 @@ class PredefinedAppsTestCase(APITestCase):
         self.assert200(response)
         response_validator.validate(response.json)
         predefined_app = response.json['data']
-        self.assertEqual(predefined_app['user_id'], self.admin.id)
         self.assertEqual(predefined_app['name'], self.name)
         self.assertEqual(predefined_app['template'], self.template)
 
@@ -69,7 +67,6 @@ class PredefinedAppsTestCase(APITestCase):
         self.assert200(response)
         response_validator.validate(response.json)
         predefined_app = response.json['data']
-        self.assertEqual(predefined_app['user_id'], self.admin.id)
         self.assertEqual(predefined_app['name'], self.name)
         self.assertEqual(predefined_app['template'], self.template)
 
@@ -88,8 +85,6 @@ class PredefinedAppsTestCase(APITestCase):
         updated_predefined_app = response.json['data']
         self.assertDictContainsSubset(new_app, updated_predefined_app)
         self.assertEqual(predefined_app['id'], updated_predefined_app['id'])
-        self.assertEqual(predefined_app['user_id'],
-                         updated_predefined_app['user_id'])
 
     def test_delete(self):
         predefined_app = self.admin_open(
@@ -102,13 +97,13 @@ class PredefinedAppsTestCase(APITestCase):
         self.assert200(response)
         self.assert404(self.admin_open(url))
 
-    @mock.patch('kubedock.api.predefined_apps.kapi_apps')
-    def test_validate_template(self, kapi_apps):
+    @mock.patch('kubedock.api.predefined_apps.PredefinedApp.validate')
+    def test_validate_template(self, v):
         url = '{0}/validate-template'.format(self.url)
         response = self.admin_open(url, method='POST',
                                    json={'template': self.template})
         self.assert200(response)
-        kapi_apps.validate_template.assert_called_once_with(self.template)
+        v.assert_called_once_with(self.template)
 
 
 if __name__ == '__main__':

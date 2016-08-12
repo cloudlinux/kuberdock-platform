@@ -13,14 +13,12 @@ class PredefinedApp(BaseModelMixin, db.Model):
     qualifier = db.Column(db.String(40), default='', nullable=False, index=True)
     origin = db.Column(db.String(255), default='unknown', nullable=False)
     template = db.Column(db.Text, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
     modified = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
 
     def __repr__(self):
-        return ("<PredefinedApp(id={0}, name='{1}', qualifier='{2}', "
-                "user_id={3})>".format(self.id, self.name, self.qualifier,
-                                       self.user_id))
+        return "<PredefinedApp(id={0}, name='{1}', qualifier='{2}')>".format(
+            self.id, self.name, self.qualifier)
 
     def save(self, deferred_commit=False):
         if not self.qualifier:
@@ -37,7 +35,6 @@ class PredefinedApp(BaseModelMixin, db.Model):
             'qualifier': self.qualifier,
             'origin': self.origin,
             'template': self.template,
-            'user_id': self.user_id,
             'created': self.created,
             'modified': self.modified,
         }

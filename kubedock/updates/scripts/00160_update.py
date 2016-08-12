@@ -254,7 +254,7 @@ class _U151(_Update):
                 pc._stop_pod(pod, block=True)
             except APIError as e:
                 upd.print_log(
-                    u'Error: Failed to stop pod {}. It may be needed to '
+                    u'Warning: Failed to stop pod {}. It may be needed to '
                     u'manual restart the pod.\n{}'.format(dbpod.name, e))
                 continue
             pc._start_pod(pod, {'async_pod_create': False})

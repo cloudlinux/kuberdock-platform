@@ -38,7 +38,7 @@
             <div>Public IP: Public IP is not assigned yet</div>
         <% } %>
         <% if (publicName) { %>
-            <div>Public name: <%- publicName %></div>
+            <div>Public DNS name: <%- publicName %></div>
         <% } %>
         <% if (hasPorts) { %>
             <div>Pod IP: <%- (typeof(podIP) !== 'undefined') ? podIP : 'Internal IP is not assigned yet'%></div>

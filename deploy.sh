@@ -863,7 +863,11 @@ do_and_log systemctl restart postgresql
 cd $KUBERDOCK_DIR
 ADMIN_PASSWORD="CHANGE_ME"
 ADMIN_PASSWORD=$(tr -dc 'A-Za-z0-9_' < /dev/urandom | head -c20)
-do_and_log python manage.py createdb $ADMIN_PASSWORD
+if [ "$ISAMAZON" = true ];then
+    do_and_log python manage.py createdb $ADMIN_PASSWORD --aws
+else
+    do_and_log python manage.py createdb $ADMIN_PASSWORD
+fi
 do_and_log python manage.py auth-key 1> /dev/null
 
 

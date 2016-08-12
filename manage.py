@@ -54,9 +54,10 @@ WAIT_RETRY_DELAY = 5  # seconds
 
 
 class Creator(Command):
-    option_list = (Option('password'),)
+    option_list = (Option('password'),
+                   Option('--aws', dest='aws', action='store_true'))
 
-    def run(self, password):
+    def run(self, password, aws):
         db.drop_all()
         db.create_all()
 
@@ -86,7 +87,7 @@ class Creator(Command):
 
         add_users_and_roles(password)
 
-        generate_menu()
+        generate_menu(aws)
 
         # Fix packages id next val
         db.engine.execute("SELECT setval('packages_id_seq', 1, false)")

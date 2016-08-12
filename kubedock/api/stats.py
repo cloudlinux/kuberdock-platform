@@ -25,7 +25,7 @@ class NodeNotRunning(APIError):
 @check_permission('get', 'nodes')
 @KubeUtils.jsonwrap
 def nodes(hostname):
-    end = datetime.now()
+    end = datetime.utcnow()
     start = end - timedelta(minutes=60)
 
     node = Node.get_by_name(hostname)
@@ -67,7 +67,7 @@ def nodes(hostname):
 @check_permission('get', 'pods')
 @KubeUtils.jsonwrap
 def pods(pod_id):
-    end = datetime.now()
+    end = datetime.utcnow()
     start = end - timedelta(minutes=60)
 
     _check_if_pod_exists(pod_id)
@@ -85,7 +85,7 @@ def pods(pod_id):
 @check_permission('get', 'pods')
 @KubeUtils.jsonwrap
 def containers(pod_id, container_id):
-    end = datetime.now()
+    end = datetime.utcnow()
     start = end - timedelta(minutes=60)
 
     _check_if_pod_exists(pod_id)

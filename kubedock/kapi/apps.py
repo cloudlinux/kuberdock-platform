@@ -348,7 +348,7 @@ class PredefinedApp(object):
         """
         Class method that updates predefined app pod to a particular plan
         :param pod_id: string -> uuid, pod (database) ID
-        :param plan_name: int -> plan ID
+        :param plan_name: string -> plan name
         :param values: dict -> values to fill defaults
         :param async: bool -> not to wait for result if async
         :param user: obj -> user on behalf of whom action is taken

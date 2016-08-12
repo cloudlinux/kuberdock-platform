@@ -1,4 +1,3 @@
-import re
 import yaml
 from flask import Blueprint, Response
 from flask.views import MethodView
@@ -88,9 +87,8 @@ def switch_pod_plan(pod_id, plan_id):
     async = params.get('async') != 'false'
     current_user = KubeUtils.get_current_user()
     if plan_id.isdigit():   # plan_id specified with index (e.g. 0)
+        plan_id = int(plan_id)
         func = PredefinedApp.update_pod_to_plan
-    elif re.match(r'[A-Z]{1}', plan_id):  # plan_id specified with name ('M')
+    else:  # plan_id specified with name ('M', 'XXL')
         func = PredefinedApp.update_pod_to_plan_by_name
-    else:  # otherwise return 'we cannot find such app package'
-        raise PredefinedAppExc.NoSuchAppPackage
     return func(pod_id, plan_id, async=async, user=current_user)

@@ -1,4 +1,3 @@
-import json
 import logging
 import os
 import random
@@ -11,7 +10,7 @@ from tempfile import NamedTemporaryFile
 from tests_integration.lib.exceptions import PipelineNotFound
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.integration_test_utils import merge_dicts, \
-    center_text_message, NebulaIPPool, suppress
+    center_text_message, NebulaIPPool, suppress, all_subclasses
 
 PIPELINES_PATH = '.pipelines/'
 INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
@@ -178,7 +177,7 @@ class Pipeline(object):
         Fabric method for creating a specific pipeline class instance
         depending on a given name
         """
-        available = {c.NAME: c for c in cls.__subclasses__()}
+        available = {c.NAME: c for c in all_subclasses(cls)}
         pipe_name = name.rsplit('_', 1)[0]
 
         if pipe_name not in available:
@@ -245,9 +244,11 @@ class NetworkingRhostCent6(NetworkingPipeline):
         # TODO: AC-3584 When the isolation rules are fixed so pods on
         # different nodes correctly communicate with each other raise that
         # number to 2
-        'KD_NODES_COUNT': '1',
+        'KD_NODES_COUNT': '2',
         'KD_RHOSTS_COUNT': '1',
         # KD_NEBULA_RHOST_TEMPLATE_ID set in kuberdock-ci-env points to cent6
+        'KD_NEBULA_RHOST_TEMPLATE_ID':
+            os.environ.get('KD_NEBULA_RHOST_TEMPLATE_ID')
     }
 
 

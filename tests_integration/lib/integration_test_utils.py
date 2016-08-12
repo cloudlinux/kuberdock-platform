@@ -397,7 +397,7 @@ def get_test_full_name(test):
 
 def http_share(cluster, host, shared_dir):
 
-    def _is_running ():
+    def _is_running():
         cmd = "curl -X GET http://{}".format("127.0.0.1")
         try:
             cluster.ssh_exec(host, cmd)
@@ -406,6 +406,11 @@ def http_share(cluster, host, shared_dir):
             return False
 
     if not _is_running():
-        cmd = "docker run -d -p 80:80 -v {}:/usr/share/nginx/html/backups:ro " \
-              "nginx:latest".format(shared_dir)
+        cmd = "docker run -d -p 80:80 -v {}:/usr/share/nginx/html/backups:ro" \
+              " nginx:latest".format(shared_dir)
         cluster.ssh_exec(host, cmd)
+
+
+def all_subclasses(cls):
+    return cls.__subclasses__() + [g for s in cls.__subclasses__()
+                                   for g in all_subclasses(s)]

@@ -81,6 +81,8 @@ def container_udp_server(pod, container_id):
         detached=True)
 
 
+# Should be fixed in AC-4158
+# @pipeline('networking_rhost_cent6')
 @pipeline('networking')
 def test_network_isolation_from_user_container(cluster):
     # type: (KDIntegrationTestAPI) -> None

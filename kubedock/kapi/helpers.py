@@ -9,7 +9,7 @@ from ..exceptions import APIError
 from ..pods.models import Pod
 from ..settings import KUBE_BASE_URL, KUBE_API_VERSION
 from ..users.models import User
-from ..utils import get_api_url, send_pod_status_update
+from ..utils import get_api_url, send_pod_status_update, POD_STATUSES
 
 
 class KubeQuery(object):
@@ -209,11 +209,17 @@ def check_pod_name(name, owner=None):
 def set_pod_status(pod_id, status, send_update=False):
     # TODO refactor to dbPod level + separate event send
     db_pod = db.session.query(Pod).get(pod_id)
-    if db_pod.status != status:
-        db_pod.status = status
-        db.session.commit()
-        if send_update:
-            send_pod_status_update(status, db_pod, 'MODIFIED')
+    if db_pod.status == status:
+        return
+    # Do not change 'deleted' status inside database. Pod could have been
+    # deleted during pod-task execution.
+    if db_pod.status == POD_STATUSES.deleted:
+        raise APIError('Not allowed to change "deleted" status.',
+                       type='NotAllowedToChangeDeletedStatus')
+    db_pod.status = status
+    db.session.commit()
+    if send_update:
+        send_pod_status_update(status, db_pod, 'MODIFIED')
 
 
 def mark_pod_as_deleted(pod_id):

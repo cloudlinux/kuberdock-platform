@@ -4,6 +4,7 @@ import string
 from flask import current_app
 
 from ..exceptions import APIError
+from ..utils import send_event_to_role
 
 
 def raise_(message, code=409):
@@ -13,7 +14,7 @@ def raise_(message, code=409):
 def _format_msg(error, message, return_value):
     msg = error
     if message:
-        msg = u'({}){}'.format(error, message)
+        msg = u'({}) {}'.format(error, message)
     return u'{}: {}'.format(msg, unicode(return_value))
 
 
@@ -42,7 +43,9 @@ def raise_if_failure(return_value, message=None):
         if status.lower() not in ('success', 'working'):
             error = u'Error in kubernetes answer'
             msg = _format_msg(error, message, return_value)
-            raise_(msg)
+            current_app.logger.error(msg)
+            send_event_to_role('notify:error', {'message': msg}, 'Admin')
+            raise_(message)
 
 
 def make_name_from_image(image):

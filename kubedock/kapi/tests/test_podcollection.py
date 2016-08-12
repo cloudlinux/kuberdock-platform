@@ -16,6 +16,7 @@ from ...exceptions import APIError, NoSuitableNode
 from ..pod import Pod
 from ..images import Image
 from .. import podcollection
+from .. import pod as kapi_pod
 from ...utils import POD_STATUSES, NODE_STATUSES
 from ...users.models import User
 from ...rbac.models import Role
@@ -518,6 +519,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         )
         self.assertEqual(res, self.test_pod.as_dict.return_value)
 
+    @mock.patch.object(kapi_pod, 'DBPod')
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection.helpers, 'set_pod_status')
     @mock.patch.object(podcollection, 'prepare_and_run_pod_task')
@@ -525,7 +527,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
     @mock.patch.object(podcollection.PodCollection, '_node_available_for_pod')
     def test_pod_start(
             self, node_available_mock, mk_ns, run_pod_mock, set_pod_status,
-            DBPod):
+            DBPod, db_pod_mock):
         """
         Test first _start_pod for pod without ports
         :type post_: mock.Mock
@@ -543,6 +545,9 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
                 'state': POD_STATUSES.stopped,
             }]
         )
+
+        db_pod = mock.Mock(id=pod.id, status=POD_STATUSES.stopped)
+        db_pod_mock.query.get.return_value = db_pod
 
         # Actual call
         self.pod_collection._start_pod(pod)

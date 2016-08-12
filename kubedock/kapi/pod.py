@@ -502,6 +502,13 @@ class Pod(object):
             # then remove this block
             raise APIError('Not allowed to change "unpaid" status.',
                            type='NotAllowedToChangeUnpaidStatus')
+
+        db_pod = DBPod.query.get(self.id)
+        # We shouldn't change pod's deleted status.
+        if db_pod.status == POD_STATUSES.deleted:
+            raise APIError('Not allowed to change "deleted" status.',
+                           type='NotAllowedToChangeDeletedStatus')
+
         helpers.set_pod_status(self.id, status, send_update=send_update)
         self.status = status
 

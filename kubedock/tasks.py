@@ -236,6 +236,7 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
 
         # AC-3652 Node backup
         sftp.put('backup_node.py', '/usr/bin/kd-backup-node')
+        sftp.put('backup_node_merge.py', '/usr/bin/kd-backup-node-merge')
 
         if CEPH:
             TEMP_CEPH_CONF_PATH = '/tmp/kd_ceph_config'

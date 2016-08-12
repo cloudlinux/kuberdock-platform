@@ -34,7 +34,7 @@ Vagrant.configure(2) do |config|
     File.open(gitignoreFile) do |f|
       f.each_line do |line|
         line.chomp!
-        next if line.empty? 
+        next if line.empty?
         rsyncExcludes << line
       end
     end

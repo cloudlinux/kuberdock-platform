@@ -273,7 +273,9 @@ setup_ntpd ()
 {
     # AC-3199 Remove chrony which prevents ntpd service to start after boot
     yum erase -y chrony
-    yum_wrapper install -y ntp
+    check_status
+    yum install -y ntp
+    check_status
 
     function _sync_time() {
         grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -d
@@ -356,7 +358,8 @@ type=rpm-md
 gpgkey=https://ceph.com/git/?p=ceph.git;a=blob_plain;f=keys/release.asc
 EOF
 
-yum_wrapper -y install epel-release
+yum -y install epel-release
+check_status
 
   CNT=1
   /bin/false
@@ -496,6 +499,8 @@ chmod +x "$KD_SSH_GC_PATH"
 check_status
 
 chmod +x "/usr/bin/kd-backup-node"
+check_status
+chmod +x "/usr/bin/kd-backup-node-merge"
 check_status
 
 # For direct ssh feature

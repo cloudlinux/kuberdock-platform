@@ -26,5 +26,5 @@ def downgrade():
         sa.Integer,
         sa.ForeignKey('users.id'),
         nullable=False,
-        server_default=1))
+        server_default='1'))
     op.drop_column('pods', 'template_plan_name')

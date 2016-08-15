@@ -2,12 +2,12 @@
     <span class="ieditable mountPath"><%- mountPath %></span>
 </td>
 <td>
-    <label class="custom">
+    <label class="custom radio-inline">
         <input class="persistent" value="0" <%= isPersistent ? '' : 'checked' %>
                type="radio" name="persistent-<%- name %>">
         <span></span><i>Transient<sup>**</sup></i>
     </label>
-    <label class="custom">
+    <label class="custom radio-inline">
         <input class="persistent" value="1" <%= isPersistent ? 'checked' : '' %>
                type="radio" name="persistent-<%- name %>">
         <span></span><i>Persistent</i>

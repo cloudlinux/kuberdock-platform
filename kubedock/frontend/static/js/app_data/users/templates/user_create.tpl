@@ -73,14 +73,15 @@
                     </select>
                 </div>
                 <div class="form-group clearfix">
-                    <label for="status-select" class="pull-left">Status</label>
-                    <label class="custom pull-right">
-                        <input type="checkbox" id="suspended" name="suspended"
-                               class="checkbox" <%= suspended ? 'checked' : '' %>>
-                        <span></span>
-                    </label>
-                    <label class="checkbox-label pull-right" for="suspended">Suspended</label>
-
+                    <div>
+                        <label for="status-select" class="pull-left">Status</label>
+                        <label class="custom pull-right">
+                            <input type="checkbox" id="suspended" name="suspended"
+                                   class="checkbox" <%= suspended ? 'checked' : '' %>>
+                            <span></span>
+                        </label>
+                        <label class="checkbox-label pull-right" for="suspended">Suspended</label>
+                    </div>
                     <select id="status-select" name="status-select" class="selectpicker">
                         <option value="1" <%= active ? 'selected' : '' %>>Active</option>
                         <option value="0" <%= active ? '' : 'selected' %>>Locked</option>

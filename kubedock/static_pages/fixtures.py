@@ -29,6 +29,8 @@ def get_menus(aws=False):
                              roles=["Admin"]),
                         dict(name="DNS names" if aws else "IP pool",
                              path="#ippool", ordering=1, roles=["Admin"]),
+                        dict(name="Domains control", path="#domains", ordering=2,
+                             roles=["Admin"]),
                     ],
                     roles=["Admin"]
                 ),

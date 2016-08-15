@@ -4,6 +4,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         'tpl!app_data/pods/templates/wizard_get_image.tpl',
 
         'tpl!app_data/pods/templates/wizard_set_container_pending_basic_settings.tpl',
+        'tpl!app_data/pods/templates/public_access_controls.tpl',
         'tpl!app_data/pods/templates/editable_ports/list.tpl',
         'tpl!app_data/pods/templates/editable_ports/item.tpl',
         'tpl!app_data/pods/templates/editable_ports/empty.tpl',
@@ -23,6 +24,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 wizardGetImageTpl,
 
                 wizardSetContainerPendingBasicSettingsTpl,
+                publicAccessControlsTpl,
                 portListTpl,
                 portListItemTpl,
                 portListEmptyTpl,
@@ -123,7 +125,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         selectImageByEnterKey: function(evt){
-            if (evt.which === 13) {  // 'Enter' key
+            if (evt.which === utils.KEY_CODES.enter){
                 evt.stopPropagation();
                 this.selectImage();
             }
@@ -188,7 +190,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         onInputKeypress: function(evt){
             evt.stopPropagation();
-            if (evt.which === 13) // 'Enter' key
+            if (evt.which === utils.KEY_CODES.enter)
                 this.search();
         },
         onSearchClick: function(evt){
@@ -241,6 +243,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         tagName: 'div',
         regions: {
             ports: '#editable-ports-list',
+            publicAccessControls: '#public-access-controls',
             volumeMounts: '#editable-vm-list',
         },
         template: wizardSetContainerPendingBasicSettingsTpl,
@@ -248,13 +251,14 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         id: 'add-image',
 
         ui: {
-            input          : 'input',
-            nextStep       : '.next-step',
-            prevStep       : '.prev-step',
-            input_command  : 'input.command',
-            cancelEdit   : '.cancel-edit',
-            editEntirePod: '.edit-entire-pod',
-            saveChanges  : '.save-changes',
+            input               : 'input',
+            nextStep            : '.next-step',
+            prevStep            : '.prev-step',
+            input_command       : 'input.command',
+            publicAccessTypeNote: '#public-access-type-note',
+            cancelEdit          : '.cancel-edit',
+            editEntirePod       : '.edit-entire-pod',
+            saveChanges         : '.save-changes',
         },
 
         events: {
@@ -267,10 +271,11 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             'click @ui.saveChanges'  : 'saveChanges',
         },
 
-        initialize: function(options) {
+        initialize: function(options){
             this.pod = this.model.getPod();
             this.payg = options.payg;
             this.hasBilling = options.hasBilling;
+            this.domains = options.domains;
         },
 
         templateHelpers: function(){
@@ -282,12 +287,24 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         onBeforeShow: function(){
             this.ports.show(new views.PortCollection({
                 model: this.model,
-                collection: this.model.get('ports')
+                collection: this.model.get('ports'),
             }), {replaceElement: true});
+
+            if (this.domains.length){
+                this.publicAccessControls.show(new views.PublicAccessControls({
+                    model: this.pod,
+                    domains : this.domains,
+                }), {replaceElement: true});
+            }
+
             this.volumeMounts.show(new views.VolumeMountCollection({
                 model: this.model,
-                collection: this.model.get('volumeMounts')
+                collection: this.model.get('volumeMounts'),
             }), {replaceElement: true});
+
+            this.listenTo(this.pod, 'change-public-access-need', function(needs){
+                this.ui.publicAccessTypeNote.toggle(needs);
+            });
         },
 
         cancelEdit: function(){
@@ -455,14 +472,81 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         onRender: function(){
             this.ui.input_command.val(this.filterCommand(this.model.get('args')));
+            this.ui.publicAccessTypeNote.toggle(!!this.pod.countPublicPorts());
         },
 
         filterCommand: function(command) {
             command = _.map(command, function(e) {
-                return e.indexOf(' ') > 0 ? '"' + e + '"': e;
+                return e.indexOf(' ') > 0 ? '"' + e + '"' : e;
             });
             return command.join(' ');
-        }
+        },
+    });
+
+    views.PublicAccessControls = Backbone.Marionette.ItemView.extend({
+        template: publicAccessControlsTpl,
+        tagName: 'div',
+        className: 'row domains-wrapper',
+
+        initialize: function(options){
+            this.domains = options.domains;
+        },
+
+        templateHelpers: function(){
+            return {
+                domains: this.domains,
+            };
+        },
+
+        ui: {
+            chooseDomainSelect: '.choose-domain-select',
+            publicAccessType  : '.public-access-type',
+            domainsWrapper    : '.select-domain-wrapper',
+            domainName        : '#public-access-type-domain',
+            publicIpType      : '#public-access-type-ip',
+        },
+
+        events: {
+            'change @ui.publicAccessType': 'toggleAccessType',
+            'change @ui.chooseDomainSelect': 'changeDomain',
+        },
+
+        modelEvents: {
+            'change-public-access-need': 'togglePublic',
+        },
+
+        onRender: function(){
+            this.ui.chooseDomainSelect.selectpicker({
+                title: 'Select from the list',
+                dropupAuto: false,
+            });
+            this.ui.chooseDomainSelect.selectpicker(
+                'val', this.model.get('domain') || this.domains.at(0).get('name'));
+        },
+
+        onShow: function(){ this.togglePublic(); },
+
+        togglePublic: function(){
+            if (this.model.countPublicPorts()){
+                this.$el.slideDown();
+                if (this.model.get('domain') != null)
+                    this.ui.domainsWrapper.slideDown();
+                else
+                    this.ui.domainsWrapper.slideUp();
+            } else {
+                this.$el.slideUp();
+            }
+        },
+        toggleAccessType: function(e){
+            if (e.target.value === 'ip'){
+                this.ui.domainsWrapper.slideUp();
+                this.model.unset('domain');
+            } else {
+                this.ui.domainsWrapper.slideDown();
+                this.model.set('domain', this.ui.chooseDomainSelect.val());
+            }
+        },
+        changeDomain: function(e){ this.model.set('domain', e.target.value); },
     });
 
     views.PortListItem = Backbone.Marionette.ItemView.extend({
@@ -572,7 +656,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         events: {
-            'click @ui.addPort' : 'addItem',
+            'click @ui.addPort'         : 'addItem',
+            'click @ui.publicAccessType': 'visibleDomainControl',
         },
 
         addItem: function(evt){ this.collection.add(new Model.Port()); },

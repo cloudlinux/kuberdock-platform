@@ -1,0 +1,1 @@
+<td colspan="2" class="text-center disabled-color-text">Domains aren't specified</td>

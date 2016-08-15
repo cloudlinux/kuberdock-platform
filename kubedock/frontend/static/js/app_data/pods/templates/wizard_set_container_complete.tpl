@@ -96,7 +96,7 @@
                         </tbody>
                     </table>
                 <% } %>
-                <% if (isPublic) { %>
+                <% if (isPublic && (typeof domain == 'undefined' || domain == null)) { %>
                     <table>
                         <thead>
                            <tr>

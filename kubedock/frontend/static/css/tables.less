@@ -7,6 +7,7 @@
 #license-table,
 #podlist-table,
 .ip_pool_table,
+.domains_table,
 #nodelist-table,
 .variables-table,
 #publicIPs-table,
@@ -197,51 +198,19 @@
         tr{
             th{
                 &.checkboxes{
-                    font-size: 0;
-                    width: 12px;
-                    text-align: center;
-                    label.custom{
-                        max-width: 12px;
-                        margin-top: 6px;
-                    }
+                    width: 21px;
                 }
             }
         }
     }
     tbody{
         tr{
-            &.checked{
-                td{
-                    label{
-                        &.custom{
-                            span{
-                                &:before{
-                                    top: -6px;
-                                    left: -5px;
-                                    width: 21px;
-                                    content: '';
-                                    height: 21px;
-                                    position: absolute;
-                                    background: url('../img/checkbox-checked-blue.png') 0 0 no-repeat;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
             &.deleting {
                 td {
                     .opacity(0.3);
                 }
             }
             td{
-                &.checkboxes{
-                    font-size: 0;
-                    text-align: center;
-                    label.custom{
-                        max-width: 12px;
-                    }
-                }
                 &.index,
                 &.disabled-color-text,
                 input[disabled]{
@@ -257,6 +226,7 @@
                     }
                 }
                 .bootstrap-select{
+                    margin-right: 0;
                     max-width: 250px;
                     .no-results {
                         display: none !important;
@@ -568,9 +538,40 @@
     }
     label{
         display: block;
+        &.radio-inline{
+            display: inline-block;
+        }
+        &.normal{
+            font-weight: 400;
+        }
         .ip{
             color: #d1d1d1;
             font-weight: normal;
+        }
+    }
+
+    #ports-table tr td,
+    #volumes-table tr td,
+    .domains-wrapper{
+        label.custom{
+            font-size: 0;
+            font-weight: 400;
+            i, span{
+                display: inline-block;
+                vertical-align: middle;
+            }
+            span{
+                + i{
+                    margin-left: 9px
+                }
+            }
+            i{
+                font-size: 13px;
+                font-style: normal;
+            }
+            + .custom{
+                margin-left: 10px;
+            }
         }
     }
     #ports-table{
@@ -612,32 +613,6 @@
                             }
                         }
                     }
-
-                }
-                label.custom{
-                    font-size: 0;
-                    font-weight: 400;
-                    input:checked{
-                        ~ i {
-                            font-weight: 800;
-                        }
-                    }
-                    i, span{
-                        display: inline-block;
-                        vertical-align: middle;
-                    }
-                    span{
-                        + i{
-                            margin-left: 6px
-                        }
-                    }
-                    i{
-                        font-size: 13px;
-                        font-style: normal;
-                    }
-                    + .custom{
-                        margin-left: 10px;
-                    }
                 }
                 .mountPath {
                     .word-wrap()
@@ -676,46 +651,6 @@
             }
         }
     }
-    .radio{
-        position: initial;
-        min-height: initial;
-        margin-top: initial;
-        margin-bottom: initial;
-        label{
-            padding-left: 0;
-            margin-left: 15px;
-            margin-right: 5px;
-            display: inline-block;
-            input[type="checkbox"]{
-                display: none;
-                + span{
-                    .border-radius(50%);
-                    width: 15px;
-                    height: 15px;
-                    margin-right: 4px;
-                    position: relative;
-                    display: inline-block;
-                    border: 1px solid #898989;
-                    vertical-align: text-top;
-                }
-                &:checked{
-                    +span{
-                        &:before{
-                            .border-radius(50%);
-                            top: 4px;
-                            left: 4px;
-                            width: 5px;
-                            height: 5px;
-                            content: '';
-                            margin: auto;
-                            position: absolute;
-                            background-color: #898989;
-                        }
-                    }
-                }
-            }
-        }
-    }
     button{
         .box-shadow(none);
         outline: 0;
@@ -734,36 +669,6 @@
                 height: 15px;
                 position: absolute;
                 background: url('../img/add-port-plus.png') 0 0 no-repeat;
-            }
-        }
-    }
-}
-.ports,
-.volumes{
-    table{
-        label.custom{
-            margin-bottom: 0;
-            display: inline-block;
-            vertical-align: middle;
-        }
-    }
-}
-.ports{
-    table{
-        label.custom{
-            input[type="checkbox"]{
-                &:checked{
-                    + span {
-                        &:before{
-                            top: -3px;
-                        }
-                    }
-                }
-                + span{
-                    width: 15px;
-                    height: 15px;
-                    margin-right: 0;
-                }
             }
         }
     }

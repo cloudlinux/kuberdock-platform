@@ -37,7 +37,11 @@ define(['marionette'], function(Marionette){
             'persistent-volumes'              : 'showPersistentVolumes',
             'persistent_volumes'              : 'showPersistentVolumes',
             'publicIPs'                       : 'showIPs',
+            'domains'                         : 'showDomains',
+            'domains/add'                     : 'showAddDomain',
             '*nothingSimilar'                 : 'pageNotFound'
+
+
         }
     });
     return router;

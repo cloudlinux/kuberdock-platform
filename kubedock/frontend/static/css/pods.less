@@ -23,29 +23,31 @@
 }
 .podsControl{
     z-index: 1;
-    width: 93%;
-    height: 50px;
-    display: none;
-    margin-left: 50px;
-    padding: 12px 0px;
+    font-size: 0;
+    margin-left: 60px;
     position: absolute;
-    background-color: #F8F8F8;
+    padding: 15px 0px 14px;
     .count{
-        font-size: 0;
         span{
             color: #1d1d1d;
             font-size: 13px;
-            min-height: 21px;
             font-family: @semibold;
-            vertical-align: middle;
-            display: inline-block;
         }
+    }
+    .count,
+    .runPods,
+    .stopPods,
+    .removePods,
+    .restartPods{
+        font-size: 0;
+        display: inline-block;
+        vertical-align: middle;
     }
     .runPods,
     .stopPods,
     .removePods,
     .restartPods{
-        margin-left: 20px;
+        margin-left: 15px;
     }
 }
 #item-info{
@@ -210,11 +212,6 @@
                 }
                 &.success{
                     color: #3f920e;
-                    &:before{
-                        width: 17px;
-                        height: 18px;
-                        background: url('../img/confirm.png') 0 0 no-repeat;
-                    }
                 }
                 &:hover{
                     cursor: default;
@@ -710,11 +707,26 @@
             }
             label{
                 margin-bottom: 15px;
+                &.margin-bottom-2{
+                    .margin-bottom-2();
+                }
+                &.margin-bottom-3{
+                    .margin-bottom-3();
+                }
+            }
+            .select-domain-wrapper{
+                .margin-bottom-4();
+            }
+            .domains-wrapper{
+                display: none;
+                .select-domain-wrapper{
+                    display: none;
+                }
             }
         }
     }
     .description{
-        margin-top: 22px;
+        margin: 22px 0 20px;
         p{
             font-size: 12px;
             margin-bottom: 0;

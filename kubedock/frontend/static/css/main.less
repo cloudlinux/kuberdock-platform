@@ -461,6 +461,7 @@ body{
                     }
                     &#add_pod,
                     &#add_node,
+                    &#add_domain,
                     &#create_user,
                     &#create_network{
                         .transition(0.3s ease-in-out);
@@ -518,6 +519,7 @@ body{
                 button, a{
                     &#add_pod,
                     &#add_node,
+                    &#add_domain,
                     &#create_user,
                     &#edit_user,
                     &#rename_node,
@@ -806,7 +808,6 @@ body{
             }
         }
     }
-
     .page-top-menu{
         .clearfix;
         font-size: 0;
@@ -824,42 +825,11 @@ body{
                 margin-left: 20px;
             }
         }
-        label.custom{
-            font-size: 13px;
-            font-weight: 400;
-            padding-left: 19px;
-            position: relative;
-            margin-bottom: 20px;
-            + label{
-                margin-left: 20px;
-            }
-            input[type=checkbox],
-            input[type=radio]{
-                + span{
-                    top: 0;
-                    left: 0;
-                    bottom: 0;
-                    margin: auto;
-                    position: absolute;
-                }
-            }
-            input[type=radio]{
-                &:checked{
-                    + span{
-                        border-color: #3197ee;
-                        &:before{
-                            background-color: #3197ee;
-                        }
-                    }
-                }
-            }
-        }
     }
 
     .border-top{
         border-top: 1px solid #e5e5e5;
     }
-
     .no-padding-right{
         padding-right: 0;
     }
@@ -871,65 +841,6 @@ body{
         .box-shadow(none) !important;
         border-color: red !important;
     }
-
-    /* checkbox&radio */
-    label.custom{
-        margin: 0;
-        padding: 0;
-        input[type="checkbox"]{
-            display: none;
-            + span{
-                width: 13px;
-                height: 13px;
-                position: relative;
-                display: inline-block;
-                border: 1px solid #c0c6cb;
-            }
-            &:checked{
-                +span{
-                    &:before{
-                        top: -6px;
-                        left: -5px;
-                        width: 21px;
-                        content: '';
-                        height: 21px;
-                        position: absolute;
-                        background: url('../img/checkbox-checked-blue.png') 0 0 no-repeat;
-                    }
-                }
-            }
-        }
-        input[type="radio"]{
-            display: none;
-            + span{
-                .border-radius(50%);
-                width: 13px;
-                height: 13px;
-                position: relative;
-                display: inline-block;
-                background-color: #fff;
-                border: 1px solid #c0c6cb;
-            }
-            &:checked{
-                + span {
-                    &:before{
-                        .border-radius(50%);
-                        top: 0;
-                        left: 0;
-                        right: 0;
-                        bottom: 0;
-                        width: 5px;
-                        margin: auto;
-                        content: '';
-                        height: 5px;
-                        position: absolute;
-                        background: rgba(48, 48, 48, 0.49);
-                    }
-                }
-            }
-        }
-    }
-
     .login-page{
         .container{
             .logo{
@@ -988,29 +899,6 @@ body{
                             padding: 0 42px;
                             line-height: 40px;
                             background-color: #2490EA;
-                        }
-                        .custom{
-                            height: 40px;
-                            font-size: 13px;
-                            line-height: 47px;
-                            font-weight: normal;
-                            span{
-                                .border-radius( 3px );
-                                width: 14px;
-                                height: 14px;
-                                margin-right: 4px;
-                                border-color: #419bf9;
-                                background-color: #419bf9;
-                                &:before{
-                                    background-image: url('../img/checkbox-checked-white.png');
-                                }
-                            }
-                            .checkbox-label{
-                                top: -2px;
-                                position: relative;
-                                display: inline-block;
-                                color: #1d1d1d;
-                            }
                         }
                         .lost{
                             color: #3197ee;
@@ -1270,6 +1158,7 @@ body{
     @import "nodes.less";
     @import "users.less";
     @import "ippool.less";
+    @import "domains.less";
     @import "settings.less";
     @import "predefined-app.less";
     @import "message.less";

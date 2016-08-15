@@ -674,8 +674,9 @@ define([
                 return;
             $.when(
                 this.podWizardBase(options),
-                App.getSystemSettingsCollection()
-            ).done(_.bind(function(base, settingsCollection){
+                App.getSystemSettingsCollection(),
+                App.getDomainsCollection()
+            ).done(_.bind(function(base, settingsCollection, domainsCollection){
                 var options = base[0], Views = base[1];
                 var containerModel = options.podModel.wizardState.container,
                     billingType = settingsCollection.byName('billing_type').get('value'),
@@ -684,6 +685,7 @@ define([
                         model: containerModel,
                         hasBilling: billingType.toLowerCase() !== 'no billing',
                         payg: payg,
+                        domains: domainsCollection,
                     });
 
                 this.listenTo(view, 'step:envconf', this.podWizardStepEnv);
@@ -1415,6 +1417,56 @@ define([
                             }),
                             view = new Views.SubnetIpsListView(
                                 {model: item, collection: filteredIPs});
+                        layoutView.main.show(view);
+                        layoutView.pager.show(new Pager.PaginatorView({view: view}));
+                    });
+                });
+                App.contents.show(layoutView);
+            });
+        },
+
+        showAddDomain: function(){
+            if (!this.checkPermissions(['Admin']))
+                return;
+            var that = this;
+            require(['app_data/domains/views'], function(Views){
+                var layoutView = new Views.DomainsLayoutView(),
+                    navbar = new Menu.NavList({collection: App.menuCollection}),
+                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['domains', 'add']});
+                that.listenTo(layoutView, 'show', function(){
+                    layoutView.nav.show(navbar);
+                    layoutView.breadcrumb.show(breadcrumbsLayout);
+                    breadcrumbsLayout.domains.show(
+                        new Breadcrumbs.Link({text: 'Domains Control', href:'#domains'}));
+                    breadcrumbsLayout.add.show(new Breadcrumbs.Text({text: 'Add domain'}));
+                    layoutView.main.show(
+                        new Views.DomainsAddDomainView()
+                    );
+                });
+                App.contents.show(layoutView);
+            });
+        },
+
+        showDomains: function(){
+            if (!this.checkPermissions(['Admin']))
+                return;
+            var that = this;
+            require(['app_data/domains/views'], function(Views){
+                var view,
+                    layoutView = new Views.DomainsLayoutView(),
+                    navbar = new Menu.NavList({collection: App.menuCollection}),
+                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['domains']}),
+                    button = {id: 'add_domain', href: '#domains/add', title: 'Add new domain'},
+                    breadcrumbsControls = new Breadcrumbs.Controls({button: button});
+
+                that.listenTo(layoutView, 'show', function(){
+                    layoutView.nav.show(navbar);
+                    layoutView.breadcrumb.show(breadcrumbsLayout);
+                    breadcrumbsLayout.domains.show(
+                        new Breadcrumbs.Link({text: 'Domains Control'}));
+                    breadcrumbsLayout.controls.show(breadcrumbsControls);
+                    App.getDomainsCollection().done(function(domainsCollection){
+                        view = new Views.DomainsListView({collection: domainsCollection});
                         layoutView.main.show(view);
                         layoutView.pager.show(new Pager.PaginatorView({view: view}));
                     });

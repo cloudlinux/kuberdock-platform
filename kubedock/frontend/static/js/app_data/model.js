@@ -367,7 +367,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             };
         },
         editableAttributes: [  // difference in other attributes won't be interpreted as "change"
-            'kube_type', 'restartPolicy', 'volumes', 'containers', 'kuberdock_resolve',
+            'kube_type', 'restartPolicy', 'volumes', 'containers',
+            'kuberdock_resolve', 'domain',
         ],
         isChanged: function(compareTo){
             if (!compareTo){
@@ -394,6 +395,12 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         initialize: function(){
             this.on('remove:containers', function(container){
                 this.deleteVolumes(container.get('volumeMounts').pluck('name'));
+            });
+            this.on('change:containers[*].ports[*].isPublic', function(model, value){
+                if (value && this.countPublicPorts() === 1)
+                    this.trigger('change-public-access-need', true);
+                if (this.countPublicPorts() === 0)
+                    this.trigger('change-public-access-need', false);
             });
         },
 
@@ -516,7 +523,14 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 data.KubeType.noAvailableKubeTypes;
         },
 
-        recalcInfo: function(pkg) {
+        countPublicPorts: function(){
+            return this.get('containers').chain()
+                .map(function(c){ return c.get('ports').toJSON(); })
+                .flatten(true).pluck('isPublic')
+                .reduce(function(sum, isPublic){ return sum + isPublic; }, 0).value();
+        },
+
+        recalcInfo: function(pkg){
             pkg = pkg || App.userPackage;
             var containers = this.get('containers'),
                 volumes = this.get('volumes'),
@@ -533,13 +547,11 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     ' ' + kube.get('disk_space_units'),
             };
 
-            var allPorts = _.flatten(containers.map(
-                    function(c){ return c.get('ports').toJSON(); }), true),
-                allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),
+            var allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),
                 totalSize = _.reduce(allPersistentVolumes,
-                    function(sum, v) { return sum + (v.pdSize || 1); }, 0),
+                    function(sum, v){ return sum + (v.pdSize || 1); }, 0),
                 totalPrice = 0;
-            this.isPublic = _.any(_.pluck(allPorts, 'isPublic'));
+            this.isPublic = !!this.countPublicPorts();
             this.isPerSorage = !!allPersistentVolumes.length;
 
             containers.each(function(container){
@@ -1282,6 +1294,24 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             return model.get(key);
         },
     });
+
+    data.DomainModel = Backbone.Model.extend({
+        urlRoot: '/api/domains/',
+        parse: unwrapper,
+    });
+
+    data.DomainsCollection = Backbone.PageableCollection.extend({
+        url: '/api/domains/',
+        model: data.DomainModel,
+        parse: unwrapper,
+        mode: 'client',
+        state: {
+            pageSize: 8,
+        },
+    });
+
+    App.getDomainsCollection = App.resourcePromiser(
+        'domainsCollection', data.DomainsCollection);
 
     data.UserAddressModel = Backbone.Model.extend({
         defaults: {

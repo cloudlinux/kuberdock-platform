@@ -25,6 +25,7 @@
         <div class="ports">
             <label>Ports:</label>
             <div id="editable-ports-list"></div>
+            <div id="public-access-controls"></div>
         </div>
         <div class="volumes">
             <label>Volumes:</label>
@@ -34,8 +35,13 @@
 </div>
 <div class="col-md-9 col-md-offset-3 col-sm-12 no-padding">
     <div class="description pull-left">
-        <p><sup>*</sup> Public IP will require additional payment<br>
-        <sup>**</sup> Data wiped out on each container restart, use persistent storage if you want data to persist</p>
+        <p>
+            <sup>*</sup> Public IP will require additional payment<br>
+            <sup>**</sup> Data wiped out on each container restart, use persistent storage if you want data to persist<br>
+            <span id="public-access-type-note">
+                <sup>***</sup> Type will apply for each container
+            </span>
+        </p>
     </div>
     <span class="buttons pull-right">
         <% if (flow === 'EDIT_CONTAINER_GENERAL'){ %>

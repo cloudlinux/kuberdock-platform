@@ -2,6 +2,10 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
     'use strict';
     var utils = {};
 
+    utils.KEY_CODES = {
+        enter: 13,
+    };
+
     utils.modalDialog = function(options){
         var modal = $('.modal'),
             modalDialog = modal.find('.modal-dialog');

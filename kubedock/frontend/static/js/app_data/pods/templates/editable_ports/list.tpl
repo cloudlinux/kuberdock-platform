@@ -14,5 +14,4 @@
     <div>
         <button type="button" class="add-port">Add port</button>
     </div>
-    <div class="col-xs-12 no-padding"></div>
 </div>

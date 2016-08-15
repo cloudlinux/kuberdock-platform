@@ -30,7 +30,7 @@ from .exceptions import APIError, PermissionDenied, NoFreeIPs, NoSuitableNode
 from .login import current_user
 from .pods import Pod
 from .rbac.models import Role
-from .settings import KUBE_MASTER_URL, KUBE_API_VERSION
+from .settings import KUBE_MASTER_URL, KUBE_BASE_URL, KUBE_API_VERSION
 from .settings import NODE_TOBIND_EXTERNAL_IPS
 from .users.models import SessionData
 
@@ -242,10 +242,10 @@ def get_api_url(*args, **kwargs):
     if kwargs.get('watch'):
         schema, query = 'ws', 'watch=true'
 
-    if 'base_url' in kwargs:
-        url = kwargs['base_url'] + '/'
-
-    url_parts = [kwargs.get('api_version', KUBE_API_VERSION)]
+    url_parts = [
+        kwargs.get('base_url', KUBE_BASE_URL),
+        kwargs.get('api_version', KUBE_API_VERSION),
+    ]
 
     namespace = kwargs.get('namespace', 'default')
     if namespace:
@@ -695,7 +695,10 @@ class KubeUtils(object):
             rv = func(*args, **kwargs)
             if isinstance(rv, Response):
                 return rv
-            return jsonify({'status': 'OK', 'data': rv})
+            response = {'status': 'OK'}
+            if rv is not None:
+                response['data'] = rv
+            return jsonify(response)
 
         return wrapper
 
@@ -1026,3 +1029,18 @@ class NestedDictUtils(object):
         message = 'All nested dicts must be instance of dict'
 
 nested_dict_utils = NestedDictUtils
+
+
+def domainize(input_str):
+    """
+    Normalize string to DNS-valid character sequence
+
+    :param input_str: input line to be normalized
+    :type input_str: str | unicode
+    :return: DNS valid line to be used as part of Domain Name
+    :rtype: str
+    """
+    str_ = input_str.lower()
+    # remove any symbols except ASCII digits and lowercase letters
+    str_ = re.sub('[^0-9a-z]', '', str_)
+    return str_

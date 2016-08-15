@@ -9,21 +9,24 @@ import ipaddress
 from flask import current_app
 
 from celery.exceptions import MaxRetriesExceededError
-from kubedock.exceptions import NoFreeIPs, NoSuitableNode
+from kubedock.exceptions import (
+    NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError)
 from kubedock.utils import ssh_connect, randstr
 from . import helpers
 from . import podutils
 from .helpers import KubeQuery
 from .images import Image
-from lbpoll import LoadBalanceService
+from .lbpoll import LoadBalanceService
 from .licensing import is_valid as license_valid
 from .node import Node as K8SNode
 from .pod import Pod
 from .pstorage import (get_storage_class_by_volume_info, get_storage_class,
                        delete_drive_by_id)
 from .node_utils import node_status_running, get_nodes_collection
+from .. import dns_management
 from ..billing import repr_limits
 from ..core import db
+from ..domains.models import PodDomain
 from ..exceptions import APIError
 from ..kd_celery import celery
 from ..pods.models import (
@@ -36,6 +39,8 @@ from ..utils import (POD_STATUSES, NODE_STATUSES, atomic, update_dict,
                      send_event_to_user, send_event_to_role, retry)
 from .node_utils import get_external_node_ip
 from ..nodes.models import Node
+from .pod_domains import set_pod_domain, check_domain
+from .ingress_resource import create_ingress
 
 DOCKERHUB_INDEX = 'https://index.docker.io/v1/'
 UNKNOWN_ADDRESS = 'Unknown'
@@ -151,6 +156,8 @@ class PodCollection(object):
                     pod.public_ip = db_pod.public_ip
                 if getattr(db_pod, 'public_aws', None):
                     pod.public_aws = db_pod.public_aws
+                if getattr(db_pod, 'domain', None):
+                    pod.domain = db_pod.domain
             pod._forge_dockers()
 
         self._make_namespace(pod.namespace)
@@ -256,15 +263,31 @@ class PodCollection(object):
         conf = pod.get_dbconfig() if config is None else config
         if (conf.get('public_ip', False) or
                 not PodCollection.needs_public_ip(conf)):
+            conf.pop('domain', None)
             return
-        if AWS:
-            conf.setdefault('public_aws', UNKNOWN_ADDRESS)
+        domain_name = conf.get('domain', None)
+        if domain_name is None:
+            if AWS:
+                conf.setdefault('public_aws', UNKNOWN_ADDRESS)
+            else:
+                ip_address = IPPool.get_free_host(as_int=True)
+                if ip_address is None:
+                    raise NoFreeIPs()
+                # 'true' indicates that this Pod needs Public IP to be assigned
+                conf['public_ip'] = pod.public_ip = 'true'
         else:
-            ip_address = IPPool.get_free_host(as_int=True)
-            if ip_address is None:
-                raise NoFreeIPs()
-            # 'true' indicates that this Pod needs Public IP to be assigned
-            conf['public_ip'] = pod.public_ip = 'true'
+            ready, message = dns_management.is_domain_system_ready()
+            if not ready:
+                current_app.logger.error(
+                    u'Trying to use domain for pod, while DNS is '
+                    u'misconfigured: {}'.format(message))
+                raise APIError(
+                    u'DNS management system is misconfigured. '
+                    u'Please, contact administrator.')
+            domain = check_domain(domain_name)
+            pod_domain = set_pod_domain(pod, domain.id)
+            conf['domain'] = pod.domain = u'{}.{}'.format(
+                pod_domain.name, domain.name)
         if config is None:
             pod.set_dbconfig(conf, save=False)
 
@@ -346,6 +369,9 @@ class PodCollection(object):
         pod_config = pod.get_dbconfig()
 
         if pod_config.pop('public_ip_before_freed', None) is None:
+            return
+
+        if pod_config.get('domain') is not None:
             return
 
         for container in pod_config['containers']:
@@ -430,10 +456,19 @@ class PodCollection(object):
 
         if hasattr(pod, 'public_ip'):
             self._remove_public_ip(pod_id=pod_id)
+        if hasattr(pod, 'domain'):
+            ok, message = dns_management.delete_type_A_record(pod.domain)
+            if not ok:
+                current_app.logger.error(
+                    u'Failed to delete A DNS record for pod "{}": {}'
+                    .format(pod.id, message))
+                send_event_to_role(
+                    'notify:error', {'message': message}, 'Admin')
         # all deleted asynchronously, now delete namespace, that will ensure
         # delete all content
         self._drop_namespace(pod.namespace)
         helpers.mark_pod_as_deleted(pod_id)
+        PodDomain.query.filter_by(pod_id=pod_id).delete()
 
     def check_updates(self, pod_id, container_name):
         """
@@ -667,6 +702,8 @@ class PodCollection(object):
                     pod.public_ip = db_pod_config['public_ip']
                 if db_pod_config.get('public_aws'):
                     pod.public_aws = db_pod_config['public_aws']
+                if db_pod_config.get('domain'):
+                    pod.domain = db_pod_config['domain']
 
                 pod.secrets = db_pod_config.get('secrets', [])
                 a = pod.containers
@@ -761,6 +798,16 @@ class PodCollection(object):
             raise APIError("Pod is not stopped, we can't run it")
         if not self._node_available_for_pod(pod):
             raise NoSuitableNode()
+        if hasattr(pod, 'domain'):
+            ok, message = dns_management.is_domain_system_ready()
+            if not ok:
+                raise SubsystemtIsNotReadyError(
+                    message,
+                    response_message=u'Pod cannot be started, because DNS '
+                                     u'management subsystem is misconfigured. '
+                                     u'Please, contact administrator.'
+                )
+
         if pod.status == POD_STATUSES.succeeded \
                 or pod.status == POD_STATUSES.failed:
             self._stop_pod(pod, block=True)
@@ -1018,8 +1065,8 @@ class PodCollection(object):
             raise APIError(DIRECT_SSH_ERROR)
         if exit_status != 0:
             current_app.logger.error(
-                "Can't update kd-ssh-user on the node.\
-                Exited with: {}, ({}, {})".format(
+                "Can't update kd-ssh-user on the node. "
+                "Exited with: {}, ({}, {})".format(
                     exit_status, i.read(), o.read()))
             raise APIError(DIRECT_SSH_ERROR)
 
@@ -1261,7 +1308,7 @@ def prepare_and_run_pod(pod):
 
         local_svc, _ = run_service(pod)
         if local_svc:
-            db_config['service'] = local_svc['metadata']['name']
+            db_config['service'] = pod.service = local_svc['metadata']['name']
             db_config['podIP'] = local_svc['spec']['clusterIP']
 
         helpers.replace_pod_config(pod, db_config)
@@ -1291,6 +1338,27 @@ def prepare_and_run_pod(pod):
         for container in pod.containers:
             # TODO: create CONTAINER_STATUSES
             container['state'] = POD_STATUSES.pending
+
+        if hasattr(pod, 'domain'):
+            ok, message = dns_management.create_or_update_type_A_record(
+                pod.domain)
+            if ok:
+                ok, message = create_ingress(
+                    pod.containers, pod.namespace, pod.domain, pod.service)
+            if not ok:
+                send_event_to_role(
+                    'notify:error',
+                    {
+                        'message': u'Failed to run pod with domain "{}": {}'
+                                   .format(pod.domain, message)
+                    },
+                    'Admin'
+                )
+                pods = PodCollection()
+                pods.update(pod.id, {'command': 'stop'})
+                raise APIError(
+                    u'Failed to create DNS record for pod "{}". '
+                    u'Please, contact administrator'.format(pod.name))
     except Exception as err:
         current_app.logger.exception('Failed to run pod: %s', pod)
         if isinstance(err, APIError):

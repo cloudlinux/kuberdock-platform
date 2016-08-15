@@ -26,6 +26,7 @@ resources = {
     'predefined_apps': ('create', 'get', 'edit', 'delete'),
     'pricing': ('create', 'get', 'edit', 'delete', 'get_own'),
     'timezone': ('get',),
+    'domains': ('create', 'get', 'edit', 'delete'),
 }
 
 permissions_base = {
@@ -77,6 +78,10 @@ permissions = {
         ('pricing', 'create'): True,
         ('pricing', 'delete'): True,
         ('timezone', 'get'): True,
+        ('domains', 'create'): True,
+        ('domains', 'get'): True,
+        ('domains', 'edit'): True,
+        ('domains', 'delete'): True,
     }),
     'User': dict(permissions_base, **{
         ('pods', 'own'): True,
@@ -95,6 +100,7 @@ permissions = {
         ('images', 'isalive'): True,
         ('pricing', 'get_own'): True,  # packages, kube types
         ('timezone', 'get'): True,
+        ('domains', 'get'): True,
     }),
 }
 permissions['LimitedUser'] = dict(permissions['User'], **{

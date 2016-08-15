@@ -153,8 +153,9 @@ CELERY_BROKER_URL = 'redis://{0}:6379'.format(REDIS_HOST)
 CELERY_RESULT_BACKEND = 'redis://{0}:6379'.format(REDIS_HOST)
 
 # Also used in yaml api version check
+KUBE_BASE_URL = 'api'
 KUBE_API_VERSION = 'v1'
-KUBE_MASTER_URL = 'http://localhost:8080/api/'
+KUBE_MASTER_URL = 'http://localhost:8080/'
 
 # If None, defaults will be used
 SSH_KEY_FILENAME = '/var/lib/nginx/.ssh/id_rsa'

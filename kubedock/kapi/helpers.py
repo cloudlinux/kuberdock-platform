@@ -7,14 +7,18 @@ import requests
 from ..core import db
 from ..exceptions import APIError
 from ..pods.models import Pod
+from ..settings import KUBE_BASE_URL, KUBE_API_VERSION
 from ..users.models import User
 from ..utils import get_api_url, send_pod_status_update
 
 
 class KubeQuery(object):
 
-    def __init__(self, return_json=True):
+    def __init__(self, return_json=True, base_url=KUBE_BASE_URL,
+                 api_version=KUBE_API_VERSION):
         self.return_json = return_json
+        self.base_url = base_url
+        self.api_version = api_version
 
     @staticmethod
     def _compose_args(rest=False):
@@ -41,15 +45,16 @@ class KubeQuery(object):
         else:
             raise SystemExit(error_string)
 
-    @staticmethod
-    def _make_url(res, ns=None, **kwargs):
+    def _make_url(self, res, ns=None, **kwargs):
         """
         Composes a full URL
         :param res: list -> list of URL path items
         """
         if res is not None:
-            return get_api_url(*res, namespace=ns, **kwargs)
-        return get_api_url(namespace=ns, **kwargs)
+            return get_api_url(*res, namespace=ns, base_url=self.base_url,
+                               api_version=self.api_version, **kwargs)
+        return get_api_url(namespace=ns, base_url=self.base_url,
+                           api_version=self.api_version, **kwargs)
 
     def _return_request(self, req):
         try:

@@ -23,6 +23,7 @@ ORIGIN_ROOT = 'originroot'
 OVERLAY_PATH = u'/var/lib/docker/overlay/{}/root'
 MOUNT_KDTOOLS_PATH = '/.kdtools'
 HOST_KDTOOLS_PATH = '/usr/lib/kdtools'
+SERVICE_ACCOUNT_STUB_PATH = '/var/run/secrets/kubernetes.io/serviceaccount'
 
 
 class PodOwner(dict):
@@ -115,7 +116,8 @@ class Pod(object):
         pod.k8s_status = pod.status
         pod.hostIP = status.get('hostIP')
 
-        # TODO why we call this "pod.host" instead of "pod.nodeName" ? rename it
+        # TODO why we call this "pod.host" instead of "pod.nodeName" ?
+        # rename it
         pod.host = spec.get('nodeName')
         pod.kube_type = spec.get('nodeSelector', {}).get('kuberdock-kube-type')
         # TODO we should use nodeName or hostIP instead, and rename this attr
@@ -124,6 +126,7 @@ class Pod(object):
         pod.containers = spec.get('containers', [])
         pod.restartPolicy = spec.get('restartPolicy')
         pod.dnsPolicy = spec.get('dnsPolicy')
+        pod.serviceAccount = spec.get('serviceAccount', False)
 
         if pod.status in (POD_STATUSES.running, POD_STATUSES.succeeded,
                           POD_STATUSES.failed):
@@ -177,7 +180,8 @@ class Pod(object):
             for volume_mount in container.get('volumeMounts', ()):
                 mount_path = volume_mount.get('mountPath', '')
                 # Skip origin root mountPath
-                hidden_volumes = [ORIGIN_ROOT, MOUNT_KDTOOLS_PATH]
+                hidden_volumes = [
+                    ORIGIN_ROOT, MOUNT_KDTOOLS_PATH, SERVICE_ACCOUNT_STUB_PATH]
                 if any(item in mount_path for item in hidden_volumes):
                     continue
                 # strip Z option from mountPath
@@ -206,7 +210,8 @@ class Pod(object):
         clean_vols = set()
         for volume, volume_public in zip(self.volumes, self.volumes_public):
             if 'persistentDisk' in volume:
-                self._handle_persistent_storage(volume, volume_public, reuse_pv)
+                self._handle_persistent_storage(
+                    volume, volume_public, reuse_pv)
             elif 'localStorage' in volume:
                 self._handle_local_storage(volume)
             else:
@@ -281,6 +286,8 @@ class Pod(object):
         secrets = getattr(self, 'secrets', [])
         kuberdock_resolve = ''.join(getattr(self, 'kuberdock_resolve', []))
         volume_annotations = self.extract_volume_annotations(volumes)
+        service_account = getattr(self, 'serviceAccount', False)
+        service = getattr(self, 'service', '')
 
         # Extract volumeMounts for missing volumes
         # missing volumes may exist if there some 'Container' storages, as
@@ -296,6 +303,11 @@ class Pod(object):
                 self._prepare_container(container, kube_type, volumes)
             )
         add_kdtools(containers, volumes)
+        add_kdenvs(containers, [
+            ("KUBERDOCK_SERVICE", service),
+        ])
+        if not service_account:
+            add_serviceaccount_stub(containers, volumes)
 
         config = {
             "kind": "ReplicationController",
@@ -358,6 +370,8 @@ class Pod(object):
         if hasattr(self, 'public_ip') and self.public_ip:
             pod_config['metadata']['labels']['kuberdock-public-ip'] = \
                 self.public_ip
+        if hasattr(self, 'domain'):
+            pod_config['metadata']['labels']['kuberdock-domain'] = self.domain
         return config
 
     def _update_volume_path(self, name, vid):
@@ -523,7 +537,7 @@ def add_kdtools(containers, volumes):
         u'name': volume_name})
     for container in containers:
         kdtools_mnt = filter(lambda m: m['name'].startswith(prefix),
-                                    container['volumeMounts'])
+                             container['volumeMounts'])
         if kdtools_mnt:
             container['volumeMounts'].remove(kdtools_mnt[0])
         container['volumeMounts'].append({
@@ -531,3 +545,53 @@ def add_kdtools(containers, volumes):
             u'mountPath': MOUNT_KDTOOLS_PATH,
             u'name': volume_name
         })
+
+
+def add_serviceaccount_stub(containers, volumes):
+    """
+    Add Service Account stub for Pods that do not needed it.
+    It's a workaround to prevent access from non-service pods to k8s services.
+    TODO: Probably there is a better way to do this.
+    See: http://kubernetes.io/docs/admin/service-accounts-admin/
+    http://kubernetes.io/docs/user-guide/service-accounts/
+
+    :param containers: Pod Containers
+    :type containers: list
+    :param volumes: Pod Volumes
+    :type volumes: list
+
+    TODO: Why do we need this?
+
+    """
+
+    volume_name = 'serviceaccount-stub-' + uuid.uuid4().hex
+    volumes.append({
+        'emptyDir': {},
+        'name': volume_name
+    })
+    for container in containers:
+        container['volumeMounts'].append({
+            'mountPath': SERVICE_ACCOUNT_STUB_PATH,
+            'name': volume_name
+        })
+
+
+def add_kdenvs(containers, envs):
+    """
+    Add KuberDock related Environment Variables to Pod Containers
+
+    :param containers: Pod Containers
+    :type containers: list
+    :param envs: Environment Variables to be added
+    :type envs: list
+    """
+
+    for container in containers:
+        env = container.get('env', [])
+
+        # TODO: What if such var already exists in list ? We should have
+        # unittests for this function
+        for name, value in envs:
+            env.insert(0, {'name': name, 'value': value})
+        if env:
+            container['env'] = env

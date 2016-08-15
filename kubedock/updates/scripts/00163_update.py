@@ -54,7 +54,7 @@ chmod -R 0440 {certs_dir}/*
         {
             "KUBE_CONTROLLER_MANAGER_ARGS":
                 {
-                    "--service-account-private-key-file=": K8S_TLS_CERT,
+                    "--service-account-private-key-file=": K8S_TLS_PRIVATE_KEY,
                     "--root-ca-file=": K8S_CA_CERT
                 }
         }

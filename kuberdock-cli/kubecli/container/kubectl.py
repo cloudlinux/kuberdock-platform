@@ -56,7 +56,7 @@ def parser(subs):
     desc_pod = desc_resource.add_parser('pod')
     desc_pods = desc_resource.add_parser('pods')
     desc_pod.add_argument('name', help=resource_help)
-    desc_pods.add_argument('name', help=resource_help)
+    desc_pods.add_argument('name', help=resource_help, nargs='?')
 
     delete = action.add_parser('delete')
     delete_resource = delete.add_subparsers(

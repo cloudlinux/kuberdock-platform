@@ -5,6 +5,7 @@ import pipes
 import sys
 import time
 import urllib2
+from collections import namedtuple
 from datetime import datetime
 
 import paramiko
@@ -167,7 +168,7 @@ class KDIntegrationTestAPI(object):
                 "the existing one.")
 
         settings = '\n'.join('{}: {}'.format(k, v)
-                             for k, v in self.kd_env.items())
+                                 for k, v in self.kd_env.items())
         LOG.debug('Cluster settings: {}'.format(settings))
 
         if provider == OPENNEBULA:
@@ -392,6 +393,7 @@ class RESTMixin(object):
 class KDPod(RESTMixin):
     # Image or PA name
     SRC = None
+    Port = namedtuple('Port', 'port proto')
 
     def __init__(self, cluster, image, name, kube_type, kubes,
                  open_all_ports, restart_policy, pvs, owner):
@@ -417,13 +419,16 @@ class KDPod(RESTMixin):
         :return: object via which Kuberdock pod can be managed
         """
 
-        def _get_image_ports():
+        def _get_image_ports(img):
             _, out, _ = cluster.kcli(
-                'image_info {}'.format(image), out_as_dict=True,
-                user=owner)
-            return [int(p['number']) for p in out['ports']]
+                'image_info {}'.format(img), out_as_dict=True, user=owner)
 
-        ports = _get_image_ports()
+            return [
+                cls.Port(int(port['number']), port['protocol'])
+                for port in out['ports']
+            ]
+
+        ports = _get_image_ports(image)
         escaped_name = pipes.quote(name)
         pv_cmd = ""
         if pvs is not None:
@@ -434,7 +439,8 @@ class KDPod(RESTMixin):
 
         ports_arg = ''
         if open_all_ports:
-            pub_ports = ",".join(["+{0}".format(p) for p in ports])
+            pub_ports = ",".join(
+                ["+{}::{}".format(p.port, p.proto) for p in ports])
             ports_arg = "--container-port {0}".format(pub_ports)
         cluster.kcli(
             "create -C {image} --kube-type {kube_type} --kubes {kubes} "
@@ -458,8 +464,8 @@ class KDPod(RESTMixin):
         def get_image(file_path=None, pod_description=None):
             if pod_description == None:
                 _, pod_description, _ = cluster.ssh_exec("master",
-                                                      "cat {}".format(
-                                                          file_path))
+                                                         "cat {}".format(
+                                                             file_path))
             pod_description = json.loads(pod_description)
             container = pod_description["containers"]
             if len(container) > 1:
@@ -521,11 +527,6 @@ class KDPod(RESTMixin):
     def _get_pod_class(cls, image):
         pod_classes = {c.SRC: c for c in cls.__subclasses__()}
         return pod_classes.get(image, cls)
-
-    def _get_ports(self, image):
-        _, out, _ = self.cluster.kcli(
-            'image_info {}'.format(image), out_as_dict=True, user=self.owner)
-        return [int(p['number']) for p in out['ports']]
 
     def start(self):
         rc, out, err = self.cluster.kcli("start {0}".format(self.escaped_name),
@@ -602,16 +603,19 @@ class KDPod(RESTMixin):
             "describe pods {}".format(self.escaped_name), out_as_dict=True,
             user=self.owner)
         return out
+
     @property
     def pod_id(self):
         return self.get_spec()['id']
 
-    def docker_exec(self, container_id, command):
+    def docker_exec(self, container_id, command, detached=False):
         if self.status != 'running':
             raise PodIsNotRunning()
 
         node_name = self.info['host']
-        docker_cmd = 'exec {} {}'.format(container_id, command)
+        args = '-d' if detached else ''
+        docker_cmd = 'exec {} {} bash -c {}'.format(
+            args, container_id, pipes.quote(command))
         return self.cluster.docker(docker_cmd, node_name)
 
     def healthcheck(self):
@@ -661,9 +665,11 @@ class PV(object):
         self.name = name
         self.owner = owner
         self.mount_path = mount_path
-        inits = {"new": self._create_new,
-                 "existing": self._load_existing,
-                 "dummy": self._create_dummy}
+        inits = {
+            "new": self._create_new,
+            "existing": self._load_existing,
+            "dummy": self._create_dummy
+        }
         try:
             inits[kind](size)
         except KeyError:

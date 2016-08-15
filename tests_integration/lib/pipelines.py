@@ -163,7 +163,7 @@ class Pipeline(object):
         cluster cleanup
         """
         self.cleanup()
-        self.cluster.preload_docker_image('nginx:latest')
+        self.cluster.preload_docker_image('nginx')
 
     def tear_down(self):
         """
@@ -227,10 +227,7 @@ class NetworkingPipeline(Pipeline):
     NAME = 'networking'
     ROUTABLE_IP_COUNT = 2
     ENV = {
-        # TODO: AC-3584 When the isolation rules are fixed so pods on
-        # different nodes correctly communicate with each other raise that
-        # number to 2
-        'KD_NODES_COUNT': '1',
+        'KD_NODES_COUNT': '2',
         'KD_RHOSTS_COUNT': '1',
         # rhost: use the same template as for master/nodes - cent7
         'KD_NEBULA_RHOST_TEMPLATE_ID': os.environ.get('KD_NEBULA_TEMPLATE_ID')

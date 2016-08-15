@@ -1,12 +1,13 @@
 <label><%- label %></label>
 <% if (options) { %>
-    <select class="settings-item selectpicker" id="<%= name %>">
+    <select id="<%= name %>" class="settings-item selectpicker">
         <% _.each(options, function(option, i){ %>
         <option value="<%- i %>"><%- option %></option>
         <% }) %>
     </select>
 <% } else { %>
-    <input type="text" id="<%= name %>" class="settings-item"
+    <input id="<%= name %>" class="settings-item"
+           type="<%= name === 'billing_password' ? 'password' : 'text' %>"
            value="<%- typeof value !== 'undefined' ? value : '' %>"
            placeholder="<%- placeholder %>"/>
 <% } %>

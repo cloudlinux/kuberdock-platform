@@ -641,7 +641,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             App.getSystemSettingsCollection().done(function(settings){
                 var fixedPrice = App.userPackage.get('count_type') === 'fixed'
                     && settings.byName('billing_type')
-                        .get('value').toLowerCase() !== 'no billing';
+                    .get('value').toLowerCase() !== 'no billing';
                 if (!fixedPrice){
                     var cmd = model.ableTo('start') ? 'start' : 'redeploy';
                     return model.command(cmd, {applyEdit: true})

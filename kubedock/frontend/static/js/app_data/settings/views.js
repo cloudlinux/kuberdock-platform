@@ -46,8 +46,7 @@ define(['app_data/app', 'marionette',
                                                      this.model.get('name'))) {
                 tgt.val(trimmedValue);
                 this.model.set({value: trimmedValue});
-            }
-            else {
+            } else {
                 var that = this,
                     modelName = this.model.get('name'),
                     modelValue = this.model.get('value');
@@ -110,14 +109,13 @@ define(['app_data/app', 'marionette',
                     m.save(null, {wait: true})
                         .fail(utils.notifyWindow)
                         .done(function(){
-                            var msg = (m.get('name') === 'billing_type' ?
-                                       'Billing system changed successfully' :
-                                       m.get('label') + ' changed successfully');
+                            var msg = (m.get('name') === 'billing_type'
+                                        ? 'Billing system changed successfully'
+                                        : m.get('label') + ' changed successfully');
                             utils.notifyWindow(msg, 'success');
                         });
                 });
-            }
-            else {
+            } else {
                 utils.notifyWindow('Data has not been changed.', 'success');
             }
         }
@@ -153,12 +151,12 @@ define(['app_data/app', 'marionette',
                 data = this.model.get('data');
 
             _.each(data, function(item){
-                !that.comparison(item[0],item[1])
+                !that.comparison(item[0], item[1])
                     ? item[3] = true
                     : item[3] = false;
             });
 
-            results = _.any(data, function(item){ return !that.comparison(item[0],item[1]); });
+            results = _.any(data, function(item){ return !that.comparison(item[0], item[1]); });
             this.model.set({attention: results}, {silent: true});
         },
 
@@ -175,14 +173,14 @@ define(['app_data/app', 'marionette',
                 },
                 error: function(){
                     that.ui.updateStats.removeClass('start-atimation');
-                    console.log('Could not fetch statistics','error');
+                    console.log('Could not fetch statistics', 'error');
                 }
             });
         },
 
         comparison: function(a, b){
             if (a === 'unlimited' || a === 0) a = Infinity;
-            return a > b ? true : false;
+            return a > b;
         },
 
         ui: {
@@ -349,9 +347,12 @@ define(['app_data/app', 'marionette',
                 symbols = /[!"#$%&'()*+,\-.\/\\:;<=>?@[\]^_`{\|}~]/g,
                 pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
 
-            this.ui.first_name.val(firtsName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
-            this.ui.last_name.val(lastName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
-            this.ui.middle_initials.val(middleInitials.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+            this.ui.first_name
+                .val(firtsName.replace(symbols, '').replace(spaces, '').replace(numbers, ''));
+            this.ui.last_name
+                .val(lastName.replace(symbols, '').replace(spaces, '').replace(numbers, ''));
+            this.ui.middle_initials
+                .val(middleInitials.replace(symbols, '').replace(spaces, '').replace(numbers, ''));
 
             var data = {
                     'first_name': this.ui.first_name.val(),
@@ -363,17 +364,17 @@ define(['app_data/app', 'marionette',
 
             if (data.email === '') {
                 utils.scrollTo(this.ui.email);
-                utils.notifyInline('Empty E-mail',this.ui.email);
+                utils.notifyInline('Empty E-mail', this.ui.email);
                 return;
             } else if (!pattern.test(data.email)) {
                 utils.scrollTo(this.ui.email);
-                utils.notifyInline('E-mail must be correct',this.ui.email);
+                utils.notifyInline('E-mail must be correct', this.ui.email);
                 return;
             }
             if (this.ui.password.val() !== this.ui.password_again.val()) {
                 utils.scrollTo(this.ui.password);
                 this.ui.password.addClass('error');
-                utils.notifyInline("Passwords don\'t match",this.ui.password_again);
+                utils.notifyInline("Passwords don't match", this.ui.password_again);
                 return;
             }
             if (this.ui.password.val())  // update only if specified
@@ -418,7 +419,7 @@ define(['app_data/app', 'marionette',
         changeTab: function (evt) {
             evt.preventDefault();
             var tgt = $(evt.target);
-            if(tgt.not("li")) tgt = tgt.parent('li');
+            if (tgt.not("li")) tgt = tgt.parent('li');
             if (tgt.hasClass('general')) App.navigate('settings/general', {trigger: true});
             if (tgt.hasClass('license')) App.navigate('settings/license', {trigger: true});
             else if (tgt.hasClass('profile')) App.navigate('settings/profile', {trigger: true});
@@ -436,8 +437,7 @@ define(['app_data/app', 'marionette',
                     $(item).addClass('active');
                 } else if (!href) {
                     that.ui.general.addClass('active');
-                }
-                else {
+                } else {
                     $(item).removeClass('active');
                 }
             });

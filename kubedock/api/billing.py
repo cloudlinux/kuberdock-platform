@@ -6,6 +6,7 @@ from kubedock.login import auth_required
 from kubedock.utils import KubeUtils
 from kubedock.billing.models import Package, Kube
 from kubedock.system_settings.models import SystemSettings
+from kubedock.kapi.apps import PredefinedApp
 import json
 
 
@@ -98,3 +99,23 @@ def order_kubes():
     billing = current_app.billing_factory.get_billing(current_billing)
     data['referer'] = data['referer'] if 'referer' in data else ''
     return billing.orderkubes(**data)
+
+
+@billing.route('/orderapp/<int:template_id>/<int:plan_id>',
+               methods=['POST'], strict_slashes=False)
+# Currently this workflow does not imply authentication but we can force it
+# @auth_required
+@maintenance_protected
+@KubeUtils.jsonwrap
+def order_app(template_id, plan_id):
+    data = KubeUtils._get_params()
+    current_billing = SystemSettings.get_by_name('billing_type')
+    if current_billing == 'No billing':
+        raise WithoutBilling()
+    app = PredefinedApp.get(template_id)
+    filled = app.get_filled_template_for_plan(plan_id, data, as_yaml=True)
+    pkgid = app._get_package().id
+    billing = current_app.billing_factory.get_billing(current_billing)
+    rv = billing.orderapp(pkgid=pkgid, yaml=filled)
+    current_app.logger.debug(rv)
+    return rv

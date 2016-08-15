@@ -1,7 +1,7 @@
-from flask import Blueprint, request, render_template, current_app
+from flask import Blueprint, request, render_template
 from collections import namedtuple
 from kubedock.kapi.apps import PredefinedApp
-from kubedock.exceptions import PredefinedAppExc, APIError
+from kubedock.exceptions import PredefinedAppExc
 from kubedock.login import current_user
 from kubedock.system_settings.models import SystemSettings
 
@@ -56,16 +56,13 @@ def prepare_system_settings(data):
     Process system settings and puts'em into data
     :param data: dict -> data to be fed to template
     """
-    keys = ('billing_type', 'billing_url', 'persitent_disk_max_size')
-    n = namedtuple('N', 'billing url max')._make(keys)
+    keys = ('billing_type', 'persitent_disk_max_size')
+    n = namedtuple('N', 'billing maxsize')._make(keys)
     data.update({k: SystemSettings.get_by_name(k) for k in keys})
-    if not data[n.max]:
-        data[n.max] = 10
+    if not data[n.maxsize]:
+        data[n.maxsize] = 10
     if data[n.billing].lower() == 'no billing':
         return
-    if not data[n.url]:
-        raise APIError('Billing URL is required unless "No billing" set')
-    data[n.url] += current_app.billing_factory.get_app_url(data[n.billing])
 
 
 def set_package_if_present(app):

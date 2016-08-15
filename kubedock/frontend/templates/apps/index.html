@@ -446,7 +446,6 @@
             window.onload = function(e) {
 
                 var appPackageID = {{ plan_id|int }},
-                    billingUrl = {{ billing_url|tojson|safe }},
                     billingType = {{ billing_type|tojson|safe }},
                     token2 = {{ token2|tojson|safe }} || window.localStorage.authData,
                     customFields = document.getElementsByClassName('custom-field'),
@@ -563,10 +562,10 @@
                     };
                 });
 
-                function getfillTemplate(cb) {
+                function getFairKick(cb) {
                     var req = new XMLHttpRequest(),
                         values = JSON.stringify(getValues());
-                    req.open('POST', '/api/yamlapi/fill/'+template_id+'/'+appPackageID);
+                    req.open('POST', '/api/billing/orderapp/'+template_id+'/'+appPackageID);
                     req.setRequestHeader('Content-Type', 'application/json;charset=UTF-8')
                     req.onreadystatechange = function(){
                         if (req.readyState === 4) {
@@ -574,25 +573,24 @@
                                 cb(req.responseText);
                             }
                             else {
-                                console.log('Failed to get filled yaml');
+                                console.log('Failed to get redirection url');
                             }
                         }
                     }
                     req.send(values);
                 }
 
-                function sendTemplateToBilling(tpl) {
-                    var url = billingUrl
-                        + (billingUrl.indexOf('?') === -1 ? '?' : '&')
-                        + 'yaml=' + encodeURIComponent(tpl)
-                        + '&pkgid=' + packageId
-                        + '&referer=' + window.location.href;
-                    window.location = url;
+                function makeRedirect(data) {
+                    var parsed = JSON.parse(data);
+                    parsed = parsed.hasOwnProperty('data') ? parsed.data : parsed;
+                    if (parsed.hasOwnProperty('redirect')) {
+                        window.location = parsed.redirect;
+                    }
                 }
 
                 submitButton.onclick = function(evt){
-                    if (billingType.toLowerCase() !== 'no billing' && billingUrl) { // we have billing
-                        getfillTemplate(sendTemplateToBilling); // get filled template and send it to billing
+                    if (billingType.toLowerCase() !== 'no billing') { // we have billing
+                        getFairKick(makeRedirect);
                     }
                     else {
                         var req = new XMLHttpRequest(),

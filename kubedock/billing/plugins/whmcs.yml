@@ -5,8 +5,6 @@ auth: params
 password-digest: md5
 common-params:
     responsetype: json
-pod-url: /kdorder.php?a=orderPod
-app-url: /kdorder.php?a=orderApp
 common-headers:
     User-Agent: Mozilla/5.0
 response:
@@ -47,6 +45,18 @@ methods:
             client_id: null          # filled in automatically
             pod: pod
             referer: referer
+        endpoint: /includes/api.php
+        return:
+            - results
+    orderapp:
+        method: post
+        args:
+            - pkgid
+            - yaml
+        params:
+            action: orderkuberdockapp
+            pkgid: pkgid
+            yaml: yaml
         endpoint: /includes/api.php
         return:
             - results

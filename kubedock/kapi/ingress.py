@@ -7,7 +7,7 @@ from ..constants import (
     KUBERDOCK_BACKEND_POD_NAME,
     KUBERDOCK_INGRESS_POD_NAME,
 )
-from ..exceptions import APIError, NoFreeIPs
+from ..exceptions import APIError
 from ..pods.models import Pod, IPPool
 from ..settings import IS_PRODUCTION_PKG
 from ..validation import check_internal_pod_data
@@ -239,8 +239,6 @@ def get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
 
 def prepare_ip_sharing():
     """Create all pods for IP Sharing"""
-    if not IPPool.get_free_host():
-        raise NoFreeIPs('At least one Public IP needed to use IP Sharing')
-
+    IPPool.get_free_host()
     create_default_backend_pod()
     create_ingress_controller_pod()

@@ -5,13 +5,12 @@ from collections import defaultdict
 from os import path
 from uuid import uuid4
 
-import ipaddress
 from flask import current_app
 
 from celery.exceptions import MaxRetriesExceededError
 from kubedock.exceptions import (
     NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError)
-from kubedock.utils import ssh_connect, randstr
+from kubedock.utils import ssh_connect, randstr, ip2int
 from . import helpers
 from . import podutils
 from .helpers import KubeQuery
@@ -270,9 +269,7 @@ class PodCollection(object):
             if AWS:
                 conf.setdefault('public_aws', UNKNOWN_ADDRESS)
             else:
-                ip_address = IPPool.get_free_host(as_int=True)
-                if ip_address is None:
-                    raise NoFreeIPs()
+                IPPool.get_free_host(as_int=True)
                 # 'true' indicates that this Pod needs Public IP to be assigned
                 conf['public_ip'] = pod.public_ip = 'true'
         else:
@@ -331,8 +328,7 @@ class PodCollection(object):
             if pod_id:
                 query = query.filter_by(pod_id=pod_id)
             if ip:
-                query = query.filter_by(
-                    ip_address=int(ipaddress.ip_address(ip)))
+                query = query.filter_by(ip_address=ip2int(ip))
             ip = query.first()
             if ip is None:
                 return
@@ -356,6 +352,35 @@ class PodCollection(object):
 
         IpState.end(pod_id, ip.ip_address)
         db.session.delete(ip)
+
+    @staticmethod
+    @atomic(nested=False)
+    def unbind_publicIP(pod_id):
+        """Temporary unbind publicIP, on next pod start publicIP will be
+        reassigned. Unbinded publicIP saved in pod config as
+        public_ip_before_freed.
+
+        """
+        ip = PodIP.query.filter_by(pod_id=pod_id).first()
+        if ip is None:
+            return
+
+        pod = ip.pod
+        pod_config = pod.get_dbconfig()
+        if pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
+            raise APIError("We can unbind ip only on stopped pod")
+        pod_config['public_ip_before_freed'] = pod_config.pop('public_ip', None)
+        pod_config['public_ip'] = 'true'
+        pod.set_dbconfig(pod_config, save=False)
+
+        network = IPPool.query.filter_by(network=ip.network).first()
+        node = network.node
+        if current_app.config['NONFLOATING_PUBLIC_IPS'] and node:
+            K8SNode(hostname=node.hostname).increment_free_public_ip_count(1)
+
+        IpState.end(pod_id, ip.ip_address)
+        db.session.delete(ip)
+        send_event_to_user('pod:change', {'id': pod_id}, pod.owner_id)
 
     @classmethod
     @atomic()
@@ -822,23 +847,30 @@ class PodCollection(object):
 
         pod.set_status(POD_STATUSES.preparing)
 
-        if not current_app.config['NONFLOATING_PUBLIC_IPS']:
-            pod_public_ip = getattr(pod, 'public_ip', None)
-            if pod_public_ip == 'true':
-                with atomic():
-                    ip_address = IPPool.get_free_host(as_int=True)
-                    if ip_address is None:
-                        raise NoFreeIPs()
-                    network = IPPool.get_network_by_ip(ip_address)
-                    pod_ip = PodIP(pod_id=pod.id, network=network.network,
-                                   ip_address=ip_address)
-                    db.session.add(pod_ip)
-                    db_config['public_ip'] = pod.public_ip = str(pod_ip)
-                    IpState.start(pod.id, pod_ip)
-                db_pod.set_dbconfig(db_config)
-            elif pod_public_ip is not None:
-                current_app.logger.warning('PodIP {0} is already allocated'
-                                           .format(pod_public_ip))
+        try:
+            if not current_app.config['NONFLOATING_PUBLIC_IPS']:
+                pod_public_ip = getattr(pod, 'public_ip', None)
+                if pod_public_ip == 'true':
+                    with atomic():
+                        ip = db_config.get('public_ip_before_freed')
+                        ip_address = IPPool.get_free_host(as_int=True, ip=ip)
+                        network = IPPool.get_network_by_ip(ip_address)
+                        pod_ip = PodIP(pod_id=pod.id, network=network.network,
+                                       ip_address=ip_address)
+                        db.session.add(pod_ip)
+                        db_config['public_ip'] = pod.public_ip = str(pod_ip)
+                        IpState.start(pod.id, pod_ip)
+                    db_pod.set_dbconfig(db_config)
+                elif pod_public_ip is not None:
+                    current_app.logger.warning(
+                        'PodIP {0} is already allocated'.format(pod_public_ip))
+        except NoFreeIPs:
+            pod.set_status(POD_STATUSES.stopped, send_update=True)
+            raise
+        except Exception:
+            current_app.logger.exception('Failed to bind publicIP: %s', pod)
+            pod.set_status(POD_STATUSES.stopped, send_update=True)
+            raise
 
         if async_pod_create:
             prepare_and_run_pod_task.delay(pod)

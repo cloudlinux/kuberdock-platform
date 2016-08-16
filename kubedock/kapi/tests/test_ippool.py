@@ -348,6 +348,30 @@ class TestIpPool(DBTestCase):
         }
         ippool.IpAddrPool().create(data)
 
+    @responses.activate
+    def test_is_ip_available(self):
+        block = '["192.168.2.1","192.168.2.3","192.168.2.7"]'
+        pool1 = IPPool(network='192.168.1.1/32')
+        pool2 = IPPool(
+            network='192.168.2.0/24', blocked_list=block, node=self.node)
+        db.session.add(pool1)
+        db.session.add(pool2)
+        db.session.commit()
+
+        self.assertTrue(pool1.is_ip_available(ip=u'192.168.1.1'))
+        self.assertFalse(pool1.is_ip_available(ip=u'192.168.1.2'))
+        self.assertFalse(pool1.is_ip_available(ip=u'192.168.2.2'))
+        self.assertTrue(pool2.is_ip_available(ip='192.168.2.2'))
+        self.assertFalse(pool2.is_ip_available(ip='192.168.2.7'))
+        self.assertTrue(pool1.is_ip_available(
+            ip=u'192.168.1.1', node_hostname=self.node.hostname))
+        self.assertTrue(pool2.is_ip_available(
+            ip=u'192.168.2.6', node_hostname=self.node.hostname))
+        self.assertFalse(pool2.is_ip_available(
+            ip=u'192.168.2.7', node_hostname=self.node.hostname))
+        self.assertFalse(pool2.is_ip_available(
+            ip=u'192.168.2.6', node_hostname="some_other_node"))
+
 
 if __name__ == '__main__':
     unittest.main()

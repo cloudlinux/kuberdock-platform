@@ -3,8 +3,10 @@ import random
 import string
 import types
 import uuid
+import operator
 from datetime import datetime
 from hashlib import md5
+from functools import reduce
 
 import ipaddress
 from flask import current_app
@@ -15,6 +17,7 @@ from ..kapi import pd_utils
 from ..models_mixin import BaseModelMixin
 from ..settings import DOCKER_IMG_CACHE_TIMEOUT, KUBERDOCK_INTERNAL_USER
 from ..users.models import User
+from ..exceptions import NoFreeIPs
 
 
 class Pod(BaseModelMixin, db.Model):
@@ -214,11 +217,11 @@ def _ip_network_hosts(obj, page=None):
     net_ip = obj.network_address + (page - 1) * 2 ** obj.page_bits
     net_pl = obj.max_prefixlen - obj.page_bits if pages > 1 else obj.prefixlen
     network = ipaddress.ip_network(u'{0}/{1}'.format(net_ip, net_pl))
-    # This method used to return _BaseNetwork.hosts() generator, however the default
-    # implementation would skip network and broadcast addresses, which made
-    # the final IP pool short of two IP addresses.
-    # As of AC-3531 fix, now it returns the _BaseNetwork.__iter__() instead,
-    # which does not skip any addresses.
+    # This method used to return _BaseNetwork.hosts() generator,
+    # however the default implementation would skip network and
+    # broadcast addresses, which made the final IP pool short of
+    # two IP addresses.  As of AC-3531 fix, now it returns
+    # the _BaseNetwork.__iter__() instead, which does not skip any addresses.
     return iter(network)
 
 
@@ -402,7 +405,19 @@ class IPPool(BaseModelMixin, db.Model):
         return False
 
     @classmethod
-    def get_free_host(cls, as_int=None, node=None):
+    def get_free_host(cls, as_int=None, node=None, ip=None):
+        """Return free host if available.
+        :param as_int: return ip as long int
+        :param node: if set, get free host only for this node
+        :param ip: if set, first try to check if this ip available, if not,
+        then return any other available ip
+        :return: ip address, as str or int, depends on  as_int value
+
+        """
+        if ip:
+            network = cls.get_network_by_ip(ip)
+            if network and network.is_ip_available(ip, node):
+                return int(ipaddress.ip_address(ip)) if as_int else ip
         if node is None:
             networks = cls.all()
         else:
@@ -411,6 +426,21 @@ class IPPool(BaseModelMixin, db.Model):
             free_host = n.get_first_free_host(as_int=as_int)
             if free_host is not None:
                 return free_host
+        raise NoFreeIPs()
+
+    def is_ip_available(self, ip, node_hostname=None):
+        """Check if ip available
+        param ip: ip to check
+        type ip: str
+        param node_hostname: if set, check if ip available only on this node
+        return: True of False
+
+        """
+        node = self.node.hostname if self.node else None
+        if node and node_hostname and node_hostname != node:
+            return False
+        pages = (self.free_hosts(page=p) for p in self.iterpages())
+        return ip in reduce(operator.add, pages)
 
 
 class PodIP(BaseModelMixin, db.Model):

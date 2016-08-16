@@ -50,7 +50,10 @@ class IpAddrPool(object):
 
     def get_free(self):
         """Returns first free ip address from pool of defined networks."""
-        return IPPool.get_free_host()
+        try:
+            return IPPool.get_free_host()
+        except NoFreeIPs:
+            return None
 
     def create(self, data):
         # type: (dict) -> dict
@@ -168,10 +171,10 @@ class IpAddrPool(object):
                     for k, v in elb_dict.items()]
 
         return [{
-                    'id': str(ipaddress.ip_address(i.ip_address)),
-                    'pod': pods[i.pod_id],
-                    'pod_id': i.pod_id
-                } for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
+            'id': str(ipaddress.ip_address(i.ip_address)),
+            'pod': pods[i.pod_id],
+            'pod_id': i.pod_id}
+            for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
 
     @atomic(nested=False)
     def delete(self, network):
@@ -248,9 +251,10 @@ class IpAddrPool(object):
             raise APIError('Pod is not exists {0}'.format(pod_id))
         if pod.ip is not None:
             return str(pod.ip)
-        ip = IPPool.get_free_host(as_int=True, node=node_hostname)
-        if ip is None:
-            raise NoFreeIPs()
+
+        db_config = pod.get_dbconfig()
+        prev_ip = db_config.get('public_ip_before_freed')
+        ip = IPPool.get_free_host(as_int=True, node=node_hostname, ip=prev_ip)
         ip_pool = IPPool.get_network_by_ip(ip)
         pod_ip = PodIP(pod=pod, network=ip_pool.network, ip_address=ip)
         pod_ip.save()

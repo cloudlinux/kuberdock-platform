@@ -1,5 +1,4 @@
 from pytz import common_timezones, timezone
-from datetime import datetime
 from flask import Blueprint, request, jsonify, current_app
 from flask.views import MethodView
 

@@ -35,8 +35,10 @@ def print_msg(msg='', color=Fore.MAGENTA):
         sys.stdout.flush()
 
 
-def run_tests_in_a_pipeline(pipeline_name, tests):
+def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
     """
+    :param cluster_debug: if True cluster isn't destroyed on any test
+        failure
     :param pipeline_name: pipeline name
     :param tests: list of callables
     """
@@ -70,7 +72,7 @@ def run_tests_in_a_pipeline(pipeline_name, tests):
             msg = format_exception(sys.exc_info())
             pipe_log('{} -> FAILED\n{}'.format(test_name, msg), Fore.RED)
 
-    if test_results.has_any_failures(pipeline_name):
+    if cluster_debug and test_results.has_any_failures(pipeline_name):
         add_debug_info(pipeline)
     else:
         pipeline.destroy()
@@ -93,7 +95,7 @@ def add_debug_info(pipeline):
         msg.format(pipeline.name, destroy_time.isoformat(' '), master_ip))
 
 
-def start_test(pipeline, tests):
+def start_test(pipeline, tests, cluster_debug):
     """
     Create a thread which creates a pipeline and starts executing tests in it
     :param pipeline: tuple (name, thread)
@@ -104,7 +106,7 @@ def start_test(pipeline, tests):
     full_name = '{}_{}'.format(*pipeline)
     t = Thread(
         name=full_name, target=run_tests_in_a_pipeline,
-        args=(full_name, tests))
+        args=(full_name, tests, cluster_debug))
     t.start()
     return t
 
@@ -156,7 +158,7 @@ def _filter_pipelines(pipelines):
         return registered_pipelines
 
     return {k: v
-            for k, v in registered_pipelines.items() if k[0] in pipelines}
+        for k, v in registered_pipelines.items() if k[0] in pipelines}
 
 
 def _verify_paths(ctx, param, items):
@@ -176,11 +178,16 @@ def _verify_pipelines(ctx, param, items):
 
 @click.command()
 @click.argument('paths', nargs=-1, callback=_verify_paths)
-@click.option('--pipelines', callback=_verify_pipelines)
-@click.option('--live-log', is_flag=True)
-@click.option('--all-tests', is_flag=True)
-@click.option('--test', type=str)
-def main(paths, pipelines, live_log, all_tests, test):
+@click.option('--pipelines', callback=_verify_pipelines,
+              help='Comma separated pipeline names to use')
+@click.option('--live-log', is_flag=True,
+              help='Instantly print test logs to the console')
+@click.option('--all-tests', is_flag=True, help='Grab all available tests')
+@click.option('--cluster-debug', is_flag=True, default=False,
+              help='Enable debug mode. Currently this does not destroy a '
+                   'cluster if any of its tests failed.')
+@click.option('--test', type=str, help='A name of a test to run')
+def main(paths, pipelines, live_log, all_tests, cluster_debug, test):
     if bool(all_tests) == bool(test):
         raise click.BadOptionUsage(
             'You should specify either --test NAME or --all-tests')
@@ -198,11 +205,12 @@ def main(paths, pipelines, live_log, all_tests, test):
             requested_pipelines = _filter_test_by_name(
                 test, requested_pipelines)
 
-        if not os.environ.get('BUILD_CLUSTER') and len(requested_pipelines) > 1:
+        if not os.environ.get('BUILD_CLUSTER') and len(
+                requested_pipelines) > 1:
             sys.exit('Can not run multiple pipelines with unset BUILD_CLUSTER')
 
-        threads = [start_test(pipe, tests)
-                   for pipe, tests in requested_pipelines.items()]
+        threads = [start_test(pipe, tests, cluster_debug)
+            for pipe, tests in requested_pipelines.items()]
 
         for t in threads:
             t.join()

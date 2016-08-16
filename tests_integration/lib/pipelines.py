@@ -235,6 +235,7 @@ class NetworkingPipeline(Pipeline):
 
     def set_up(self):
         super(NetworkingPipeline, self).set_up()
+        self.cluster.preload_docker_image('sysradium/cloudlinux')
         self.cluster.recreate_routable_ip_pool()
 
 

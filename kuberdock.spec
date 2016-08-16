@@ -102,6 +102,7 @@ mkdir -p %{buildroot}%{_bindir}
 cp -r * %{buildroot}/var/opt/kuberdock
 ln -sf  /var/opt/kuberdock/kubedock/updates/kuberdock_upgrade.py %{buildroot}%{_bindir}/kuberdock-upgrade
 ln -sf  /var/opt/kuberdock/backup_master.py %{buildroot}%{_bindir}/kd-backup-master
+ln -sf  /var/opt/kuberdock/backup_ceph.py %{buildroot}%{_bindir}/kd-backup-ceph
 %{__install} -D -m 0644 conf/kuberdock-ssl.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %{__install} -D -m 0644 conf/shared-kubernetes.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
 %{__install} -D -m 0644 conf/shared-etcd.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-etcd.conf

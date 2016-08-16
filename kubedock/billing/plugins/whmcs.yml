@@ -98,3 +98,29 @@ methods:
         endpoint: /includes/api.php
         return:
             - results
+    getclientid:
+        method: post
+        args:
+            - password
+            - package_id
+            - firstname
+            - lastname
+            - username
+            - email
+        params:
+            action: addclient
+            package_id: package_id
+            firstname: firstname
+            lastname: lastname
+            kduser: username
+            email: email
+            password2: password
+            address1: KuberDock
+            city: KuberDock
+            state: None
+            postcode: !!str 12345
+            country: US
+            phonenumber: !!str 0000000
+        endpoint: /includes/api.php
+        return:
+            - clientid

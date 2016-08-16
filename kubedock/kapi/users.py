@@ -1,7 +1,5 @@
 from copy import deepcopy
-from hashlib import md5
-
-import requests
+from flask import current_app
 from sqlalchemy.exc import IntegrityError, InvalidRequestError
 
 from .licensing import is_valid as license_valid
@@ -19,6 +17,7 @@ from ..users.models import User, UserActivity
 from ..users.utils import enrich_tz_with_offset
 from ..utils import atomic
 from ..validation import UserValidator
+from ..billing import has_billing
 
 
 class ResourceReleaseError(APIError):
@@ -311,40 +310,17 @@ class UserCollection(object):
     @staticmethod
     def get_client_id(data, package):
         """Tries to create the user in billing"""
-        # TODO: untie from WHMCS specifics, maybe as plugin
-
         if data.get('clientid'):
             return
-        if SystemSettings.get_by_name('billing_type') == 'No billing':
+        if not has_billing():
             return
-        url, username, password = map(
-            SystemSettings.get_by_name,
-            ('billing_url', 'billing_username', 'billing_password'))
-        if not all((url, username, password)):
-            raise APIError("Some billing parameters are missing or "
-                           "not properly configured")
-        args = {'verify': False}
         billing_data = deepcopy(data)
         billing_data.update({
-            'action': 'addclient',
-            'username': username,
-            'password': md5(password).hexdigest(),
-            'password2': generate(8),  # password for a new user
-            'firstname': data.pop('first_name', 'kduser'),
-            'lastname': data.pop('last_name', 'kduser'),
-            'kduser': data.get('username', 'kduser'),
-            'address1': 'KuberDock',
-            'city': 'KuberDock',
-            'state': 'None',
-            'postcode': '12345',
-            'country': 'US',
-            'phonenumber': '0000000',
-            'package_id': package.id,
-            'responsetype': 'json'})
-        r = requests.post(url.strip('/ ') + '/includes/api.php',
-                          data=billing_data, **args)
-        if r.status_code != 200:
-            raise APIError(
-                "Could not add user to billing. Make sure billing site "
-                "is accessible and properly functioning")
-        data['clientid'] = r.json().get('clientid')
+            'password': generate(8),  # password for a new user
+            'firstname': billing_data.pop('first_name', 'kduser'),
+            'lastname': billing_data.pop('last_name', 'kduser'),
+            'username': billing_data.get('username', 'kduser'),
+            'package_id': package.id})
+        current_billing = SystemSettings.get_by_name('billing_type')
+        billing = current_app.billing_factory.get_billing(current_billing)
+        data['clientid'] = billing.getclientid(**billing_data)

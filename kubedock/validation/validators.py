@@ -154,7 +154,7 @@ class V(cerberus.Validator):
     def _validate_type_ipv4_net(self, field, value):
         try:
             ip_network(value)
-        except (ValueError, AttributeError) as e:
+        except (ValueError, AttributeError):
             self._error(field, 'Invalid IPv4 network')
 
     def _validate_type_strnum(self, field, value):

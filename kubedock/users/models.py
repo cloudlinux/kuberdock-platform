@@ -41,6 +41,7 @@ def clean_session(sid):
     db.session.delete(session)
     db.session.commit()
 
+
 @login_manager.session_adder
 def add_session(sid, uid, rid):
     if sid is None:

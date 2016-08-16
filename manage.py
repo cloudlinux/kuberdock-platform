@@ -429,28 +429,14 @@ class AddPredefinedApp(Command):
                help="Predefined app's name"),
         Option('-t', '--template', dest='template', required=True,
                help="Predefined app's template"),
-        Option('-u', '--user', dest='username', required=False,
-               help='User name'),
         Option('-o', '--origin', dest='origin', required=False,
                help='Origin'),
         Option('-f', '--no-validation', dest='no_validation',
                action='store_true'),
     )
 
-    def run(self, name, template, username, origin, no_validation):
-        from kubedock.kapi.predefined_apps import PredefinedApps
-
-        if username is None:
-            role = Role.filter_by(rolename='Admin').first()
-            user = User.filter_by(role=role).first()
-            if not user:
-                raise InvalidCommand('No username was specified, so user with '
-                                     'Admin role was searched but not found.')
-        else:
-            user = User.filter_by(username=username).first()
-            if not user:
-                raise InvalidCommand('User with `{0}` username not '
-                                     'found'.format(username))
+    def run(self, name, template, origin, no_validation):
+        from kubedock.kapi.apps import PredefinedApp
 
         try:
             with open(template, 'r') as tf:
@@ -458,12 +444,15 @@ class AddPredefinedApp(Command):
         except IOError as err:
             raise InvalidCommand("Can not load template: %s" % err)
 
-        result = PredefinedApps(user).create(
+        if not no_validation:
+            PredefinedApp.validate(template_data)
+
+        result = PredefinedApp.create(
             name=name,
             template=template_data,
             origin=origin or 'kuberdock',
-            validate=not no_validation
         )
+
         print(result)
 
 

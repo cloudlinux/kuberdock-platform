@@ -3,15 +3,16 @@ import imp
 import os
 import traceback
 from collections import namedtuple, Counter
+from itertools import groupby
 from operator import attrgetter
 
 from colorama import Fore
+from junit_xml import TestCase, TestSuite
 from pygments import highlight
 from pygments.formatters.terminal256 import Terminal256Formatter
 from pygments.lexers.python import PythonLexer
 
-from tests_integration.lib.integration_test_utils import get_test_full_name, \
-    center_text_message
+from tests_integration.lib.integration_test_utils import center_text_message
 
 
 class TestResultCollection(object):
@@ -23,34 +24,36 @@ class TestResultCollection(object):
     # 1. passed - test completed successfully
     # 2. failed - test gracefully failed
     # 3. pipeline_error - some unexpected error occurred during test execution
-    TestResult = namedtuple('TestResult', 'name status pipeline')
+    TestResult = namedtuple('TestResult',
+                            'module name status pipeline error_message')
 
     def __init__(self):
         self._results = []
 
-    def register_failure(self, test, pipeline):
-        # type: (str, str) -> None
+    def register_failure(self, test, pipeline, error_message=None):
+        # type: (function, str, str) -> None
         """
         Adds a test to the collection and marks it as a failed one
         """
-        self._results.append(self.TestResult(test, 'failed', pipeline))
+        self._results.append(
+            self._make_test_result(pipeline, test, 'failed', error_message))
 
     def register_success(self, test, pipeline):
-        # type: (str, str) -> None
+        # type: (function, str) -> None
         """
         Adds a test to the collection and marks it as a passed one
         """
-        self._results.append(self.TestResult(test, 'passed', pipeline))
+        self._results.append(self._make_test_result(pipeline, test, 'passed'))
 
     def register_pipeline_error(self, pipeline, tests):
         # type: (str, list) -> None
         """
         Adds given tests to the collection and marks them as failed
         """
-        test_names = (get_test_full_name(test) for test in tests)
         results = (
-            self.TestResult(t, 'pipeline_error', pipeline) for t in test_names)
-
+            self._make_test_result(pipeline, t, 'pipeline_error')
+            for t in tests
+        )
         self._results.extend(results)
 
     def pipeline_test_summary(self, name):
@@ -95,6 +98,12 @@ class TestResultCollection(object):
         entries = (_make_report_entry(t) for t in results)
         return center_text_message('TESTS SUMMARY') + '\n' + '\n'.join(entries)
 
+    @property
+    def grouped_by_pipeline(self):
+        key = attrgetter('pipeline')
+        results = sorted(self, key=key)
+        return {g: list(t) for g, t in groupby(results, key=key)}
+
     def _color_from_status(self, status):
         mapping = {
             'failed': Fore.RED,
@@ -102,6 +111,15 @@ class TestResultCollection(object):
             'pipeline_error': Fore.RED
         }
         return mapping[status]
+
+    def __iter__(self):
+        for r in self._results:
+            yield r
+
+    def _make_test_result(self, pipeline, test, state, error_message=None):
+        # type: (str, function, str, str) -> TestResult
+        return self.TestResult(
+            test.__module__, test.__name__, state, pipeline, error_message)
 
 
 def discover_integration_tests(paths, mask='test_*.py'):
@@ -155,3 +173,30 @@ def highlight_code(code):
     :return: colorized string
     """
     return highlight(code, PythonLexer(), Terminal256Formatter(style='manni'))
+
+
+def write_junit_xml(fp, results):
+    """
+    Writes results in a jUnit XML report form to a given file object
+    :param fp: file-like object
+    :param results: TestResults object
+    """
+
+    def make_test_suite(pipeline, results):
+        def make_test_case(r):
+            case = TestCase(r.name, '{}.{}'.format(pipeline, r.module))
+            if r.status == 'failed':
+                case.add_error_info('Test failed', output=r.error_message)
+            elif r.status == 'pipeline_error':
+                case.add_failure_info('Failed to create a pipeline')
+            return case
+
+        return TestSuite(pipeline, [make_test_case(r) for r in results])
+
+    with fp.open() as f:
+        suites = [
+            make_test_suite(pipeline, results)
+            for pipeline, results in results.grouped_by_pipeline.items()
+        ]
+
+        TestSuite.to_file(f, suites)

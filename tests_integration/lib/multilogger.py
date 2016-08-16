@@ -54,6 +54,15 @@ class FilePerThreadHandler(logging.Handler):
             os.unlink(fp.name)
         self.files = {}
 
+    @property
+    def grouped_by_thread(self):
+        def _produce(fp):
+            fp.seek(0)
+            return fp.read()
+
+        return {name: _produce(fp) for name, fp in self.files.items()}
+
+
 
 def init_handler(logger, live_log=False):
     log_format = '%(threadName)s %(message)s'

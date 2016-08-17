@@ -21,7 +21,9 @@
             </span>
         </span>
         <ul class="dropdown-menu" role="menu">
-        <li><a class="edit-btn" href="#pods/<%- id %>/edit"><span>Edit</span></a></li>
+        <% if (currentUserRole !== 'LimitedUser') {%>
+            <li><a class="edit-btn" href="#pods/<%- id %>/edit"><span>Edit</span></a></li>
+        <% } %>
         <% if (ableTo('redeploy')) { %><li><span class="restart-btn"><span>Restart</span></span></li><% } %>
         <% if (ableTo('pay-and-start')) { %><li><span class="pay-and-start-btn"><span>Pay & start</span></span></li><% } %>
         <% if (ableTo('start')) { %><li><span class="start-btn"><span>Start</span></span></li><% } %>

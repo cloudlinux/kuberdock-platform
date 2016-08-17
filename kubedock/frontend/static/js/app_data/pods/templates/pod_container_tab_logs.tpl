@@ -27,8 +27,10 @@
                             <% } else { %>
                                 <span class="container-update" title="Update <%- image %> container"><span>Update</span></span>
                             <% } %>
-                            <a class="upgrade-btn" href="#pods/<%- parentID %>/edit"
+                            <% if (currentUserRole !== 'LimitedUser') {%>
+                                <a class="upgrade-btn" href="#pods/<%- parentID %>/edit"
                                     title="Change the amount of resources for <%- image %>"><span>Upgrade resources</span></a>
+                            <% } %>
                         <% } else  if (state == "stopped"){ %>
                             <span id="startContainer"><span>Start pod</span></span>
                         <% } %>

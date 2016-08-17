@@ -25,7 +25,9 @@
                         <% } else  if (state == "stopped"){ %>
                             <span id="startContainer"><span>Start pod</span></span>
                         <% } %>
-                        <a class="edit-container-env" href="#pods/<%- podID %>/container/<%- id %>/edit/env"><span>Edit</span></a>
+                        <% if (currentUserRole !== 'LimitedUser') {%>
+                            <a class="edit-container-env" href="#pods/<%- podID %>/container/<%- id %>/edit/env"><span>Edit</span></a>
+                        <% } %>
                         <% if (sourceUrl !== undefined) { %>
                             <a class="hidden-sm hidden-xs pull-right image-link" href="<%- /^https?:\/\//.test(sourceUrl) ? sourceUrl : 'http://' + sourceUrl %>" target="blank"><span>Learn more about variables for this image</span></a>
                         <% } %>

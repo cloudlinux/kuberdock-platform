@@ -201,6 +201,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 updateIsAvailable: before && before.updateIsAvailable,
                 kube_type: this.podBefore.getKubeType(),
                 restart_policy: this.podBefore.get('restartPolicy'),
+                currentUserRole : App.currentUser.get('rolename')
             };
         },
 
@@ -291,6 +292,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 updateIsAvailable: before && before.updateIsAvailable,
                 kube_type: this.podBefore.getKubeType(),
                 restart_policy: this.podBefore.get('restartPolicy'),
+                currentUserRole : App.currentUser.get('rolename')
             };
         },
 
@@ -340,7 +342,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 },
                 series: series,
                 grid: {
-                    background: '#ffffff',
+                    background:'#ffffff',
                     drawBorder: false,
                     shadow: false
                 },
@@ -353,7 +355,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                     indicator: error,
                     axes: {
                         xaxis: {
-                            min: App.currentUser.localizeDatetime(+new Date() - 1000*60*20),
+                            min: App.currentUser.localizeDatetime(+new Date() - 1000 * 60 * 20),
                             max: App.currentUser.localizeDatetime(),
                             tickOptions: {formatString:'%H:%M'},
                             tickInterval: '5 minutes',
@@ -364,7 +366,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             };
 
             var points = [];
-            for (var i=0; i<lines; i++)
+            for (var i = 0; i < lines; i++)
                 points.push([]);
 
             // If there is only one point, jqplot will display ugly plot with
@@ -375,8 +377,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
             this.model.get('points').forEach(function(record){
                 var time = App.currentUser.localizeDatetime(record[0]);
-                for (var i=0; i<lines; i++)
-                    points[i].push([time, record[i+1]]);
+                for (var i = 0; i < lines; i++)
+                    points[i].push([time, record[i + 1]]);
             });
             this.ui.chart.jqplot(points, options);
         }
@@ -432,6 +434,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 image: before.get('image'),
                 sourceUrl: before.get('sourceUrl'),
                 kubes: before.get('kubes'),
+                currentUserRole : App.currentUser.get('rolename')
             };
 
         },
@@ -509,6 +512,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 image: before.get('image'),
                 sourceUrl: before.get('sourceUrl'),
                 kubes: before.get('kubes'),
+                currentUserRole : App.currentUser.get('rolename')
             };
         },
 

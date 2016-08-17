@@ -78,9 +78,9 @@ define(['app_data/app', 'app_data/model',
 
             return {
                 changed: !before || before.isChanged(after),
-                startedAt: startedAt ?
-                    App.currentUser.localizeDatetime(startedAt) :
-                    'Not deployed yet',
+                startedAt: startedAt
+                    ? App.currentUser.localizeDatetime(startedAt)
+                    : 'Not deployed yet',
                 updateIsAvailable: this.model.updateIsAvailable,
                 pod: before ? before.getPod() : after.getPod().editOf(),
                 imagename: imagename,
@@ -117,7 +117,7 @@ define(['app_data/app', 'app_data/model',
                     sshLink = sshAccess.links[modelName];
                 utils.copyLink(sshLink, 'SSH link copied to clipboard');
             } else {
-                utils.notifyWindow('SSH access credentials are outdated. Please, '+
+                utils.notifyWindow('SSH access credentials are outdated. Please, ' +
                 'click Get SSH access to generate new link and password', 'error');
             }
         },
@@ -127,7 +127,7 @@ define(['app_data/app', 'app_data/model',
                 var sshPassword = sshAccess.auth;
                 utils.copyLink(sshPassword, 'SSH password copied to clipboard');
             } else {
-                utils.notifyWindow('SSH access credentials are outdated. Please, '+
+                utils.notifyWindow('SSH access credentials are outdated. Please, ' +
                 'click Get SSH access to generate new link and password', 'error');
             }
         },
@@ -145,8 +145,8 @@ define(['app_data/app', 'app_data/model',
     podItem.ChangedContainersView = ContainersTableBaseView.extend({
         template: pageContainersChangedTpl,
         filter: function(model){
-            return !model.get('before') || !model.get('after')
-                || model.get('before').isChanged(model.get('after'));
+            return !model.get('before') || !model.get('after') ||
+                model.get('before').isChanged(model.get('after'));
         },
         toggleVisibility: function(){
             this.$el.toggleClass('hidden', !this.collection.some(this.filter));
@@ -159,8 +159,8 @@ define(['app_data/app', 'app_data/model',
             caption: 'caption',
         },
         filter: function(model){
-            return model.get('before') && model.get('after')
-                && !model.get('before').isChanged(model.get('after'));
+            return model.get('before') && model.get('after') &&
+                !model.get('before').isChanged(model.get('after'));
         },
         toggleVisibility: function(){
             this.$el.toggleClass('hidden', !this.collection.some(this.filter));
@@ -213,9 +213,9 @@ define(['app_data/app', 'app_data/model',
         },
 
         templateHelpers: function(){
-            var publicName = this.model.has('public_aws') ?
-                    this.model.get('public_aws') :
-                    '',
+            var publicName = this.model.has('public_aws')
+                    ? this.model.get('public_aws')
+                    : '',
                 kubes = this.model.getKubes(),
                 pkg = App.userPackage,
                 kubeId = this.model.get('kube_type'),
@@ -242,6 +242,7 @@ define(['app_data/app', 'app_data/model',
                 podName         : this.model.get('name'),
                 period          : pkg.get('period'),
                 ableTo          : _.bind(this.model.ableTo, this.model),
+                currentUserRole : App.currentUser.get('rolename')
             };
         },
 
@@ -304,7 +305,7 @@ define(['app_data/app', 'app_data/model',
                     indicator: error,
                     axes: {
                         xaxis: {
-                            min: App.currentUser.localizeDatetime(+new Date() - 1000*60*20),
+                            min: App.currentUser.localizeDatetime(+new Date() - 1000 * 60 * 20),
                             max: App.currentUser.localizeDatetime(),
                             tickOptions: {formatString:'%H:%M'},
                             tickInterval: '5 minutes',
@@ -315,7 +316,7 @@ define(['app_data/app', 'app_data/model',
             };
 
             var points = [];
-            for (var i=0; i<lines; i++)
+            for (var i = 0; i < lines; i++)
                 points.push([]);
 
             // If there is only one point, jqplot will display ugly plot with
@@ -326,8 +327,8 @@ define(['app_data/app', 'app_data/model',
 
             this.model.get('points').forEach(function(record){
                 var time = App.currentUser.localizeDatetime(record[0]);
-                for (var i=0; i<lines; i++)
-                    points[i].push([time, record[i+1]]);
+                for (var i = 0; i < lines; i++)
+                    points[i].push([time, record[i + 1]]);
             });
             this.ui.chart.jqplot(points, options);
         }
@@ -466,7 +467,7 @@ define(['app_data/app', 'app_data/model',
                         url: '/api/billing/orderKubes',
                         data: JSON.stringify({pod: JSON.stringify(that.model)}),
                     }).always(utils.preloader.hide).fail(utils.notifyWindow).done(function(xhr){
-                        if(xhr.data.status.toLowerCase() === 'paid'){
+                        if (xhr.data.status.toLowerCase() === 'paid'){
                             utils.notifyWindow('Pod will be upgraded.', 'success');
                             App.navigate('pods/' + that.model.id, {trigger: true});
                         } else {

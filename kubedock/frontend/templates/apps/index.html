@@ -518,7 +518,7 @@
                             nbsp = String.fromCharCode(160),
                             kt = plan.info.kubeType;
                     setRes(document, 'plan-price', plan.info.prefix +
-                        nbsp + plan.info.price);
+                        nbsp + plan.info.price.toFixed(2));
                     setRes(document, 'plan-period', '/' + plan.info.period);
                     setRes(domPlan, 'plan-cpu', plan.info.cpu + nbsp + kt.cpu_units);
                     setRes(domPlan, 'plan-memory', plan.info.memory + nbsp + kt.memory_units);

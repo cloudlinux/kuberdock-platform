@@ -1166,7 +1166,6 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         defaults: {
             name: '',
             template: '',
-            qualifier: '',
             origin: 'kuberdock'
         },
         urlRoot: '/api/predefined-apps',

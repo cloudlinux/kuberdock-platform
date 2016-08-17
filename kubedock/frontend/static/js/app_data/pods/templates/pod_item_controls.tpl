@@ -29,6 +29,7 @@
                 <span>Switch package</span>
             </a></li>
         <% } %>
+        <% if (ableTo('restore')) { %><li><span class="restore-btn"><span>Restore</span></span></li><% } %>
         <% if (ableTo('redeploy')) { %><li><span class="restart-btn"><span>Restart</span></span></li><% } %>
         <% if (ableTo('pay-and-start')) { %><li><span class="pay-and-start-btn"><span>Pay & start</span></span></li><% } %>
         <% if (ableTo('start')) { %><li><span class="start-btn"><span>Start</span></span></li><% } %>

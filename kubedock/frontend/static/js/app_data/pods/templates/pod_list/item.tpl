@@ -36,4 +36,5 @@
     <% if (ableTo('stop')) { %> <span class="stop-btn" data-toggle="tooltip" data-placement="top" title="Stop <%- name %> pod"></span> <% } %>
     <% if (ableTo('pay-and-start')) { %> <span class="pay-and-start-btn" data-toggle="tooltip" data-placement="top" title="Pay then Run <%- name %> pod"></span> <% } %>
     <% if (ableTo('delete')) { %> <span class="terminate-btn" data-toggle="tooltip" data-placement="top" title="Delete <%- name %> pod"></span> <% } %>
+    <% if (ableTo('restore')) { %> <span class="restore-btn" data-toggle="tooltip" data-placement="top" title="Restore <%- name %> pod"></span> <% } %>
 </td>

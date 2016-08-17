@@ -474,6 +474,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 isInternalUser = App.currentUser.usernameIs('kuberdock-internal');
             if (command === 'start')
                 return _.contains(['stopped'], status);
+            if (command === 'restore')
+                return _.contains(['paid_deleted',], status);
             if (command === 'redeploy')
                 return _.contains(['stopping', 'waiting', 'pending', 'running',
                                    'failed', 'succeeded', 'preparing'], status);

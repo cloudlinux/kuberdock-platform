@@ -72,6 +72,10 @@
         .mdi('autorenew',21px, @defaultIconColor, @defaultIconColorDarken);
         &:hover span{color: @hoverStatusLineText; }
     }
+    .restore-btn{
+        .mdi('undo',21px, @defaultIconColor, @defaultIconColorDarken);
+        &:hover span{color: @hoverStatusLineText; }
+    }
     .container-update{
         .mdi('cloud_upload',21px, @defaultIconColor, @defaultIconColorDarken);
         &:hover span{color: @hoverStatusLineText; }
@@ -303,7 +307,11 @@ table{
     }
     .restart-btn{
         display: inline-block;
-        .mdi('autorenew',21px, @defaultIconColor, @hoverIconColor);
+        .mdi('autorenew', 21px, @defaultIconColor, @hoverIconColor);
+    }
+    .restore-btn{
+        display: inline-block;
+        .mdi('undo', 21px, @defaultIconColor, @defaultIconColorDarken);
     }
     .container-update{
         display: inline-block;

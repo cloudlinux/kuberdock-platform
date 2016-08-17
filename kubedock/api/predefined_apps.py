@@ -36,7 +36,7 @@ edit_params_schema = {
 
 def _take_template_from_uploads_if_needed(fn):
     """Takes template from request.files if 'template' from **kwargs is empty.
-    Must be after @use_kwargs.
+    Must be called before @use_kwargs.
     """
 
     @wraps(fn)
@@ -69,9 +69,10 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
     @KubeUtils.jsonwrap
     @maintenance_protected
     @check_permission('create', 'predefined_apps')
-    @use_kwargs(create_params_schema)
+    # TODO: with cerberus 1.0 use purge_unknown and remove **kwargs
+    @use_kwargs(create_params_schema, allow_unknown=True)
     @_take_template_from_uploads_if_needed
-    def post(self, name, template, origin=None, validate=False):
+    def post(self, name, template, origin=None, validate=False, **kwargs):
         if template is None:
             raise APIError('template not provided')
         if validate:
@@ -82,11 +83,14 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
     @KubeUtils.jsonwrap
     @maintenance_protected
     @check_permission('edit', 'predefined_apps')
-    @use_kwargs(edit_params_schema)
+    @use_kwargs(edit_params_schema, allow_unknown=True)
     @_take_template_from_uploads_if_needed
     def put(self, app_id, template=None, validate=False, **params):
         if validate and template is not None:
             PredefinedApp.validate(template)  # OK if no exception
+        # TODO: with cerberus 1.0 use purge_unknown
+        params = {param: value for param, value in params.items()
+                  if param in edit_params_schema}
         params.update(template=template)
         app = PredefinedApp.update(app_id, **params)
         return app.to_dict()

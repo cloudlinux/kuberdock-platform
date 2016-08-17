@@ -349,7 +349,6 @@ check_amazon()
       log_it echo "Not on AWS."
     fi
 }
-check_amazon
 
 yum_wrapper()
 {
@@ -373,62 +372,72 @@ function get_route_table_id {
   python -c "import json,sys; lst = [str(route_table['RouteTableId']) for route_table in json.load(sys.stdin)['RouteTables'] if route_table['VpcId'] == '$1' and route_table['Associations'][0].get('SubnetId') == '$2']; print ''.join(lst)"
 }
 
-function create-k8s-certs {
-  local -r primary_cn="${1}"
-  local -r certs_dir="${2}"
+function create_k8s_certs {
+    local -r primary_cn="${1}"
+    local -r certs_dir="${2}"
 
-  K8S_TEMP="/tmp/k8s/"
-  rm -rf ${K8S_TEMP}
-  mkdir ${K8S_TEMP}
+    K8S_TEMP="/tmp/k8s/"
+    rm -rf ${K8S_TEMP}
+    mkdir ${K8S_TEMP}
 
-  sans="IP:${primary_cn},IP:10.254.0.1,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:$(hostname)"
+    sans="IP:${primary_cn},IP:10.254.0.1,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:$(hostname)"
 
-  local -r cert_create_debug_output=$(mktemp "${K8S_TEMP}/cert_create_debug_output.XXX")
-  (set -x
-    cd "${K8S_TEMP}"
-    curl -L -O --connect-timeout 20 --retry 6 --retry-delay 2 https://storage.googleapis.com/kubernetes-release/easy-rsa/easy-rsa.tar.gz
-    tar xzf easy-rsa.tar.gz
-    cd easy-rsa-master/easyrsa3
-    ./easyrsa init-pki
-    ./easyrsa --batch "--req-cn=${primary_cn}@$(date +%s)" build-ca nopass
-    ./easyrsa --subject-alt-name="${sans}" build-server-full "$(hostname)" nopass
+    local -r cert_create_debug_output=$(mktemp "${K8S_TEMP}/cert_create_debug_output.XXX")
+    (set -x
+        cd "${K8S_TEMP}"
+        curl -L -O --connect-timeout 20 --retry 6 --retry-delay 2 https://storage.googleapis.com/kubernetes-release/easy-rsa/easy-rsa.tar.gz
+        tar xzf easy-rsa.tar.gz
+        cd easy-rsa-master/easyrsa3
+        ./easyrsa init-pki
+        ./easyrsa --batch "--req-cn=${primary_cn}@$(date +%s)" build-ca nopass
+        ./easyrsa --subject-alt-name="${sans}" build-server-full "$(hostname)" nopass
     ) &>${cert_create_debug_output} || {
-    cat "${cert_create_debug_output}" >&2
-    echo "=== Failed to generate certificates: Aborting ===" >&2
-    exit 2
-  }
-  TMP_CERT_DIR="${K8S_TEMP}/easy-rsa-master/easyrsa3"
-  mkdir -p ${certs_dir}
-  mv ${TMP_CERT_DIR}/pki/ca.crt ${certs_dir}/
-  mv ${TMP_CERT_DIR}/pki/issued/* ${certs_dir}/
-  mv ${TMP_CERT_DIR}/pki/private/* ${certs_dir}/
-  chown -R kube:kube ${certs_dir}
-  chmod -R 0440 ${certs_dir}/*
+        cat "${cert_create_debug_output}" >&2
+        echo "=== Failed to generate certificates: Aborting ===" >&2
+        exit 2
+    }
+    TMP_CERT_DIR="${K8S_TEMP}/easy-rsa-master/easyrsa3"
+    mkdir -p ${certs_dir}
+    mv ${TMP_CERT_DIR}/pki/ca.crt ${certs_dir}/
+    mv ${TMP_CERT_DIR}/pki/issued/* ${certs_dir}/
+    mv ${TMP_CERT_DIR}/pki/private/* ${certs_dir}/
+    chown -R kube:kube ${certs_dir}
+    chmod -R 0440 ${certs_dir}/*
 }
 
-#yesno()
-## $1 = Message prompt
-## Returns ans=0 for no, ans=1 for yes
-#{
-#   if [[ $dry_run -eq 1 ]]
-#   then
-#      echo "Would be asked here if you wanted to"
-#      echo "$1 (y/n - y is assumed)"
-#      ans=1
-#   else
-#      ans=2
-#   fi
-#
-#   while [ $ans -eq 2 ]
-#   do
-#      echo -n "$1 (y/n)? " ; read reply
-#      case "$reply" in
-#      Y*|y*) ans=1 ;;
-#      N*|n*) ans=0 ;;
-#          *) echo "Please answer y or n" ;;
-#      esac
-#   done
-#}
+setup_ntpd ()
+{
+    # AC-3318 Remove chrony which prevents ntpd service to start after boot
+    yum erase -y chrony
+    yum_wrapper install -y ntp
+
+    for _retry in $(seq 3); do
+        echo "Attempt $_retry to run ntpdate -vdu time.nist.gov.." && \
+        ntpdate -vdu time.nist.gov && \
+        break || sleep 30;
+    done
+    ntpdate -vdu time.nist.gov
+    if [ $? -ne 0 ];then
+        echo "WARNING: ntpdate -vdu time.nist.gov exit with error. Maybe some problems with ntpd settings and manual changes are needed"
+    fi
+
+    # To prevent ntpd from exit on large time offsets
+    sed -i "/^tinker /d" /etc/ntp.conf
+    echo "tinker panic 0" >> /etc/ntp.conf
+
+    log_it echo "Enabling restart for ntpd.service"
+    do_and_log mkdir -p /etc/systemd/system/ntpd.service.d
+    do_and_log echo -e "[Service]
+    Restart=always
+    RestartSec=1s" > /etc/systemd/system/ntpd.service.d/restart.conf
+    do_and_log systemctl daemon-reload
+    do_and_log systemctl restart ntpd
+    do_and_log systemctl reenable ntpd
+    do_and_log ntpq -p
+    if [ $? -ne 0 ];then
+        echo "WARNING: ntpq -p exit with error. Maybe some problems with ntpd settings and manual changes needed"
+    fi
+}
 
 ##########
 # Deploy #
@@ -438,10 +447,10 @@ function create-k8s-certs {
 do_deploy()
 {
 
-#if [ "$ISAMAZON" = true ] && [ -z "$ROUTE_TABLE_ID" ];then
-#    echo "ROUTE_TABLE_ID as envvar is expected for AWS setup"
-#    exit 1
-#fi
+# Should be done at the very beginning to ensure yum https works correctly
+setup_ntpd
+
+check_amazon
 
 # Get number of interfaces up
 IFACE_NUM=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;}}'|wc -l)
@@ -605,33 +614,6 @@ log_it echo 'Reload firewall...'
 do_and_log firewall-cmd --reload
 
 
-# AC-3318 Remove chrony which prevents ntpd service to start
-# after boot
-yum erase -y chrony
-
-# 3 Install ntp, we need correct time for node logs
-# for now, etcd-ca and bridge-utils needed during deploy only
-yum_wrapper install -y ntp
-yum_wrapper install -y etcd-ca
-yum_wrapper install -y bridge-utils
-log_it ntpd -gq
-log_it echo "Enabling restart for ntpd.service"
-
-# To prevent ntpd from exit on large time offsets
-sed -i "/^tinker /d" /etc/ntp.conf
-echo "tinker panic 0" >> /etc/ntp.conf
-
-do_and_log mkdir -p /etc/systemd/system/ntpd.service.d
-do_and_log echo -e "[Service]
-Restart=always
-RestartSec=1s" > /etc/systemd/system/ntpd.service.d/restart.conf
-do_and_log systemctl daemon-reload
-do_and_log systemctl restart ntpd
-do_and_log systemctl reenable ntpd
-do_and_log ntpq -p
-
-
-
 #4. Install kuberdock
 PACKAGE=$(ls -1 |awk '/^kuberdock.*\.rpm$/ {print $1; exit}')
 if [ ! -z $PACKAGE ];then
@@ -666,7 +648,9 @@ echo "NODE_TOBIND_EXTERNAL_IPS = $NODE_TOBIND_EXTERNAL_IPS" >> $KUBERDOCK_MAIN_C
 echo "NODE_TOBIND_FLANNEL = $NODE_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
 echo "PD_NAMESPACE = $PD_NAMESPACE" >> $KUBERDOCK_MAIN_CONFIG
 
-
+# for now, etcd-ca and bridge-utils needed during deploy only
+yum_wrapper install -y etcd-ca
+yum_wrapper install -y bridge-utils
 
 #6 Setting up etcd
 log_it echo 'Generating etcd-ca certificates...'
@@ -832,7 +816,7 @@ chmod 600 $KUBERNETES_CONF_DIR/configfile_for_nodes
 log_it echo "Configuring kubernetes"
 # ServiceAccount signing key
 KUBERNETES_CERTS_DIR=/etc/kubernetes/certs/
-create-k8s-certs $MASTER_IP $KUBERNETES_CERTS_DIR
+create_k8s_certs $MASTER_IP $KUBERNETES_CERTS_DIR
 K8S_TLS_CERT=$KUBERNETES_CERTS_DIR/$HOSTNAME.crt
 K8S_TLS_PRIVATE_KEY=$KUBERNETES_CERTS_DIR/$HOSTNAME.key
 K8S_CA_CERT=$KUBERNETES_CERTS_DIR/ca.crt

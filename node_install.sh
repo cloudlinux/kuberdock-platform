@@ -269,6 +269,39 @@ yum_wrapper()
 }
 
 
+setup_ntpd ()
+{
+    # AC-3199 Remove chrony which prevents ntpd service to start after boot
+    yum erase -y chrony
+    yum_wrapper install -y ntp
+
+    # We use setup like this
+    # http://docs.openstack.org/juno/install-guide/install/yum/content/ch_basic_environment.html#basics-ntp
+    # Decrease poll interval to be more closer to master time
+    for _retry in $(seq 3); do
+        echo "Attempt $_retry to run ntpdate -vdu.." && \
+        ntpdate -vdu ${MASTER_IP} && \
+        break || sleep 30;
+    done
+    ntpdate -vdu ${MASTER_IP}
+    check_status
+
+    sed -i "/^server /d" /etc/ntp.conf
+    sed -i "/^tinker /d" /etc/ntp.conf
+    echo "server ${MASTER_IP} iburst minpoll 3 maxpoll 4" >> /etc/ntp.conf
+    echo "tinker panic 0" >> /etc/ntp.conf
+
+    systemctl daemon-reload
+    systemctl restart ntpd
+    check_status
+    systemctl reenable ntpd
+    check_status
+    ntpq -p
+    if [ $? -ne 0 ];then
+        echo "WARNING: ntpq -p exit with error. Maybe some problems with ntpd settings and manual changes are needed"
+    fi
+}
+
 chk_ver()
 {
     python -c "import rpmUtils.miscutils as misc; print misc.compareEVR(misc.stringToVersion('$1'), misc.stringToVersion('$2')) < 0"
@@ -340,6 +373,9 @@ yum_wrapper -y install epel-release
 
 }
 
+# Should be done at the very beginning to ensure yum https works correctly
+setup_ntpd
+
 # Workaround for CentOS 7 minimal CD bug.
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787
 SWITCH=`cat /etc/nsswitch.conf | grep "^hosts:"`
@@ -388,39 +424,6 @@ check_status
 
 # Ensure latest packages from new repos
 yum --enablerepo=kube,kube-testing clean metadata
-
-
-# 1.2 Install ntp, we need correct time for node logs
-# AC-3199 Remove chrony which prevents ntpd service to start
-# after boot
-yum erase -y chrony
-# We use setup like this
-# http://docs.openstack.org/juno/install-guide/install/yum/content/ch_basic_environment.html#basics-ntp
-# Decrease poll interval to be more closer to master time
-yum_wrapper install -y ntp
-sed -i "/^server /d" /etc/ntp.conf
-sed -i "/^tinker /d" /etc/ntp.conf
-echo "server ${MASTER_IP} iburst minpoll 3 maxpoll 4" >> /etc/ntp.conf
-echo "tinker panic 0" >> /etc/ntp.conf
-systemctl daemon-reload
-systemctl stop ntpd
-
-for _retry in $(seq 3); do
-    echo "Attempt $_retry to run ntpd -gq.." && \
-    ntpdate -vd -u ${MASTER_IP} && \
-    break || sleep 30;
-done
-ntpdate -vd -u ${MASTER_IP}
-check_status
-
-systemctl start ntpd
-check_status
-systemctl reenable ntpd
-check_status
-ntpq -p
-if [ $? -ne 0 ];then
-    echo "WARNING: ntpq -p exit with error. Maybe some problems with ntpd settings and manual changes needed"
-fi
 
 
 # 2. install components

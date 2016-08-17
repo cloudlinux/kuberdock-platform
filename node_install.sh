@@ -548,11 +548,11 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-cat > "$PLUGIN_DIR/kuberdock.ini" << EOF
-NONFLOATING_PUBLIC_IPS=$([ "$NONFLOATING_PUBLIC_IPS" = True ] && echo "yes" || echo "no")
-MASTER=$MASTER_IP
-NODE=$NODENAME
-TOKEN=$TOKEN
+cat <<EOF > "$PLUGIN_DIR/kuberdock.json"
+{"nonfloating_public_ips": "$([ "$NONFLOATING_PUBLIC_IPS" = True ] && echo "yes" || echo "no")",
+"master": "$MASTER_IP",
+"node": "$NODENAME",
+"token": "$TOKEN"}
 EOF
 
 systemctl daemon-reload

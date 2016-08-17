@@ -13,7 +13,8 @@ from kubedock.predefined_apps.models import PredefinedApp as PredefinedAppModel
 from kubedock.exceptions import NotFound, PermissionDenied, PredefinedAppExc
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.kd_celery import celery
-from kubedock.pods.models import Pod
+from kubedock.nodes.models import Node
+from kubedock.pods.models import Pod, IPPool
 from kubedock.settings import KUBE_API_VERSION
 from kubedock.utils import send_event_to_user
 from kubedock.validation import V, predefined_app_schema
@@ -32,6 +33,18 @@ FIELD_PARSER = re.compile(ur"""
         )?
     )?\$
 """, re.X)
+
+
+def check_migratability(pod, new_kube):
+    if pod.kube_id == new_kube:
+        return
+    if pod.has_local_storage:
+        raise PredefinedAppExc.AppPackageChangeImpossible(
+            details={'message': 'local storage cannot migrate'})
+    node_to_migrate = Node.query.filter_by(kube_id=new_kube).first()
+    if node_to_migrate is None:
+        raise PredefinedAppExc.AppPackageChangeImpossible(
+            details={'message': 'there is no node of such kube type'})
 
 
 def generate(length=8):
@@ -394,6 +407,9 @@ class PredefinedApp(object):
         wanted = PodCollection.needs_public_ip(root)
         curr_IP = pod_config.get('public_ip')
         if wanted and curr_IP is None:
+            if not IPPool.has_public_ips():
+                raise PredefinedAppExc.AppPackageChangeImpossible(
+                    details={'message': 'Unable to pick up public IP'})
             PodCollection._prepare_for_public_address(pod, root)
             pod_config['public_ip'] = root.get('public_ip')
         elif not wanted and curr_IP is not None:
@@ -417,12 +433,13 @@ class PredefinedApp(object):
         """
         root = self._get_template_spec(new_config)
         kube_id = new_config['kuberdock']['appPackage']['kubeType']
+        check_migratability(pod, kube_id)
         orig_config = pod.config
         orig_kube_id = pod.kube_id
         pod_config = json.loads(orig_config)
+        self._update_kubes(root, pod_config)
+        self._update_IPs(pod, root, pod_config)
         try:
-            self._update_kubes(root, pod_config)
-            self._update_IPs(pod, root, pod_config)
             pod.kube_id = kube_id
             pod.config = json.dumps(pod_config)
             if async:

@@ -10,6 +10,7 @@ from kubedock.kapi.podcollection import PodCollection
 from kubedock.validation import check_new_pod_data
 from kubedock.rbac import check_permission
 from kubedock.kapi.apps import PredefinedApp, dispatch_kind
+from kubedock.validation.coerce import extbool
 
 
 yamlapi = Blueprint('yaml_api', __name__, url_prefix='/yamlapi')
@@ -71,11 +72,15 @@ def fill_template(template_id, plan_id):
 def create_pod(template_id, plan_id):
     user = KubeUtils.get_current_user()
     data = KubeUtils._get_params()
+    start = extbool(data.pop('start', True))
     app = PredefinedApp.get(template_id)
     pod_data = app.get_filled_template_for_plan(plan_id, data, user=user)
     new_pod = dispatch_kind([pod_data], template_id)
     new_pod = check_new_pod_data(new_pod, user)
     res = PodCollection(user).add(new_pod)
+    if start:
+        PodCollection(user).update(res['id'],
+                                   {'command': 'start', 'commandOptions': {}})
     return res
 
 

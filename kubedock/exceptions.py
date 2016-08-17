@@ -132,6 +132,9 @@ class PredefinedAppExc(object):
     class InternalPredefinedAppError(InternalAPIError):
         message_template = 'An internal error occurred: {message}'
 
+    class AppPackageChangeImpossible(APIError):
+        message_template = 'Unable to change app package: {message}'
+
 
 class BillingExc(object):
 

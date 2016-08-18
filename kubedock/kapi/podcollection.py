@@ -781,6 +781,7 @@ class PodCollection(object):
             db_pod_config = json.loads(db_pod.config)
             namespace = db_pod.namespace
             template_id = db_pod.template_id
+            template_plan_name = db_pod.template_plan_name
 
             # exists in DB only
             if (db_pod.id, namespace) not in self._collection:
@@ -822,6 +823,7 @@ class PodCollection(object):
             pod.name = db_pod.name
             pod.set_owner(db_pod.owner)
             pod.template_id = template_id
+            pod.template_plan_name = template_plan_name
             pod.kube_type = db_pod.kube_id
             pod.db_status = db_pod.status
             pod.direct_access = (json.loads(db_pod.direct_access)

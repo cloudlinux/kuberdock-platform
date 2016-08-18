@@ -81,6 +81,7 @@ def order_edit():
     if current_billing == 'No billing':
         raise WithoutBilling()
     billing = current_app.billing_factory.get_billing(current_billing)
+    data['referer'] = data['referer'] if 'referer' in data else ''
     response = billing.orderpodedit(**data)
     if response.get('result') == 'error':
         raise APIError(response.get('message'))

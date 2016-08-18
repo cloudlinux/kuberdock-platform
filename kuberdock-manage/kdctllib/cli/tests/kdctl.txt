@@ -42,8 +42,11 @@ pods restore --owner some-owner --pv-backups-location some-location --pv-backups
 pods restore --owner some-owner --pv-backups-location some-location --pv-backups-path-template some-template -f {some_json_file}
 
 predefined-apps list
+predefined-apps list --file-only
 predefined-apps get --id 1
+predefined-apps get --id 1 --file-only
 predefined-apps get --name some_pa
+predefined-apps get --name some_pa --file-only
 predefined-apps create {some_json} --name some_pa --origin origin --validate
 predefined-apps create -f {some_json_file} --name some_pa --origin origin --validate
 predefined-apps update --name some_pa {some_json} --validate

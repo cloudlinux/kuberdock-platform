@@ -279,8 +279,9 @@ setup_ntpd ()
     # http://docs.openstack.org/juno/install-guide/install/yum/content/ch_basic_environment.html#basics-ntp
     # Decrease poll interval to be more closer to master time
     for _retry in $(seq 3); do
+        # http://www.planetcobalt.net/sdb/ntp_leap.shtml
         echo "Attempt $_retry to run ntpdate -vdu.." && \
-        ntpdate -vdu ${MASTER_IP} && \
+        ntpdate -b ${MASTER_IP} && ntpdate -vdu ${MASTER_IP} && \
         break || sleep 30;
     done
     ntpdate -vdu ${MASTER_IP}

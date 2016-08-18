@@ -407,7 +407,7 @@ def http_share(cluster, host, shared_dir):
 
     if not _is_running():
         cmd = "docker run -d -p 80:80 -v {}:/usr/share/nginx/html/backups:ro" \
-              " nginx:latest".format(shared_dir)
+              " nginx".format(shared_dir)
         cluster.ssh_exec(host, cmd)
 
 

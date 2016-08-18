@@ -14,7 +14,7 @@ from tests_integration.lib.integration_test_utils import merge_dicts, \
 
 PIPELINES_PATH = '.pipelines/'
 INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
-CLUSTER_CREATION_MAX_DELAY = 30
+CLUSTER_CREATION_MAX_DELAY = 120
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 

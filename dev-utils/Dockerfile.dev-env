@@ -2,21 +2,24 @@ FROM centos:7
 
 RUN yum -y install epel-release && \
     yum -y update && \
-    yum -y install ansible rsync wget python-netaddr git gcc make && \
-    wget https://releases.hashicorp.com/vagrant/1.8.4/vagrant_1.8.4_x86_64.rpm && \
-    yum -y localinstall vagrant_1.8.4_x86_64.rpm && \
+    yum -y install wget make gcc rsync wget python-netaddr git && \
+    wget http://cbs.centos.org/kojifiles/packages/ansible/2.1.0.0/1.el7/noarch/ansible-2.1.0.0-1.el7.noarch.rpm && \
+    yum -y localinstall ansible-2.1.0.0-1.el7.noarch.rpm && rm -f ansible-2.1.0.0-1.el7.noarch.rpm && \
+    wget https://releases.hashicorp.com/vagrant/1.8.5/vagrant_1.8.5_x86_64.rpm && \
+    yum -y localinstall vagrant_1.8.5_x86_64.rpm && rm -f vagrant_1.8.5_x86_64.rpm && \
     vagrant plugin install vagrant-gatling-rsync && \
     vagrant plugin install vagrant-rsync-back && \
-    vagrant plugin install opennebula-provider --plugin-version 1.1.0 && \
+    wget https://github.com/histrio/opennebula-provider/releases/download/1.1.2/opennebula-provider-1.1.2.gem && \
+    vagrant plugin install opennebula-provider-1.1.2.gem && \
     yum clean all
 
 # Remove annoying "duplicated key at line 132 ignored: :nic" warning
-RUN sed -i '132d' /root/.vagrant.d/gems/gems/fog-1.38.0/lib/fog/opennebula/requests/compute/template_pool.rb
+RUN sed -i '131d' /root/.vagrant.d/gems/gems/fog-1.38.0/lib/fog/opennebula/requests/compute/template_pool.rb
 
-# Workaround for https://github.com/mitchellh/vagrant/issues/6721 # TODO remove "gcc" and "make" rpms when fixed
+# Workaround for https://github.com/mitchellh/vagrant/issues/6721
 RUN cd /opt/vagrant/embedded/ && \
-    bin/gem install ffi -v 1.9.10 && \
-    yes | cp {lib/ruby/gems/2.2.0,gems}/extensions/x86_64-linux/2.2.0/ffi-1.9.10/ffi_c.so
+    bin/gem install ffi -v 1.9.14 && \
+    yes | cp {lib/ruby/gems/2.2.0,gems}/extensions/x86_64-linux/2.2.0/ffi-1.9.14/ffi_c.so
 
 
 # Rebuild & push with:

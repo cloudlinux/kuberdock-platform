@@ -10,6 +10,15 @@ pods update --id 1 -f {some_json_file}
 pods delete --name some_pod
 pods delete --id 1
 
+predefined-apps list
+predefined-apps list --file-only
+predefined-apps get --id 1
+predefined-apps get --id 1 --file-only
+predefined-apps get --name some_pa
+predefined-apps get --name some_pa --file-only
+predefined-apps create-pod some-template-id some-plan-id {some_json}
+predefined-apps create-pod some-template-id some-plan-id -f {some_json_file}
+
 pstorage list
 pstorage get --id 1 
 pstorage get --name some_pv 

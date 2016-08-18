@@ -95,6 +95,7 @@ permissions = {
         ('persistent_volumes', 'get'): True,
         ('persistent_volumes', 'edit'): True,
         ('persistent_volumes', 'delete'): True,
+        ('predefined_apps', 'get'): True,
         ('yaml_pods', 'create'): True,
         ('system_settings', 'read'): True,
         ('images', 'get'): True,

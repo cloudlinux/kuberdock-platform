@@ -11,7 +11,7 @@ class ClientBase(object):
         return self.client.transport
 
     def _url(self, *parts):
-        rv = self.endpoint
-        for p in filter(None, parts):
-            rv += '/' + str(p)
+        rv = (self.endpoint + ''.join('/' + str(p)
+                                      for p in parts
+                                      if p is not None))
         return rv

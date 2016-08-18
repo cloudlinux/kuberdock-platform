@@ -1,9 +1,9 @@
-import mock
 import unittest
+
+import mock
+
 from kubedock.testutils.testcases import APITestCase
-
 from kubedock.validation import V
-
 
 response_validator = V({
     'status': {'type': 'string', 'required': True, 'allowed': ['OK', 'error']},
@@ -22,11 +22,18 @@ class PredefinedAppsTestCase(APITestCase):
         self.name = 'test yaml app'
         self.template = 'test yaml app template'
 
-    def test_get(self):
+    def test_get_user(self):
+        self._test_get(self.userauth)
+
+    def test_get_admin(self):
+        self._test_get(self.adminauth)
+
+    def _test_get(self, auth):
         self.admin_open(method='POST',
                         json={'name': self.name, 'template': self.template})
+
         # get list
-        response = self.admin_open()
+        response = self.open(auth=auth)
         self.assert200(response)
         response_validator.validate(response.json)
         predefined_app = response.json['data'][0]
@@ -35,12 +42,13 @@ class PredefinedAppsTestCase(APITestCase):
 
         # get by id
         url = self.item_url(predefined_app['id'])
-        response = self.admin_open(url)
+        response = self.open(url, auth=auth)
         self.assert200(response)
         self.assertEqual(predefined_app, response.json['data'])
 
         # get by id, file-only
-        response = self.admin_open(url, query_string={'file-only': True})
+        response = self.open(url, query_string={'file-only': True},
+                             auth=auth)
         self.assert200(response)
         # raw response data
         self.assertEqual(predefined_app['template'], response.data)
@@ -95,7 +103,7 @@ class PredefinedAppsTestCase(APITestCase):
         url = self.item_url(predefined_app['id'])
         response = self.admin_open(url, method='DELETE')
         self.assert200(response)
-        self.assert404(self.admin_open(url))
+        self.assert404(self.open(url, auth=self.adminauth))
 
     @mock.patch('kubedock.api.predefined_apps.PredefinedApp.validate')
     def test_validate_template(self, v):

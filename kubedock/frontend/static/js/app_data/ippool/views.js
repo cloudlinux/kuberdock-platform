@@ -203,7 +203,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 that = this,
                 pattern = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:-\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})?(?:\s*,\s*(?:\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:-\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})?))*$/;
 
-            if (this.ipPoolMode && this.nodelist.length === 0) return;
+            if (!this.ipPoolMode && !this.nodelist.length){
+                utils.notifyWindow('Set node hostname to assign IP pool');
+                return;
+            }
             App.getIPPoolCollection().done(function(ipCollection){
                 // temp validation
                 var network = that.ui.network.val();

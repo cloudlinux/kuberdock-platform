@@ -53,10 +53,12 @@ methods:
         args:
             - pkgid
             - yaml
+            - referer
         params:
             action: orderkuberdockapp
             pkgid: pkgid
             yaml: yaml
+            referer: referer
         endpoint: /includes/api.php
         return:
             - results

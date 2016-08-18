@@ -1,4 +1,4 @@
-from flask import Blueprint, current_app
+from flask import Blueprint, current_app, request
 
 from kubedock.decorators import maintenance_protected
 from kubedock.exceptions import APIError
@@ -116,6 +116,4 @@ def order_app(template_id, plan_id):
     filled = app.get_filled_template_for_plan(plan_id, data, as_yaml=True)
     pkgid = app._get_package().id
     billing = current_app.billing_factory.get_billing(current_billing)
-    rv = billing.orderapp(pkgid=pkgid, yaml=filled)
-    current_app.logger.debug(rv)
-    return rv
+    return billing.orderapp(pkgid=pkgid, yaml=filled, referer=request.referrer)

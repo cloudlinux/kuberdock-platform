@@ -187,7 +187,7 @@ class PredefinedApp(object):
         if with_id:
             filled['kuberdock']['kuberdock_template_id'] = self.id
         if as_yaml:
-            return yaml.safe_dump(self._apply_package(filled, plans[0]))
+            return self._dump_yaml(self._apply_package(filled, plans[0]))
         return self._apply_package(filled, plans[0])
 
     def get_filled_template_for_plan_by_name(self, name, values, as_yaml=False,
@@ -395,6 +395,25 @@ class PredefinedApp(object):
         if not user.fix_price:
             return
         raise PermissionDenied
+
+    @staticmethod
+    def _dump_yaml(applied):
+        """
+        Dumps dict correctly processing multiline pre & postDescription string
+        :param applied: dict -> filled config ready to be converted to yaml
+        :return: str -> yaml config
+        """
+
+        def str_presenter(dumper, data):
+            if len(data.splitlines()) > 1:  # check for multiline string
+                return dumper.represent_scalar(
+                    'tag:yaml.org,2002:str', data, style='|')
+            return dumper.represent_scalar(
+                'tag:yaml.org,2002:str', data.strip())
+
+        yaml.add_representer(unicode, str_presenter)
+        yaml.add_representer(str, str_presenter)
+        return yaml.dump(applied, default_flow_style=False, width=1000)
 
     @staticmethod
     def _update_IPs(pod, root, pod_config):

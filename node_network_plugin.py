@@ -26,7 +26,7 @@ requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
 FSLIMIT_PATH = '/var/lib/kuberdock/scripts/fslimit.py'
 PLUGIN_PATH = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/'
-KD_CONF_PATH = PLUGIN_PATH + 'kuberdock.ini'
+KD_CONF_PATH = PLUGIN_PATH + 'kuberdock.json'
 
 PUBLIC_IP_RULE = 'iptables -w -{0} KUBERDOCK-PUBLIC-IP -t nat -d {1} ' \
                  '-p {2} --dport {3} -j DNAT --to-destination {4}:{5}'

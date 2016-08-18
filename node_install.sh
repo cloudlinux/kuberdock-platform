@@ -548,8 +548,13 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
+if [ "$NONFLOATING_PUBLIC_IPS" = True ]; then
+    nonfloating="yes"
+else
+    nonfloating="no"
+fi
 cat <<EOF > "$PLUGIN_DIR/kuberdock.json"
-{"nonfloating_public_ips": "$([ "$NONFLOATING_PUBLIC_IPS" = True ] && echo "yes" || echo "no")",
+{"nonfloating_public_ips": "$nonfloating",
 "master": "$MASTER_IP",
 "node": "$NODENAME",
 "token": "$TOKEN"}

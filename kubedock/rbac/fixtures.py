@@ -127,8 +127,7 @@ def add_roles(roles=()):
 
 
 def delete_roles(roles=()):
-    """ Delete roles with its permissions
-    """
+    """Delete roles with its permissions"""
     for role_name in roles:
         role = Role.filter(Role.rolename == role_name).first()
         if role:
@@ -145,8 +144,7 @@ def add_resources(resources=()):
 
 
 def delete_resources(resources=()):
-    """ Delete resources with its permissions
-    """
+    """Delete resources with its permissions"""
     for resource_name in resources:
         resource = Resource.filter(Resource.name == resource_name).first()
         if resource:
@@ -185,15 +183,35 @@ def _delete_permissions(permissions=()):
 
 
 def add_permissions(roles=None, resources=None, permissions=None):
-    if not roles:
-        roles = ROLES
-    if not resources:
-        resources = RESOURCES
-    if not permissions:
-        permissions = PERMISSIONS
-    add_roles(roles)
-    add_resources(resources)
-    _add_permissions(permissions)
+    if roles:
+        add_roles(roles)
+    if resources:
+        add_resources(resources)
+    if permissions:
+        _add_permissions(permissions)
+
+
+def change_permissions(new_permissions):
+    """Changes existing permissions.
+
+    Updates all or nothing. If some permission is not found, KeyError raised.
+
+    :raises: KeyError
+    """
+    for res, role, perm, allow in new_permissions:
+        res = Permission.query.join(Role).join(Resource) \
+            .filter(Permission.name == perm, Role.rolename == role,
+                    Resource.name == res)\
+            .update({'allow': allow}, synchronize_session=False)
+        if res == 0:  # there is no updated rows
+            db.session.rollback()
+            raise KeyError('Permission not found: %s'
+                           % [res, role, perm, allow])
+    db.session.commit()
+
+
+def add_all_permissions():
+    return add_permissions(ROLES, RESOURCES, PERMISSIONS)
 
 
 if __name__ == '__main__':

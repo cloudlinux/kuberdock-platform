@@ -13,7 +13,7 @@ from kubedock.models import User, Pod
 from kubedock.billing.models import Kube
 from kubedock.nodes.models import Node
 from kubedock.notifications.fixtures import add_notifications
-from kubedock.rbac.fixtures import add_permissions
+from kubedock.rbac.fixtures import add_all_permissions
 from kubedock.rbac.models import Role
 from kubedock.system_settings.fixtures import add_system_settings
 from kubedock.static_pages.fixtures import generate_menu
@@ -30,7 +30,7 @@ def initial_fixtures():
 
     add_notifications()
 
-    add_permissions()
+    add_all_permissions()
 
     add_users_and_roles(randstr())
 

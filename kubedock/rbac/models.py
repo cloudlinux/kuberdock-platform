@@ -1,3 +1,5 @@
+from sqlalchemy import UniqueConstraint
+
 from ..core import db
 from ..models_mixin import BaseModelMixin
 
@@ -54,6 +56,9 @@ class Permission(BaseModelMixin, db.Model):
     role_id = db.Column(db.Integer, db.ForeignKey('rbac_role.id'))
     name = db.Column(db.String(64), unique=False)
     allow = db.Column(db.Boolean, default=True)
+
+    __table_args__ = (UniqueConstraint('resource_id', 'role_id', 'name',
+                                       name='resource_role_name_unique'),)
 
     def to_dict(self, include=None, exclude=None):
         data = dict(

@@ -131,6 +131,14 @@ class MasterRestorePipeline(Pipeline):
         self.cleanup()
 
 
+class WebUIPipeline(Pipeline):
+    NAME = 'web_ui'
+    ROUTABLE_IP_COUNT = 1
+    ENV = {
+        'KD_NODES_COUNT': '1',
+    }
+
+
 pipelines = defaultdict(list)
 
 

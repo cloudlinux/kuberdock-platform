@@ -172,7 +172,7 @@ class KDIntegrationTestAPI(object):
         LOG.debug('Cluster settings: {}'.format(settings))
 
         if provider == OPENNEBULA:
-            retry(self.vagrant.up, tries=3,
+            retry(self.vagrant.up, tries=3, interval=15,
                   provider=provider, no_provision=True)
             self.created_at = datetime.utcnow()
             self.vagrant.provision()

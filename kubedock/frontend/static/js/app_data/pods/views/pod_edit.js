@@ -326,6 +326,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 }
             });
         },
+
         editEntirePod: function(evt){
             evt.stopPropagation();
             if (this.validateAndNormalize()){
@@ -335,6 +336,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 this.trigger('step:complete');
             }
         },
+
         saveChanges: function(evt){
             evt.stopPropagation();
             if (!this.validateAndNormalize())
@@ -373,7 +375,13 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         validateAndNormalize: function(){
-            var that = this;
+            var that = this,
+                portsCollection = this.ports.currentView.collection;
+
+            if (!portsCollection.publicPortsCheckVal(80, 443) && this.pod.get('domain')){
+                utils.notifyWindow('Support only ports 80 and 443 at pod port');
+                return false
+            }
 
             // remove empty ports and volumeMounts
             this.model.set('ports', this.model.get('ports').filter(
@@ -499,11 +507,12 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         ui: {
-            chooseDomainSelect: '.choose-domain-select',
-            publicAccessType  : '.public-access-type',
-            domainsWrapper    : '.select-domain-wrapper',
-            domainName        : '#public-access-type-domain',
-            publicIpType      : '#public-access-type-ip',
+            chooseDomainSelect : '.choose-domain-select',
+            publicAccessType   : '.public-access-type',
+            domainsWrapper     : '.select-domain-wrapper',
+            domainName         : '#public-access-type-domain',
+            publicIpType       : '#public-access-type-ip',
+            tooltip            : '[data-toggle="tooltip"]'
         },
 
         events: {
@@ -522,6 +531,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             });
             this.ui.chooseDomainSelect.selectpicker(
                 'val', this.model.get('domain') || this.domains.at(0).get('name'));
+            this.ui.tooltip.tooltip();
         },
 
         onShow: function(){ this.togglePublic(); },

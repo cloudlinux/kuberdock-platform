@@ -572,6 +572,22 @@
             + .custom{
                 margin-left: 10px;
             }
+            .help{
+                .opacity(0);
+                .transition(500ms);
+                z-index: -1;
+                position: relative;
+
+            }
+            input{
+                &:checked{
+                    ~ .help{
+                        .opacity(1);
+                        z-index: 1;
+                        margin-left: 5px;
+                    }
+                }
+            }
         }
     }
     #ports-table{

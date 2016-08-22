@@ -160,6 +160,18 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         modelId: function(attrs){
             return JSON.stringify(_.pick(attrs, 'containerPort', 'protocol'));
         },
+        publicPortsCheckVal: function(){
+            for (var i = 0; i < arguments.length; i++) {
+                for (var a = 0; a < this.models.length; a++) {
+                    if (this.models[a].get('isPublic')) {
+                        if (this.models[a].get('containerPort') === arguments[i]) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        },
     });
 
     data.EnvVar = Backbone.AssociatedModel.extend({
@@ -310,8 +322,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             else if (mountPath.length > 30)
                 return 'Mount path maximum length is 30 symbols';
             else if (!/^[\w/.-]*$/.test(mountPath))
-                return 'Mount path should contain letters of Latin alphabet '
-                    + 'or "/", "_", "-" symbols';
+                return 'Mount path should contain letters of Latin alphabet ' +
+                       'or "/", "_", "-" symbols';
         },
     });
 
@@ -625,10 +637,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                         } else {
                             utils.modalDialog({
                                 title: 'Insufficient funds',
-                                body: 'Your account funds seem to be'
-                                        + ' insufficient for the action.'
-                                        + ' Would you like to go to billing'
-                                        + ' system to make the payment?',
+                                body: 'Your account funds seem to be' +
+                                      ' insufficient for the action.' +
+                                      ' Would you like to go to billing' +
+                                      ' system to make the payment?',
                                 small: true,
                                 show: true,
                                 footer: {
@@ -652,8 +664,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             var deferred = new $.Deferred(),
                 model = this;
             App.getSystemSettingsCollection().done(function(settings){
-                var fixedPrice = App.userPackage.get('count_type') === 'fixed'
-                    && settings.byName('billing_type')
+                var fixedPrice = App.userPackage.get('count_type') === 'fixed' &&
+                    settings.byName('billing_type')
                     .get('value').toLowerCase() !== 'no billing';
                 if (!fixedPrice){
                     var cmd = model.ableTo('start') ? 'start' : 'redeploy';
@@ -698,10 +710,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                         }
                         utils.modalDialog({
                             title: 'Insufficient funds',
-                            body: 'Your account funds seem to be'
-                                + ' insufficient for the action.'
-                                + ' Would you like to go to billing'
-                                + ' system to make the payment?',
+                            body: 'Your account funds seem to be' +
+                                  ' insufficient for the action.' +
+                                  ' Would you like to go to billing' +
+                                  ' system to make the payment?',
                             small: true,
                             show: true,
                             footer: {
@@ -725,9 +737,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 name = model.get('name');
             utils.modalDialog({
                 title: 'Confirm restarting of application ' + _.escape(name),
-                body: 'You can wipe out all the data and redeploy the '
-                    + 'application or you can just restart and save data '
-                    + 'in Persistent storages of your application.',
+                body: 'You can wipe out all the data and redeploy the ' +
+                      'application or you can just restart and save data ' +
+                      'in Persistent storages of your application.',
                 small: true,
                 show: true,
                 footer: {
@@ -742,8 +754,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     buttonCancel: function(){
                         utils.modalDialog({
                             title: 'Confirm restarting of application ' + _.escape(name),
-                            body: 'Are you sure you want to delete all data? You will '
-                                + 'not be able to recover this data if you continue.',
+                            body: 'Are you sure you want to delete all data? You will ' +
+                                  'not be able to recover this data if you continue.',
                             small: true,
                             show: true,
                             footer: {
@@ -1000,10 +1012,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     .pluck('persistentDisk').filter().pluck('pdName').value();
 
             return new data.PersistentStorageCollection(this.collection.filter(function(pd){
-                return pd !== this && pd !== ignored
-                    && _.contains(podDisks, pd.get('name'))
-                    && pd.get('node_id') != null
-                    && pd.get('node_id') != this.get('node_id');
+                return pd !== this && pd !== ignored &&
+                    _.contains(podDisks, pd.get('name')) &&
+                    pd.get('node_id') != null &&
+                    pd.get('node_id') !== this.get('node_id');
             }, this));
         },
     });
@@ -1448,8 +1460,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     data.KubeType.noAvailableKubeTypes.notifyConflict = function(){
         // Case, when there are no available kube types, 'cause of conflicts with pod's PDs.
         // TODO: better message
-        utils.notifyWindow('You cannot use selected Persistent Disks with any '
-                           + 'available Kube Types.');
+        utils.notifyWindow('You cannot use selected Persistent Disks with any ' +
+                           'available Kube Types.');
     };
     data.KubeTypeCollection = Backbone.Collection.extend({
         model: data.KubeType,

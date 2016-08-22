@@ -4,7 +4,10 @@ import string
 from flask import current_app
 
 from ..exceptions import APIError
-from ..utils import send_event_to_role
+
+K8S_ANSWER_ERROR = u'Error in kubernetes answer'
+K8S_UNKNOWN_ANSWER_STATUS_ERROR = u'Unknown kubernetes status answer'
+KD_UNKNOWN_ANSWER_FORMAT_ERROR = u'Unknown answer format from kuberdock'
 
 
 def raise_(message, code=409):
@@ -20,32 +23,50 @@ def _format_msg(error, message, return_value):
 
 def raise_if_failure(return_value, message=None):
     """
-    Raises error if return value has key 'status' and that status' value
-    neither 'success' nor 'working' (which means failure)
-    :param return_value: dict
-    :param message: string
+    Raises error if request to k8s fails
+    :param return_value: k8s answer as dictionary
+    :param message: APIError message sent to user in case of an error. Defaults
+                    to a message composed from k8s answer and err_msg from
+                    is_failed_k8s_answer
+    :type return_value: dict
+    :type message: str
+    """
+    failed, err_msg = is_failed_k8s_answer(return_value)
+    if not failed:
+        return
+
+    msg = _format_msg(err_msg, message, return_value)
+    if err_msg != K8S_ANSWER_ERROR:
+        current_app.logger.warning(msg)
+        return
+
+    current_app.logger.error(msg)
+    raise_(message)
+
+
+def is_failed_k8s_answer(return_value):
+    """
+    If return_value has 'status' field and it's not 'success' or 'working'
+    return a tuple indicating that there was failure in request to k8s.
+    :param return_value: k8s answer as dictionary
+    :type return_value: dict
+    :returns: (ERR_FLAG, ERR_MESSAGE)
+    :rtype: tuple([boolean, str])
     """
     if not isinstance(return_value, dict):
-        error = u'Unknown answer format from kuberdock'
-        msg = _format_msg(error, message, return_value)
-        current_app.logger.warning(msg)
+        err_msg = KD_UNKNOWN_ANSWER_FORMAT_ERROR
+        return (True, err_msg)
     else:
-        # TODO: handle kubernetes error (APIError?) and test that
-        # it will not break anything
         if return_value.get('kind') != u'Status':
-            return
+            return (False, None)
         status = return_value.get('status')
         if not isinstance(status, basestring):
-            error = u'Unknown kubernetes status answer'
-            msg = _format_msg(error, message, return_value)
-            current_app.logger.warning(msg)
-            return
+            err_msg = K8S_UNKNOWN_ANSWER_STATUS_ERROR
+            return (True, err_msg)
         if status.lower() not in ('success', 'working'):
-            error = u'Error in kubernetes answer'
-            msg = _format_msg(error, message, return_value)
-            current_app.logger.error(msg)
-            send_event_to_role('notify:error', {'message': msg}, 'Admin')
-            raise_(message)
+            err_msg = K8S_ANSWER_ERROR
+            return (True, err_msg)
+    return (False, None)
 
 
 def make_name_from_image(image):

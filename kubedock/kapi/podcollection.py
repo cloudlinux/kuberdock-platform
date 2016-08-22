@@ -369,7 +369,8 @@ class PodCollection(object):
         pod_config = pod.get_dbconfig()
         if pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
             raise APIError("We can unbind ip only on stopped pod")
-        pod_config['public_ip_before_freed'] = pod_config.pop('public_ip', None)
+        pod_config['public_ip_before_freed'] = pod_config.pop('public_ip',
+                                                              None)
         pod_config['public_ip'] = 'true'
         pod.set_dbconfig(pod_config, save=False)
 
@@ -1347,17 +1348,7 @@ def prepare_and_run_pod(pod):
 
         config = pod.prepare()
         k8squery = KubeQuery()
-        try:
-            get_replicationcontroller(pod.namespace, pod.sid)
-            rc = k8squery.put(['replicationcontrollers', pod.sid],
-                              json.dumps(config), ns=pod.namespace, rest=True)
-            podutils.raise_if_failure(
-                rc,
-                "Could not start '{0}' pod".format(
-                    pod.name.encode('ascii', 'replace')
-                )
-            )
-        except APIError:
+        if not _try_to_update_existing_rc(pod, config):
             rc = k8squery.post(['replicationcontrollers'],
                                json.dumps(config), ns=pod.namespace, rest=True)
             podutils.raise_if_failure(
@@ -1657,6 +1648,27 @@ def _process_persistent_volumes(pod, volumes):
     finally:
         if free_on_exit and now_taken:
             PersistentDisk.free_drives([d.drive_name for d in now_taken])
+
+
+def _try_to_update_existing_rc(pod, config):
+    """
+    Try to update existing replication controller.
+    :param pod: pod to be updated
+    :param config: updated config for pod
+    :type pod: kubedock.kapi.pod.Pod
+    :type config: dict
+    :returns: True/False on success/failure
+    :rtype: boolean
+    """
+    k8squery = KubeQuery()
+    rc = k8squery.get(['replicationcontrollers', pod.sid], ns=pod.namespace)
+    failed, _ = podutils.is_failed_k8s_answer(rc)
+    if failed:
+        return False
+    rc = k8squery.put(['replicationcontrollers', pod.sid],
+                      json.dumps(config), ns=pod.namespace, rest=True)
+    failed, _ = podutils.is_failed_k8s_answer(rc)
+    return not failed
 
 
 def get_replicationcontroller(namespace, name):

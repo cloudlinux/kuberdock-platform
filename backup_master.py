@@ -305,6 +305,10 @@ restore_chain = (PostgresResource, EtcdResource, SSHKeysResource,
 
 @lock(LOCKFILE)
 def do_backup(backup_dir, callback, skip_errors, **kwargs):
+
+    if not os.path.exists(backup_dir):
+        os.makedirs(backup_dir)
+
     timestamp = datetime.datetime.today().isoformat()
     logger.info('Backup started {0}'.format(backup_dir))
     backup_dst = tempfile.mkdtemp(dir=backup_dir, prefix=timestamp)

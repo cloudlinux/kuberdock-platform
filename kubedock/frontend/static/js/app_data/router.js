@@ -30,6 +30,8 @@ define(['marionette'], function(Marionette){
             'settings'                        : 'showSettings',
             'settings/general'                : 'showGeneralSettings',
             'settings/license'                : 'showLicense',
+            'settings/domain'                 : 'showDomainSettings',
+            'settings/billing'                : 'showBillingSettings',
             'settings/profile'                : 'editProfileSettings',
             'ippool'                          : 'showNetworks',
             'ippool/create'                   : 'showCreateNetwork',

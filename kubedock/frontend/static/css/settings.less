@@ -29,6 +29,7 @@
             margin-bottom: 20px;
             display: block;
         }
+        textarea,
         #timezone,
         #conectionType,
         #billingAppsLink,
@@ -58,6 +59,13 @@
             .placeholder(#b4b4b4);
             margin-bottom: 25px;
         }
+        textarea{
+            resize: none;
+            height: auto;
+            min-height: 200px;
+            padding-top: 17px;
+            padding-bottom: 17px;
+        }
     }
 }
 
@@ -77,17 +85,18 @@
             }
         }
         .link-wrapper{
+            font-size: 0;
             position: relative;
-            margin-bottom: 55px;
+            margin-bottom: 40px;
             .link-description{
-                left: 10px;
                 top: 92px;
                 color: #adaaaa;
                 font-size: 11px;
-                position: absolute;
+                margin-left: 10px;
             }
-            input{
-                margin-bottom: 0;
+            input,
+            textarea{
+                margin-bottom: 5px;
             }
         }
     }

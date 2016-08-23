@@ -16,6 +16,8 @@
                     <% if(user.get('rolename')  === 'Admin') { %>
                         <li class="general"><span>General</span></li>
                         <li class="license"><span>License</span></li>
+                        <li class="domain"><span>Domain</span></li>
+                        <li class="billing"><span>Billing</span></li>
                     <% } %>
                     <li class="profile"><span>Profile</span></li>
                 </ul>

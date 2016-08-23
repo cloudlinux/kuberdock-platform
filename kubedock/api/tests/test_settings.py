@@ -15,6 +15,7 @@ class TestSystemSettings(APITestCase):
                                       label='test_setting_label',
                                       options='["foo", "abc"]',
                                       description='test_setting_description',
+                                      setting_group='test_setting_group',
                                       placeholder='test_setting_placeholder')
         self.db.session.add(self.setting)
         self.db.session.commit()
@@ -44,6 +45,7 @@ class TestSystemSettings(APITestCase):
              'options': ['foo', 'abc'],
              'label': 'test_setting_label',
              'description': 'test_setting_description',
+             'setting_group': 'test_setting_group',
              'placeholder': 'test_setting_placeholder'}, data)
 
     def test_edit_setting(self):
@@ -63,6 +65,7 @@ class TestSystemSettings(APITestCase):
              'label': 'test_setting_label',
              'options': ['foo', 'abc'],
              'description': 'test_setting_description',
+             'setting_group': 'test_setting_group',
              'placeholder': 'test_setting_placeholder'}, data)
 
 

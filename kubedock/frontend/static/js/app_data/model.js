@@ -1238,6 +1238,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         parse: unwrapper,
         comparator: function(model){ return model.id; },
         byName: function(name){ return this.findWhere({name: name}); },
+        filterByGroup: function(group){ return this.filter({setting_group: group}); }
     });
     App.getSystemSettingsCollection = App.resourcePromiser(
         'systemSettingsCollection', data.SettingsCollection);

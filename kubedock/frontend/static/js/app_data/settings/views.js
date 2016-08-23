@@ -6,8 +6,12 @@ define(['app_data/app', 'marionette',
         'tpl!app_data/settings/templates/license.tpl',
         'app_data/utils', 'bootstrap', 'bootstrap-editable', 'selectpicker', 'tooltip'],
        function(App, Marionette,
-                settingsLayoutTpl, userEditTpl, generalSettingsTpl,
-                generalSettingsItemTpl, licenseTpl, utils){
+                settingsLayoutTpl,
+                userEditTpl,
+                generalSettingsTpl,
+                generalSettingsItemTpl,
+                licenseTpl,
+                utils){
     var views = {};
 
     views.GeneralItemView = Marionette.ItemView.extend({
@@ -17,11 +21,19 @@ define(['app_data/app', 'marionette',
         className: function(){
             var className = 'link-wrapper',
                 billing = this.model.collection.findWhere({name: 'billing_type'}).get('value'),
+                dnsSystem = this.model.collection.findWhere(
+                    {name: 'dns_management_system'}).get('value'),
                 name = this.model.get('name');
 
             if (billing === 'No billing' && _.contains(
-                    ['billing_url', 'billing_username', 'billing_password'], name))
+                    ['billing_url', 'billing_username', 'billing_password'], name)) {
                 className += ' hidden';
+            } else if (dnsSystem === 'No provider' && _.contains(
+                    ['dns_management_cpanel_dnsonly_host',
+                     'dns_management_cpanel_dnsonly_user',
+                     'dns_management_cpanel_dnsonly_token'], name)) {
+                className += ' hidden';
+            }
             return className;
         },
 
@@ -35,12 +47,15 @@ define(['app_data/app', 'marionette',
 
         fieldChange: function(evt){
             evt.stopPropagation();
-            var tgt = $(evt.target),
-                value = tgt.val(),
-                trimmedValue = value.trim();
-            if (this.model.get('options')) {
+            var trimmedValue,
+                tgt = $(evt.target),
+                value = tgt.val();
+
+            if (this.model.get('options')){
                 value = this.model.get('options')[+value];
             }
+            trimmedValue = value.trim();
+
             // Strip dangling spaces for all fields except password
             if (trimmedValue !== value && !_.contains(['billing_type', 'billing_password'],
                                                      this.model.get('name'))) {
@@ -79,6 +94,11 @@ define(['app_data/app', 'marionette',
             if (this.model.get('name') === 'billing_type'){
                 $('#billing_url, #billing_username, #billing_password').parent()
                     .toggleClass('hidden', this.model.get('value') === 'No billing');
+            }
+
+            if (this.model.get('name') === 'dns_management_system'){
+                $('#dns_management_cpanel_dnsonly_host, #dns_management_cpanel_dnsonly_user, #dns_management_cpanel_dnsonly_token').parent()
+                    .toggleClass('hidden', this.model.get('value') === 'No provider');
             }
         },
 
@@ -422,6 +442,8 @@ define(['app_data/app', 'marionette',
             if (tgt.not("li")) tgt = tgt.parent('li');
             if (tgt.hasClass('general')) App.navigate('settings/general', {trigger: true});
             if (tgt.hasClass('license')) App.navigate('settings/license', {trigger: true});
+            if (tgt.hasClass('domain')) App.navigate('settings/domain', {trigger: true});
+            if (tgt.hasClass('billing')) App.navigate('settings/billing', {trigger: true});
             else if (tgt.hasClass('profile')) App.navigate('settings/profile', {trigger: true});
         },
 

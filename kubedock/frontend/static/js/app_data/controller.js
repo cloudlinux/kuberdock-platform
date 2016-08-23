@@ -1281,7 +1281,7 @@ define([
             });
         },
 
-        showGeneralSettings: function(){
+        showSettings: function(group){
             if (!this.checkPermissions(['Admin']))
                 return;
             var that = this;
@@ -1291,13 +1291,21 @@ define([
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.nav.show(navbar);
                     App.getSystemSettingsCollection().done(function(settingsCollection){
-                        layoutView.main.show(new Views.GeneralView(
-                            {collection: settingsCollection}));
+                        var view = new Views.GeneralView({
+                            collection: new Model.SettingsCollection(
+                                settingsCollection.filterByGroup(group)
+                            )
+                        });
+                        layoutView.main.show(view);
                     });
                 });
                 App.contents.show(layoutView);
             });
         },
+
+        showGeneralSettings: function(){ this.showSettings('general') },
+        showDomainSettings: function(){ this.showSettings('domain') },
+        showBillingSettings: function(){ this.showSettings('billing') },
 
         showLicense: function(){
             if (!this.checkPermissions(['Admin']))

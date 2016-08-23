@@ -43,7 +43,7 @@ class Pipeline(object):
         self.defaults = {
             'KD_MASTER_CPUS': '2',
             'KD_MASTER_MEMORY': '4096',
-            'KD_NODES_COUNT': '2',
+            'KD_NODES_COUNT': '1',
             'KD_NODE_MEMORY': '3048',
             'KD_LICENSE': 'patch',
             'KD_TESTING_REPO': 'true',
@@ -219,6 +219,7 @@ class MainPipeline(Pipeline):
     ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
+        'KD_TIMEZONE': 'Europe/Moscow'
     }
 
 

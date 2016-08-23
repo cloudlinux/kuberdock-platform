@@ -11,7 +11,7 @@ from colorama import Fore
 
 from tests_integration.lib import multilogger
 from tests_integration.lib.integration_test_runner import TestResultCollection, \
-    discover_integration_tests, format_exception
+    discover_integration_tests, format_exception, write_junit_xml
 from tests_integration.lib.integration_test_utils import get_test_full_name, \
     center_text_message
 from tests_integration.lib.pipelines import pipelines as \
@@ -64,11 +64,11 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
 
         try:
             pipeline.run_test(test)
-            test_results.register_success(test_name, pipeline_name)
+            test_results.register_success(test, pipeline_name)
 
             pipe_log('{} -> PASSED'.format(test_name), Fore.GREEN)
         except:
-            test_results.register_failure(test_name, pipeline_name)
+            test_results.register_failure(test, pipeline_name)
             msg = format_exception(sys.exc_info())
             pipe_log('{} -> FAILED\n{}'.format(test_name, msg), Fore.RED)
 
@@ -117,17 +117,15 @@ def get_pipeline_logs(multilog):
     :param multilog: logger handler instance
     """
 
-    def _format_log(name, fp):
-        fp.seek(0)
-        arr = [
-            center_text_message(name, color=Fore.MAGENTA),
-            fp.read(),
-        ]
-        return '\n'.join(arr)
+    def _format_log(name, log):
+        return center_text_message(name, color=Fore.MAGENTA) + '\n' + log
 
     entries = (
-        _format_log(name, fp) for name, fp in multilog.files.items()
-        if test_results.has_any_failures(name))
+        _format_log(name, log)
+        for name, log in multilog.grouped_by_thread.items()
+        if test_results.has_any_failures(name)
+    )
+
     msg = '\n' + '\n'.join(entries)
 
     return center_text_message(
@@ -186,8 +184,10 @@ def _verify_pipelines(ctx, param, items):
 @click.option('--cluster-debug', is_flag=True, default=False,
               help='Enable debug mode. Currently this does not destroy a '
                    'cluster if any of its tests failed.')
+@click.option('--junit-xml', type=click.File(mode='w'))
 @click.option('--test', type=str, help='A name of a test to run')
-def main(paths, pipelines, live_log, all_tests, cluster_debug, test):
+def main(
+        paths, pipelines, live_log, all_tests, cluster_debug, junit_xml, test):
     if bool(all_tests) == bool(test):
         raise click.BadOptionUsage(
             'You should specify either --test NAME or --all-tests')
@@ -216,6 +216,9 @@ def main(paths, pipelines, live_log, all_tests, cluster_debug, test):
             t.join()
 
         _print_logs(multilog, live_log)
+
+        if junit_xml:
+            write_junit_xml(junit_xml, test_results)
 
         if test_results.has_any_failures():
             sys.exit(1)

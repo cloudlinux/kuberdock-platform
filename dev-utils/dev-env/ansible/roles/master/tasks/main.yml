@@ -76,6 +76,7 @@
 - name: Update users timezone
   become_user: postgres
   command: psql -d kuberdock -c "UPDATE users SET timezone='{{ timezone }}';"
+  when: timezone_is_link
   tags:
     - timezone
 

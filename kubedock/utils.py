@@ -13,7 +13,6 @@ from contextlib import contextmanager
 from functools import wraps
 from itertools import chain
 from json import JSONEncoder
-from traceback import format_exception
 from urlparse import urlsplit, urlunsplit, urljoin
 
 import bitmath

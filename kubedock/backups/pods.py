@@ -1,4 +1,5 @@
 import os
+
 from kubedock import validation
 from kubedock.backups import utils
 from kubedock.exceptions import APIError
@@ -6,6 +7,7 @@ from kubedock.kapi.pod import VolumeExists
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.pods.models import Pod as DBPod, PersistentDisk, \
     PersistentDiskStatuses
+from kubedock.users import User
 from kubedock.utils import nested_dict_utils
 
 DEFAULT_BACKUP_PATH_TEMPLATE = '/{owner_id}/{volume_name}.tar.gz'
@@ -183,4 +185,5 @@ def restore(pod_dump, owner, pv_backups_location=None,
         Expected that pod_dump contains data got from `/api/dump/pods`.
     """
     return _PodRestoreCommand(
-        pod_dump, owner, pv_backups_location, pv_backups_path_template)()
+        pod_dump, owner, pv_backups_location, pv_backups_path_template,
+    )()

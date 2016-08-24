@@ -12,7 +12,7 @@ from ..rbac import check_permission
 from ..system_settings.models import SystemSettings
 from ..utils import KubeUtils, register_api, catch_error
 from ..validation import check_new_pod_data, check_change_pod_data, \
-    owner_optional_schema, owner_mandatory_schema
+    owner_optional_schema, owner_mandatory_schema, extbool
 
 podapi = Blueprint('podapi', __name__, url_prefix='/podapi')
 
@@ -218,7 +218,7 @@ restore_args_schema = {
         'type': 'string',
         'required': False,
         'nullable': True
-    }
+    },
 }
 
 

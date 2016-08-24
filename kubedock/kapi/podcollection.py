@@ -4,7 +4,6 @@ from crypt import crypt
 from os import path
 from uuid import uuid4
 
-import ipaddress
 from celery.exceptions import MaxRetriesExceededError
 from flask import current_app
 
@@ -35,7 +34,7 @@ from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
-from ..utils import POD_STATUSES, NODE_STATUSES
+from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils
 
 UNKNOWN_ADDRESS = 'Unknown'
 
@@ -393,8 +392,12 @@ class PodCollection(object):
     def _prepare_for_public_address(pod, config=None):
         """Prepare pod for Public IP assigning"""
         conf = pod.get_dbconfig() if config is None else config
-        if (conf.get('public_ip', False) or
-                not PodCollection.needs_public_ip(conf)):
+        public_ip = conf.get('public_ip')
+        if public_ip:
+            ip_address = IPPool.get_free_host(as_int=True, ip=public_ip)
+            if ip_address is None:
+                raise NoFreeIPs
+        if public_ip or not PodCollection.needs_public_ip(conf):
             conf.pop('domain', None)
             return
         domain_name = conf.get('domain', None)
@@ -464,8 +467,7 @@ class PodCollection(object):
             if pod_id:
                 query = query.filter_by(pod_id=pod_id)
             if ip:
-                query = query.filter_by(
-                    ip_address=int(ipaddress.ip_address(ip)))
+                query = query.filter_by(ip_address=utils.ip2int(ip))
             ip = query.first()
             if ip is None:
                 return
@@ -478,7 +480,7 @@ class PodCollection(object):
         pod_config['public_ip_before_freed'] = pod_config.pop('public_ip',
                                                               None)
         for container in pod_config['containers']:
-            for port in container.get('ports', tuple()):
+            for port in container['ports']:
                 port['isPublic_before_freed'] = port.pop('isPublic', None)
         pod.set_dbconfig(pod_config, save=False)
 
@@ -913,6 +915,34 @@ class PodCollection(object):
         pod.forge_dockers()
         return pod, db_pod.get_dbconfig()
 
+    @staticmethod
+    @utils.atomic()
+    def _assign_public_ip(pod, desired_ip=None):
+        ip_address = IPPool.get_free_host(as_int=True, ip=desired_ip)
+        if desired_ip and ip_address != utils.ip2int(desired_ip):
+            # send event 'IP changed'
+            send_to_ids = {
+                KubeUtils.get_current_user().id,
+                pod.owner.id  # can be the same as current user
+            }
+            msg = ('Please, take into account that IP address of pod '
+                   '{pod_name} was changed from {old_ip} to {new_ip}'
+                   .format(pod_name=pod.name, old_ip=desired_ip,
+                           new_ip=utils.int2ip(ip_address)))
+            for user_id in send_to_ids:
+                utils.send_event_to_user(
+                    event_name='notify:error', data={'message': msg},
+                    user_id=user_id)
+        network = IPPool.get_network_by_ip(ip_address)
+
+        pod_ip = PodIP.create(pod_id=pod.id, network=network.network,
+                              ip_address=ip_address)
+        db.session.add(pod_ip)
+        rv = str(pod_ip)
+        pod.public_ip = rv
+        IpState.start(pod.id, pod_ip)
+        return rv
+
     def _start_pod(self, pod, data=None):
         if data is None:
             data = {}
@@ -951,21 +981,18 @@ class PodCollection(object):
 
         if not current_app.config['NONFLOATING_PUBLIC_IPS']:
             pod_public_ip = getattr(pod, 'public_ip', None)
-            if pod_public_ip == 'true':
-                with utils.atomic():
-                    ip_address = IPPool.get_free_host(as_int=True)
-                    if ip_address is None:
-                        raise NoFreeIPs()
-                    network = IPPool.get_network_by_ip(ip_address)
-                    pod_ip = PodIP(pod_id=pod.id, network=network.network,
-                                   ip_address=ip_address)
-                    db.session.add(pod_ip)
-                    db_config['public_ip'] = pod.public_ip = str(pod_ip)
-                    IpState.start(pod.id, pod_ip)
+
+            if pod_public_ip is not None:
+                if pod_public_ip == 'true':
+                    desired_ip = None
+                else:
+                    current_app.logger.warning(
+                        'PodIP {0} is already allocated'.format(pod_public_ip))
+                    desired_ip = pod_public_ip
+
+                ip = self._assign_public_ip(pod, desired_ip)
+                db_config['public_ip'] = ip
                 db_pod.set_dbconfig(db_config)
-            elif pod_public_ip is not None:
-                current_app.logger.warning('PodIP {0} is already allocated'
-                                           .format(pod_public_ip))
 
         if async_pod_create:
             prepare_and_run_pod_task.delay(pod)

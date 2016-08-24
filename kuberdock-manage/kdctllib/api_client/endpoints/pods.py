@@ -55,6 +55,6 @@ class PodsClient(ClientBase):
                 'pod_dump': pod_dump,
                 'owner': owner,
                 'pv_backups_location': pv_backups_location,
-                'pv_backups_path_template': pv_backups_path_template
+                'pv_backups_path_template': pv_backups_path_template,
             }
         )

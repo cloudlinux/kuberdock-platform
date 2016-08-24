@@ -622,6 +622,54 @@ class LocalStorage(object):
         return annotations, metadata, vol_annotations
 
 
+def get_k8s_info():
+    server = token = ''
+    with open('/etc/kubernetes/configfile') as cf:
+        for l in cf:
+            l = l.strip()
+            if l.startswith('server:'):
+                server = l.split('server:')[-1].strip()
+            if l.startswith('token:'):
+                token = l.split('token:')[-1].strip()
+            if server and token:
+                break
+    return server, token
+
+
+def existing_pods():
+    server, token = get_k8s_info()
+    r = requests.get('{0}/api/v1/pods'.format(server),
+                     headers={'Authorization': 'Bearer {0}'.format(token)},
+                     verify=False)
+    if r.status_code != 200:
+        return
+    pods = set()
+    for pod in r.json()['items']:
+        pod_metadata = pod['metadata']
+        pod_namespace = pod_metadata['namespace']
+        pod_name = pod_metadata['name']
+        pods.add((pod_namespace, pod_name))
+    return pods
+
+
+def node_known_pods():
+    data_dir = os.path.join(PLUGIN_PATH, 'data')
+    pods = set()
+    namespaces = [d for d in os.listdir(data_dir)
+                  if os.path.isdir(os.path.join(data_dir, d))]
+    for namespace in namespaces:
+        name = os.listdir(os.path.join(data_dir, namespace))[0]
+        pods.add((namespace, name))
+    return pods
+
+
+def teardown_unexisting():
+    pods_to_teardown = node_known_pods() - existing_pods()
+    for pod_namespace, pod_name in pods_to_teardown:
+        subprocess.call([os.path.join(PLUGIN_PATH, 'kuberdock'),
+                         'teardown', pod_namespace, pod_name])
+
+
 def main(action, *args):
     if action == 'init':
         # TODO must be called after each restart service and flush/restore
@@ -639,6 +687,8 @@ def main(action, *args):
         watch(update_ipset)
     elif action == 'ex_status':
         handle_ex_status(*args)
+    elif action == 'teardown_unexisting':
+        teardown_unexisting()
 
 
 if __name__ == '__main__':

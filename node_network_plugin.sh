@@ -312,6 +312,8 @@ case "$ACTION" in
     ipset -exist create kuberdock_ingress hash:ip
     ;;
   "setup")
+    /usr/bin/env python2 "$PLUGIN_DIR/kuberdock.py" teardown_unexisting
+
     # Workaround 1
     # TODO what if api-server is down ?
     POD_SPEC=$(get_pod_spec)

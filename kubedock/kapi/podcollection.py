@@ -1522,7 +1522,7 @@ def restore_containers_host_ports_config(pod_containers, db_containers):
         container_ports_map = {
             item.get(container_port_key): item
             for item in ports if item.get(container_port_key)
-            }
+        }
         for port in db_ports:
             container_port = port.get(container_port_key)
             src_port = container_ports_map.get(container_port)

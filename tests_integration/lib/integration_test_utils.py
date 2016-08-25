@@ -13,6 +13,8 @@ from contextlib import contextmanager
 from functools import wraps
 from itertools import count, islice
 from xmlrpclib import ProtocolError
+from paramiko import SSHClient, AutoAddPolicy
+from paramiko.ssh_exception import AuthenticationException
 
 import oca
 from colorama import Fore, Style
@@ -58,14 +60,34 @@ def local_exec(cmd, env=None, timeout=None, check_retcode=True):
     return ret_code, out, err
 
 
-def ssh_exec(ssh, cmd, timeout=None, check_retcode=True):
+def ssh_exec(ssh, cmd, timeout=None, check_retcode=True, get_pty=False):
     LOG.debug(u"{}Calling SSH: '{}'{}".format(Style.DIM, cmd, Style.RESET_ALL))
-    _, out, err = ssh.exec_command(cmd, timeout=timeout)
+    _, out, err = ssh.exec_command(cmd, timeout=timeout, get_pty=get_pty)
     ret_code = out.channel.recv_exit_status()
     out, err = out.read().strip(), err.read().strip()
 
     _proceed_exec_result(out, err, ret_code, check_retcode)
     return ret_code, out, err
+
+
+@contextmanager
+def get_ssh(host, user, password, look_for_keys=True):
+    ssh = SSHClient()
+    ssh.set_missing_host_key_policy(AutoAddPolicy())
+    try:
+        try:
+            ssh.connect(host, username=user, password=password, timeout=5,
+                        look_for_keys=look_for_keys)
+        except AuthenticationException:
+            raise
+        except Exception as e:
+            LOG.error(str(e))
+            if 'timed out' in str(e) or 'Connection refused' in str(e):
+                raise Exception('Connection error: timed out or refused.')
+            raise e
+        yield ssh
+    finally:
+        ssh.close()
 
 
 def wait_net_port(ip, port, timeout, try_interval=2):

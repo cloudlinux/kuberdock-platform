@@ -55,15 +55,19 @@ class IncorrectPodDescription(Exception):
     pass
 
 
-class PodIsNotRunning(Exception):
-    pass
-
-
 class CannotRestorePodWithMoreThanOneContainer(Exception):
     pass
 
 
 class NodeIsNotPresent(Exception):
+    pass
+
+
+class ContainerNotRunningException(Exception):
+    pass
+
+
+class FileTransferValidationFailed(Exception):
     pass
 
 

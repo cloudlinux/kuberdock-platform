@@ -275,20 +275,24 @@ setup_ntpd ()
     yum erase -y chrony
     yum_wrapper install -y ntp
 
+    function _sync_time() {
+        grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -d
+    }
+
     # We use setup like this
     # http://docs.openstack.org/juno/install-guide/install/yum/content/ch_basic_environment.html#basics-ntp
     # Decrease poll interval to be more closer to master time
     for _retry in $(seq 3); do
         # http://www.planetcobalt.net/sdb/ntp_leap.shtml
         echo "Attempt $_retry to run ntpdate -vdu.." && \
-        ntpdate -b ${MASTER_IP} && ntpdate -vdu ${MASTER_IP} && \
-        break || sleep 30;
+        _sync_time && break || sleep 30;
     done
-    ntpdate -vdu ${MASTER_IP}
+    _sync_time
     check_status
 
-    sed -i "/^server /d" /etc/ntp.conf
-    sed -i "/^tinker /d" /etc/ntp.conf
+    sed -i "/^server /d; /^tinker /d" /etc/ntp.conf
+    # NTP on master server should work at least a few minutes before ntp
+    # clients start trusting him. Thus we postpone the sync with it
     echo "server ${MASTER_IP} iburst minpoll 3 maxpoll 4" >> /etc/ntp.conf
     echo "tinker panic 0" >> /etc/ntp.conf
 
@@ -297,10 +301,6 @@ setup_ntpd ()
     check_status
     systemctl reenable ntpd
     check_status
-    ntpq -p
-    if [ $? -ne 0 ];then
-        echo "WARNING: ntpq -p exit with error. Maybe some problems with ntpd settings and manual changes are needed"
-    fi
 }
 
 chk_ver()

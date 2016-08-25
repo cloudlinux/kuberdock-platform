@@ -484,6 +484,11 @@ pod_dump_schema = {
             'id': {'type': 'integer', 'required': True},
             'username': {'type': 'string', 'required': True}
         }
+    },
+    'volumes_map': {
+        'type': 'dict',
+        'keyschema': {'type': 'string'},
+        'valueschema': {'type': 'string'},
     }
 }
 

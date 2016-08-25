@@ -10,23 +10,23 @@ class PStorageClient(ClientBase):
             params={'owner': owner}
         )
 
-    def get(self, device_id, owner=None):
+    def get(self, id, owner=None):
         return self.transport.get(
-            self._url(device_id),
+            self._url(id),
             params={'owner': owner}
         )
 
-    def create(self, device_data, owner=None):
+    def create(self, data, owner=None):
         return self.transport.post(
             self._url(),
             params={'owner': owner},
-            json=device_data
+            json=data
         )
 
     # Server does not support edit method
 
-    def delete(self, device_id, owner=None):
+    def delete(self, id, owner=None):
         return self.transport.delete(
-            self._url(device_id),
+            self._url(id),
             params={'owner': owner}
         )

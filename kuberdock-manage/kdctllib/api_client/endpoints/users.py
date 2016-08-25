@@ -13,29 +13,29 @@ class UsersClient(ClientBase):
             }
         )
 
-    def get(self, uid, short=False, with_deleted=False):
+    def get(self, id, short=False, with_deleted=False):
         return self.transport.get(
-            self._url(uid),
+            self._url(id),
             params={
                 'short': short,
                 'with-deleted': with_deleted
             }
         )
 
-    def create(self, user_data):
+    def create(self, data):
         return self.transport.post(
             self._url(),
-            json=user_data
+            json=data
         )
 
-    def update(self, uid, user_data):
+    def update(self, id, data):
         return self.transport.put(
-            self._url(uid),
-            json=user_data
+            self._url(id),
+            json=data
         )
 
-    def delete(self, uid, force=False):
+    def delete(self, id, force=False):
         return self.transport.delete(
-            self._url(uid),
+            self._url(id),
             params={'force': force}
         )

@@ -51,6 +51,7 @@ class Transport(object):
         self.requests_logger.log_curl_request(r)
 
         response = self.conn.send(r)
+        self.requests_logger.log_http_response(response)
         rv = self._unwrap_response(response)
         return rv
 

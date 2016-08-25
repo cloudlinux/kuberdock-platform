@@ -8,7 +8,7 @@ from tests_integration.lib.pipelines import pipeline
 
 BACKUP_FOLDER = "/root/backups"
 DEFAULT_SETTING_VALUE = "10"
-SETTING_ID = 6
+SETTING_NAME = "persitent_disk_max_size"
 test_users = [("test_user_a", "test_user_a@cloudlinux.com"),
               ("test_user_b", "test_user_b@cloudlinux.com")]
 
@@ -53,7 +53,7 @@ def _clear_master(cluster):
     cluster.delete_all_pvs()
     cluster.delete_all_predefined_applications()
     cluster.delete_node("node1")
-    cluster.set_system_setting(SETTING_ID, DEFAULT_SETTING_VALUE)
+    cluster.set_system_setting(DEFAULT_SETTING_VALUE, name=SETTING_NAME)
 
 
 def _fill_master_with_data_to_backup(cluster):
@@ -67,7 +67,7 @@ def _fill_master_with_data_to_backup(cluster):
         password = username
         cluster.create_user(username, password, email)
     # Change "Persistent disk maximum size" (id = 6) to 15.
-    cluster.set_system_setting(SETTING_ID, 15)
+    cluster.set_system_setting(15, name=SETTING_NAME)
 
     cluster.recreate_routable_ip_pool()
     cluster.add_node("node1")
@@ -84,7 +84,8 @@ class _MasterState(object):
         self.users = set(cluster.get_kd_users())
         self.pods = set(pipes.quote(pod['name']) for pod in
                         cluster.get_all_pods())
-        self.control_setting_value = cluster.get_system_setting(SETTING_ID)
+        self.control_setting_value = cluster.get_system_setting(
+            name=SETTING_NAME)
         self.free_ips, self.used_ips, self.blocked_ips = \
             self._get_ip_allocation(cluster)
 

@@ -1,48 +1,66 @@
-from .. import kdclick
+from functools import wraps
 
+from .. import kdclick
 from ..kdclick.access import ADMIN
+from ..utils import SimpleCommand, SimpleCommandWithIdNameArgs
 
 
 @kdclick.group(help='Commands for users management.', available_for=ADMIN)
-def users():
+@kdclick.pass_context
+def users(ctx):
+    ctx.obj = ctx.obj.kdctl.users
+
+
+def id_decorator(fn):
+    @kdclick.option('--id', help='Id of required user')
+    @kdclick.option('--name', help='Use it to specify name instead of id')
+    @kdclick.required_exactly_one_of('id', 'name')
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+class _UsersCommandWithIdNameArgs(SimpleCommandWithIdNameArgs):
+    name_field = 'username'
+
+
+@users.command()
+@kdclick.option('--short', is_flag=True)
+@kdclick.option('--with-deleted', is_flag=True)
+@kdclick.pass_obj
+class List(SimpleCommand):
     pass
 
 
 @users.command()
+@id_decorator
 @kdclick.option('--short', is_flag=True)
 @kdclick.option('--with-deleted', is_flag=True)
 @kdclick.pass_obj
-def list(obj, **params):
-    return obj.kdctl.users.list(**params)
+class Get(_UsersCommandWithIdNameArgs):
+    pass
 
 
 @users.command()
-@kdclick.argument('uid')
-@kdclick.option('--short', is_flag=True)
-@kdclick.option('--with-deleted', is_flag=True)
+@kdclick.data_argument('data')
 @kdclick.pass_obj
-def get(obj, **params):
-    return obj.kdctl.users.get(**params)
+class Create(SimpleCommand):
+    pass
 
 
 @users.command()
-@kdclick.data_argument('user-data')
+@id_decorator
+@kdclick.data_argument('data')
 @kdclick.pass_obj
-def create(obj, **params):
-    return obj.kdctl.users.create(**params)
+class Update(_UsersCommandWithIdNameArgs):
+    pass
 
 
 @users.command()
-@kdclick.argument('uid')
-@kdclick.data_argument('user-data')
-@kdclick.pass_obj
-def update(obj, **params):
-    return obj.kdctl.users.update(**params)
-
-
-@users.command()
-@kdclick.argument('uid')
+@id_decorator
 @kdclick.option('--force', is_flag=True)
 @kdclick.pass_obj
-def delete(obj, **params):
-    return obj.kdctl.users.delete(**params)
+class Delete(_UsersCommandWithIdNameArgs):
+    pass

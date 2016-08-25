@@ -1,11 +1,12 @@
 from .. import kdclick
-
 from ..kdclick.access import ADMIN
+from ..utils import SimpleCommand
 
 
 @kdclick.group(help='Commands for IP pool management.', available_for=ADMIN)
-def ippool():
-    pass
+@kdclick.pass_context
+def ippool(ctx):
+    ctx.obj = ctx.obj.kdctl.ippool
 
 
 def _verify_page(ctx, param, value):
@@ -21,35 +22,35 @@ def _verify_page(ctx, param, value):
 @kdclick.option('--page', type=int, callback=_verify_page)
 @kdclick.option('--free-only', is_flag=True)
 @kdclick.pass_obj
-def list(obj, **params):
-    return obj.kdctl.ippool.list(**params)
+class List(SimpleCommand):
+    pass
 
 
 @ippool.command()
 @kdclick.argument('network')
 @kdclick.option('--page', type=int, callback=_verify_page)
 @kdclick.pass_obj
-def get(obj, **params):
-    return obj.kdctl.ippool.get(**params)
+class Get(SimpleCommand):
+    pass
 
 
 @ippool.command()
-@kdclick.data_argument('ippool-data')
+@kdclick.data_argument('data')
 @kdclick.pass_obj
-def create(obj, **params):
-    return obj.kdctl.ippool.create(**params)
-
-
-@ippool.command()
-@kdclick.argument('network')
-@kdclick.data_argument('ippool-data')
-@kdclick.pass_obj
-def update(obj, **params):
-    return obj.kdctl.ippool.update(**params)
+class Create(SimpleCommand):
+    pass
 
 
 @ippool.command()
 @kdclick.argument('network')
+@kdclick.data_argument('data')
 @kdclick.pass_obj
-def delete(obj, **params):
-    return obj.kdctl.ippool.delete(**params)
+class Update(SimpleCommand):
+    pass
+
+
+@ippool.command()
+@kdclick.argument('network')
+@kdclick.pass_obj
+class Delete(SimpleCommand):
+    pass

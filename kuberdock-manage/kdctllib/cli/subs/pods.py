@@ -1,12 +1,27 @@
-from .. import kdclick
+from functools import wraps
 
+from .. import kdclick
 from ..kdclick.access import ADMIN, USER
+from ..utils import (SimpleCommand, SimpleCommandWithIdNameArgs,
+                     SimpleCommandWithIdNameOwnerArgs)
 
 
 @kdclick.group(help='Commands for pods management.',
                available_for=(ADMIN, USER))
-def pods():
-    pass
+@kdclick.pass_context
+def pods(ctx):
+    ctx.obj = ctx.obj.kdctl.pods
+
+
+def id_decorator(fn):
+    @kdclick.option('--id', help='Id of required pod')
+    @kdclick.option('--name', help='Use it to specify name instead of id')
+    @kdclick.required_exactly_one_of('id', 'name')
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 ###############################################################################
@@ -15,42 +30,42 @@ def pods():
 @pods.command(available_for=ADMIN)
 @kdclick.option('--owner')
 @kdclick.pass_obj
-def list(obj, **params):
-    return obj.kdctl.pods.list(**params)
+class List(SimpleCommand):
+    pass
 
 
 @pods.command(available_for=ADMIN)
-@kdclick.argument('pod-id')
+@id_decorator
 @kdclick.option('--owner')
 @kdclick.pass_obj
-def get(obj, **params):
-    return obj.kdctl.pods.get(**params)
+class Get(SimpleCommandWithIdNameOwnerArgs):
+    pass
 
 
 @pods.command(available_for=ADMIN)
-@kdclick.data_argument('pod-data')
+@kdclick.data_argument('data')
 @kdclick.option('--owner')
 @kdclick.pass_obj
-def create(obj, **params):
-    return obj.kdctl.pods.create(**params)
+class Create(SimpleCommand):
+    pass
 
 
 @pods.command(available_for=ADMIN)
-@kdclick.argument('pod-id')
-@kdclick.data_argument('pod-data')
+@id_decorator
+@kdclick.data_argument('data')
 # todo: uncomment in api/v2
 # @kdclick.option('--owner')  # should be added in api/v2
 @kdclick.pass_obj
-def update(obj, **params):
-    return obj.kdctl.pods.update(**params)
+class Update(SimpleCommandWithIdNameOwnerArgs):
+    pass
 
 
 @pods.command(available_for=ADMIN)
-@kdclick.argument('pod-id')
+@id_decorator
 @kdclick.option('--owner')
 @kdclick.pass_obj
-def delete(obj, **params):
-    return obj.kdctl.pods.delete(**params)
+class Delete(SimpleCommandWithIdNameOwnerArgs):
+    pass
 
 
 ###############################################################################
@@ -58,36 +73,36 @@ def delete(obj, **params):
 ###############################################################################
 @pods.command(available_for=USER)
 @kdclick.pass_obj
-def list(obj, **params):
-    return obj.kdctl.pods.list(**params)
+class List(SimpleCommand):
+    pass
 
 
 @pods.command(available_for=USER)
-@kdclick.argument('pod-id')
+@id_decorator
 @kdclick.pass_obj
-def get(obj, **params):
-    return obj.kdctl.pods.get(**params)
+class Get(SimpleCommandWithIdNameArgs):
+    pass
 
 
 @pods.command(available_for=USER)
-@kdclick.data_argument('pod-data')
+@kdclick.data_argument('data')
 @kdclick.pass_obj
-def create(obj, **params):
-    return obj.kdctl.pods.create(**params)
+class Create(SimpleCommand):
+    pass
 
 
 @pods.command(available_for=USER)
-@kdclick.argument('pod-id')
-@kdclick.data_argument('pod-data')
+@id_decorator
+@kdclick.data_argument('data')
 # todo: uncomment in api/v2
 # @kdclick.option('--owner')  # should be added in api/v2
 @kdclick.pass_obj
-def update(obj, **params):
-    return obj.kdctl.pods.update(**params)
+class Update(SimpleCommandWithIdNameArgs):
+    pass
 
 
 @pods.command(available_for=USER)
-@kdclick.argument('pod-id')
+@id_decorator
 @kdclick.pass_obj
-def delete(obj, **params):
-    return obj.kdctl.pods.delete(**params)
+class Delete(SimpleCommandWithIdNameArgs):
+    pass

@@ -1,12 +1,27 @@
-from .. import kdclick
+from functools import wraps
 
+from .. import kdclick
 from ..kdclick.access import ADMIN, USER
+from ..utils import (SimpleCommand, SimpleCommandWithIdNameArgs,
+                     SimpleCommandWithIdNameOwnerArgs)
 
 
 @kdclick.group(help='Commands for persistent volumes management.',
                available_for=(ADMIN, USER))
-def pstorage():
-    pass
+@kdclick.pass_context
+def pstorage(ctx):
+    ctx.obj = ctx.obj.kdctl.pstorage
+
+
+def id_decorator(fn):
+    @kdclick.option('--id', help='Id of required persistent volume')
+    @kdclick.option('--name', help='Use it to specify name instead of id')
+    @kdclick.required_exactly_one_of('id', 'name')
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 ###############################################################################
@@ -15,32 +30,32 @@ def pstorage():
 @pstorage.command(available_for=ADMIN)
 @kdclick.option('--owner')
 @kdclick.pass_obj
-def list(obj, **params):
-    return obj.kdctl.pstorage.list(**params)
+class List(SimpleCommand):
+    pass
 
 
 @pstorage.command(available_for=ADMIN)
-@kdclick.argument('device-id')
+@id_decorator
 @kdclick.option('--owner')
 @kdclick.pass_obj
-def get(obj, **params):
-    return obj.kdctl.pstorage.get(**params)
+class Get(SimpleCommandWithIdNameOwnerArgs):
+    pass
 
 
 @pstorage.command(available_for=ADMIN)
 @kdclick.data_argument('device-data')
 @kdclick.option('--owner')
 @kdclick.pass_obj
-def create(obj, **params):
-    return obj.kdctl.pstorage.create(**params)
+class Create(SimpleCommand):
+    pass
 
 
 @pstorage.command(available_for=ADMIN)
-@kdclick.argument('device-id')
+@id_decorator
 @kdclick.option('--owner')
 @kdclick.pass_obj
-def delete(obj, **params):
-    return obj.kdctl.pstorage.delete(**params)
+class Delete(SimpleCommandWithIdNameOwnerArgs):
+    pass
 
 
 ###############################################################################
@@ -48,26 +63,26 @@ def delete(obj, **params):
 ###############################################################################
 @pstorage.command(available_for=USER)
 @kdclick.pass_obj
-def list(obj, **params):
-    return obj.kdctl.pstorage.list(**params)
+class List(SimpleCommand):
+    pass
 
 
 @pstorage.command(available_for=USER)
-@kdclick.argument('device-id')
+@id_decorator
 @kdclick.pass_obj
-def get(obj, **params):
-    return obj.kdctl.pstorage.get(**params)
+class Get(SimpleCommandWithIdNameArgs):
+    pass
 
 
 @pstorage.command(available_for=USER)
-@kdclick.data_argument('device-data')
+@kdclick.data_argument('data')
 @kdclick.pass_obj
-def create(obj, **params):
-    return obj.kdctl.pstorage.create(**params)
+class Create(SimpleCommand):
+    pass
 
 
 @pstorage.command(available_for=USER)
-@kdclick.argument('device-id')
+@id_decorator
 @kdclick.pass_obj
-def delete(obj, **params):
-    return obj.kdctl.pstorage.delete(**params)
+class Delete(SimpleCommandWithIdNameArgs):
+    pass

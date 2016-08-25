@@ -12,11 +12,11 @@ class PredefinedAppsClient(ClientBase):
             params=params
         )
 
-    def get(self, app_id, file_only=False):
+    def get(self, id, file_only=False):
         params = {'file-only': file_only}
 
         return self.transport.get(
-            self._url(app_id),
+            self._url(id),
             params=params
         )
 
@@ -32,20 +32,19 @@ class PredefinedAppsClient(ClientBase):
             json=json
         )
 
-    def update(self, app_id, name=None, template=None, validate=None):
+    def update(self, id, template=None, validate=None):
         json = {
-            'name': name,
             'template': template,
             'validate': validate,
         }
         return self.transport.put(
-            self._url(app_id),
+            self._url(id),
             json=json
         )
 
-    def delete(self, app_id):
+    def delete(self, id):
         return self.transport.delete(
-            self._url(app_id)
+            self._url(id)
         )
 
     def validate_template(self, template):

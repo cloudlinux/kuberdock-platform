@@ -1,3 +1,5 @@
+from functools import wraps
+
 import click
 
 import types
@@ -64,3 +66,19 @@ def data_argument(*args, **kwargs):
         return d2(d1(fn))
 
     return wrapper
+
+
+def required_exactly_one_of(*arg_names):
+    def decorator(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            n = sum(1 for arg_name in arg_names
+                    if kwargs.get(arg_name, None) is not None)
+            if n != 1:
+                raise click.BadOptionUsage('Please specify exactly one of %s '
+                                           % ', '.join(arg_names))
+            return fn(*args, **kwargs)
+
+        return wrapper
+
+    return decorator

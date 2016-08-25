@@ -9,26 +9,26 @@ class NodesClient(ClientBase):
             self._url()
         )
 
-    def get(self, node_id):
+    def get(self, id):
         return self.transport.get(
-            self._url(node_id)
+            self._url(id)
         )
 
-    def create(self, node_data):
+    def create(self, data):
         return self.transport.post(
             self._url(),
-            json=node_data
+            json=data
         )
 
-    def update(self, node_id, node_data):
+    def update(self, id, data):
         return self.transport.put(
-            self._url(node_id),
-            json=node_data
+            self._url(id),
+            json=data
         )
 
-    def delete(self, node_id):
+    def delete(self, id):
         return self.transport.delete(
-            self._url(node_id)
+            self._url(id)
         )
 
     def check_host(self, hostname):

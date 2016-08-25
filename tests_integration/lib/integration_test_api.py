@@ -52,7 +52,11 @@ class KDIntegrationTestAPI(object):
         :param version:
         :param upgrade_to:
         """
-        defaults = {"VAGRANT_CWD": "dev-utils/dev-env/", "KD_LICENSE": "patch"}
+        defaults = {
+            "VAGRANT_CWD": "dev-utils/dev-env/",
+            "KD_LICENSE": "patch",
+            "VAGRANT_NO_PARALLEL": "1"
+        }
 
         env_vars = [
             "DOCKER_TLS_VERIFY",

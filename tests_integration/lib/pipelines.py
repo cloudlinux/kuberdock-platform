@@ -313,6 +313,18 @@ class PodRestorePipeline(Pipeline):
         super(PodRestorePipeline, self).cleanup()
         self.cluster.recreate_routable_ip_pool()
 
+
+class MasterRestorePipeline(Pipeline):
+    NAME = 'master_backup_restore'
+    ROUTABLE_IP_COUNT = 2
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch'
+    }
+
+    def set_up(self):
+        self.cleanup()
+
 pipelines = defaultdict(list)
 
 

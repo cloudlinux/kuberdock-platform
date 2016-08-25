@@ -341,7 +341,7 @@ class PodCollection(object):
         pod_config['public_ip_before_freed'] = pod_config.pop('public_ip',
                                                               None)
         for container in pod_config['containers']:
-            for port in container['ports']:
+            for port in container.get('ports', tuple()):
                 port['isPublic_before_freed'] = port.pop('isPublic', None)
         pod.set_dbconfig(pod_config, save=False)
 

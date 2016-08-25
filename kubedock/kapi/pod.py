@@ -184,14 +184,21 @@ class Pod(object):
         pod_data = self.as_dict()
         owner = self.owner
         k8s_secrets = self.get_secrets()
+        volumes_map = self.get_volumes()
 
         rv = {
             'pod_data': pod_data,
             'owner': owner,
-            'k8s_secrets': k8s_secrets
+            'k8s_secrets': k8s_secrets,
+            'volumes_map': volumes_map,
         }
 
         return rv
+
+    def get_volumes(self):
+        vols = (vol for vol in getattr(self, 'volumes', [])
+                if 'name' in vol and 'hostPath' in vol)
+        return {vol['name']: vol['hostPath']['path'] for vol in vols}
 
     def get_secrets(self):
         """Retrieve secrets of type '.dockercfg' from kubernetes.

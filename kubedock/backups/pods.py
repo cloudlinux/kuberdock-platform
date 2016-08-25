@@ -1,3 +1,4 @@
+import os
 from kubedock import validation
 from kubedock.backups import utils
 from kubedock.exceptions import APIError
@@ -5,7 +6,6 @@ from kubedock.kapi.pod import VolumeExists
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.pods.models import Pod as DBPod, PersistentDisk, \
     PersistentDiskStatuses
-from kubedock.users import User
 from kubedock.utils import nested_dict_utils
 
 DEFAULT_BACKUP_PATH_TEMPLATE = '/{owner_id}/{volume_name}.tar.gz'
@@ -31,7 +31,7 @@ class MultipleErrors(APIError):
                     'details': e.details
                 }
                 for e in errors
-                ]
+            ]
         }
         super(MultipleErrors, self).__init__(details=details)
 
@@ -42,7 +42,10 @@ class BackupUrlFactory(object):
         self.path_template = path_template
         self.kwargs = kwargs
 
-    def get_url(self, volume_name):
+    def get_url(self, volume_name, volume_path=None):
+        if volume_path is not None:
+            volume_name = os.path.basename(volume_path)
+
         path = self.path_template.format(
             volume_name=volume_name, **self.kwargs)
         return utils.join_url(self.base_url, path)
@@ -74,6 +77,7 @@ class _PodRestoreCommand(object):
                                   allow_unknown=True)
 
         pod_data = pod_dump['pod_data']
+        volumes_map = pod_dump['volumes_map']
         persistent_volumes = _filter_persistent_volumes(pod_data)
         # we have to restore all specified pv.
         # may be it will be changed later.
@@ -82,7 +86,8 @@ class _PodRestoreCommand(object):
             if not self.pv_backups_location:
                 raise APIError('POD spec contains persistent volumes '
                                'but backups location was not specified')
-            self._extend_pv_specs_with_backup_info(persistent_volumes)
+            self._extend_pv_specs_with_backup_info(persistent_volumes,
+                                                   volumes_map)
 
         self._check_for_conflicts(pod_data)
 
@@ -90,10 +95,11 @@ class _PodRestoreCommand(object):
         restored_pod_dict = self._start_pod_if_needed(restored_pod_dict)
         return restored_pod_dict
 
-    def _extend_pv_specs_with_backup_info(self, pv_specs):
+    def _extend_pv_specs_with_backup_info(self, pv_specs, volumes_map):
         for pv_spec in pv_specs:
-            pd_name = nested_dict_utils.get(pv_spec, 'persistentDisk.pdName')
-            backup_url = self.backup_url_factory.get_url(pd_name)
+            pd_name = nested_dict_utils.get(pv_spec, 'name')
+            pd_path = volumes_map[pd_name]
+            backup_url = self.backup_url_factory.get_url(pd_name, pd_path)
             nested_dict_utils.set(pv_spec, 'annotation.backupUrl', backup_url)
 
     def _check_for_conflicts(self, pod_data):

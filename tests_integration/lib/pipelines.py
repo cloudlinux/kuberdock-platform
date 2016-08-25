@@ -4,6 +4,7 @@ from functools import wraps
 
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
+from tests_integration.lib.integration_test_utils import set_eviction_timeout
 
 
 class MainPipeline(Pipeline):
@@ -92,6 +93,18 @@ class KubeTypePipeline(Pipeline):
         'KD_NODES_COUNT': '2',
         'KD_NODE_TYPES': 'node1=standard,node2=tiny'
     }
+
+
+class MovePodsPipeline(Pipeline):
+    NAME = 'move_pods'
+    ROUTABLE_IP_COUNT = 2
+    ENV = {
+        'KD_NODES_COUNT': '2',
+    }
+
+    def post_create_hook(self, *args, **kwargs):
+        set_eviction_timeout(self.cluster, '30s')
+        return super(MovePodsPipeline, self).post_create_hook(*args, **kwargs)
 
 
 class FailConditionsPipeline(Pipeline):

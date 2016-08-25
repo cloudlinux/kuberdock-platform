@@ -8,6 +8,7 @@ import time
 import urllib2
 from collections import namedtuple
 from datetime import datetime
+from contextlib import contextmanager
 
 import paramiko
 import vagrant
@@ -212,6 +213,20 @@ class KDIntegrationTestAPI(object):
     def destroy(self):
         self.vagrant.destroy()
 
+    @contextmanager
+    def temporary_stop_host(self, host):
+        """
+        Powers off the host for the duration of the with block.
+        Makes sure that the host is back on even if the exception occurs.
+
+        :param host:  Name of the host to be powered off.
+        """
+        self.power_off(host)
+        try:
+            yield
+        finally:
+            self.power_on(host)
+
     def power_off(self, host):
         vm_name = self.vm_names[host]
         LOG.debug("VM Power Off: '{}'".format(vm_name))
@@ -220,7 +235,7 @@ class KDIntegrationTestAPI(object):
     def power_on(self, host):
         vm_name = self.vm_names[host]
         LOG.debug("VM Power On: '{}'".format(vm_name))
-        self.vagrant.up(vm_name=vm_name)
+        retry(self.vagrant.up, tries=3, vm_name=vm_name)
 
     def get_kd_users(self):
         _, out, _ = self.kdctl('users list', out_as_dict=True)
@@ -279,6 +294,12 @@ class KDIntegrationTestAPI(object):
     def delete_all_predefined_applications(self):
         for pa in self.get_predefined_applications():
             self.delete_predefined_application(pa['id'])
+
+    def get_host_status(self, host):
+        _, out, _ = self.kdctl("nodes list", out_as_dict=True)
+        return next(s['status']
+                    for s in out['data']
+                    if s['hostname'] == host)
 
     def delete_all_pods(self):
         for user in self.get_kd_users():

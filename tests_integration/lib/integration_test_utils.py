@@ -440,3 +440,45 @@ def http_share(cluster, host, shared_dir):
 
 def _force_utf_string(text):
     return text if isinstance(text, unicode) else text.decode('utf-8')
+
+
+def set_eviction_timeout(cluster, timeout):
+    """
+    Adds --pod-eviction-timeout setting to the KUBE_CONTROLLER_MANAGER_ARGS in
+    /etc/kubernetes/controller-manager and restarts kube-controller-manager to
+    apply the new settings.
+    """
+    sftp = cluster.get_sftp('master')
+    tmp_filename = '/tmp/controller-manager-conf_tmp'
+    conf_filename = '/etc/kubernetes/controller-manager'
+    conf = sftp.open(conf_filename)
+    tmp_file = sftp.open(tmp_filename, 'w')
+    for line in conf:
+        if re.match(r'^\s*KUBE_CONTROLLER_MANAGER_ARGS', line):
+            line = re.sub(r'"(.*)"',
+                          r'"\1 --pod-eviction-timeout={}"'.format(timeout),
+                          line)
+        tmp_file.write(line)
+    conf.close()
+    tmp_file.close()
+
+    sftp.rename(tmp_filename, conf_filename)
+    cluster.ssh_exec('master', 'systemctl restart kube-controller-manager')
+
+
+def wait_for(func, tries=50, interval=10, fail_silently=False):
+    """
+    Waits for function func to evaluate to True.
+
+    :param func:            Function that should evaluate to true.
+    :param tries:           Number of tries to make.
+    :param interval:        Interval in second between consequent tries.
+    :param fail_silently:   If False then asserts that func evaluated to True.
+    """
+    for _ in xrange(tries):
+        func_value = func()
+        if func_value:
+            break
+        time.sleep(interval)
+    if not fail_silently:
+        assert func_value

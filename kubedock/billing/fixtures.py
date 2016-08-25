@@ -3,9 +3,9 @@ from kubedock.billing.models import Package, Kube, PackageKube
 
 
 def add_kubes_and_packages():
-# Create default packages and kubes
-# Package and Kube with id=0 are default
-# and must be undeletable (always present with id=0) for fallback
+    # Create default packages and kubes
+    # Package and Kube with id=0 are default
+    # and must be undeletable (always present with id=0) for fallback
     k_internal = Kube(id=Kube.get_internal_service_kube_type(),
                         name='Internal service', cpu=.02, cpu_units='Cores',
                         memory=64, memory_units='MB', disk_space=1,

@@ -526,7 +526,7 @@ class TestUtilUpdateNginxProxyRestriction(unittest.TestCase):
         def check_ips(location):
             ips = [key.value for key in location.keys if key.name == 'allow']
             self.assertEqual(self.accept_ips, ips)
-            self.assertEqual(location.keys[-1].as_dict(), {'deny': 'all'})
+            self.assertEqual(location.keys[-1].as_dict, {'deny': 'all'})
 
         conf = nginx.loads(self.conf)
         update_allowed(self.accept_ips, conf)

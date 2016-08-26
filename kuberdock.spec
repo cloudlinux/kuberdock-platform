@@ -191,6 +191,7 @@ fi
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 %attr (-,nginx,nginx) %{_bindir}/kd-backup-master
+%attr (-,nginx,nginx) %{_bindir}/kd-backup-ceph
 %{_bindir}/kdcustomize
 
 %changelog

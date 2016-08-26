@@ -26,7 +26,9 @@ from requests.packages.urllib3.exceptions import InsecureRequestWarning
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
-FSLIMIT_PATH = '/var/lib/kuberdock/scripts/fslimit.py'
+KD_SCRIPT_DIR = '/var/lib/kuberdock/scripts'
+FSLIMIT_PATH = os.path.join(KD_SCRIPT_DIR, 'fslimit.py')
+STORAGE_MANAGE_DIR = 'node_storage_manage'
 PLUGIN_PATH = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/'
 KD_CONF_PATH = PLUGIN_PATH + 'kuberdock.json'
 
@@ -450,6 +452,31 @@ class FileAdapter(requests.adapters.BaseAdapter):
         pass
 
 
+def _run_storage_manage_command(args):
+    """Executes node storage manager command with specified arguments.
+    :param args: list of arguments
+    :return: tuple of success flag, error message
+    """
+
+    env = os.environ.copy()
+    env['PYTHONPATH'] = KD_SCRIPT_DIR
+    try:
+        res = subprocess.check_output(
+            ['python2', '-m', '{}.{}'.format(STORAGE_MANAGE_DIR, 'manage')]
+            + args,
+            env=env
+        )
+    except subprocess.CalledProcessError as err:
+        return False, str(err)
+    try:
+        response = json.loads(res)
+        if response['status'] != 'OK':
+            return False, response['data']['message']
+    except (ValueError, TypeError, KeyError):
+        return False, 'Invalid result format from storage script'
+    return True, None
+
+
 class VolumeManager(object):
     """Class that creates, restores from backup and deletes volumes."""
 
@@ -504,22 +531,31 @@ class VolumeManager(object):
         """
         Creates a folder for the volume and sets correct SELinux type on it
         """
+        err_message = u'Failed to create local storage: {}'
+        ok, err = _run_storage_manage_command([
+            'create-volume',
+            '--path', volume_spec.path,
+            '--quota', volume_spec.size.replace('g', '')
+        ])
+        if not ok:
+            raise PluginException(err_message.format(err))
         try:
-            os.makedirs(volume_spec.path)
             subprocess.call(
                 ['chcon', '-Rt', 'svirt_sandbox_file_t', volume_spec.path])
         except os.error:
-            raise PluginException(
-                'Failed to create local storage dir "{}"'
-                    .format(volume_spec.path)
-            )
+            raise PluginException(err_message.format(volume_spec.path))
 
     @staticmethod
     def remove(volume_spec):
         """
         Physically removes directory
         """
-        shutil.rmtree(volume_spec.path, True)
+        ok, err = _run_storage_manage_command([
+            'remove-volume',
+            '--path', volume_spec.path
+        ])
+        if not ok:
+            raise PluginException(u'Failed to remove volume: {}'.format(err))
 
     class _ArchiveExtractor(object):
         supported_formats = ['.tar.gz', '.zip']
@@ -586,8 +622,6 @@ class LocalStorage(object):
             cls.remove_volumes(volumes)
             raise
 
-        cls.set_xfs_volume_size_limits(volumes)
-
     @classmethod
     def extract_volume_spec(cls, annotation):
         """
@@ -616,15 +650,6 @@ class LocalStorage(object):
     def remove_volumes(cls, volume_specs):
         for v in volume_specs:
             cls.volume_manager.remove(v)
-
-    @classmethod
-    def set_xfs_volume_size_limits(cls, volume_specs):
-        if not volume_specs:
-            return
-        subprocess.call(
-            ['/usr/bin/env', 'python2', FSLIMIT_PATH, 'storage'] +
-            ['{0}={1}'.format(v.path, v.size) for v in volume_specs]
-        )
 
     @staticmethod
     def check_annotation(annotation):

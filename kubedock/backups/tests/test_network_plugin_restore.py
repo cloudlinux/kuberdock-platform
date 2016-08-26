@@ -7,6 +7,7 @@ from requests.exceptions import RequestException
 
 from node_network_plugin import VolumeRestoreException, LocalStorage, \
     VolumeManager, VolumeSpec
+import node_network_plugin
 
 volume_manager = VolumeManager()
 
@@ -112,46 +113,52 @@ def test_restore_volume_raises_if_http_connection_breaks(
 @responses.activate
 def test_local_storage_init_successfully_unpacks_archive(
         storage_dir, volume_spec, mocker, pod_spec, backup_archive):
-    mocker.patch('subprocess.call')
+    mocker.patch.object(node_network_plugin, '_run_storage_manage_command')
+
     mock_remote_storage(volume_spec.backup_url, status=200,
                         body=backup_archive)
 
+    node_network_plugin._run_storage_manage_command.return_value = (True, None)
     LocalStorage.init(pod_spec.strpath)
-
-    assert storage_dir.listdir()
+    node_network_plugin._run_storage_manage_command.assert_called_once_with(
+        ['create-volume', '--path', volume_spec.path, '--quota',
+         volume_spec.size.replace('g', '')]
+    )
 
 
 @responses.activate
 def test_local_storage_init_removes_trash_if_restore_fails(
         volume_spec, mocker, pod_spec):
-    mocker.patch('subprocess.call')
     mock_remote_storage(volume_spec.backup_url, status=200, body='trahs')
+    mocker.patch.object(node_network_plugin, '_run_storage_manage_command')
+    node_network_plugin._run_storage_manage_command.return_value = (True, None)
 
     with pytest.raises(VolumeRestoreException):
         LocalStorage.init(pod_spec.strpath)
 
-    assert not os.path.exists(volume_spec.path)
+    node_network_plugin._run_storage_manage_command.assert_any_call(
+        ['create-volume', '--path', volume_spec.path, '--quota',
+         volume_spec.size.replace('g', '')]
+    )
+    node_network_plugin._run_storage_manage_command.assert_called_with(
+        ['remove-volume', '--path', volume_spec.path]
+    )
 
 
 @responses.activate
 def test_local_storage_init_remove_storage_if_failed_to_download_backup(
         volume_spec, mocker, pod_spec):
-    mocker.patch('subprocess.call')
     mock_remote_storage(volume_spec.backup_url, status=404)
+    mocker.patch.object(node_network_plugin, '_run_storage_manage_command')
+    node_network_plugin._run_storage_manage_command.return_value = (True, None)
 
     with pytest.raises(VolumeRestoreException):
         LocalStorage.init(pod_spec.strpath)
 
-    assert not os.path.exists(volume_spec.path)
-
-
-@responses.activate
-def test_local_storage_init_remove_storage_if_failed_to_download_backup(
-        volume_spec, mocker, pod_spec):
-    mocker.patch('subprocess.call')
-    mock_remote_storage(volume_spec.backup_url, status=404)
-
-    with pytest.raises(VolumeRestoreException):
-        LocalStorage.init(pod_spec.strpath)
-
-    assert not os.path.exists(volume_spec.path)
+    node_network_plugin._run_storage_manage_command.assert_any_call(
+        ['create-volume', '--path', volume_spec.path, '--quota',
+         volume_spec.size.replace('g', '')]
+    )
+    node_network_plugin._run_storage_manage_command.assert_called_with(
+        ['remove-volume', '--path', volume_spec.path]
+    )

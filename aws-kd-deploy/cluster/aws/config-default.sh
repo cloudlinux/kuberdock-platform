@@ -20,6 +20,8 @@ ZONE=${KUBE_AWS_ZONE:-us-west-2b}
 MASTER_SIZE=${MASTER_SIZE:-}
 NODE_SIZE=${NODE_SIZE:-}
 NUM_NODES=${NUM_NODES:-2}
+# Set to "yes" to use ZFS as a backend for local storage
+KD_USE_ZFS=${KD_USE_ZFS:-no}
 
 # Dynamically set node sizes so that Heapster has enough space to run
 if [[ -z ${NODE_SIZE} ]]; then

@@ -8,7 +8,7 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
 from . import pstorage
-from .node_utils import add_node_to_db, delete_node_from_db, remove_ls_volume
+from .node_utils import add_node_to_db, delete_node_from_db, remove_ls_storage
 from .podcollection import PodCollection
 from .. import tasks
 from ..billing import kubes_to_limits
@@ -19,7 +19,8 @@ from ..nodes.models import Node, NodeFlag, NodeFlagNames
 from ..pods.models import Pod
 from ..settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, KUBERDOCK_INTERNAL_USER,
-    ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE, NODE_INSTALL_TASK_ID)
+    ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE, NODE_INSTALL_TASK_ID,
+    ZFS, AWS)
 from ..users.models import User
 from ..utils import send_event_to_role, run_ssh_command, retry, NODE_STATUSES
 from ..validation import check_internal_pod_data
@@ -63,6 +64,11 @@ def create_node(ip, hostname, kube_id,
                        'Check that file has not been renamed by package '
                        'manager to .rpmsave or similar'
                        .format(KUBERDOCK_SETTINGS_FILE))
+    if ZFS and not any(AWS and ls_devices):
+        raise APIError(
+            'Kuberdock configured with ZFS backend, there must be at least '
+            'one device specified during node creation.'
+        )
     if ip is None:
         ip = socket.gethostbyname(hostname)
     if ip == MASTER_IP:
@@ -70,7 +76,9 @@ def create_node(ip, hostname, kube_id,
                        'this kind of setup is not supported at this '
                        'moment')
     _check_node_hostname(ip, hostname)
-    node = Node(ip=ip, hostname=hostname, kube_id=kube_id, state=NODE_STATUSES.pending)
+    node = Node(
+        ip=ip, hostname=hostname, kube_id=kube_id, state=NODE_STATUSES.pending
+    )
 
     try:
         # clear old log before it pulled by SSE event
@@ -215,7 +223,7 @@ def delete_node(node_id=None, node=None, force=False):
     except Exception as e:
         raise APIError(u'Failed to delete node from DB: {}'.format(e))
 
-    ls_clean_error = remove_ls_volume(hostname, raise_on_error=False)
+    ls_clean_error = remove_ls_storage(hostname, raise_on_error=False)
     res = tasks.remove_node_by_host(hostname)
     if res['status'] == 'Failure' and res['code'] != 404:
         raise APIError('Failed to delete node in k8s: {0}, code: {1}. \n'

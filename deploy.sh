@@ -228,6 +228,9 @@ while [[ $# > 0 ]];do
         VNI="$2";   # vxlan network id. Defaults to 1
         shift
         ;;
+        --zfs)
+        ZFS=yes
+        ;;
         *)
         echo "Unknown option: $key"
         exit 1
@@ -652,6 +655,9 @@ echo "MASTER_TOBIND_FLANNEL = $MASTER_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
 echo "NODE_TOBIND_EXTERNAL_IPS = $NODE_TOBIND_EXTERNAL_IPS" >> $KUBERDOCK_MAIN_CONFIG
 echo "NODE_TOBIND_FLANNEL = $NODE_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
 echo "PD_NAMESPACE = $PD_NAMESPACE" >> $KUBERDOCK_MAIN_CONFIG
+if [ "$ZFS" = yes ]; then
+    echo "ZFS = yes" >> $KUBERDOCK_MAIN_CONFIG
+fi
 
 # for now, etcd-ca and bridge-utils needed during deploy only
 yum_wrapper install -y etcd-ca

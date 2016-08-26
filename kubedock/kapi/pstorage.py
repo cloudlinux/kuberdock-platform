@@ -22,7 +22,8 @@ from ..utils import send_event_to_role, atomic, nested_dict_utils, \
     NODE_STATUSES
 from ..settings import (
     SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR,
-    NODE_LOCAL_STORAGE_PREFIX, CEPH_CLIENT_USER, CEPH_KEYRING_PATH)
+    NODE_LOCAL_STORAGE_PREFIX, CEPH_CLIENT_USER, CEPH_KEYRING_PATH,
+    NODE_STORAGE_MANAGE_CMD)
 from ..kd_celery import celery, exclusive_task
 from . import node_utils
 from .pd_utils import compose_pdname
@@ -1458,12 +1459,14 @@ class LocalStorage(PersistentStorage):
             current_app.logger.debug('Deleting local storage: %s', drive_path)
             res = self.run_on_pd_node(
                 pd,
-                'rm -rf "{}"'.format(drive_path),
-                catch_exitcodes=[failed_rm_code]
+                NODE_STORAGE_MANAGE_CMD + ' remove-volume --path {}'.format(
+                    drive_path),
+                catch_exitcodes=[failed_rm_code],
+                jsonresult=True
             )
-            if res is None:
+            if res['status'] != 'OK':
                 return 1
-        except NodeCommandWrongExitCode:
+        except (NodeCommandWrongExitCode, KeyError):
             return 1
         return 0
 

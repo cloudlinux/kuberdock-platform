@@ -25,6 +25,8 @@ KD_SSH_GC_LOCK="/var/run/kuberdock-ssh-gc.lock"
 KD_SSH_GC_CMD="flock -n $KD_SSH_GC_LOCK -c '$KD_SSH_GC_PATH;rm $KD_SSH_GC_LOCK'"
 KD_SSH_GC_CRON="@hourly  $KD_SSH_GC_CMD >/dev/null 2>&1"
 
+NODE_STORAGE_MANAGE_DIR=node_storage_manage
+
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
 echo "Using MASTER_IP=${MASTER_IP}"
@@ -109,9 +111,10 @@ clean_node(){
         remove_unneeded ceph-common
     else
         # clean any localtorage LVM group
-        umount -f /var/lib/kuberdock/storage || true
-        sed -i.kdsave '/^[^#].*\/var\/lib\/kuberdock\/storage/d' /etc/fstab
-        vgremove -ff kdstorage00
+        echo "Clean local storage ..."
+        PYTHONPATH=/ python2 -m ${NODE_STORAGE_MANAGE_DIR}.manage remove-storage
+        remove_unneeded zfs
+        remove_unneeded zfs-release
     fi
 
     # kubelet auth token and etcd certs
@@ -220,7 +223,10 @@ check_release
 check_mem
 check_selinux
 check_xfs "/var/lib/docker/overlay"
-check_xfs "/var/lib/kuberdock/storage"
+
+if [ "$ZFS" != "yes" -a "$AWS" != True ]; then
+    check_xfs "/var/lib/kuberdock/storage"
+fi
 
 if [[ $ERRORS ]]; then
     printf "Following noncompliances of KD cluster requirements have been detected:\n"
@@ -228,6 +234,18 @@ if [[ $ERRORS ]]; then
     printf "For details refer Requirements section of KuberDock Documentation, http://docs.kuberdock.com/index.html?requirements.htm\n"
     exit 3
 fi
+
+# Setup proper backend for local storage to enable it's cleanup in clean_node
+cd /${NODE_STORAGE_MANAGE_DIR}
+rm -f storage.py
+if [ "$ZFS" = yes ]; then
+    ln -s node_zfs_manage.py storage.py
+else
+    ln -s node_lvm_manage.py storage.py
+fi
+check_status
+cd -
+
 
 clean_node
 
@@ -358,9 +376,6 @@ type=rpm-md
 gpgkey=https://ceph.com/git/?p=ceph.git;a=blob_plain;f=keys/release.asc
 EOF
 
-yum -y install epel-release
-check_status
-
   CNT=1
   /bin/false
   while [ $? -ne 0 ]; do
@@ -446,11 +461,13 @@ yum_wrapper -y install tuned
 # kdtools - statically linked binaries to provide ssh access into containers
 yum_wrapper -y install kdtools
 
+rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+yum_wrapper -y install epel-release
+check_status
+
 # 3. If amazon instance install additional packages from epel
 if [ "$AWS" = True ];then
     # we need to install command-line json parser from epel
-    rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-    yum_wrapper -y install epel-release
     yum_wrapper -y install awscli
     yum_wrapper -y install jq
     yum_wrapper -y install python2-botocore
@@ -524,9 +541,7 @@ setup_cron
 # Useless if we do reboot:
 # systemctl restart sshd.service
 
-mv /node_lvm_manage.py /var/lib/kuberdock/scripts/node_lvm_manage.py
-chmod +x /var/lib/kuberdock/scripts/node_lvm_manage.py
-check_status
+mv /${NODE_STORAGE_MANAGE_DIR} /var/lib/kuberdock/scripts/
 
 
 # 4.2 kuberdock kubelet plugin stuff
@@ -779,6 +794,7 @@ then
 fi
 
 # 14. Install and configure CEPH client if CEPH config is defined in envvar
+#     Or packages for local storage backend
 if [ ! -z "$CEPH_CONF" ]; then
 
     install_ceph_client
@@ -787,10 +803,18 @@ if [ ! -z "$CEPH_CONF" ]; then
     check_status
 
 else
-    # If it is not CEPH-enabled installation, then manage persistent storage
-    # via LVM.
-    # Python bindings to manage LVM
-    yum_wrapper -y install lvm2-python-libs
+    if [ "$ZFS" = yes ]; then
+        yum_wrapper -y install --nogpgcheck http://archive.zfsonlinux.org/epel/zfs-release$(rpm -E %dist).noarch.rpm
+        # Use exact version of kernel-headers as current kernel.
+        # If it differs, then installation of spl-dkms, zfs-dkms will fail
+        yum_wrapper -y install kernel-devel-$current_kernel zfs
+        /sbin/modprobe zfs
+    else
+        # If it is not CEPH-enabled installation, then manage persistent storage
+        # via LVM.
+        # Python bindings to manage LVM
+        yum_wrapper -y install lvm2-python-libs
+    fi
 fi
 
 

@@ -232,7 +232,15 @@ UPDATES_PATH = '/var/opt/kuberdock/kubedock/updates/scripts'
 KUBERDOCK_SERVICE = 'emperor.uwsgi'
 KUBERDOCK_SETTINGS_FILE = '/etc/sysconfig/kuberdock/kuberdock.conf'
 NODE_SCRIPT_DIR = '/var/lib/kuberdock/scripts'
-NODE_LVM_MANAGE_SCRIPT = 'node_lvm_manage.py'
+NODE_STORAGE_MANAGE_DIR = 'node_storage_manage'
+NODE_STORAGE_MANAGE_MODULE = 'manage'
+NODE_STORAGE_MANAGE_CMD = 'PYTHONPATH={} python2 -m {}.{}'.format(
+    NODE_SCRIPT_DIR, NODE_STORAGE_MANAGE_DIR, NODE_STORAGE_MANAGE_MODULE)
+
+
+# Use zfs for localstorage backend
+ZFS = False
+
 
 MASTER_IP = ''
 MASTER_TOBIND_FLANNEL = 'enp0s5'
@@ -277,6 +285,8 @@ if cp.read(KUBERDOCK_SETTINGS_FILE) and cp.has_section('main'):
         SECRET_KEY = cp.get('main', 'SECRET_KEY')
     if cp.has_option('main', 'WITH_TESTING'):
         WITH_TESTING = cp.getboolean('main', 'WITH_TESTING')
+    if cp.has_option('main', 'ZFS'):
+        ZFS = cp.getboolean('main', 'ZFS')
 
 
 # Import local settings

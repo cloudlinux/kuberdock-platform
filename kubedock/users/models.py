@@ -56,7 +56,8 @@ def add_session(sid, uid, rid):
 class User(BaseModelMixin, UserMixin, db.Model):
     __tablename__ = 'users'
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True,
+                   nullable=False)
     username = db.Column(db.String(64), unique=True)
     email = db.Column(db.String(64), unique=True)
     password_hash = db.Column(db.String(128), nullable=False)
@@ -121,7 +122,9 @@ class User(BaseModelMixin, UserMixin, db.Model):
     @classmethod
     def get_online_collection(cls, to_json=None):
         user_ids = get_online_users()
-        users = [u.to_dict() for u in cls.not_deleted.filter(cls.id.in_(user_ids))]
+        users = [
+            u.to_dict() for u in cls.not_deleted.filter(cls.id.in_(user_ids))
+        ]
         if to_json:
             return json.dumps(users)
         return users

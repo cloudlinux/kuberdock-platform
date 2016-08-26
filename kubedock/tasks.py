@@ -36,14 +36,14 @@ from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
     NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH,
     KUBERDOCK_INTERNAL_USER, NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT,
-    NODE_LVM_MANAGE_SCRIPT)
+    NODE_STORAGE_MANAGE_DIR, ZFS)
 from .kapi.collect import collect, send
 from .kapi.pstorage import (
     delete_persistent_drives, remove_drives_marked_for_deletion,
     check_namespace_exists)
 from .kapi.usage import update_states
 from .kapi.node import Node as K8SNode
-from .kapi.node_utils import setup_lvm_to_aws_node, add_volume_to_node_ls
+from .kapi.node_utils import setup_storage_to_aws_node, add_volume_to_node_ls
 
 from .kd_celery import celery, exclusive_task
 
@@ -221,7 +221,19 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
                  '/kd-ssh-user-update.sh')
         sftp.put('node_scripts/kd-ssh-gc', '/kd-ssh-gc')
 
-        sftp.put(NODE_LVM_MANAGE_SCRIPT, '/' + NODE_LVM_MANAGE_SCRIPT)
+        # Copy node storage manage scripts
+        remote_path = '/' + NODE_STORAGE_MANAGE_DIR
+        try:
+            sftp.stat(remote_path)
+        except IOError:
+            sftp.mkdir(remote_path)
+        scripts = [
+            'aws.py', 'common.py', '__init__.py', 'manage.py',
+            'node_lvm_manage.py', 'node_zfs_manage.py'
+        ]
+        for script in scripts:
+            sftp.put(NODE_STORAGE_MANAGE_DIR + '/' + script,
+                     remote_path + '/' + script)
 
         # TODO this is obsoleted, remove later:
         sftp.put('pd.sh', '/pd.sh')
@@ -263,6 +275,8 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
         if CEPH:
             deploy_cmd = 'CEPH_CONF={} '.format(
                 TEMP_CEPH_CONF_PATH) + deploy_cmd
+        elif ZFS:
+            deploy_cmd = 'ZFS=yes ' + deploy_cmd
 
         if with_testing:
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
@@ -320,8 +334,8 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
         else:
             send_logs(node_id, 'Setup persistent storage...', log_file,
                       channels)
-            setup_lvm_to_node(ssh, node_id, ls_devices, ebs_volume,
-                              channels)
+            setup_node_storage(ssh, node_id, ls_devices, ebs_volume,
+                               channels)
 
         send_logs(node_id, 'Rebooting node...', log_file, channels)
         ssh.exec_command(
@@ -334,7 +348,9 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
 
         err = add_node_to_k8s(host, kube_type, CEPH)
         if err:
-            raise NodeInstallException('ERROR adding node.', log_file, channels)
+            raise NodeInstallException(
+                'ERROR adding node.', log_file, channels
+            )
 
         send_logs(node_id, 'Adding Node completed successful.',
                   log_file, channels)
@@ -355,10 +371,12 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
         send_event('node:change', {'id': db_node.id})
 
 
-def setup_lvm_to_node(ssh, node_id, devices=None, ebs_volume=None,
-                      log_channels=None):
+def setup_node_storage(ssh, node_id, devices=None, ebs_volume=None,
+                       log_channels=None):
+    current_app.logger.debug(
+        'setup_node_storage: devices = {}'.format(devices))
     if AWS:
-        res, message = setup_lvm_to_aws_node(
+        res, message = setup_storage_to_aws_node(
             ssh, node_id, EBS_volume_name=ebs_volume
         )
         if not res:
@@ -373,6 +391,8 @@ def setup_lvm_to_node(ssh, node_id, devices=None, ebs_volume=None,
         return
 
     res, message = add_volume_to_node_ls(ssh, node_id, devices)
+    current_app.logger.debug(
+        'setup_node_storage: res = {}, message = {}'.format(res, message))
     if not res:
         raise NodeInstallException(
             'Failed to setup LVM on the node: {}'.format(message))
@@ -440,10 +460,10 @@ def fix_pods_timeline():
     # Actually it is needed to be run once, but let it be run regularly.
     # Needed because there was bug in k8s2etcd service.
     # Sometime later it can be deleted (now is 2016-04-06).
-    non_consistent_pss = db.session.query(PodState) \
-        .join(PodState.pod).filter(
+    non_consistent_pss = db.session.query(PodState).join(PodState.pod).filter(
         Pod.status == POD_STATUSES.deleted,
-        PodState.end_time.is_(None))
+        PodState.end_time.is_(None)
+    )
     closed_states = 0
     for ps in non_consistent_pss:
         ps.end_time = datetime.utcnow()

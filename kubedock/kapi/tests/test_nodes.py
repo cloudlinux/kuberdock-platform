@@ -90,30 +90,30 @@ class TestNodes(DBTestCase):
         with self.assertRaises(APIError):
             nodes.create_node(None, 'anotherhost', kube_id)
 
-    @mock.patch.object(nodes, 'remove_ls_volume')
+    @mock.patch.object(nodes, 'remove_ls_storage')
     @mock.patch.object(nodes.tasks, 'remove_node_by_host')
-    def test_delete_node(self, remove_by_host_mock, remove_ls_volume_mock):
+    def test_delete_node(self, remove_by_host_mock, remove_ls_storage_mock):
         """Test for kapi.nodes.delete_node function."""
         node1, node2 = self.add_two_nodes()
         id1 = node1.id
 
-        remove_ls_volume_mock.return_value = ''
+        remove_ls_storage_mock.return_value = ''
 
         nodes.delete_node(id1)
         nodes_ = Node.get_all()
         remove_by_host_mock.assert_called_once_with(node1.hostname)
-        remove_ls_volume_mock.assert_called_once_with(
+        remove_ls_storage_mock.assert_called_once_with(
             node1.hostname, raise_on_error=False)
         self.assertEqual(nodes_, [node2])
 
         with self.assertRaises(APIError):
             nodes.delete_node(id1)
 
-    @mock.patch.object(nodes, 'remove_ls_volume')
+    @mock.patch.object(nodes, 'remove_ls_storage')
     @mock.patch.object(nodes.tasks, 'remove_node_by_host')
     def test_node_cant_be_deleted_in_nonfloating_mode_with_active_ip_pools(
-            self, remove_by_host_mock, remove_ls_volume_mock):
-        remove_ls_volume_mock.return_value = ''
+            self, remove_by_host_mock, remove_ls_storage_mock):
+        remove_ls_storage_mock.return_value = ''
         current_app.config['NONFLOATING_PUBLIC_IPS'] = True
 
         node1, node2 = self.add_two_nodes()

@@ -15,7 +15,7 @@ from ..exceptions import APIError
 from ..core import db, ssh_connect
 from ..settings import (
     NODE_INSTALL_LOG_FILE, AWS, CEPH, PD_NAMESPACE, PD_NS_SEPARATOR,
-    NODE_SCRIPT_DIR, NODE_LVM_MANAGE_SCRIPT)
+    NODE_STORAGE_MANAGE_CMD, ZFS)
 
 
 def get_nodes_collection(kube_type=None):
@@ -411,7 +411,7 @@ def extend_ls_volume(hostname, devices=None, ebs_volume=None, size=None):
             #
             #   Here is provided (1) & (2) methods.
             #   (3) method will be applied in 'else' branch.
-            return setup_lvm_to_aws_node(
+            return setup_storage_to_aws_node(
                 ssh, node.id, EBS_volume_name=ebs_volume, size=size
             )
         else:
@@ -422,7 +422,7 @@ def extend_ls_volume(hostname, devices=None, ebs_volume=None, size=None):
         ssh.close()
 
 
-def setup_lvm_to_aws_node(ssh, node_id, EBS_volume_name=None, size=None):
+def setup_storage_to_aws_node(ssh, node_id, EBS_volume_name=None, size=None):
     """Attaches EBS volume to AWS instance. If EBS_volume_name is not
     specified, then creates new one with random name.
     Makes LVM volume group with that EBS volume and single LVM logical volume
@@ -430,10 +430,9 @@ def setup_lvm_to_aws_node(ssh, node_id, EBS_volume_name=None, size=None):
     """
     from kubedock.settings import (
         AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_EBS_EXTEND_STEP)
-    cmd = 'python2 {0}/{1} ebs-attach '\
-          '--aws-access-key-id {2} --aws-secret-access-key {3}'.format(
-              NODE_SCRIPT_DIR, NODE_LVM_MANAGE_SCRIPT,
-              AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+    cmd = NODE_STORAGE_MANAGE_CMD + ' ebs-attach '\
+        '--aws-access-key-id {0} --aws-secret-access-key {1}'.format(
+            AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
     if EBS_volume_name is None:
         # if no volume is specified, then create a new one
         EBS_volume_name = PD_NS_SEPARATOR.join(
@@ -474,19 +473,28 @@ def add_volume_to_node_ls(ssh, node_id, devices, device_names=None):
         is False)
     """
     _, o, e = ssh.exec_command(
-        'python2 {0}/{1} add-volume --devices {2}'.format(
-            NODE_SCRIPT_DIR, NODE_LVM_MANAGE_SCRIPT, ' '.join(devices)
+        NODE_STORAGE_MANAGE_CMD + ' add-volume --devices {}'.format(
+            ' '.join(devices)
         )
     )
     result = o.read()
     device_names = device_names or {}
     try:
         data = json.loads(result)
-    except (ValueError, TypeError):
+        if data['status'] != 'OK':
+            return (
+                False,
+                'Failed to add volume: {} '.format(data['data']['message'])
+            )
+    except (ValueError, TypeError, KeyError):
         return False, u'Unknown answer format from remote script: {}\n'\
                       u'=======================\nSTDERR:\n{}'.format(
                           result, e.read())
-    pv_info = data.get('data', {}).get('PV', {})
+    data = data.get('data', {})
+    if ZFS:
+        pv_info = data.get('zpoolDevs', {})
+    else:
+        pv_info = data.get('PV', {})
     for device in devices:
         if device not in pv_info:
             continue
@@ -497,7 +505,7 @@ def add_volume_to_node_ls(ssh, node_id, devices, device_names=None):
     return True, None
 
 
-def remove_ls_volume(hostname, raise_on_error=True):
+def remove_ls_storage(hostname, raise_on_error=True):
     """Performs clean actions on node deletion.
     Raises APIError exception if error occured and raise_on_error flag is set
     to True.
@@ -513,9 +521,7 @@ def remove_ls_volume(hostname, raise_on_error=True):
         if raise_on_error:
             raise APIError(error_message)
         return error_message
-    cmd = 'python2 {0}/{1} remove-ls-vg'.format(
-        NODE_SCRIPT_DIR, NODE_LVM_MANAGE_SCRIPT
-    )
+    cmd = NODE_STORAGE_MANAGE_CMD + ' remove-storage'
     if AWS:
         from kubedock.settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
         cmd += ' --detach-ebs '\
@@ -539,9 +545,7 @@ def get_ls_info(hostname, raise_on_error=False):
             raise APIError(error_message)
         return error_message
 
-    cmd = 'python2 {0}/{1} get-info'.format(
-        NODE_SCRIPT_DIR, NODE_LVM_MANAGE_SCRIPT
-    )
+    cmd = NODE_STORAGE_MANAGE_CMD + ' get-info'
     _, o, e = ssh.exec_command(cmd)
     if o.channel.recv_exit_status():
         error_message = msg.format(e.read())

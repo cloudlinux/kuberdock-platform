@@ -78,7 +78,12 @@ class IpAddrPool(object):
 
         with atomic():
             pool = IPPool(network=data['network'], node=node)
-            auto_block = data.get('autoblock', '').replace(' ', '')
+            auto_block = data.get('autoblock')
+
+            # Strip out any spaces between symbols
+            if auto_block:
+                auto_block = auto_block.replace(' ', '')
+
             block_list = self.parse_autoblock(auto_block) if auto_block else []
             pool.block_ip(block_list)
 

@@ -105,10 +105,10 @@ def _max_tries_validation(ctx, param, value):
 
 def _collect_force(force_delete, force_not_delete):
     # collect bit flags
-    force = sum(
+    force = sum([
         (force_delete and _FORCE_DELETE),
         (force_not_delete and _FORCE_NOT_DELETE)
-    )
+    ])
 
     # check if only one flag or no flags specified
     if force not in [_NOT_FORCE, _FORCE_DELETE, _FORCE_NOT_DELETE]:

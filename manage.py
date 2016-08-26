@@ -21,7 +21,7 @@ from kubedock.models import User, Pod
 from kubedock.pods.models import PersistentDisk
 from kubedock.billing.models import Package, Kube
 from kubedock.billing.fixtures import add_kubes_and_packages
-from kubedock.rbac.fixtures import add_permissions
+from kubedock.rbac.fixtures import add_all_permissions
 from kubedock.users.fixtures import add_users_and_roles
 from kubedock.rbac.models import Role
 from kubedock.system_settings.fixtures import add_system_settings
@@ -83,7 +83,7 @@ class Creator(Command):
 
         add_notifications()
 
-        add_permissions()
+        add_all_permissions()
 
         add_users_and_roles(password)
 

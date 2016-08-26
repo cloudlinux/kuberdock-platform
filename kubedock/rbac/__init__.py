@@ -28,7 +28,8 @@ class Registry(RegistryOrigin):
 
     def _set_registry(self, key, value):
         cache.set(key, value)
-        setattr(self, '_{0}'.format(key), getattr(self, '_get_{0}'.format(key)))
+        setattr(self, '_{0}'.format(key),
+                getattr(self, '_get_{0}'.format(key)))
 
     def init_permissions(self):
         resources = {}
@@ -57,9 +58,9 @@ acl = Registry()
 class check_permission(object):
     """Improved version of check_permission.
 
-    Original function raises assertion error if resource was not found, but this
-    one will throw warning and deny access.
-    Also, this varsion uses exception inherited from APIError.
+    Original function raises assertion error if resource was not found,
+    but this one will throw warning and deny access.
+    Also, this version uses exception inherited from APIError.
 
     As an original method, this one could be used as a decorator, a context
     manager, a boolean-like value or directly by calling method check().
@@ -73,8 +74,8 @@ class check_permission(object):
         self.exception_kwargs.setdefault('exception', PermissionDenied)
         rbac_context = IdentityContext(acl)
         rbac_context.set_roles_loader(self._roles_loader)
-        self.checker = rbac_context.check_permission(self.operation, self.resource,
-                                                     **self.exception_kwargs)
+        self.checker = rbac_context.check_permission(
+            self.operation, self.resource, **self.exception_kwargs)
 
     def _roles_loader(self):
         yield get_user_role(self.user)

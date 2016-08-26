@@ -407,20 +407,23 @@ function create_k8s_certs {
 
 setup_ntpd ()
 {
-    time_src="time.nist.gov"
     # AC-3318 Remove chrony which prevents ntpd service to start after boot
     yum erase -y chrony
-    yum_wrapper install -y ntp
+    yum install -y ntp
+
+    function _sync_time() {
+        grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -d
+    }
 
     for _retry in $(seq 3); do
-        # http://www.planetcobalt.net/sdb/ntp_leap.shtml
-        echo "Attempt $_retry to run ntpdate -vdu $time_src.." && \
-        ntpdate -b $time_src && ntpdate -vdu $time_src && \
-        break || sleep 30;
+        echo "Attempt $_retry to run ntpdate ..." && \
+        _sync_time && break || sleep 30;
     done
-    ntpdate -vdu $time_src
+
+    _sync_time
     if [ $? -ne 0 ];then
-        echo "WARNING: ntpdate -vdu $time_src exit with error. Maybe some problems with ntpd settings and manual changes are needed"
+        echo "ERROR: ntpdate exit with error. Maybe some problems with ntpd settings and manual changes are needed"
+        exit 1
     fi
 
     # To prevent ntpd from exit on large time offsets

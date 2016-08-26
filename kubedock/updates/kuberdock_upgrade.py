@@ -123,7 +123,7 @@ def load_update(upd):
     except Exception as e:
         print >> sys.stderr, 'Error importing update script {0}. {1}'.format(
             upd, e.__repr__())
-        return None, None, None, None, None
+        return None, None, None, None, None, None
 
     in_db_update = Updates.query.get(upd) or \
                    Updates.create(fname=upd,
@@ -140,7 +140,7 @@ def load_update(upd):
     else:
         in_db_update.print_log(
             'Error. No upgrade/downgrade functions found in script.')
-        return None, None, None, None, None
+        return None, None, None, None, None, None
 
     downgrade_node_func = None
     if hasattr(module, 'upgrade_node') and callable(module.upgrade_node):
@@ -150,7 +150,7 @@ def load_update(upd):
         else:
             in_db_update.print_log(
                 'Error: No downgrade_node function found in script.')
-            return None, None, None, None, None
+            return None, None, None, None, None, None
     else:
         upgrade_node_func = None
 

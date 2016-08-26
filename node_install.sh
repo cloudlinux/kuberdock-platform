@@ -374,9 +374,6 @@ yum_wrapper -y install epel-release
 
 }
 
-# Should be done at the very beginning to ensure yum https works correctly
-setup_ntpd
-
 # Workaround for CentOS 7 minimal CD bug.
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787
 SWITCH=`cat /etc/nsswitch.conf | grep "^hosts:"`
@@ -426,6 +423,9 @@ check_status
 # Ensure latest packages from new repos
 yum --enablerepo=kube,kube-testing clean metadata
 
+
+# Should be done at the very beginning to ensure yum https works correctly
+setup_ntpd
 
 # 2. install components
 echo "Installing kubernetes..."

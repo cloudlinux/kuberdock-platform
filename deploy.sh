@@ -450,6 +450,7 @@ do_deploy()
 {
 
 # Should be done at the very beginning to ensure yum https works correctly
+install_repos
 setup_ntpd
 
 check_amazon
@@ -523,7 +524,6 @@ else
   PD_NAMESPACE="$PD_CUSTOM_NAMESPACE"
 fi
 
-install_repos
 
 if [ "$ISAMAZON" = true ];then
     AVAILABILITY_ZONE=$(curl -s connect-timeout 1 http://169.254.169.254/latest/meta-data/placement/availability-zone)

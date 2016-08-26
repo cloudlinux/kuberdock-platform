@@ -40,7 +40,7 @@ ETCD_POD_STATES_URL = ETCD_URL.format('/'.join([
     ETCD_KUBERDOCK, ETCD_POD_STATES]))
 MAX_ATTEMPTS = 10
 # How ofter we will send error about listener reconnection to sentry
-ERROR_TIMEOUT = 3*60 # in seconds
+ERROR_TIMEOUT = 3 * 60  # in seconds
 
 
 def filter_event(data, app):
@@ -125,8 +125,8 @@ def set_limit(host, pod_id, containers, app):
     spaces = dict(
         (i, (s, u)) for i, s, u in Kube.query.values(
             Kube.id, Kube.disk_space, Kube.disk_space_units
-            )
-        )  # workaround
+        )
+    )  # workaround
 
     pod = Pod.query.filter_by(id=pod_id).first()
 
@@ -136,7 +136,7 @@ def set_limit(host, pod_id, containers, app):
 
     config = json.loads(pod.config)
     kube_type = pod.kube_id
-        # kube = Kube.query.get(kube_type) this query raises an exception
+    # kube = Kube.query.get(kube_type) this query raises an exception
     limits = []
     for container in config['containers']:
         container_name = container['name']
@@ -392,6 +392,7 @@ def update_pod_direct_access(pods, pod, obj):
         current_app.logger.exception(
             "Failed to update direct access pod {}".format(pod))
 
+
 def pin_pod_to_node(spec, node, pods, pod):
     """Binds pods and persistent disks to a node in a case when starts a pod
     with volumes on local storage backend.
@@ -422,6 +423,7 @@ def pin_pod_to_node(spec, node, pods, pod):
         current_app.logger.debug(
             'Pin pod "%s" to node "%s"', pod.id, node
         )
+
 
 def process_pods_event_k8s(data, app):
     event_type = data['type']
@@ -486,7 +488,7 @@ def listen_fabric(watch_url, list_url, func, k8s_json_object_hook=None):
                     with app.app_context():
                         now = datetime.now()
                         logger = current_app.logger.warning
-                        if (now-last_reconnect).total_seconds() > ERROR_TIMEOUT:
+                        if (now - last_reconnect).total_seconds() > ERROR_TIMEOUT:
                             last_reconnect = now
                             logger = current_app.logger.error
                         logger("WebSocker error()".format(fn_name),
@@ -535,7 +537,7 @@ def listen_fabric(watch_url, list_url, func, k8s_json_object_hook=None):
                     with app.app_context():
                         now = datetime.now()
                         logger = current_app.logger.warning
-                        if (now-last_reconnect).total_seconds() > ERROR_TIMEOUT:
+                        if (now - last_reconnect).total_seconds() > ERROR_TIMEOUT:
                             last_reconnect = now
                             logger = current_app.logger.error
                         logger('restarting listen: {1}' .format(fn_name),

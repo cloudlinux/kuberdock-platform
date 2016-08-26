@@ -466,20 +466,20 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
             }]
         )
 
+    @mock.patch.object(podcollection, '_try_to_update_existing_rc')
     @mock.patch.object(podcollection, 'create_ingress')
     @mock.patch.object(podcollection.dns_management,
                        'create_or_update_type_A_record')
     @mock.patch.object(podcollection.helpers, 'replace_pod_config')
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection, 'run_service')
-    @mock.patch.object(podcollection, 'get_replicationcontroller')
     @mock.patch.object(podcollection.podutils, 'raise_if_failure')
     @mock.patch.object(podcollection.KubeQuery, 'post')
     def test_pod_prepare_and_run_task(
-            self, post_mock,
-            raise_if_failure_mock, get_rc_mock, run_service_mock,
+            self, post_mock, raise_if_failure_mock, run_service_mock,
             dbpod_mock, replace_pod_config_mock,
-            create_or_update_type_A_record_mock, create_ingress_mock):
+            create_or_update_type_A_record_mock, create_ingress_mock,
+            try_update_rc_mock):
         """
         Test first _start_pod in usual case
         :type post_: mock.Mock
@@ -487,13 +487,13 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         :type rif: mock.Mock
         """
         create_ingress_mock.return_value = (True, None)
-        get_rc_mock.side_effect = APIError('no rc')
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
         dbpod = mock.Mock()
         dbpod_mock.query.get.return_value = dbpod
         dbpod.get_dbconfig.return_value = {'volumes': []}
         run_service_mock.return_value = (None, None)
         create_or_update_type_A_record_mock.return_value = (True, None)
+        try_update_rc_mock.return_value = False
 
         # Actual call
         res = podcollection.prepare_and_run_pod_task(self.test_pod)
@@ -655,23 +655,23 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         get_nodes_mock.assert_called_with(kube_type=pod.kube_type)
         self.assertFalse(res)
 
+    @mock.patch.object(podcollection, '_try_to_update_existing_rc')
     @mock.patch.object(podcollection, 'create_ingress')
     @mock.patch.object(podcollection.dns_management,
                        'create_or_update_type_A_record')
     @mock.patch.object(podcollection, 'run_service')
     @mock.patch.object(podcollection, 'DBPod')
-    @mock.patch.object(podcollection, 'get_replicationcontroller')
     @mock.patch.object(podcollection.KubeQuery, 'post')
     def test_pod_prepare_and_run_task_second_start(
-            self, post_, mk_get_rc, dbpod_mock, run_service_mock,
-            create_or_update_type_A_record_mock, create_ingress_mock):
+            self, post_, dbpod_mock, run_service_mock,
+            create_or_update_type_A_record_mock, create_ingress_mock,
+            try_update_rc_mock):
         """
         Test second _start_pod in usual case
         :type post_: mock.Mock
         """
 
         create_ingress_mock.return_value = (True, None)
-        mk_get_rc.side_effect = APIError('no rc')
         dbpod_mock.query.get().get_dbconfig.return_value = {
             'volumes': [], 'service': self.test_service_name}
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
@@ -683,6 +683,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         }
         run_service_mock.return_value = (None, None)
         create_or_update_type_A_record_mock.return_value = (True, None)
+        try_update_rc_mock.return_value = False
 
         # Actual call
         res = podcollection.prepare_and_run_pod_task(self.test_pod)

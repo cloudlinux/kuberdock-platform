@@ -45,7 +45,7 @@ class TestNodeEventListeners(DBTestCase):
         app = mock.MagicMock()
         redis = mock.MagicMock()
         redis.configure_mock(**{
-            'get.return_value':'["Ready", "True"]',
+            'get.return_value': '["Ready", "True"]',
             'exists.return_value': False})
         _r.return_value = redis
         _ns.return_value = '["Ready", "Unknown"]'
@@ -56,7 +56,7 @@ class TestNodeEventListeners(DBTestCase):
         app = mock.MagicMock()
         redis = mock.MagicMock()
         redis.configure_mock(**{
-            'get.return_value':'["Ready", "True"]',
+            'get.return_value': '["Ready", "True"]',
             'exists.return_value': True})
         _r.return_value = redis
         _ns.return_value = '["Ready", "Unknown"]'

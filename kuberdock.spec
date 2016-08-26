@@ -85,8 +85,12 @@ start='urlArgs: "bust="'
 replace='(new Date()).getTime()'
 replace_with=$(date +"%s")
 sed -i "/$start/ {s/$replace/$replace_with/}" kubedock/frontend/static/js/*/require_main.js
-# In case of deprecating undocumented %exclude macro
+# Exclude dev-utils and tests
 rm -rf dev-utils
+rm -rf builds
+rm -rf tests_integration
+rm -rf kubedock/tests
+rm -rf kubedock/vcrpy_test_cassettes
 
 %install
 rm -rf %{buildroot}
@@ -186,7 +190,6 @@ fi
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade
 %attr (-,nginx,nginx) %{_bindir}/kd-backup-master
-%exclude /var/opt/kuberdock/dev-utils
 %{_bindir}/kdcustomize
 
 %changelog

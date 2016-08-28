@@ -20,3 +20,9 @@ KEY_PREFIX_DNS_CPANEL = 'dns_management_cpanel_dnsonly'
 DNS_MANAGEMENT_CPANEL_HOST = KEY_PREFIX_DNS_CPANEL + '_host'
 DNS_MANAGEMENT_CPANEL_USER = KEY_PREFIX_DNS_CPANEL + '_user'
 DNS_MANAGEMENT_CPANEL_TOKEN = KEY_PREFIX_DNS_CPANEL + '_token',
+
+#    Route53 setting for dns management
+#    Prefix for keys of Route53 dns management settings
+KEY_PREFIX_DNS_ROUTE53 = 'dns_management_aws_route53'
+DNS_MANAGEMENT_ROUTE53_ID = KEY_PREFIX_DNS_ROUTE53 + '_id'
+DNS_MANAGEMENT_ROUTE53_SECRET = KEY_PREFIX_DNS_ROUTE53 + '_secret'

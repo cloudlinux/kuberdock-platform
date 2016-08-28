@@ -1,6 +1,15 @@
+"""
+DNS Management Plugin for Amazon Route 53
+
+Usage of this plugin is not restricted to KuberDock on AWS and can be used on
+  any kind of KuberDock setup
+
+API reference: http://boto.cloudhackers.com/en/latest/ref/route53.html
+"""
+
 from . import entry
 
-ALLOWED_ARGS = ['host', 'user', 'token']
+ALLOWED_ARGS = ['id', 'secret']
 
 
 def is_valid_arg(name, value):

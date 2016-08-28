@@ -2,5 +2,6 @@
 
 __all__ = [
     'example',
+    'aws_route53',
     'cpanel_dnsonly',
 ]

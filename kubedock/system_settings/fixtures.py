@@ -72,5 +72,17 @@ def add_system_settings():
             label='cPanel user token for DNS management',
             description='cPanel token that used for DNS management auth',
             placeholder='Enter token for cPanel which serve your DNS records'),
+        SystemSettings(
+            name=keys.DNS_MANAGEMENT_ROUTE53_ID,
+            label='AWS Access Key ID',
+            description='AWS Access Key ID for Route 53 DNS management',
+            placeholder='Enter AWS Access Key ID'
+        ),
+        SystemSettings(
+            name=keys.DNS_MANAGEMENT_ROUTE53_SECRET,
+            label='AWS Secret Access Key',
+            description='AWS Secret Access Key for Route 53 DNS management',
+            placeholder='Enter AWS Secret Access Key'
+        ),
     ])
     db.session.commit()

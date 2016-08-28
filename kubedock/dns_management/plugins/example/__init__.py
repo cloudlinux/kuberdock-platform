@@ -18,7 +18,7 @@ from . import entry
 # address of external dns system, user credentials to login there, or
 # something else. To make plugin useful, for every of these parameters there
 # must be a record in system settings with valid value.
-args = []
+ALLOWED_ARGS = []
 
 
 def is_valid_arg(name, value):
@@ -28,6 +28,6 @@ def is_valid_arg(name, value):
     :return: tuple of success flag and error message (None if parameter value
         is valid)
     """
-    if name not in args:
+    if name not in ALLOWED_ARGS:
         return False, u'Unknown parameter "{}" ({})'.format(name, value)
     return True, None

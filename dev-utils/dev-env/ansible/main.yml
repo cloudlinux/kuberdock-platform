@@ -47,6 +47,7 @@
       run_once: true
 
     - set_fact: kd_url="{{ hostvars[groups['rhost1'][0]].ansible_default_ipv4.address }}"
+      when: install_plesk
     - debug: msg="https://{{ kd_url }} [user:admin, password:admin]"
       run_once: true
       when: install_plesk

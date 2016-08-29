@@ -58,7 +58,7 @@ def local_exec(cmd, env=None, timeout=None, check_retcode=True):
 
 
 def ssh_exec(ssh, cmd, timeout=None, check_retcode=True):
-    LOG.debug("{}Calling SSH: '{}'{}".format(Style.DIM, cmd, Style.RESET_ALL))
+    LOG.debug(u"{}Calling SSH: '{}'{}".format(Style.DIM, cmd, Style.RESET_ALL))
     _, out, err = ssh.exec_command(cmd, timeout=timeout)
     ret_code = out.channel.recv_exit_status()
     out, err = out.read().strip(), err.read().strip()

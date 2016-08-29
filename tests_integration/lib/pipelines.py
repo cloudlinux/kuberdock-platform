@@ -1,6 +1,7 @@
 import os
 from collections import defaultdict
 from functools import wraps
+from ipaddress import IPv4Network
 
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
@@ -142,6 +143,29 @@ class MasterRestorePipeline(Pipeline):
 
     def set_up(self):
         self.cleanup()
+
+
+class ReleaseUpdatePipeline(Pipeline):
+    NAME = 'release_update'
+    ROUTABLE_IP_COUNT = 1
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,ippool',
+        'KD_INSTALL_TYPE': 'release',
+    }
+
+    # TODO: Delete when 1.4.0 released
+    def post_create_hook(self):
+        super(ReleaseUpdatePipeline, self).post_create_hook()
+        cmd = """
+        MAIN_INTERFACE=$(ip route get 8.8.8.8 | egrep 'dev\s+.+?\s+src' -o | awk '{print $2}');  # noqa
+        ip addr show dev $MAIN_INTERFACE | awk 'NR==3 { print $2 }'
+        """
+        _, main_ip, _ = self.cluster.ssh_exec('master', cmd)
+
+        ip_pool = str(IPv4Network(unicode(main_ip), strict=False))
+        cmd = 'create-ip-pool -s {}'.format(ip_pool)
+        self.cluster.manage(cmd)
 
 
 class WebUIPipeline(Pipeline):

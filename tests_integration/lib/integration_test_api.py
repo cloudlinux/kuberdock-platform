@@ -305,7 +305,7 @@ class KDIntegrationTestAPI(object):
         for user in self.get_kd_users():
             for pod in self.get_all_pods(user):
                 name = self._escape_command_arg(pod['name'])
-                self.kcli('delete {}'.format(name), user=user)
+                self.kcli(u'delete {}'.format(name), user=user)
 
     def forget_all_pods(self):
         for user in self.get_kd_users():
@@ -313,7 +313,7 @@ class KDIntegrationTestAPI(object):
 
             for pod in pods:
                 name = self._escape_command_arg(pod['name'])
-                self.kcli('forget {}'.format(name), user=user)
+                self.kcli(u'forget {}'.format(name), user=user)
 
     def delete_all_ip_pools(self):
         _, pools, _ = self.manage('list-ip-pools', out_as_dict=True)
@@ -565,8 +565,7 @@ class KDPod(RESTMixin):
 
             return [
                 cls.Port(int(port['number']), port['protocol'])
-                for port in out['ports']
-                ]
+                for port in out['ports']]
 
         ports = _get_image_ports(image)
         escaped_name = pipes.quote(name)
@@ -583,11 +582,11 @@ class KDPod(RESTMixin):
                 ["+{}::{}".format(p.port, p.proto) for p in ports])
             ports_arg = "--container-port {0}".format(pub_ports)
         cluster.kcli(
-            "create -C {image} --kube-type {kube_type} --kubes {kubes} "
+            u"create -C {image} --kube-type {kube_type} --kubes {kubes} "
             "--restart-policy {restart_policy} {ports_arg} {pv_cmd} "
             "{escaped_name}".format(**locals()), user=owner)
         cluster.kcli(
-            "save {0}".format(escaped_name), user=owner)
+            u"save {0}".format(escaped_name), user=owner)
         this_pod_class = cls._get_pod_class(image)
         return this_pod_class(cluster, image, name, kube_type, kubes,
                               open_all_ports, restart_policy, pvs, owner)
@@ -604,8 +603,7 @@ class KDPod(RESTMixin):
         def get_image(file_path=None, pod_dump=None):
             if pod_dump is None:
                 _, pod_dump, _ = cluster.ssh_exec("master",
-                                                         "cat {}".format(
-                                                             file_path))
+                                                  "cat {}".format(file_path))
             pod_dump = json.loads(pod_dump)
             container = pod_dump['pod_data']["containers"]
             if len(container) > 1:
@@ -669,18 +667,18 @@ class KDPod(RESTMixin):
         return pod_classes.get(image, cls)
 
     def start(self):
-        rc, out, err = self.cluster.kcli("start {0}".format(self.escaped_name),
+        rc, out, err = self.cluster.kcli(u"start {0}".format(self.escaped_name),
                                          user=self.owner)
         # TODO: Handle exclamation mark in a response correctly
         self.public_ip = yaml.load(out).get('public_ip')
 
     def stop(self):
         self.cluster.kcli(
-            "stop {0}".format(self.escaped_name), user=self.owner)
+            u"stop {0}".format(self.escaped_name), user=self.owner)
 
     def delete(self):
         self.cluster.kcli(
-            "delete {0}".format(self.escaped_name), user=self.owner)
+            u"delete {0}".format(self.escaped_name), user=self.owner)
 
     def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
         ports = ports or self.ports
@@ -717,7 +715,7 @@ class KDPod(RESTMixin):
     def info(self):
         try:
             _, out, _ = self.cluster.kubectl(
-                'get pod {}'.format(self.escaped_name), out_as_dict=True,
+                u'get pod {}'.format(self.escaped_name), out_as_dict=True,
                 user=self.owner)
             return out[0]
         except KeyError:
@@ -740,12 +738,12 @@ class KDPod(RESTMixin):
 
     def get_spec(self):
         _, out, _ = self.cluster.kubectl(
-            "describe pods {}".format(self.escaped_name), out_as_dict=True,
+            u"describe pods {}".format(self.escaped_name), out_as_dict=True,
             user=self.owner)
         return out
 
     def get_dump(self):
-        cmd = "pods dump {pod_id}".format(pod_id=self.pod_id)
+        cmd = u"pods dump {pod_id}".format(pod_id=self.pod_id)
         _, out, _ = self.cluster.kdctl(cmd, out_as_dict=True)
         rv = out['data']
         return rv

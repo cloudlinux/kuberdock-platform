@@ -27,6 +27,7 @@
   become: yes
   roles:
       - rhost
+      - { role: plesk, when: install_plesk }
 
 - hosts: master
   tasks:
@@ -44,3 +45,8 @@
     - set_fact: kd_url="{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}"
     - debug: msg="https://{{ kd_url }} [user:admin, password:admin]"
       run_once: true
+
+    - set_fact: kd_url="{{ hostvars[groups['rhost1'][0]].ansible_default_ipv4.address }}"
+    - debug: msg="https://{{ kd_url }} [user:admin, password:admin]"
+      run_once: true
+      when: install_plesk

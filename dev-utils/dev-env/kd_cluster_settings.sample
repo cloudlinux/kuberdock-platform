@@ -114,3 +114,13 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # default: from host
 #export KD_TIMEZONE=Asia/Shanghai
 
+# Install plesk to rhost 
+# default: False
+#export KD_INSTALL_PLESK=1
+
+# Plesk's license. It can be string key or license file
+# default: 0 
+#export KD_PLESK_LICENSE=ACB123
+# or
+#export KD_PLESK_LICENSE=/path/to/your/license.xml
+

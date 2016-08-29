@@ -1,0 +1,51 @@
+---
+
+- set_fact: plesk_license_param="{{ plesk_license }}"
+
+- stat: path="{{ plesk_license }}"
+  become: false
+  delegate_to: localhost
+  register: lic_file
+
+- name: Copy license file
+  copy: src="{{ plesk_license }}" dest="{{ license_key_file_dst }}"
+  when: lic_file.stat.exists
+
+- set_fact: plesk_license_param="{{ license_key_file_dst }}"
+  when: lic_file.stat.exists
+
+- name: Copy deploy script
+  get_url: url={{ plesk_deploy_script_url }} dest=/tmp/deploy-plesk.sh
+
+- name: Install plesk
+  command: sh /tmp/deploy-plesk.sh
+
+- name: initialize plesk
+  command: /usr/local/psa/bin/init_conf --init -passwd "{{ password }}" -email "{{ email }}" -name "{{ user }}", -phone "{{ phone }}", -company "{{ company }}", -address "{{ address }}", -city "{{ city }}", -country "{{ country }}"
+
+- name: Install license key from file
+  command: "{{ item }}"
+  with_items:
+    - plesk bin license --install "{{ plesk_license_param }}" -not-check-limits 1
+    - plesk bin license --retrieve
+
+
+- name: Download kcli deploy script
+  get_url: url="{{ kcli_deploy_script_url }}" dest=/tmp/kcli-deploy.sh
+
+- name: Deploy kcli
+  command: bash /tmp/kcli-deploy.sh --user admin --testing --kuberdock "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}"
+  env:
+      KD_PASSWORD: "{{ admin_password }}"
+
+- name: Create customer
+  command: plesk bin customer --create "{{ customer_user }}" -name "{{ customer_name }}" -passwd "{{ customer_password }}" -notify false
+
+- name: Create ip pool
+  command: plesk bin ipmanage --create 192.0.2.78 -mask 255.255.255.0 -interface "ens3" -type shared
+
+- name: give an ip to customer
+  command: plesk bin ip_pool --add 192.0.2.78 -type shared -owner JDoe
+
+- name: create a domain for customer
+  command: plesk bin domain --create "{{ domain }}" -owner "{{ customer_user }}" -ip 192.0.2.78 -status enabled -hosting true -login "{{ domain_login }}" -passwd {{ domain_password }} -notify false -service-plan "Default Domain"

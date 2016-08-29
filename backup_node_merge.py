@@ -37,17 +37,24 @@ def get_timestamp(item):
 
 
 def group_by_timestamp(data, precision, skip_errors=False):
-    group = [data.pop(0), ]
+
+    # Sanitize group
+    timestamps = []
     for item in data:
         try:
-            gap = get_timestamp(item) - get_timestamp(group[0])
-            logger.debug('{1} | {0} | {2}'.format(item, group[0], gap))
+            timestamps.append([item, get_timestamp(item)])
         except MergeError as err:
             if skip_errors:
                 logger.warning("File `{0}` backup skipped due to "
                                "error `{1}`. Skipped".format(item, err))
                 continue
             raise
+
+    head, t0 = timestamps.pop(0)
+    group = [head, ]
+    for item, timestamp in timestamps:
+        gap = timestamp - t0
+        logger.debug('{1} | {0} | {2}'.format(item, group[0], gap))
         if gap.total_seconds() <= precision:
             group.append(item)
         else:

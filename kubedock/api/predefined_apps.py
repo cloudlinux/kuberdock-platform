@@ -52,6 +52,16 @@ def _take_template_from_uploads_if_needed(fn):
     return wrapper
 
 
+def _purged_unknown_and_null(params, schema):
+    """Purge unknown params and params with not set values"""
+    params = {param: value for param, value in params.items()
+              if (param in schema
+                  and not (edit_params_schema[param].get('nullable', False)
+                           and value is None)  # skip null values
+                  )}
+    return params
+
+
 class PredefinedAppsAPI(KubeUtils, MethodView):
     decorators = [auth_required]
 
@@ -60,7 +70,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
         if app_id is None:
             return jsonify({'status': 'OK',
                             'data': PredefinedApp.all(as_dict=True)})
-        file_only = self._get_params().get('file-only', False)
+        file_only = extbool(self._get_params().get('file-only', False))
         app = PredefinedApp.get(app_id)
         if file_only:
             return Response(app.template, content_type='application/x-yaml')
@@ -89,8 +99,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
         if validate and template is not None:
             PredefinedApp.validate(template)  # OK if no exception
         # TODO: with cerberus 1.0 use purge_unknown
-        params = {param: value for param, value in params.items()
-                  if param in edit_params_schema}
+        params = _purged_unknown_and_null(params, edit_params_schema)
         params.update(template=template)
         app = PredefinedApp.update(app_id, **params)
         return app.to_dict()
@@ -102,7 +111,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
         PredefinedApp.delete(app_id)
 
 register_api(predefined_apps, PredefinedAppsAPI, 'predefined_apps', '/',
-             'app_id', strict_slashes=False)
+             'app_id', pk_type='int', strict_slashes=False)
 
 
 @predefined_apps.route('/validate-template', methods=['POST'],

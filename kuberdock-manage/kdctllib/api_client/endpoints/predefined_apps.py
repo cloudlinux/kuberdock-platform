@@ -38,7 +38,7 @@ class PredefinedAppsClient(ClientBase):
             'template': template,
             'validate': validate,
         }
-        return self.transport.post(
+        return self.transport.put(
             self._url(app_id),
             json=json
         )

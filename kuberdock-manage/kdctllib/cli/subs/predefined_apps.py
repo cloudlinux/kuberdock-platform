@@ -39,7 +39,7 @@ def create(obj, **params):
 @pa.command()
 @kdclick.argument('app-id')
 @kdclick.data_argument('template', type=kdclick.types.text)
-@kdclick.option('--name', required=True, help='Application name.')
+@kdclick.option('--name', required=False, help='Application name.')
 @kdclick.option('--validate', is_flag=True,
                 help='Provide if validation is needed.')
 @kdclick.pass_obj

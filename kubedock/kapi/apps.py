@@ -297,7 +297,7 @@ class PredefinedApp(object):
                         any_entity_regex.sub('.*', re.escape(left)),
                         right):
                     return False
-            elif all([isinstance(i, Sequence) for i in (left, right)]):   # list
+            elif all([isinstance(i, Sequence) for i in (left, right)]):  # list
                 if len(left) != len(right):
                     return False
                 stack.extend(zip(left, right))
@@ -496,7 +496,8 @@ class PredefinedApp(object):
             pd_by_volname[pd.get('name')] = pd.get('pdSize')
         for vol in right.get('volumes', []):
             if vol.get('persistentDisk'):
-                vol['persistentDisk']['pdSize'] = pd_by_volname[vol.get('name')]
+                vol_size = pd_by_volname[vol.get('name')]
+                vol['persistentDisk']['pdSize'] = vol_size
 
     def _apply_package(self, tpl, plan):
         """
@@ -518,7 +519,7 @@ class PredefinedApp(object):
         self._update_kubes(plan_pod, spec)
         self._update_volumes(plan_pod, spec)
 
-        if plan.get('publicIP') == False and self._has_public_ports():
+        if plan.get('publicIP') is False and self._has_public_ports():
             for container in spec.get('containers', []):
                 for port in container.get('ports', []):
                     port['isPublic'] = False
@@ -607,7 +608,7 @@ class PredefinedApp(object):
         plans = self._get_plans(filled)
         for plan in plans:
             plan.setdefault('goodFor', '')
-            plan['publicIP'] = plan.get('publicIP') != False
+            plan['publicIP'] = plan.get('publicIP') is not False
             if type(plan.get('pods')) is not list:
                 plan['pods'] = [{}]
             for pod in plan['pods']:
@@ -704,7 +705,8 @@ class PredefinedApp(object):
         patt = re.compile(r'^(?:{0})$'.format('|'.join(self._entities_by_uid)))
         CustomLoader.add_implicit_resolver('!kd', patt, None)
         try:
-            self._loaded_template = yaml.load(preprocessed, Loader=CustomLoader)
+            self._loaded_template = yaml.load(preprocessed,
+                                              Loader=CustomLoader)
         except (yaml.scanner.ScannerError, yaml.parser.ParserError):
             raise PredefinedAppExc.UnparseableTemplate
         return self._loaded_template
@@ -916,7 +918,7 @@ class PredefinedApp(object):
         pod = self._get_template_spec()
         for container in pod.get('containers', []):
             for port in container.get('ports', []):
-                if port.get('isPublic') == True:
+                if port.get('isPublic') is True:
                     self._public_ports = True
                     return True
         self._public_ports = False
@@ -1061,7 +1063,8 @@ def dispatch_kind(docs, template_id=None):
         else:
             raise ValidationError('Unsupported object kind')
     if not pod and not rc:
-        raise ValidationError('At least Pod or ReplicationController is needed')
+        raise ValidationError(
+            'At least Pod or ReplicationController is needed')
     if pod and rc:
         raise ValidationError('Only one Pod or ReplicationController '
                               'is allowed but not both')

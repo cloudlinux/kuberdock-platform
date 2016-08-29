@@ -1,19 +1,19 @@
 import logging
+import operator
 import random
 import re
 import socket
 import string
 import time
-from functools import wraps
 from collections import defaultdict
 from contextlib import contextmanager
+from functools import wraps
 from itertools import count, islice
 
-import operator
 import oca
-from oca import OpenNebulaException
 from colorama import Fore, Style
 from ipaddress import IPv4Address
+from oca import OpenNebulaException
 
 from tests_integration.lib.exceptions import PublicPortWaitTimeoutException, \
     NonZeroRetCodeException, NotEnoughFreeIPs
@@ -396,7 +396,6 @@ def get_test_full_name(test):
 
 
 def http_share(cluster, host, shared_dir):
-
     def _is_running():
         cmd = "curl -X GET http://{}".format("127.0.0.1")
         try:
@@ -409,8 +408,3 @@ def http_share(cluster, host, shared_dir):
         cmd = "docker run -d -p 80:80 -v {}:/usr/share/nginx/html/backups:ro" \
               " nginx".format(shared_dir)
         cluster.ssh_exec(host, cmd)
-
-
-def all_subclasses(cls):
-    return cls.__subclasses__() + [g for s in cls.__subclasses__()
-                                   for g in all_subclasses(s)]

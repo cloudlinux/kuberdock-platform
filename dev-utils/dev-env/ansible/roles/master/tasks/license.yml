@@ -1,15 +1,6 @@
-- name: Checking license existance
-  become: False
-  stat: path="{{ license_path }}"
-  delegate_to: localhost
-  register: license
-  tags:
-      - license
-      - patch
-
-- name: Copy linence file
+- name: Copy license file
   copy: src={{ license_path }} dest={{ copy_license_to }}
-  when: license.stat.exists
+  when: license_path != 'patch'
   tags:
       - license
       - patch

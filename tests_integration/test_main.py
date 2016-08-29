@@ -11,14 +11,16 @@ def test_cadvisor_errors(cluster):
     cluster.kdctl('pricing license show')
 
     # TODO: Remove once AC-3618 implemented
-    cmd = "[ $(journalctl --since '15 min ago' -m -t uwsgi | " \
-          "grep -v 'ssl_stapling' | " \
-          "egrep 'warn|err' -c) -eq 0 ]"
-    cluster.ssh_exec('master', cmd)
+    cmd = "journalctl --since '15 min ago' -m -t uwsgi | " \
+          "grep -v 'ssl_stapling' | egrep 'warn|err' | tail -n 100"
+    _, out, err = cluster.ssh_exec('master', cmd)
+    assert_eq((out + err).strip(), '')
 
 
 @pipeline('main')
+@pipeline('main_upgraded')
 @pipeline('ceph')
+@pipeline('ceph_upgraded')
 def test_a_pv_created_together_with_pod(cluster):
     # We have issue related to using non-unique disk names within
     # same CEPH pool (AC-3831). That is why name is randomized.
@@ -44,7 +46,9 @@ def test_a_pv_created_together_with_pod(cluster):
 
 
 @pipeline('main')
+@pipeline('main_upgraded')
 @pipeline('ceph')
+@pipeline('ceph_upgraded')
 def test_a_pv_created_separately(cluster):
     pv_name = _gen_rnd_ceph_pv_name()
     pv_size = 2
@@ -74,6 +78,7 @@ def test_a_pv_created_separately(cluster):
 
 
 @pipeline('main')
+@pipeline('main_upgraded')
 def test_can_create_pod_without_volumes_and_ports(cluster):
     # Contents of Docker file utilized to create image:
     # FROM busybox
@@ -83,6 +88,7 @@ def test_can_create_pod_without_volumes_and_ports(cluster):
 
 
 @pipeline('main')
+@pipeline('main_upgraded')
 def test_nginx_with_healthcheck(cluster):
     cluster.create_pod("nginx", "test_nginx_pod_1", open_all_ports=True,
                        start=True, wait_ports=True, healthcheck=True,
@@ -90,6 +96,7 @@ def test_nginx_with_healthcheck(cluster):
 
 
 @pipeline('main')
+@pipeline('main_upgraded')
 def test_recreate_pod_with_real_ip(cluster):
     pod = cluster.create_pod("nginx", "test_nginx_pod_4", open_all_ports=True,
                              start=True, wait_for_status='running')
@@ -102,6 +109,7 @@ def test_recreate_pod_with_real_ip(cluster):
 
 
 @pipeline('networking')
+@pipeline('networking_upgraded')
 def test_pod_ip_resource(cluster):
     # It's not possible to create a POD with public IP with no IP pools
     cluster.delete_all_ip_pools()

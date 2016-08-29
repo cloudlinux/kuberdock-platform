@@ -15,7 +15,8 @@ from tests_integration.lib.integration_test_runner import TestResultCollection, 
 from tests_integration.lib.integration_test_utils import get_test_full_name, \
     center_text_message
 from tests_integration.lib.pipelines import pipelines as \
-    registered_pipelines, Pipeline
+    registered_pipelines
+from tests_integration.lib.pipelines_base import Pipeline
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)

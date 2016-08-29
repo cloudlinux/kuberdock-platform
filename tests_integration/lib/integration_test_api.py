@@ -40,9 +40,7 @@ class KDIntegrationTestAPI(object):
         "rhost1": "kd_rhost1",
     }
 
-    def __init__(self, override_envs=None,
-                 version='latest',
-                 upgrade_to='latest', out_cm=None, err_cm=None):
+    def __init__(self, override_envs=None, out_cm=None, err_cm=None):
         """
         API client for interaction with kuberdock cluster
 
@@ -161,6 +159,7 @@ class KDIntegrationTestAPI(object):
         return any(vm.state != "not_created" for vm in self.vagrant.status())
 
     def get_node_info(self, name):
+        # type: (str) -> dict
         _, out, _ = self.manage(
             'node-info -n {}'.format(pipes.quote(name)), out_as_dict=True)
         return out
@@ -186,11 +185,17 @@ class KDIntegrationTestAPI(object):
             self.vagrant.up(provider=provider, no_provision=True)
             self.created_at = datetime.utcnow()
 
-    def upgrade(self, upgrade_to='latest'):
-        local_arg = ''
+    def upgrade(self, upgrade_to='latest', use_testing=False,
+                skip_healthcheck=False):
+        args = ''
+        if use_testing:
+            args += ' -t'
         if upgrade_to != 'latest':
-            local_arg = "--local {0}".format(upgrade_to)
-        self.ssh_exec("master", "kuberdock-upgrade {0}".format(local_arg))
+            args += " --local {0}".format(upgrade_to)
+        if skip_healthcheck:
+            args += ' --skip-health-check'
+        self.ssh_exec(
+            "master", "yes | /usr/bin/kuberdock-upgrade {}".format(args))
 
     def destroy(self):
         self.vagrant.destroy()
@@ -284,6 +289,7 @@ class KDIntegrationTestAPI(object):
         self.forget_all_pods()
 
     def get_all_pods(self, owner='test_user'):
+        # type: (str) -> dict
         _, pods, _ = self.kubectl("get pods", out_as_dict=True, user=owner)
         return pods
 
@@ -409,6 +415,8 @@ class KDIntegrationTestAPI(object):
 
     def ssh_exec(self, node, cmd, check_retcode=True):
         ssh = self.get_ssh(node)
+        # Forcibly source profile, so all additional ENV variables are exported
+        cmd = '. /etc/profile; ' + cmd
         return ssh_exec(ssh, cmd, check_retcode=check_retcode)
 
     def _escape_command_arg(self, arg):

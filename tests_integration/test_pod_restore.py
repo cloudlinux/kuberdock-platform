@@ -1,9 +1,9 @@
 import json
+
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.integration_test_utils import \
-    assert_in, assert_raises, assert_eq, assert_not_eq, hooks, wait_net_port, \
-    http_share, kube_type_to_int, kube_type_to_str
+    assert_in, assert_raises, assert_eq, assert_not_eq, hooks, http_share
+from tests_integration.lib.pipelines import pipeline
 
 BACKUP_FILES = {
     "nginx_with_pv": "/nginx_pv.json",
@@ -26,6 +26,7 @@ def setup_pv_test(cluster):
 
 
 @pipeline('pod_restore')
+@pipeline('pod_restore_upgraded')  # TODO: Drop in 1.4 release
 @hooks(setup=setup_non_pv_test)
 def test_restore_pod_from_cmd(cluster):
     """
@@ -41,6 +42,7 @@ def test_restore_pod_from_cmd(cluster):
 
 
 @pipeline('pod_restore')
+@pipeline('pod_restore_upgraded')  # TODO: Drop in 1.4 release
 @hooks(setup=setup_non_pv_test)
 def test_restore_from_file(cluster):
     """
@@ -53,6 +55,7 @@ def test_restore_from_file(cluster):
 
 
 @pipeline('pod_restore')
+@pipeline('pod_restore_upgraded')  # TODO: Drop in 1.4 release
 @hooks(setup=setup_pv_test)
 def test_pod_with_pv_restore(cluster):
     file_name = BACKUP_FILES[nginx_with_pv]
@@ -101,7 +104,7 @@ def _generate_restore_file_with_pv(cluster):
         pod_with_pv, pv = _create_nginx_pod_with_pv(cluster)
         pod_spec = pod_with_pv.get_spec()
         with open('tests_integration/assets/pod_backups{}'
-                  .format(file_name), "w") as f:
+                          .format(file_name), "w") as f:
             json.dump(pod_spec, f)
         _copy_backup_to_master(cluster, file_name)
         pod_with_pv.delete()

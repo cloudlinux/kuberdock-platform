@@ -5,7 +5,8 @@ import time
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 
-from tests_integration.lib.exceptions import PipelineNotFound
+from tests_integration.lib.exceptions import PipelineNotFound, \
+    NonZeroRetCodeException, ClusterUpgradeError, VmCreationError
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.integration_test_utils import NebulaIPPool, \
     merge_dicts, get_test_full_name, center_text_message, suppress
@@ -251,8 +252,11 @@ class UpgradedPipelineMixin(object):
 
     def post_create_hook(self):
         super(UpgradedPipelineMixin, self).post_create_hook()
-        self.cluster.upgrade('/tmp/prebuilt_rpms/kuberdock.rpm',
-                             use_testing=True, skip_healthcheck=True)
+        try:
+            self.cluster.upgrade('/tmp/prebuilt_rpms/kuberdock.rpm',
+                                 use_testing=True, skip_healthcheck=True)
+        except NonZeroRetCodeException:
+            raise ClusterUpgradeError('Could not upgrade cluster')
         # TODO: This is needed because we skip IP pool creation during
         # vagrant provisioning. See TODO in the ENV
         self.cluster.recreate_routable_ip_pool()

@@ -15,3 +15,8 @@
   command: kdctl login --username admin --password admin
   tags:
    - kdctl
+
+- name: Login by kcli2
+  command: kcli2 login --username test_user --password test_user
+  tags:
+   - kdctl

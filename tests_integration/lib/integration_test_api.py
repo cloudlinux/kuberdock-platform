@@ -7,8 +7,8 @@ import sys
 import time
 import urllib2
 from collections import namedtuple
-from datetime import datetime
 from contextlib import contextmanager
+from datetime import datetime
 
 import paramiko
 import vagrant
@@ -170,7 +170,7 @@ class KDIntegrationTestAPI(object):
                 "the existing one.")
 
         settings = '\n'.join('{}: {}'.format(k, v)
-                                 for k, v in self.kd_env.items())
+                             for k, v in self.kd_env.items())
         LOG.debug('Cluster settings: {}'.format(settings))
 
         if provider == OPENNEBULA:
@@ -290,6 +290,13 @@ class KDIntegrationTestAPI(object):
 
         kcli_cmd.extend(['kuberdock', cmd])
         return self.ssh_exec('master', ' '.join(kcli_cmd))
+
+    # TODO: Process the user argument
+    def kcli2(self, cmd, out_as_dict=False, user=None):
+        rc, out, err = self.ssh_exec("master", u"kcli2 -k {}".format(cmd))
+        if out_as_dict:
+            out = json.loads(out)
+        return rc, out, err
 
     # TODO: Kubectl will be moved out of KCLI so this code duplication won't
     #  hurt that much
@@ -611,7 +618,7 @@ class KDPod(RESTMixin):
                 cls.Port(int(port['number']), port['protocol'])
                 for port in out['ports']]
 
-        ports = _get_image_ports(image)
+        ports = retry(_get_image_ports, img=image)
         escaped_name = pipes.quote(name)
         pv_cmd = ""
         if pvs is not None:
@@ -711,8 +718,9 @@ class KDPod(RESTMixin):
         return pod_classes.get(image, cls)
 
     def start(self):
-        rc, out, err = self.cluster.kcli(u"start {0}".format(self.escaped_name),
-                                         user=self.owner)
+        rc, out, err = self.cluster.kcli(
+            u"start {0}".format(self.escaped_name),
+            user=self.owner)
         # TODO: Handle exclamation mark in a response correctly
         self.public_ip = yaml.load(out).get('public_ip')
 
@@ -723,6 +731,14 @@ class KDPod(RESTMixin):
     def delete(self):
         self.cluster.kcli(
             u"delete {0}".format(self.escaped_name), user=self.owner)
+
+    def redeploy(self):
+        data = {
+            'command': 'redeploy', 'commandOptions': {'wipeOut': True}
+        }
+        self.cluster.kcli2(
+            u"pods update --name {} '{}'".format(
+                self.escaped_name, json.dumps(data), user=self.owner))
 
     def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
         ports = ports or self.ports

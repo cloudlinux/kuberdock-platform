@@ -161,10 +161,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             return JSON.stringify(_.pick(attrs, 'containerPort', 'protocol'));
         },
         publicPortsCheckVal: function(){
-            var publicIP = this.findWhere({isPublic: true});
-            return _.any(arguments, function(port){
-                return _.findWhere(publicIP, {containerPort: port});
-            });
+            for (var i = 0; i < arguments.length; i++) {
+                for (var a = 0; a < this.models.length; a++) {
+                    if (this.models[a].get('isPublic')) {
+                        if (this.models[a].get('containerPort') === arguments[i]) {
+                            return true;
+                        }
+                    }
+                }
+            }
             return false;
         },
     });

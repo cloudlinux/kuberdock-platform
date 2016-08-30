@@ -1,3 +1,4 @@
+import os
 import logging
 import operator
 import random
@@ -5,6 +6,8 @@ import re
 import socket
 import string
 import time
+import subprocess
+from functools import wraps
 from collections import defaultdict
 from contextlib import contextmanager
 from functools import wraps
@@ -22,12 +25,7 @@ NO_FREE_IPS_ERR_MSG = 'no free public IP-addresses'
 LOG = logging.getLogger(__name__)
 
 
-def ssh_exec(ssh, cmd, timeout=None, check_retcode=True):
-    LOG.debug("{}Calling SSH: '{}'{}".format(Style.DIM, cmd, Style.RESET_ALL))
-    _, out, err = ssh.exec_command(cmd, timeout=timeout)
-    ret_code = out.channel.recv_exit_status()
-    out, err = out.read().strip(), err.read().strip()
-
+def _proceed_exec_result(out, err, ret_code, check_retcode):
     msg_parts = [
         (Fore.GREEN, 'RetCode: ', str(ret_code)),
         (Fore.YELLOW, '=== StdOut ===\n', out),
@@ -38,6 +36,31 @@ def ssh_exec(ssh, cmd, timeout=None, check_retcode=True):
     if check_retcode and ret_code != 0:
         raise NonZeroRetCodeException(
             stdout=out, stderr=err, ret_code=ret_code)
+
+
+def local_exec(cmd, env=None, timeout=None, check_retcode=True):
+    LOG.debug("{}Calling local: '{}'{}".format(Style.DIM, cmd,
+                                               Style.RESET_ALL))
+    if env is not None:
+        env = dict(os.environ, **env)
+    proc = subprocess.Popen(cmd, env=env, stderr=subprocess.PIPE,
+                            stdout=subprocess.PIPE)
+    out, err = proc.communicate()
+    ret_code = proc.returncode
+
+    _proceed_exec_result(
+        out.decode('ascii', 'ignore'), err.decode('ascii', 'ignore'),
+        ret_code, check_retcode)
+    return ret_code, out, err
+
+
+def ssh_exec(ssh, cmd, timeout=None, check_retcode=True):
+    LOG.debug("{}Calling SSH: '{}'{}".format(Style.DIM, cmd, Style.RESET_ALL))
+    _, out, err = ssh.exec_command(cmd, timeout=timeout)
+    ret_code = out.channel.recv_exit_status()
+    out, err = out.read().strip(), err.read().strip()
+
+    _proceed_exec_result(out, err, ret_code, check_retcode)
     return ret_code, out, err
 
 

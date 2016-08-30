@@ -1,3 +1,4 @@
+from __future__ import unicode_literals
 from tempfile import NamedTemporaryFile
 from contextlib import contextmanager
 import logging
@@ -61,7 +62,6 @@ class FilePerThreadHandler(logging.Handler):
             return fp.read()
 
         return {name: _produce(fp) for name, fp in self.files.items()}
-
 
 
 def init_handler(logger, live_log=False):

@@ -232,7 +232,8 @@ class KDIntegrationTestAPI(object):
         self.kdctl("users create '{}'".format(json.dumps(user)))
 
     def delete_user(self, name):
-        self.kdctl("users delete {}".format(self._escape_command_arg(name)))
+        self.kdctl("users delete --id {}".format(self._escape_command_arg(
+            name)))
 
     def delete_all_kd_users(self):
         for user in self.get_kd_users():
@@ -261,7 +262,7 @@ class KDIntegrationTestAPI(object):
         return [pa for pa in data]
 
     def delete_predefined_application(self, id):
-        self.kdctl("predefined-apps delete {}".format(id))
+        self.kdctl("predefined-apps delete --id {}".format(id))
 
     def delete_all_predefined_applications(self):
         for pa in self.get_predefined_applications():
@@ -466,13 +467,21 @@ class KDIntegrationTestAPI(object):
                 return True
         return False
 
-    def set_system_setting(self, setting_id, value):
-        self.kdctl("system-settings update {} {}".format(setting_id,
-                                                         value))
+    def set_system_setting(self, value, setting_id=None, name=None):
+        cmd = "system-settings update "
+        if setting_id:
+            cmd += "--id {}".format(setting_id)
+        if name:
+            cmd += "--name {}".format(name)
+        self.kdctl("{} {}".format(cmd, value))
 
-    def get_system_setting(self, setting_id):
-        _, data, _ = self.kdctl("system-settings get {}".format(setting_id),
-                                out_as_dict=True)
+    def get_system_setting(self, setting_id=None, name=None):
+        cmd = "system-settings get "
+        if setting_id:
+            cmd += "--id {}".format(setting_id)
+        if name:
+            cmd += "--name {}".format(name)
+        _, data, _ = self.kdctl(cmd, out_as_dict=True)
         return data['data']['value']
 
 

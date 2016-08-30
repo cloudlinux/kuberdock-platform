@@ -1,50 +1,64 @@
-from .. import kdclick
+from functools import wraps
 
+from .. import kdclick
 from ..kdclick.access import ADMIN
+from ..utils import SimpleCommand, SimpleCommandWithIdNameArgs
 
 
 @kdclick.group(help='Commands for nodes management.', available_for=ADMIN)
-def nodes():
+@kdclick.pass_context
+def nodes(ctx):
+    ctx.obj = ctx.obj.kdctl.nodes
+
+
+def id_decorator(fn):
+    @kdclick.option('--id', help='Id of required node')
+    @kdclick.option('--name', help='Use it to specify name instead of id')
+    @kdclick.required_exactly_one_of('id', 'name')
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+@nodes.command()
+@kdclick.pass_obj
+class List(SimpleCommand):
     pass
 
 
 @nodes.command()
+@id_decorator
 @kdclick.pass_obj
-def list(obj, **params):
-    return obj.kdctl.nodes.list(**params)
+class Get(SimpleCommandWithIdNameArgs):
+    pass
 
 
 @nodes.command()
-@kdclick.argument('node-id')
+@kdclick.data_argument('data')
 @kdclick.pass_obj
-def get(obj, **params):
-    return obj.kdctl.nodes.get(**params)
+class Create(SimpleCommand):
+    pass
 
 
 @nodes.command()
-@kdclick.data_argument('node-data')
+@id_decorator
+@kdclick.data_argument('data')
 @kdclick.pass_obj
-def create(obj, **params):
-    return obj.kdctl.nodes.create(**params)
+class Update(SimpleCommandWithIdNameArgs):
+    pass
 
 
 @nodes.command()
-@kdclick.argument('node-id')
-@kdclick.data_argument('node-data')
+@id_decorator
 @kdclick.pass_obj
-def update(obj, **params):
-    return obj.kdctl.nodes.update(**params)
-
-
-@nodes.command()
-@kdclick.argument('node-id')
-@kdclick.pass_obj
-def delete(obj, **params):
-    return obj.kdctl.nodes.delete(**params)
+class Delete(SimpleCommandWithIdNameArgs):
+    pass
 
 
 @nodes.command('check-host')
 @kdclick.argument('hostname')
 @kdclick.pass_obj
-def check_host(obj, **params):
-    return obj.kdctl.nodes.check_host(**params)
+class CheckHost(SimpleCommand):
+    corresponding_method = 'check_host'

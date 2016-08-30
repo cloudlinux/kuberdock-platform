@@ -1,28 +1,42 @@
-from .. import kdclick
+from functools import wraps
 
+from .. import kdclick
 from ..kdclick.access import ADMIN
+from ..utils import SimpleCommand, SimpleCommandWithIdNameArgs
 
 
 @kdclick.group('predefined-apps',
                help='Commands for predefined applications management.',
                available_for=ADMIN)
-def pa():
+@kdclick.pass_context
+def pa(ctx):
+    ctx.obj = ctx.obj.kdctl.predefined_apps
+
+
+def id_decorator(fn):
+    @kdclick.option('--id', help='Id of required predefined application')
+    @kdclick.option('--name', help='Use it to specify name instead of id')
+    @kdclick.required_exactly_one_of('id', 'name')
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        return fn(*args, **kwargs)
+
+    return wrapper
+
+
+@pa.command()
+@kdclick.option('--file-only', is_flag=True)
+@kdclick.pass_obj
+class List(SimpleCommand):
     pass
 
 
 @pa.command()
+@id_decorator
 @kdclick.option('--file-only', is_flag=True)
 @kdclick.pass_obj
-def list(obj, **params):
-    return obj.kdctl.predefined_apps.list(**params)
-
-
-@pa.command()
-@kdclick.argument('app-id')
-@kdclick.option('--file-only', is_flag=True)
-@kdclick.pass_obj
-def get(obj, **params):
-    return obj.kdctl.predefined_apps.get(**params)
+class Get(SimpleCommandWithIdNameArgs):
+    pass
 
 
 @pa.command()
@@ -32,30 +46,29 @@ def get(obj, **params):
 @kdclick.option('--validate', is_flag=True,
                 help='Provide if validation is needed.')
 @kdclick.pass_obj
-def create(obj, **params):
-    return obj.kdctl.predefined_apps.create(**params)
+class Create(SimpleCommand):
+    pass
 
 
 @pa.command()
-@kdclick.argument('app-id')
+@id_decorator
 @kdclick.data_argument('template', type=kdclick.types.text)
-@kdclick.option('--name', required=False, help='Application name.')
 @kdclick.option('--validate', is_flag=True,
                 help='Provide if validation is needed.')
 @kdclick.pass_obj
-def update(obj, **params):
-    return obj.kdctl.predefined_apps.update(**params)
+class Update(SimpleCommandWithIdNameArgs):
+    pass
 
 
 @pa.command()
-@kdclick.argument('app-id')
+@id_decorator
 @kdclick.pass_obj
-def delete(obj, **params):
-    return obj.kdctl.predefined_apps.delete(**params)
+class Delete(SimpleCommandWithIdNameArgs):
+    pass
 
 
 @pa.command('validate-template')
 @kdclick.data_argument('template', type=kdclick.types.text)
 @kdclick.pass_obj
-def validate_template(obj, **params):
-    return obj.kdctl.predefined_apps.validate_template(**params)
+class ValidateTemplate(SimpleCommand):
+    corresponding_method = 'validate_template'

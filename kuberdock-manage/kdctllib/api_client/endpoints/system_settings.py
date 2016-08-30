@@ -9,13 +9,13 @@ class SystemSettingsClient(ClientBase):
             self._url()
         )
 
-    def get(self, sid):
+    def get(self, id):
         return self.transport.get(
-            self._url(sid)
+            self._url(id)
         )
 
-    def update(self, sid, value):
+    def update(self, id, value):
         return self.transport.put(
-            self._url(sid),
+            self._url(id),
             json={'value': value}
         )

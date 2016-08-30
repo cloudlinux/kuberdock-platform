@@ -10,28 +10,28 @@ class PodsClient(ClientBase):
             params={'owner': owner}
         )
 
-    def get(self, pod_id, owner=None):
+    def get(self, id, owner=None):
         return self.transport.get(
-            self._url(pod_id),
+            self._url(id),
             params={'owner': owner}
         )
 
-    def create(self, pod_data, owner=None):
+    def create(self, data, owner=None):
         return self.transport.post(
             self._url(),
             params={'owner': owner},
-            json=pod_data
+            json=data
         )
 
-    def update(self, pod_id, pod_data):
+    def update(self, id, data):
         # todo: add parameter "owner" in api/v2
         return self.transport.put(
-            self._url(pod_id),
-            json=pod_data
+            self._url(id),
+            json=data
         )
 
-    def delete(self, pod_id, owner=None):
+    def delete(self, id, owner=None):
         return self.transport.delete(
-            self._url(pod_id),
+            self._url(id),
             params={'owner': owner}
         )

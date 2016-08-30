@@ -11,6 +11,7 @@ from collections import defaultdict
 from contextlib import contextmanager
 from functools import wraps
 from itertools import count, islice
+from xmlrpclib import ProtocolError
 
 import oca
 from colorama import Fore, Style
@@ -18,7 +19,7 @@ from ipaddress import IPv4Address
 from oca import OpenNebulaException
 
 from tests_integration.lib.exceptions import PublicPortWaitTimeoutException, \
-    NonZeroRetCodeException, NotEnoughFreeIPs
+    NonZeroRetCodeException, NotEnoughFreeIPs, OpenNebulaError
 
 NO_FREE_IPS_ERR_MSG = 'no free public IP-addresses'
 LOG = logging.getLogger(__name__)
@@ -272,13 +273,16 @@ class NebulaIPPool(object):
 
     @property
     def pool(self):
-        p = oca.VirtualNetworkPool(self.client, preload_info=True)
-        # Filter flag possible values:
-        # -3: Connected user's resources
-        # -2: All resources
-        # -1: Connected user's and his group's resources
-        p.info(filter=-2, range_start=-1, range_end=-1)
-        return p
+        try:
+            p = oca.VirtualNetworkPool(self.client, preload_info=True)
+            # Filter flag possible values:
+            # -3: Connected user's resources
+            # -2: All resources
+            # -1: Connected user's and his group's resources
+            p.info(filter=-2, range_start=-1, range_end=-1)
+            return p
+        except ProtocolError:
+            raise OpenNebulaError('Could not retrieve info from OpenNebula')
 
     def get_free_ip_list(self, network_name):
         """
@@ -326,7 +330,7 @@ class NebulaIPPool(object):
                 try:
                     net.hold(ip)
                     return ip
-                except OpenNebulaException:
+                except (OpenNebulaException, ProtocolError):
                     # It's not possible to distinguish if that was an
                     # arbitrary API error or the IP was concurrently
                     # reserved. We'll consider it's always the latter case

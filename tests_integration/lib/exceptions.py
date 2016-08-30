@@ -19,7 +19,11 @@ class NonZeroRetCodeException(Exception):
         return '\n'.join([self.message, str(self.stdout), str(self.stderr)])
 
 
-class NotEnoughFreeIPs(Exception):
+class OpenNebulaError(Exception):
+    pass
+
+
+class NotEnoughFreeIPs(OpenNebulaError):
     pass
 
 
@@ -60,4 +64,16 @@ class CannotRestorePodWithMoreThanOneContainer(Exception):
 
 
 class NodeIsNotPresent(Exception):
+    pass
+
+
+class VmCreationError(Exception):
+    pass
+
+
+class VmProvisionError(Exception):
+    pass
+
+
+class ClusterUpgradeError(Exception):
     pass

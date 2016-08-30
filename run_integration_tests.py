@@ -48,13 +48,18 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
     def pipe_log(msg, color=Fore.MAGENTA):
         print_msg('{} -> {}\n'.format(pipeline_name, msg), color)
 
+    def prettify_exception(exc):
+        return '{}: {}'.format(exc.__class__.__namexc__, str(exc))
+
     try:
         pipeline = Pipeline.from_name(pipeline_name)
         pipe_log('CREATING CLUSTER', Fore.MAGENTA)
         pipeline.create()
         pipe_log('CLUSTER CREATED', Fore.GREEN)
-    except:
-        test_results.register_pipeline_error(pipeline_name, tests)
+    except Exception as e:
+        test_results.register_pipeline_error(pipeline_name, tests,
+                                             prettify_exception(e))
+
         msg = format_exception(sys.exc_info())
         pipe_log('CLUSTER CREATION FAILED\n{}'.format(msg), Fore.RED)
         return

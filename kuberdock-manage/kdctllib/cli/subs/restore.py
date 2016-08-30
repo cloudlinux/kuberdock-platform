@@ -67,7 +67,7 @@ class _RestorePodCommand(object):
                 kdclick.abort()
         io.out_text('Deleting...')
         pod_id = pod_data.get('id')
-        kdctl.pods.delete(pod_id=pod_id, owner=self.owner)
+        kdctl.pods.delete(id=pod_id, owner=self.owner)
         io.out_text('Deleted')
 
     def _try_delete_pv(self, pv_data):
@@ -81,7 +81,7 @@ class _RestorePodCommand(object):
                 kdclick.abort()
         io.out_text('Deleting...')
         pv_id = pv_data.get('id')
-        kdctl.pstorage.delete(device_id=pv_id, owner=self.owner)
+        kdctl.pstorage.delete(id=pv_id, owner=self.owner)
         io.out_text('Deleted')
 
 

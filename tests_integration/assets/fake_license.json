@@ -1,10 +1,10 @@
 {
             "installationID": "ZTl4d3qSRPuPhumtUHPsAxvY4EqxtPcl",
-            "updated": "2016-12-30T08:01:36.552397+00:00",
+            "updated": "2016-08-30T08:01:36.552397+00:00",
             "data": {"license": {
                 "status": "ok", "type": "standard",
                 "sign": "",
-                "expiration": "2016-08-31T04:01:36.323-04:00", "memory": 0,
+                "expiration": "2016-12-31T04:01:36.323-04:00", "memory": 0,
                 "cores": 16, "pods": 0, "containers": 0}},
             "auth_key": "3cae4bfd27ad4d4db12049a5eb3a4483"
 }

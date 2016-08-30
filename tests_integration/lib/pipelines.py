@@ -175,6 +175,10 @@ class WebUIPipeline(Pipeline):
         'KD_NODES_COUNT': '1',
     }
 
+    def post_create_hook(self):
+        super(WebUIPipeline, self).post_create_hook()
+        self.cluster.wait_for_service_pods()
+
 
 pipelines = defaultdict(list)
 

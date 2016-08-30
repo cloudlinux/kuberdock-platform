@@ -15,11 +15,11 @@ import vagrant
 import yaml
 from ipaddress import IPv4Network
 
-from exceptions import NodeWasNotRemoved
+from exceptions import ServicePodsNotReady, NodeWasNotRemoved, VmCreationError, \
+    VmProvisionError
 from tests_integration.lib.exceptions import StatusWaitException, \
     UnexpectedKubectlResponse, DiskNotFound, PodIsNotRunning, \
-    IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer, \
-    VmCreationError, VmProvisionError
+    IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
 from tests_integration.lib.integration_test_utils import \
     ssh_exec, assert_eq, assert_in, kube_type_to_int, wait_net_port, \
     merge_dicts, retry, kube_type_to_str
@@ -49,8 +49,6 @@ class KDIntegrationTestAPI(object):
         :param override_envs: a dictionary of environment variables values
         to override. Useful when your integration test requires another
         cluster setup
-        :param version:
-        :param upgrade_to:
         """
         defaults = {
             "VAGRANT_CWD": "dev-utils/dev-env/",
@@ -175,7 +173,7 @@ class KDIntegrationTestAPI(object):
                 "the existing one.")
 
         settings = '\n'.join('{}: {}'.format(k, v)
-                             for k, v in self.kd_env.items())
+                                 for k, v in self.kd_env.items())
         LOG.debug('Cluster settings: {}'.format(settings))
 
         if provider == OPENNEBULA:
@@ -326,6 +324,16 @@ class KDIntegrationTestAPI(object):
         # type: (str) -> dict
         _, pods, _ = self.kubectl("get pods", out_as_dict=True, user=owner)
         return pods
+
+    def wait_for_service_pods(self):
+        def _check_service_pods():
+            _, response, _ = self.kdctl(
+                'pods list --owner kuberdock-internal', out_as_dict=True)
+            statuses = (pod['status'] for pod in response['data'])
+            if not all(s == 'running' for s in statuses):
+                raise ServicePodsNotReady()
+
+        retry(_check_service_pods, tries=40, interval=15)
 
     def assert_pods_number(self, number):
         assert_eq(len(self.get_all_pods()), number)
@@ -486,7 +494,7 @@ class KDIntegrationTestAPI(object):
     def add_node(self, node_name, kube_type="Standard"):
         self.manage(
             'add-node --hostname {} --kube-type {} --do-deploy -t'
-            .format(node_name, kube_type)
+                .format(node_name, kube_type)
         )
         self.manage("wait-for-nodes --nodes {}".format(node_name))
 

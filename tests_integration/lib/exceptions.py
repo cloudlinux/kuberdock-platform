@@ -67,6 +67,10 @@ class NodeIsNotPresent(Exception):
     pass
 
 
+class ServicePodsNotReady(Exception):
+    pass
+
+
 class VmCreationError(Exception):
     pass
 

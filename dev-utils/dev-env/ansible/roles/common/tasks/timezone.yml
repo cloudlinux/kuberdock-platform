@@ -1,54 +1,33 @@
 ---
 
-- name: Get timezone file from host
-  stat: path=/etc/localtime
-  run_once: true
-  become: False
-  delegate_to: localhost
-  register: tzstat
-  tags:
-    - timezone
-
-- fail: msg="No timezone detected. Set KD_TIMEZONE or check your /etc/localtime file."
-  when: not tzstat.stat.exists and timezone is not defined
-  tags:
-    - timezone
-
-- set_fact:
-    timezone_is_link: "{{ (timezone is defined) or (tzstat.stat.islnk is defined and tzstat.stat.islnk) }}"
-  run_once: true
-  tags:
-    - timezone
-
 - name: Get timezone from host
   run_once: true
   become: False
   delegate_to: localhost
   shell: readlink /etc/localtime | cut -d/ -f5,6
-  when: timezone is not defined and timezone_is_link
+  when: timezone is not defined
   register: timezone_raw
   tags:
     - timezone
 
 - set_fact:
     timezone: "{{ timezone_raw.stdout }}"
-  when: timezone is not defined and timezone_is_link
+  when: timezone is not defined
   run_once: true
   tags:
     - timezone
 
-- name: Set timezone by link
+- debug: msg="No timezone detected. Set KD_TIMEZONE or check your /etc/localtime symlink."
+  run_once: true
+  when: not timezone
+  tags:
+    - timezone
+
+- name: Set timezone
   file:
     src: "/usr/share/zoneinfo/{{ timezone }}"
     dest: /etc/localtime
     state: link
-    force: yes
-  when: timezone_is_link
-  tags:
-    - timezone
-
-- name: Set timezone by file
-  copy: src="{{ tzstat.stat.path }}" dest=/etc/localtime force=yes backup=yes
-  when: not timezone_is_link
+  when:  not ((timezone | default("")) == "")
   tags:
     - timezone

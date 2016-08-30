@@ -117,6 +117,10 @@ class NoSuitableNode(APIError):
                         'again later or contact KuberDock administrator')
 
 
+class PodStartFailure(APIError):
+    message_template = 'Could not start pod'
+
+
 class InsufficientData(APIError):
     message_template = 'Supplied data are incomplete'
 

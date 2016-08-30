@@ -26,7 +26,7 @@ from .. import dns_management
 from ..billing import repr_limits
 from ..core import db
 from ..domains.models import PodDomain
-from ..exceptions import APIError
+from ..exceptions import APIError, PodStartFailure
 from ..kd_celery import celery
 from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
@@ -1352,11 +1352,13 @@ def prepare_and_run_pod(pod):
         if not _try_to_update_existing_rc(pod, config):
             rc = k8squery.post(['replicationcontrollers'],
                                json.dumps(config), ns=pod.namespace, rest=True)
+            err_msg = "Could not start '{0}' pod".format(
+                pod.name.encode('ascii', 'replace'))
+
             podutils.raise_if_failure(
                 rc,
-                "Could not start '{0}' pod".format(
-                    pod.name.encode('ascii', 'replace')
-                )
+                message=err_msg,
+                api_error=PodStartFailure(message=err_msg)
             )
 
         for container in pod.containers:
@@ -1386,8 +1388,13 @@ def prepare_and_run_pod(pod):
     except Exception as err:
         current_app.logger.exception('Failed to run pod: %s', pod)
         if isinstance(err, APIError):
-            send_event_to_user('notify:error', {'message': err.message},
-                               db_pod.owner_id)
+            # We need to update db_pod in case if the pod status was changed
+            # since the last retrieval from DB
+            db.session.refresh(db_pod)
+            if (not isinstance(err, PodStartFailure) or
+                not db_pod.is_deleted()):
+                send_event_to_user('notify:error', {'message': err.message},
+                                   db_pod.owner_id)
         pod.set_status(POD_STATUSES.stopped, send_update=True)
         raise
     pod.set_status(POD_STATUSES.pending, send_update=True)

@@ -21,7 +21,7 @@ def _format_msg(error, message, return_value):
     return u'{}: {}'.format(msg, unicode(return_value))
 
 
-def raise_if_failure(return_value, message=None):
+def raise_if_failure(return_value, message=None, api_error=None):
     """
     Raises error if request to k8s fails
     :param return_value: k8s answer as dictionary
@@ -41,6 +41,8 @@ def raise_if_failure(return_value, message=None):
         return
 
     current_app.logger.error(msg)
+    if api_error:
+        raise api_error
     raise_(message)
 
 

@@ -363,7 +363,7 @@ define([
                     // copy original config to edited_config (if latter is empty)
                     originalModelCopy.set('edited_config',
                         _.partial(_.pick, podConfig).apply(
-                            _, originalModelCopy.editableAttributes));
+                            _, originalModelCopy.persistentAttributes));
                 }
                 var model = originalModelCopy.get('edited_config');
                 model.persistentDrives = persistentDrives;

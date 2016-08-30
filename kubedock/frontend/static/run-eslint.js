@@ -1,7 +1,7 @@
 /* eslint-env node, es6 */
 /* eslint no-console: off */
 
-var ERRORS_TRESHOLD = 322;
+var ERRORS_TRESHOLD = 261;
 
 var CLIEngine = require('eslint').CLIEngine;
 var process = require('process');

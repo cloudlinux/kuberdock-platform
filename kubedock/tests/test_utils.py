@@ -30,6 +30,9 @@ from ..utils import (
 
 
 class TestAtomic(DBTestCase):
+    class TargetInternalError(Exception):
+        """Some non-APIError inside target code"""
+
     class TargetAPIEror(APIError):
         """Some APIError inside target code"""
 
@@ -55,7 +58,7 @@ class TestAtomic(DBTestCase):
         self.db.session.add(self.Package(name=self.fixtures.randstr()))
         self.db.session.commit()
         self.db.session.add(self.Package(name=self.fixtures.randstr()))
-        raise Exception('Exception inside target code')
+        raise self.TargetInternalError('Exception inside target code')
         self.db.session.add(self.Package(name=self.fixtures.randstr()))
 
     def _target_with_APIError(self):
@@ -90,6 +93,38 @@ class TestAtomic(DBTestCase):
         self.db.session.add(self.Package(name=self.fixtures.randstr()))
 
     def test_with_exception(self):
+        """If some non-`APIError` was rised, rollback all changes."""
+
+        with self.assertRaises(self.TargetInternalError):
+            with atomic():
+                self._target_with_exception()
+        # Nothing's changed
+        self.assertEqual(self.total_before, len(self.Package.query.all()))
+        # Current thansaction wasn't commited or rolled back
+        self.assertTrue(self.current_transaction.is_active)
+
+    def test_api_error_callable(self):
+        """
+        If some non-`APIError` was rised, rollback all changes,
+        and raise an exception from `atomic().api_error(*exc_info)` instead.
+        """
+        on_error = mock.Mock(return_value=self.CreatePackageError)
+
+        with self.assertRaises(self.CreatePackageError):
+            with atomic(on_error):
+                self._target_with_exception()
+
+        on_error.assert_called_once_with(
+            self.TargetInternalError, mock.ANY, mock.ANY)
+        self.assertEqual(on_error.call_args[0][1].message,
+                         'Exception inside target code')
+
+        # Nothing's changed
+        self.assertEqual(self.total_before, len(self.Package.query.all()))
+        # Current thansaction wasn't commited or rolled back
+        self.assertTrue(self.current_transaction.is_active)
+
+    def test_api_error_exception(self):
         """
         If some non-`APIError` was rised, rollback all changes,
         and raise `CreatePackageError` instead.
@@ -106,7 +141,7 @@ class TestAtomic(DBTestCase):
         self.assertTrue(self.current_transaction.is_active)
 
     def test_with_api_error(self):
-        """If some `APIError` was rised, don't stop it, 
+        """If some `APIError` was rised, don't stop it,
         but rollback all changes."""
         with self.assertRaises(self.TargetAPIEror):  # original exception
             with atomic(self.CreatePackageError()):
@@ -128,7 +163,7 @@ class TestAtomic(DBTestCase):
         self.assertTrue(self.current_transaction.is_active)
 
     def test_ok_and_commit_current_transaction(self):
-        """If everything is ok, 
+        """If everything is ok,
         preserve changes and commit current transaction."""
         with atomic(self.CreatePackageError(), nested=False):
             self._target_without_exception()
@@ -150,7 +185,7 @@ class TestAtomic(DBTestCase):
 
     def test_ok_and_commit_current_transaction_as_decrator(self):
         """
-        Parameter `commit` in decorated function 
+        Parameter `commit` in decorated function
         must override parameter `nested`
         in `atomic` decorator.
         """
@@ -163,7 +198,7 @@ class TestAtomic(DBTestCase):
         self.assertFalse(self.current_transaction.is_active)
 
     def test_main_transaction_commited(self):
-        """Prevent main transaction from beeng commited 
+        """Prevent main transaction from beeng commited
         inside of atomic block."""
         with self.assertRaises(atomic.UnexpectedCommit):
             with atomic():

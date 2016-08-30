@@ -379,7 +379,14 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 status: 'stopped',
             };
         },
-        editableAttributes: [  // difference in other attributes won't be interpreted as "change"
+        editableAttributes: [
+            // difference in other attributes won't be interpreted as "change"
+            'kube_type', 'restartPolicy', 'volumes', 'containers',
+            'kuberdock_resolve',
+        ],
+        persistentAttributes: [
+            // only those attributes will be copied in a new `edited_config`
+            // we don't need stuff like "status" there
             'kube_type', 'restartPolicy', 'volumes', 'containers',
             'kuberdock_resolve', 'domain',
         ],
@@ -579,7 +586,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 totalPrice += container.rawPrice;
             });
 
-            if (this.isPublic)
+            if (this.isPublic && !this.get('domain'))
                 totalPrice += pkg.get('price_ip');
             if (this.isPerSorage)
                 totalPrice += pkg.get('price_pstorage') * totalSize;

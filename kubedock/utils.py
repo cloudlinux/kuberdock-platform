@@ -282,8 +282,10 @@ class atomic(object):
     You can find some usage examples in `.tests.utils.TestAtomic` or
     `.kapi.users`.
 
-    :param api_error: if not None, will be raised instead of any exception
-        that is not an APIError subclass.
+    :param api_error: Exception instance or a callable that accepts
+        (exc_type, exc_value, traceback) and returns an exception.
+        If not None, will be raised instead of any exception that is not an
+        APIError subclass.
     :param nested: set it to `False` if you want this wrapper to use your
         current transaction instead of creating a new nested one.
         In case of a decorator, this behavior can be overridden by passing
@@ -326,10 +328,14 @@ class atomic(object):
     def _rollback(self, transaction, exc_type, exc_value, traceback):
         if not isinstance(exc_value, self.UnexpectedRollback):
             transaction.rollback()
-        if self.api_error and not isinstance(exc_value, APIError):
-            current_app.logger.warn(
-                ''.join(format_exception(exc_type, exc_value, traceback)))
-            raise self.api_error
+        if callable(self.api_error):
+            api_error = self.api_error(exc_type, exc_value, traceback)
+        else:
+            api_error = self.api_error
+        if api_error and not isinstance(exc_value, APIError):
+            current_app.logger.warn('Exception inside atomic block',
+                                    exc_info=(exc_type, exc_value, traceback))
+            raise api_error
 
     def __exit__(self, exc_type, exc_value, traceback):
         transaction = g.atomics.pop()

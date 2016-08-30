@@ -48,9 +48,9 @@ image_request_schema = {
 }
 
 # http://stackoverflow.com/questions/1418423/the-hostname-regex
-hostname_regex = re.compile(
-    r"^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?"
-    r"(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$", re.IGNORECASE)
+hostname_regex = (
+    r"^(?=.{1,255}$)[0-9A-Za-z](?:[0-9A-Za-z-]{0,61}[0-9A-Za-z])?"
+    r"(?:\.[0-9A-Za-z](?:[0-9A-Za-z-]{0,61}[0-9A-Za-z])?)*\.?$")
 hostname_schema = {
     'type': 'string',
     'empty': False,
@@ -255,7 +255,7 @@ restart_policy_schema = {'type': 'string',
                          'allowed': ['Always', 'OnFailure', 'Never']}
 pod_resolve_schema = {'type': 'list', 'schema': {'type': 'string'}}
 
-base_pod_config_schema = {
+edited_pod_config_schema = {
     'podIP': {
         'type': 'ipv4',
         'nullable': True,
@@ -419,13 +419,10 @@ base_pod_config_schema = {
         'required': False,
         'internal_only': True,
     },
-}
-edited_pod_config_schema = deepcopy(base_pod_config_schema)
-edited_pod_config_schema.update({
     'domain': domain_schema,
-})
+}
 
-new_pod_schema = deepcopy(base_pod_config_schema)
+new_pod_schema = deepcopy(edited_pod_config_schema)
 new_pod_schema.update({
     'name': dict(pod_name_schema, required=True),
     'postDescription': {
@@ -450,7 +447,6 @@ new_pod_schema.update({
         'type': 'string', 'required': False,
         'allowed': ['stopped', 'unpaid']
     },
-    'domain': domain_schema,
 })
 
 

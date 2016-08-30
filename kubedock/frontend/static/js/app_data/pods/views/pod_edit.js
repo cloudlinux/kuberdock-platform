@@ -494,7 +494,10 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
     views.PublicAccessControls = Backbone.Marionette.ItemView.extend({
         template: publicAccessControlsTpl,
         tagName: 'div',
-        className: 'row domains-wrapper',
+        className: function(){
+            return 'row domains-wrapper' + (
+                this.model.wizardState.flow === 'CREATE_POD' ? '' : ' disabled');
+        },
 
         initialize: function(options){
             this.domains = options.domains;
@@ -503,6 +506,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         templateHelpers: function(){
             return {
                 domains: this.domains,
+                flow: this.model.wizardState.flow,
             };
         },
 
@@ -529,8 +533,15 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 title: 'Select from the list',
                 dropupAuto: false,
             });
+            var podDomain = this.model.get('domain'),
+                selectedDomain = podDomain
+                    ? this.domains.findWhere({'name': podDomain}) ||
+                        this.domains.find(function(domain){
+                            return podDomain.endsWith(domain.get('name'));
+                        })
+                    : this.domains.at(0);
             this.ui.chooseDomainSelect.selectpicker(
-                'val', this.model.get('domain') || this.domains.at(0).get('name'));
+                'val', selectedDomain && selectedDomain.get('name'));
             this.ui.tooltip.tooltip();
         },
 

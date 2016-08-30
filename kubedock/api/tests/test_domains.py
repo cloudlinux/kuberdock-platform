@@ -25,12 +25,19 @@ class TestDomains(APITestCase):
         # check query with missed 'name' field
         response = self.admin_open('/domains/', method='POST',
                                    json={'no name': 'field'})
-        self.assert400(response)
+        self.assertAPIError(response, 400, 'ValidationError',
+                            {u'name': u'required field'})
+
+        # check query with invalid 'name' field
+        response = self.admin_open('/domains/', method='POST',
+                                   json={'name': '!@#$%^&'})
+        self.assertAPIError(response, 400, 'ValidationError',
+                            {u'name': u'invalid domain'})
 
         # check creation of the same domain
         response = self.admin_open('/domains/', method='POST',
                                    json={'name': test_name})
-        self.assertStatus(response, 409)
+        self.assertAPIError(response, 409, 'AlreadyExistsError')
 
         # check another domain creation
         test_name2 = 'qwerty.com'
@@ -68,16 +75,16 @@ class TestDomains(APITestCase):
         # check update domain name to already existing one
         response = self.admin_open('/domains/{}'.format(id3), method='PUT',
                                    json={'name': test_name2})
-        self.assertStatus(response, 409)
+        self.assertAPIError(response, 409, 'AlreadyExistsError')
 
         # check update not existing domain
         response = self.admin_open('/domains/{}'.format(323232), method='PUT',
                                    json={'name': test_name2})
-        self.assert404(response)
+        self.assertAPIError(response, 404, 'DomainNotFound')
 
     def test_delete_domain(self):
         response = self.admin_open('/domains/{}'.format(123), method='DELETE')
-        self.assert404(response)
+        self.assertAPIError(response, 404, 'DomainNotFound')
 
         test_name1 = 'example1.com'
         test_name2 = 'example2.com'
@@ -94,7 +101,7 @@ class TestDomains(APITestCase):
         self.assertEqual(len(dbdomains), 1)
         self.assertEqual(dbdomains[0].id, id1)
         response = self.admin_open('/domains/{}'.format(id2), method='DELETE')
-        self.assert404(response)
+        self.assertAPIError(response, 404, 'DomainNotFound')
 
         dbpodomain = PodDomain(
             domain_id=id1,
@@ -103,7 +110,7 @@ class TestDomains(APITestCase):
         db.session.add(dbpodomain)
         db.session.commit()
         response = self.admin_open('/domains/{}'.format(id1), method='DELETE')
-        self.assertStatus(response, 409)
+        self.assertAPIError(response, 409, 'CannotBeDeletedError')
 
 
 if __name__ == '__main__':

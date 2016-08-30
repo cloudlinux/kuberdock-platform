@@ -1,6 +1,7 @@
 """
 Defines and exports global kuberdock exceptions
 """
+import sys
 from abc import ABCMeta
 
 
@@ -42,7 +43,7 @@ class APIError(Exception):
         """Human-readable message"""
         if hasattr(self, '_message'):
             return self._message
-        return self.message_template.format(**self.details)
+        return unicode(self.message_template).format(**self.details)
 
     def __str__(self):
         # Only message because this class may wrap other exception classes
@@ -54,30 +55,36 @@ class APIError(Exception):
 
 
 class InternalAPIError(APIError):
-    """Message of this type is not shown to user, but to admin only.
-
-    Do not use it directly. Create inheritors.
-    """
+    """Message of this type is not shown to user, but to admin only."""
     __metaclass__ = ABCMeta
     status_code = 500
     response_message = 'Internal error, please contact administrator'
+    message_template = '{excType}: {excValue}'
 
     def __init__(self, message=None, status_code=None, type=None,
-                 details=None, response_message=None):
+                 details=None, response_message=None, exc_info=None):
         """Here is one additional parameter 'response_message'.
         If it is defined, then APIError will contain this message, instead
         of one defined on class level.
         """
-        if response_message:
-            self.response_message = response_message
         super(InternalAPIError, self).__init__(
             message=message, status_code=status_code, type=type,
             details=details)
 
+        if response_message:
+            self.response_message = response_message
+        self.exc_info = exc_info
+        if self.exc_info:
+            self.details['excType'] = exc_info[0].__name__
+            self.details['excValue'] = exc_info[1].message
+
+    @classmethod
+    def from_exc(cls, exc_type, exc_value, traceback):
+        return cls(exc_info=(exc_type, exc_value, traceback))
+
 
 class SubsystemtIsNotReadyError(InternalAPIError):
-    """Raise this exception if some subsystemt did not properly configured.
-    """
+    """Raise this exception if some subsystemt did not properly configured."""
     pass
 
 
@@ -94,6 +101,10 @@ class NotAuthorized(APIError):
 class NotFound(APIError):
     message_template = 'Not found'
     status_code = 404
+
+
+class DomainNotFound(NotFound):
+    message_template = 'Domain not found'
 
 
 class NoFreeIPs(APIError):

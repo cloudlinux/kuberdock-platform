@@ -101,7 +101,7 @@ def pre_start_hook(app):
 
 def on_app_error(e):
     if isinstance(e, InternalAPIError):
-        current_app.logger.exception(e.message)
+        current_app.logger.error(e.message, exc_info=e.exc_info)
         current_user = KubeUtils.get_current_user()
         if current_user.is_administrator():
             return _jsonify_api_error(e)

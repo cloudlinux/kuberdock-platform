@@ -275,12 +275,13 @@ class PodCollection(object):
         else:
             ready, message = dns_management.is_domain_system_ready()
             if not ready:
-                current_app.logger.error(
+                raise SubsystemtIsNotReadyError(
                     u'Trying to use domain for pod, while DNS is '
-                    u'misconfigured: {}'.format(message))
-                raise APIError(
-                    u'DNS management system is misconfigured. '
-                    u'Please, contact administrator.')
+                    u'misconfigured: {}'.format(message),
+                    response_message=(
+                        u'DNS management system is misconfigured. '
+                        u'Please, contact administrator.')
+                )
             domain = check_domain(domain_name)
             pod_domain = set_pod_domain(pod, domain.id)
             conf['domain'] = pod.domain = u'{}.{}'.format(

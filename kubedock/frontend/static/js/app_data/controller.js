@@ -1281,7 +1281,7 @@ define([
             });
         },
 
-        showSettings: function(group){
+        showSettingsGroup: function(group){
             if (!this.checkPermissions(['Admin']))
                 return;
             var that = this;
@@ -1303,9 +1303,9 @@ define([
             });
         },
 
-        showGeneralSettings: function(){ this.showSettings('general') },
-        showDomainSettings: function(){ this.showSettings('domain') },
-        showBillingSettings: function(){ this.showSettings('billing') },
+        showGeneralSettings: function(){ this.showSettingsGroup('general') },
+        showDomainSettings: function(){ this.showSettingsGroup('domain') },
+        showBillingSettings: function(){ this.showSettingsGroup('billing') },
 
         showLicense: function(){
             if (!this.checkPermissions(['Admin']))

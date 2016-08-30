@@ -16,6 +16,7 @@ class SystemSettings(db.Model):
     description = db.Column(db.Text, default='')
     placeholder = db.Column(db.String, default='')
     options = db.Column(db.String, nullable=True)
+    setting_group = db.Column(db.Text, nullable=True)
 
     @classmethod
     def get_all(cls):

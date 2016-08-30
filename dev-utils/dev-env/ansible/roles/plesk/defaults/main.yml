@@ -1,1 +1,20 @@
----password: adminemail: admin@example.comuser: adminnamephone: 21-21-21company: SomeCaddress: some addresscity: some_citycountry: RUplesk_license: 0customer_user: JDoecustomer_name: "John Doe"customer_password: some_passworddomain: example.comdomain_login: jdoe_domaindomain_password: some_password
+---
+
+password: some_password
+email: admin@example.com
+user: admin
+phone: 21-21-21
+company: SomeC
+address: some address
+city: some_city
+country: RU
+
+plesk_license: 0
+
+customer_user: JDoe
+customer_name: "John Doe"
+customer_password: some_password
+
+domain: example.com
+domain_login: jdoe_domain
+domain_password: some_password

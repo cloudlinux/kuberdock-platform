@@ -7,6 +7,8 @@
   delegate_to: localhost
   register: lic_file
 
+- debug: var=lic_file
+
 - name: Copy license file
   copy: src="{{ plesk_license }}" dest="{{ license_key_file_dst }}"
   when: lic_file.stat.exists
@@ -21,7 +23,7 @@
   command: sh /tmp/deploy-plesk.sh
 
 - name: initialize plesk
-  command: /usr/local/psa/bin/init_conf --init -passwd "{{ password }}" -email "{{ email }}" -name "{{ user }}", -phone "{{ phone }}", -company "{{ company }}", -address "{{ address }}", -city "{{ city }}", -country "{{ country }}"
+  command: /usr/local/psa/bin/init_conf --init -passwd {{ password }} -email "{{ email }}" -name "{{ user }}" -phone "{{ phone }}" -company "{{ company }}" -address "{{ address }}" -city "{{ city }}" -country "{{ country }}"
 
 - name: Install license key from file
   command: "{{ item }}"
@@ -29,12 +31,11 @@
     - plesk bin license --install "{{ plesk_license_param }}" -not-check-limits 1
     - plesk bin license --retrieve
 
-
 - name: Download kcli deploy script
   get_url: url="{{ kcli_deploy_script_url }}" dest=/tmp/kcli-deploy.sh
 
 - name: Deploy kcli
-  command: bash /tmp/kcli-deploy.sh --user admin --testing --kuberdock "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}"
+  shell: KD_PASSWORD=admin KD_USER=admin bash /tmp/kcli-deploy.sh --testing --kuberdock "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}"
   env:
       KD_PASSWORD: "{{ admin_password }}"
 

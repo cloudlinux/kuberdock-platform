@@ -451,11 +451,8 @@ class KDIntegrationTestAPI(object):
 
     def add_node(self, node_name, kube_type="Standard"):
         self.manage(
-            'add-node --hostname {} --kube-type {} --do-deploy -t '
-            '--docker-options="--insecure-registry '
-            'dockerhub-proxy.cloudlinux.com:5000 '
-            '--registry-mirror=https://dockerhub-proxy.cloudlinux.com:5000'
-            '"'.format(node_name, kube_type)
+            'add-node --hostname {} --kube-type {} --do-deploy -t'
+            .format(node_name, kube_type)
         )
         self.manage("wait-for-nodes --nodes {}".format(node_name))
 

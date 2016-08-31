@@ -6,9 +6,9 @@ from ..utils import SimpleCommand, SimpleCommandWithIdNameArgs
 
 
 @kdclick.group(help='Commands for users management.', available_for=ADMIN)
-@kdclick.pass_context
-def users(ctx):
-    ctx.obj = ctx.obj.kdctl.users
+@kdclick.pass_obj
+def users(obj):
+    obj.executor = obj.kdctl.users
 
 
 def id_decorator(fn):

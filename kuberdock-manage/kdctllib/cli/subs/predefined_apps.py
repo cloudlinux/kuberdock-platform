@@ -8,9 +8,9 @@ from ..utils import SimpleCommand, SimpleCommandWithIdNameArgs
 @kdclick.group('predefined-apps',
                help='Commands for predefined applications management.',
                available_for=ADMIN)
-@kdclick.pass_context
-def pa(ctx):
-    ctx.obj = ctx.obj.kdctl.predefined_apps
+@kdclick.pass_obj
+def pa(obj):
+    obj.executor = obj.kdctl.predefined_apps
 
 
 def id_decorator(fn):

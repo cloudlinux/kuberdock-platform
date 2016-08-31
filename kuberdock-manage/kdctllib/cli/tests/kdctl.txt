@@ -1,0 +1,72 @@
+images search some_image
+
+ippool list
+ippool list --page 1
+ippool list --free-only
+ippool get 1
+ippool get 1 --page 1
+ippool create {some_json}
+ippool create -f {some_json_file}
+ippool update some_network {some_json}
+ippool update some_network -f {some_json_file}
+ippool delete some_network
+
+nodes list
+nodes get --id 1
+nodes get --hostname some_host
+nodes create {some_json}
+nodes create -f {some_json_file}
+nodes update --hostname some_host {some_json}
+nodes update --id some_host_id -f {some_json_file}
+nodes delete --hostname some_host
+nodes delete --id some_host_id
+nodes check-host some_host
+
+pods list
+pods get --id 1 --owner some_user
+pods get --name some_pod --owner some_user
+pods create {some_json} --owner some_user
+pods create -f {some_json_file} --owner some_user
+pods update --name some_pod {some_json}
+pods update --id 1 -f {some_json_file}
+pods delete --name some_pod --owner some_user
+pods delete --id 1 --owner some_user
+
+predefined-apps list
+predefined-apps get --id 1
+predefined-apps get --name some_pa
+predefined-apps create {some_json} --name some_pa --origin origin --validate
+predefined-apps create -f {some_json_file} --name some_pa --origin origin --validate
+predefined-apps update --name some_pa {some_json} --validate
+predefined-apps update --id 1 -f {some_json_file} --validate
+predefined-apps delete --name some_pa
+predefined-apps delete --id 1
+predefined-apps validate-template {some_json}
+predefined-apps validate-template -f {some_json_file}
+
+pricing license show
+pricing license set inst-id
+
+pstorage list
+pstorage get --id 1 --owner some_user
+pstorage get --name some_pv --owner some_user
+pstorage create {some_json} --owner some_user
+pstorage create -f {some_json_file} --owner some_user
+pstorage delete --name some_pv --owner some_user
+pstorage delete --id 1 --owner some_user
+
+system-settings list
+system-settings get --id 1
+system-settings get --name some_setting
+system-settings update --name some_pv new_value
+system-settings update --id 1 new_value
+
+users list
+users get --id 1
+users get --name some_user
+users create {some_json}
+users create -f {some_json_file}
+users update --name some_user {some_json}
+users update --id 1 -f {some_json_file}
+users delete --name some_user
+users delete --id 1

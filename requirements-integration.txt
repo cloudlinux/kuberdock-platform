@@ -4,7 +4,7 @@ paramiko
 pyyaml
 python-vagrant==0.5.11
 colorama==0.3.7
-pytest==2.9.2
+pytest==3.0.1
 pytest-instafail==0.3.0
 pygments
 click>=6.3

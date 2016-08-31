@@ -1,5 +1,6 @@
 from .. import kdclick
 from ..kdclick.access import ADMIN
+from ..utils.misc import SimpleCommand
 
 
 @kdclick.group(help='Commands for pricing management.', available_for=ADMIN)
@@ -8,18 +9,19 @@ def pricing():
 
 
 @pricing.group(help='Commands for license management.')
-def license():
-    pass
+@kdclick.pass_obj
+def license(obj):
+    obj.executor = obj.kdctl.pricing.license
 
 
 @license.command()
 @kdclick.pass_obj
-def show(obj):
-    return obj.kdctl.pricing.license.show()
+class Show(SimpleCommand):
+    pass
 
 
 @license.command()
 @kdclick.argument('installation-id')
 @kdclick.pass_obj
-def set(obj, **params):
-    return obj.kdctl.pricing.license.set(**params)
+class Set(SimpleCommand):
+    pass

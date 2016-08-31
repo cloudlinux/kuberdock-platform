@@ -6,9 +6,9 @@ from ..utils import SimpleCommand, SimpleCommandWithIdNameArgs
 
 
 @kdclick.group(help='Commands for nodes management.', available_for=ADMIN)
-@kdclick.pass_context
-def nodes(ctx):
-    ctx.obj = ctx.obj.kdctl.nodes
+@kdclick.pass_obj
+def nodes(obj):
+    obj.executor = obj.kdctl.nodes
 
 
 def id_decorator(fn):

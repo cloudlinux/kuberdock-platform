@@ -8,9 +8,9 @@ from ..utils import SimpleCommand, SimpleCommandWithIdNameArgs
 @kdclick.group('system-settings',
                help='Commands for system settings management.',
                available_for=(ADMIN, USER))
-@kdclick.pass_context
-def ss(ctx):
-    ctx.obj = ctx.obj.kdctl.system_settings
+@kdclick.pass_obj
+def ss(obj):
+    obj.executor = obj.kdctl.system_settings
 
 
 def id_decorator(fn):

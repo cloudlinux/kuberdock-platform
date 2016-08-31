@@ -5,7 +5,7 @@ class Settings(object):
 
 class KCliSettings(Settings):
     app_description = 'Kuberdock command line utilities'
-    working_directory = '~/.kcli/'
+    working_directory = '~/.kcli2/'
 
 
 class KDCtlSettings(Settings):

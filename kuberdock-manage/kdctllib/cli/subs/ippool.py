@@ -4,9 +4,9 @@ from ..utils import SimpleCommand
 
 
 @kdclick.group(help='Commands for IP pool management.', available_for=ADMIN)
-@kdclick.pass_context
-def ippool(ctx):
-    ctx.obj = ctx.obj.kdctl.ippool
+@kdclick.pass_obj
+def ippool(obj):
+    obj.executor = obj.kdctl.ippool
 
 
 def _verify_page(ctx, param, value):

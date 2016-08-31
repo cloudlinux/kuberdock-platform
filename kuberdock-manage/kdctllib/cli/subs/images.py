@@ -5,9 +5,9 @@ from ..utils import SimpleCommand
 
 @kdclick.group(help='Commands for docker images management.',
                available_for=(ADMIN, USER))
-@kdclick.pass_context
-def images(ctx):
-    ctx.obj = ctx.obj.kdctl.images
+@kdclick.pass_obj
+def images(obj):
+    obj.executor = obj.kdctl.images
 
 
 @images.command()

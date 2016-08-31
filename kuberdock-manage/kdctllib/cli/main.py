@@ -1,3 +1,5 @@
+import traceback
+
 import context
 import kdclick
 from io import IO
@@ -5,19 +7,10 @@ from kdclick.access import ALL
 from kdctl import KDCtl
 from subs import (images, ippool, nodes, pods, predefined_apps, pricing,
                   pstorage, restore, system_settings, users)
+from utils.misc import ContextObj
 from ..api_client import APIError, UnknownAnswer
 
 settings = context.settings
-
-
-class ContextObj(object):
-    def __init__(self, kdctl=None, io=None):
-        """
-        :type kdctl: KDCtl
-        :type io: IO
-        """
-        self.kdctl = kdctl
-        self.io = io
 
 
 class Group(kdclick.Group):
@@ -56,7 +49,10 @@ def main(ctx, config_dir, debug, json_only):
     kdctl = KDCtl.create(config_dir, debug)
     kdctl.update_config()
     io = IO(json_only)
-    ctx.obj = ContextObj(kdctl, io)
+    ctx_obj = ContextObj()
+    ctx_obj.kdctl = kdctl
+    ctx_obj.io = io
+    ctx.obj = ctx_obj
 
 
 @main.resultcallback()

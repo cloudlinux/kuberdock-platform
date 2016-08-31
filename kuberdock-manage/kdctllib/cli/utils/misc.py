@@ -23,6 +23,13 @@ def get_id_by_name(name, objs, id_field='id', name_field='name'):
     return obj[id_field]
 
 
+class ContextObj(object):
+    """This object is passed as context.obj into click command."""
+    kdctl = None
+    executor = None
+    io = None
+
+
 class SimpleCommand(object):
     """Class that just redirect command to corresponding method
     of underlying executor.
@@ -48,7 +55,8 @@ class SimpleCommand(object):
     corresponding_method = None
 
     @classmethod
-    def __new__(cls, command, executor, **kwargs):
+    def __new__(cls, command, context_obj, **kwargs):
+        executor = context_obj.executor
         cls.preprocess_args(executor, kwargs)
         method_name = cls.corresponding_method or command.__name__.lower()
         m = getattr(executor, method_name)

@@ -8,9 +8,9 @@ from ..utils import (SimpleCommand, SimpleCommandWithIdNameArgs,
 
 @kdclick.group(help='Commands for pods management.',
                available_for=(ADMIN, USER))
-@kdclick.pass_context
-def pods(ctx):
-    ctx.obj = ctx.obj.kdctl.pods
+@kdclick.pass_obj
+def pods(obj):
+    obj.executor = obj.kdctl.pods
 
 
 def id_decorator(fn):

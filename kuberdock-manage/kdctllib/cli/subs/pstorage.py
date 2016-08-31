@@ -8,9 +8,9 @@ from ..utils import (SimpleCommand, SimpleCommandWithIdNameArgs,
 
 @kdclick.group(help='Commands for persistent volumes management.',
                available_for=(ADMIN, USER))
-@kdclick.pass_context
-def pstorage(ctx):
-    ctx.obj = ctx.obj.kdctl.pstorage
+@kdclick.pass_obj
+def pstorage(obj):
+    obj.executor = obj.kdctl.pstorage
 
 
 def id_decorator(fn):
@@ -43,7 +43,7 @@ class Get(SimpleCommandWithIdNameOwnerArgs):
 
 
 @pstorage.command(available_for=ADMIN)
-@kdclick.data_argument('device-data')
+@kdclick.data_argument('data')
 @kdclick.option('--owner')
 @kdclick.pass_obj
 class Create(SimpleCommand):

@@ -1,0 +1,23 @@
+images search some_image
+
+pods list
+pods get --id 1
+pods get --name some_pod
+pods create {some_json}
+pods create -f {some_json_file}
+pods update --name some_pod {some_json}
+pods update --id 1 -f {some_json_file}
+pods delete --name some_pod
+pods delete --id 1
+
+pstorage list
+pstorage get --id 1 
+pstorage get --name some_pv 
+pstorage create {some_json} 
+pstorage create -f {some_json_file} 
+pstorage delete --name some_pv 
+pstorage delete --id 1 
+
+system-settings list
+system-settings get --id 1
+system-settings get --name some_setting

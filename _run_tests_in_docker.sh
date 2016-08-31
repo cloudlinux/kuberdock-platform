@@ -19,7 +19,7 @@ $compose run --rm appcloud /bin/bash -c \
     --cov=kubedock \
     --cov=kuberdock-cli \
     --cov=kuberdock-manage \
-    kubedock kuberdock-cli"
+    kubedock kuberdock-cli kuberdock-manage"
 ret=$?
 
 $compose down --rmi local -v

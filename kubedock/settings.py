@@ -303,10 +303,6 @@ SQLALCHEMY_DATABASE_URI = '{0}://{1}'.format(DB_ENGINE, DB_CONNECT_STRING)
 
 
 AWS = False
-# Default size to extend persistent storage on AWS nodes (in GB)
-# TODO: replace with reasonable value. 1 GB size is for test purpose only.
-# TODO: https://cloudlinux.atlassian.net/browse/AC-3699
-AWS_EBS_EXTEND_STEP = 1
 try:
     from .amazon_settings import *  # noqa
 except ImportError:

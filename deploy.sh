@@ -545,6 +545,13 @@ if [ "$ISAMAZON" = true ];then
         exit 1
     fi
 
+    if [ -z "$AWS_EBS_DEFAULT_SIZE" ];then
+        read -p "Enter your AWS EBS DEFAULT SIZE in GB [20]: " AWS_EBS_DEFAULT_SIZE
+    fi
+    if [ -z "$AWS_EBS_DEFAULT_SIZE" ];then
+        AWS_EBS_DEFAULT_SIZE=20
+    fi
+
     if [ -z "$ROUTE_TABLE_ID" ];then
         yum_wrapper install awscli -y   # only after epel is installed
         INSTANCE_ID=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
@@ -1053,6 +1060,7 @@ REGION="$REGION"
 AVAILABILITY_ZONE="$AVAILABILITY_ZONE"
 AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
 AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+AWS_EBS_EXTEND_STEP="$AWS_EBS_DEFAULT_SIZE"
 EOF
 fi
 

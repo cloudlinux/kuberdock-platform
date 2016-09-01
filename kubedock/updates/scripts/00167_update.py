@@ -30,7 +30,6 @@ class _Update(object):
 
 
 class _U167Config(_Update):
-
     @classmethod
     def upgrade(cls, upd, with_testing):
         helpers.update_local_config_file(
@@ -59,7 +58,6 @@ class _U167Config(_Update):
 
 
 class _U167Database(_Update):
-
     @classmethod
     def upgrade(cls, upd, with_testing):
         try:
@@ -136,20 +134,21 @@ class _U167SystemSettings(_Update):
             SystemSettings(
                 name='dns_management_system',
                 label='Select your DNS management system',
-                value='cpanel_dnsonly'
+                value='cpanel_dnsonly',
             ),
             SystemSettings(
                 name='dns_management_cpanel_dnsonly_host',
                 label='cPanel URL for DNS management',
                 description='cPanel URL that used for DNS management',
-                placeholder='Enter URL for cPanel which serve your DNS records'
+                placeholder='Enter URL for cPanel which serve your DNS '
+                            'records',
             ),
             SystemSettings(
                 name='dns_management_cpanel_dnsonly_user',
                 label='cPanel user name for DNS management',
                 description='cPanel user that used for DNS management auth',
                 placeholder='Enter user for cPanel which serve your DNS '
-                            'records'
+                            'records',
             ),
             SystemSettings(
                 name='dns_management_cpanel_dnsonly_token',
@@ -157,7 +156,8 @@ class _U167SystemSettings(_Update):
                 description='cPanel token that used for DNS management auth',
                 placeholder=(
                     'Enter token for cPanel which serve your DNS records'
-                )
+                ),
+                setting_group=None,
             ),
         ])
         db.session.commit()
@@ -168,11 +168,24 @@ class _U167SystemSettings(_Update):
             SystemSettings.query.filter_by(name=setting_name).delete()
 
 
+class _U182(_Update):
+    @classmethod
+    def upgrade(cls, upd, with_testing, *args, **kwargs):
+        upd.print_log('Upgrading schema...')
+        helpers.upgrade_db(revision='8d3aed3e74c')
+
+    @classmethod
+    def downgrade(cls, upd, with_testing, exception, *args, **kwargs):
+        upd.print_log('Downgrading schema...')
+        helpers.downgrade_db(revision='12963e26b673')
+
+
 updates = [
     _U167Config,
     _U167Database,
     _U167NetworkPlugin,
     _U167Permissions,
+    _U182,
     _U167SystemSettings,
 ]
 

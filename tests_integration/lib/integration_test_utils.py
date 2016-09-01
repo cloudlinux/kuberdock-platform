@@ -1,13 +1,12 @@
-import os
 import logging
 import operator
+import os
 import random
 import re
 import socket
 import string
-import time
 import subprocess
-from functools import wraps
+import time
 from collections import defaultdict
 from contextlib import contextmanager
 from functools import wraps
@@ -26,11 +25,13 @@ LOG = logging.getLogger(__name__)
 
 
 def _proceed_exec_result(out, err, ret_code, check_retcode):
+    err, out = _force_utf_string(err), _force_utf_string(out)
+
     msg_parts = [
         (Fore.GREEN, 'RetCode: ', str(ret_code)),
         (Fore.YELLOW, '=== StdOut ===\n', out),
         (Fore.RED, '=== StdErr ===\n', err)]
-    msg = '\n'.join('{}{}{}'.format(c, n, v) for c, n, v in msg_parts if v)
+    msg = '\n'.join(u'{}{}{}'.format(c, n, v) for c, n, v in msg_parts if v)
 
     LOG.debug(msg + Style.RESET_ALL)
     if check_retcode and ret_code != 0:
@@ -431,3 +432,7 @@ def http_share(cluster, host, shared_dir):
         cmd = "docker run -d -p 80:80 -v {}:/usr/share/nginx/html/backups:ro" \
               " nginx".format(shared_dir)
         cluster.ssh_exec(host, cmd)
+
+
+def _force_utf_string(text):
+    return text if isinstance(text, unicode) else text.decode('utf-8')

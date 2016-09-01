@@ -1,8 +1,7 @@
-from __future__ import unicode_literals
-from tempfile import NamedTemporaryFile
-from contextlib import contextmanager
 import logging
 import os
+from contextlib import contextmanager
+from tempfile import NamedTemporaryFile
 
 
 @contextmanager
@@ -21,6 +20,7 @@ class FilePerThreadHandler(logging.Handler):
     Used in integration tests where tests are executed in different
     pipelines, in different threads
     """
+
     def __init__(self):
         super(FilePerThreadHandler, self).__init__()
         self.files = {}
@@ -43,7 +43,7 @@ class FilePerThreadHandler(logging.Handler):
         try:
             fp = self._get_or_open(record.threadName)
             msg = self.format(record)
-            fp.write('{}\n'.format(msg.encode("utf-8")))
+            fp.write('{}\n'.format(msg.encode('utf-8')))
         except (KeyboardInterrupt, SystemExit):
             raise
         except:

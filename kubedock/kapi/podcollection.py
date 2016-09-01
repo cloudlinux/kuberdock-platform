@@ -18,7 +18,7 @@ import pstorage
 from helpers import KubeQuery, K8sSecretsClient, K8sSecretsBuilder
 from images import Image
 from kubedock.exceptions import (
-    NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError)
+    NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError, ServicePodDumpError)
 from lbpoll import LoadBalanceService
 from node import Node as K8SNode
 from pod import Pod
@@ -334,10 +334,25 @@ class PodCollection(object):
         secret information. FOR ADMINS ONLY!
         """
         if pod_id is None:
-            pods = [p.dump() for p in self._get_owned()]
+            return self._dump_all()
         else:
-            pods = self._get_by_id(pod_id).dump()
-        return pods
+            return self._dump_one(pod_id)
+
+    def _dump_all(self):
+        if self.owner is None:
+            rv = [pod.dump() for pod in self._get_owned()
+                  if not pod.owner.is_internal()]
+        else:
+            # a little optimization. All pods have the same owner,
+            # so check once
+            if self.owner.is_internal():
+                raise ServicePodDumpError
+            rv = [pod.dump() for pod in self._get_owned()]
+        return rv
+
+    def _dump_one(self, pod_id):
+        # check for internal user performed in the pod
+        return self._get_by_id(pod_id).dump()
 
     def _get_by_id(self, pod_id):
         try:
@@ -353,6 +368,7 @@ class PodCollection(object):
         return pod
 
     def _get_owned(self):
+        """:rtype: list[Pod]"""
         if self.owner is None:
             pods = [p for p in self._collection.values()]
         else:

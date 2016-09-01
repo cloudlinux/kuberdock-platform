@@ -14,7 +14,7 @@ from .images import Image
 from .. import billing
 from .. import settings
 from ..billing.models import Kube
-from ..exceptions import APIError
+from ..exceptions import APIError, ServicePodDumpError
 from ..pods.models import (db, PersistentDisk, PersistentDiskStatuses,
                            Pod as DBPod)
 from ..utils import POD_STATUSES
@@ -34,6 +34,9 @@ class PodOwner(dict):
         super(PodOwner, self).__init__(id=id, username=username)
         self.id = id
         self.username = username
+
+    def is_internal(self):
+        return self.username == settings.KUBERDOCK_INTERNAL_USER
 
 
 class VolumeExists(APIError):
@@ -175,6 +178,9 @@ class Pod(object):
         ATTENTION! Do not use it in methods allowed for user! It may contain
         secret information. FOR ADMINS ONLY!
         """
+        if self.owner.is_internal():
+            raise ServicePodDumpError
+
         pod_data = self.as_dict()
         owner = self.owner
         k8s_secrets = self.get_secrets()

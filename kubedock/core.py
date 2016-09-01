@@ -60,17 +60,101 @@ class ExclusiveLock(object):
     """
     #: Prefix for all locks created by this class.
     lock_prefix = 'kd.exclusivelock.'
+    payload_prefix = 'kd.exclusivelock-payload.'
 
-    def __init__(self, name, ttl=None):
+    # Fields to serialize and deserialize py-redis Lock object
+    _lock_object_fields = [
+        'name', 'timeout', 'sleep', 'blocking', 'blocking_timeout',
+        'thread_local'
+    ]
+
+    def redis_set_keep_ttl(self, key, value, new_ttl):
+        """Sets value for the key in redis. If key already exists and has TTL,
+        then it will be kept. If the key does not exists or has no TTL then
+        TTL will be set to `new_ttl` (seconds).
+        Or if there are no TTL and `new_ttl` is <= 0, then no expiration will
+        be set.
+        :param key: redis key to set (string)
+        :param value: value to set in redis for key `key` (string)
+        :param new_ttl: time to live must be set to redis `key` (int seconds)
+        """
+        def execute_set(pipe):
+            ttl = pipe.ttl(key)
+            if ttl <= 0:
+                ttl = new_ttl
+            if ttl > 0:
+                pipe.setex(key, ttl, value)
+            else:
+                pipe.set(key, value)
+
+        self._redis_con.transaction(execute_set, key)
+
+    @classmethod
+    def _get_lock_key(cls, name):
+        return cls.lock_prefix + name
+
+    @classmethod
+    def _get_payload_key(cls, name):
+        return cls.payload_prefix + name
+
+    def __init__(self, name, ttl=None, json_payload=None, serialized=None):
         """Init Lock object.
         :param name: name of the lock
         :param ttl: number of seconds after acquiring when the lock must
         be automatically released.
+        :param json_payload: optional payload with some additional information
+        :param serialized: optional dict containing data which produced by
+            `serialize` method of another object. It is useful for serializing
+            lock object to send it to celery task (or in some another process).
+            Serialized lock object may be attached there and behave itself
+            like the original, now it is used to release lock in celery task.
         """
         self._redis_con = ConnectionPool().get_connection()
         self._lock = None
-        self.name = self.lock_prefix + name
+        self.acquired = False
+        self.name_wo_prefix = name
+        if serialized:
+            self.attach(serialized)
+            return
+        self.name = self._get_lock_key(name)
+        self.payload_name = self._get_payload_key(name)
         self.ttl = ttl
+        self.json_payload = json_payload or {}
+
+    def serialize(self):
+        result = dict(
+            name=self.name,
+            name_wo_prefix=self.name_wo_prefix,
+            ttl=self.ttl,
+            payload_name=self.payload_name,
+            json_payload=self.json_payload,
+            acquired=self.acquired,
+        )
+        lock_object = {}
+        if self._lock:
+            for key in self._lock_object_fields:
+                lock_object[key] = getattr(self._lock, key)
+            lock_object['local.token'] = self._lock.local.token
+        result['lock_object'] = lock_object
+        return result
+
+    def attach(self, serialized):
+        if not serialized:
+            raise ValueError('There are no serialized object to attach')
+        self.name = serialized['name']
+        self.name_wo_prefix = serialized['name_wo_prefix']
+        self.ttl = serialized['ttl']
+        self.payload_name = serialized['payload_name']
+        self.json_payload = serialized['json_payload']
+        self.acquired = serialized['acquired']
+        self._lock = None
+        lock_object = serialized['lock_object']
+        if lock_object:
+            self._lock = self._redis_con.lock(self.name, self.ttl)
+            for key in self._lock_object_fields:
+                setattr(self._lock, key, lock_object[key])
+            self._lock.local.token = lock_object['local.token']
+        return self
 
     def lock(self, blocking=False):
         """Try to acquire the lock.
@@ -83,19 +167,42 @@ class ExclusiveLock(object):
         if self._lock is not None:
             return False
         self._lock = self._redis_con.lock(self.name, self.ttl)
-        return self._lock.acquire(blocking=blocking)
+        res = self._lock.acquire(blocking=blocking)
+        if res:
+            self.acquired = True
+            self._save_payload()
+        return res
+
+    def _save_payload(self):
+        if self.json_payload:
+            self.redis_set_keep_ttl(
+                self.payload_name, json.dumps(self.json_payload),
+                self.ttl or 0
+            )
 
     def release(self):
         """Release the lock."""
         if self._lock is None:
             return
+        self._clean_payload()
         self._lock.release()
+        self.acquired = False
+
+    def _clean_payload(self):
+        self._redis_con.delete(self.payload_name)
+
+    def update_payload(self, **kwargs):
+        self.json_payload = self.get_payload(self.name_wo_prefix)
+        if not self.json_payload:
+            self.json_payload = {}
+        self.json_payload.update(kwargs)
+        self._save_payload()
 
     @classmethod
     def is_acquired(cls, name):
         """Checks if the lock was already acquired and not yet released."""
         redis_con = ConnectionPool().get_connection()
-        name = cls.lock_prefix + name
+        name = cls._get_lock_key(name)
         lock = redis_con.lock(name, 1)
         res = False
         try:
@@ -109,19 +216,34 @@ class ExclusiveLock(object):
         return res
 
     @classmethod
+    def get_payload(cls, name):
+        redis_con = ConnectionPool().get_connection()
+        name = cls._get_payload_key(name)
+        data = redis_con.get(name)
+        if not data:
+            return {}
+        return json.loads(data)
+
+    @classmethod
     def clean_locks(cls, pattern=None):
         """Removes all locks. Optionally may be specified prefix for lock's
         names.
 
         """
         redis_con = ConnectionPool().get_connection()
-        if pattern:
-            pattern = cls.lock_prefix + pattern + '*'
-        else:
-            pattern = cls.lock_prefix + '*'
-        keys = list(redis_con.scan_iter(pattern))
-        if keys:
-            redis_con.delete(*keys)
+        if not pattern:
+            pattern = ''
+        lock_pattern = cls._get_lock_key(pattern) + '*'
+        payload_pattern = cls._get_payload_key(pattern) + '*'
+        for pattern in (lock_pattern, payload_pattern):
+            keys = list(redis_con.scan_iter(pattern))
+            if keys:
+                redis_con.delete(*keys)
+
+    @staticmethod
+    def get_key_ttl(key):
+        redis_con = ConnectionPool().get_connection()
+        return redis_con.ttl(key)
 
 
 class ExclusiveLockContextManager(object):

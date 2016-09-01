@@ -43,6 +43,36 @@ class TestExclusiveLock(TestCase):
         self.assertTrue(lock2.lock())
         lock2.release()
 
+    def test_payload(self):
+        name = 'qweradsf1212'
+        lock = core.ExclusiveLock(name)
+        lock.lock()
+        payload = core.ExclusiveLock.get_payload(name)
+        self.assertEqual(payload, {})
+
+        name = name + 'qq'
+        data = {
+            'qq': [1, 2, 3], 'ww': True, 'aa': 'qwerty', 'zz': None, '1': 2
+        }
+        timeout = 10
+        lock = core.ExclusiveLock(name, json_payload=data, ttl=timeout)
+        lock.lock()
+        payload = core.ExclusiveLock.get_payload(name)
+        self.assertEqual(payload, data)
+        lock.update_payload(one='1', two='2')
+        payload = core.ExclusiveLock.get_payload(name)
+        data.update(dict(one='1', two='2'))
+        self.assertEqual(payload, data)
+
+        key = lock.payload_name
+        ttl = core.ExclusiveLock.get_key_ttl(key)
+        self.assertTrue(0 < ttl <= timeout)
+        lock.release()
+        ttl = core.ExclusiveLock.get_key_ttl(key)
+        self.assertTrue(ttl < 0)
+        payload = core.ExclusiveLock.get_payload(name)
+        self.assertEqual(payload, {})
+
     def test_is_acquired(self):
         name = 'qwerty1234'
         lock1 = core.ExclusiveLock(name)

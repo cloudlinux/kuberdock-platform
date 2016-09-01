@@ -571,7 +571,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         self.ippool.save()
 
     @mock.patch.object(podcollection, 'db')
-    @mock.patch.object(podcollection.PodCollection, 'update')
+    @mock.patch.object(podcollection.PodCollection, 'update_with_options')
     @mock.patch.object(podcollection.utils, 'send_event_to_user')
     @mock.patch.object(podcollection, '_try_to_update_existing_rc')
     @mock.patch.object(podcollection.ingress_resource, 'create_ingress')
@@ -640,7 +640,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
             podcollection.prepare_and_run_pod(self.test_pod, dbpod,
                                               dbpod_config)
         podcollection_update_mock.assert_called_once_with(
-            self.test_pod.id, {'command': 'stop'}
+            self.test_pod.id, {'command': 'stop'}, lock=False
         )
         self.assertTrue(send_event_to_user_mock.called)
 
@@ -681,7 +681,8 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
 
         node_available_mock.assert_called_once_with(pod)
         mk_ns.assert_called_once_with(pod.namespace)
-        run_pod_mock.delay.assert_called_once_with(pod, db_pod.id, db_config)
+        run_pod_mock.delay.assert_called_once_with(
+            pod, db_pod.id, db_config, lock=False)
         self.assertEqual(pod.status, POD_STATUSES.preparing)
 
     @mock.patch.object(podcollection, 'DBPod')
@@ -882,7 +883,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         mock_db.session.commit.assert_called_with()
 
 
-class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
+class TestPodCollectionStopPod(TestCase, TestCaseMixin):
 
     def setUp(self):
         U = type('User', (), {'username': 'user'})
@@ -893,7 +894,7 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
     @responses.activate
     @mock.patch.object(podcollection.PersistentDisk, 'free')
     @mock.patch.object(podcollection.scale_replicationcontroller_task,
-                       'apply_async')
+                       'delay')
     def test_pod_normal_stop(self, mk_scale_rc, free_pd_mock):
         """
         Test _stop_pod in usual case
@@ -911,20 +912,22 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
                 'state': POD_STATUSES.running,
             }]
         )
+        res_test_value = 341234
+        pod.as_dict.return_value = res_test_value
 
         # Actual call
         res = self.pod_collection._stop_pod(pod)
 
         pod.set_status.assert_called_once_with(
             POD_STATUSES.stopping, send_update=True)
-        mk_scale_rc.assert_called_once_with((pod.id,))
+        mk_scale_rc.assert_called_once_with(pod.id, serialized_lock=None)
 
         free_pd_mock.assert_called_once_with(pod.id)
 
         # pod is not "stopped" yet, only "stopping",
         # so containers are still "running"
         self.assertEqual(pod.containers[0]['state'], POD_STATUSES.running)
-        self.assertEqual(res, pod.as_dict.return_value)
+        self.assertEqual(res, res_test_value)
 
     @responses.activate
     @mock.patch.object(podcollection.PersistentDisk, 'free')
@@ -1222,17 +1225,17 @@ class TestPodCollectionUpdate(unittest.TestCase, TestCaseMixin):
         with patch_method('_start_pod') as start_pod_mock:
             pod_data = {'command': 'start'}
             self.pod_collection.update(pod_id, pod_data)
-            start_pod_mock.assert_called_once_with(pod, {})
+            start_pod_mock.assert_called_once_with(pod, {}, lock=True)
 
         with patch_method('_stop_pod') as stop_pod_mock:
             pod_data = {'command': 'stop'}
             self.pod_collection.update(pod_id, pod_data)
-            stop_pod_mock.assert_called_once_with(pod, {})
+            stop_pod_mock.assert_called_once_with(pod, {}, lock=True)
 
         with patch_method('_change_pod_config') as change_pod_config_mock:
             pod_data = {'command': 'change_config'}
             self.pod_collection.update(pod_id, pod_data)
-            change_pod_config_mock.assert_called_once_with(pod, {})
+            change_pod_config_mock.assert_called_once_with(pod, {}, lock=True)
 
         get_by_id_mock.assert_has_calls([mock.call(pod_id)] * 3)
 
@@ -1823,7 +1826,7 @@ class TestPodCollectionCheckUpdates(unittest.TestCase, TestCaseMixin):
         get_image_id_mock.assert_called_once_with(Image(image), [])
 
 
-class TestPodCollectionUpdateContainer(unittest.TestCase, TestCaseMixin):
+class TestPodCollectionUpdateContainer(TestCase, TestCaseMixin):
     def setUp(self):
         # mock all these methods to prevent any accidental calls
         self.mock_methods(podcollection.PodCollection, '_get_namespaces',
@@ -1843,8 +1846,8 @@ class TestPodCollectionUpdateContainer(unittest.TestCase, TestCaseMixin):
 
         self.pod_collection.update_container(pod_id, container_id)
         get_by_id_mock.assert_called_once_with(pod_id)
-        stop_pod_mock.assert_called_once_with(pod, block=True)
-        start_pod_mock.assert_called_once_with(pod)
+        stop_pod_mock.assert_called_once_with(pod, block=True, lock=False)
+        start_pod_mock.assert_called_once_with(pod, lock=False)
 
 
 # TODO: AC-1662 unbind ip from nodes and delete service

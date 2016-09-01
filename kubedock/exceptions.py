@@ -352,3 +352,8 @@ class IngressControllerNotReady(SharedIPSubsystemNotReady):
 class IngressConfigMapError(SharedIPSubsystemNotReady):
     message_template = 'Could not create configuration resource for Ingress ' \
                        'Controller'
+
+
+class PodIsLockedByAnotherOperation(APIError):
+    message_template = 'Pod is locked by another operation ({operation}). '\
+                       'Wait some time and try again.'

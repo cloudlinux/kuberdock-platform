@@ -57,6 +57,9 @@ from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
 from ..users.models import User
 from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils, nested_dict_utils
+from .pod_locks import (
+    PodOperations, get_pod_lock, pod_lock_context, catch_locked_pod,
+    task_release_podlock, PodIsLockedError)
 
 # We use only 30 because useradd limits name to 32, and ssh client limits
 # name only to 30 (may be this is configurable) so we use lowest possible
@@ -266,18 +269,19 @@ class PodCollection(object):
 
         namespace = pod.namespace
 
-        self._make_namespace(namespace)
+        with pod_lock_context(pod.id, operation=PodOperations.CREATE):
+            self._make_namespace(pod.namespace)
 
-        secret_ids = self._save_k8s_secrets(secrets, namespace)
-        pod.secrets = secret_ids
+            secret_ids = self._save_k8s_secrets(secrets, namespace)
+            pod.secrets = secret_ids
 
-        pod_config = db_pod.get_dbconfig()
-        pod_config['service_annotations'] = data.pop(
-            'service_annotations', None)
-        pod_config['secrets'] = pod.secrets
-        # Update config
-        db_pod.set_dbconfig(pod_config, save=True)
-        return pod.as_dict()
+            pod_config = db_pod.get_dbconfig()
+            pod_config['service_annotations'] = data.pop(
+                'service_annotations', None)
+            pod_config['secrets'] = pod.secrets
+            # Update config
+            db_pod.set_dbconfig(pod_config, save=True)
+            return pod.as_dict()
 
     def add(self, params, skip_check=False, reuse_pv=True, dry_run=False):
         if self.owner is None and not dry_run:
@@ -339,8 +343,9 @@ class PodCollection(object):
         if pinned_node_name is not None:
             params['node'] = pinned_node_name
 
+    @catch_locked_pod
     @utils.atomic(nested=False)
-    def edit(self, original_pod, data, skip_check=False):
+    def edit(self, original_pod, data, skip_check=False, lock=False):
         """
         Preprocess and add new pod config in db.
         New config will be applied on the next manual restart.
@@ -348,45 +353,51 @@ class PodCollection(object):
         :param original_pod: kubedock.kapi.pod.Pod
         :param data: see command_pod_schema and edited_pod_config_schema
             in kubedock.validation
+        :param lock: flag specifies should we lock the operation or not
         """
-        new_pod_data = data.get('edited_config')
-        original_db_pod = DBPod.query.get(original_pod.id)
-        original_db_pod_config = original_db_pod.get_dbconfig()
+        with pod_lock_context(original_pod.id, operation=PodOperations.EDIT,
+                              acquire_lock=lock):
+            new_pod_data = data.get('edited_config')
+            original_db_pod = DBPod.query.get(original_pod.id)
+            original_db_pod_config = original_db_pod.get_dbconfig()
 
-        if new_pod_data is None:
-            original_db_pod.set_dbconfig(
-                dict(original_db_pod_config, edited_config=None), save=False)
-            original_pod.edited_config = None
+            if new_pod_data is None:
+                original_db_pod.set_dbconfig(
+                    dict(original_db_pod_config, edited_config=None),
+                    save=False)
+                original_pod.edited_config = None
+                return original_pod.as_dict()
+
+            reject_replica_with_pv(new_pod_data, key='volumes')
+
+            data, secrets = self._preprocess_new_pod(
+                new_pod_data, original_pod=original_pod, skip_check=skip_check)
+
+            pod = Pod(dict(new_pod_data, **{
+                key: original_db_pod_config[key]
+                for key in ('namespace', 'id', 'sid')
+                if key in original_db_pod_config}))
+            # create PD models in db and change volumes schema in config
+            pod.compose_persistent()
+
+            # get old secrets, like mapping {secret: id-of-the-secret-in-k8s}
+            exist = {
+                v: k for k, v in self.get_secrets(original_pod).iteritems()
+            }
+            # create missing secrets in k8s and add IDs in config
+            secrets_to_create = set(secrets) - set(exist.keys())
+            new_ids = self._save_k8s_secrets(secrets_to_create, pod.namespace)
+            pod.secrets = sorted(new_ids + exist.values())
+
+            # add in kapi-Pod
+            original_pod.edited_config = vars(pod).copy()
+            original_pod.edited_config.pop('owner', None)
+            # add in db-Pod config
+            original_config = original_db_pod.get_dbconfig()
+            original_config['edited_config'] = original_pod.edited_config
+            original_db_pod.set_dbconfig(original_config, save=False)
+
             return original_pod.as_dict()
-
-        reject_replica_with_pv(new_pod_data, key='volumes')
-
-        data, secrets = self._preprocess_new_pod(
-            new_pod_data, original_pod=original_pod, skip_check=skip_check)
-
-        pod = Pod(dict(new_pod_data, **{
-            key: original_db_pod_config[key]
-            for key in ('namespace', 'id', 'sid')
-            if key in original_db_pod_config}))
-        # create PD models in db and change volumes schema in config
-        pod.compose_persistent()
-
-        # get old secrets, like mapping {secret: id-of-the-secret-in-k8s}
-        exist = {v: k for k, v in self.get_secrets(original_pod).iteritems()}
-        # create missing secrets in k8s and add IDs in config
-        secrets_to_create = set(secrets) - set(exist.keys())
-        new_ids = self._save_k8s_secrets(secrets_to_create, pod.namespace)
-        pod.secrets = sorted(new_ids + exist.values())
-
-        # add in kapi-Pod
-        original_pod.edited_config = vars(pod).copy()
-        original_pod.edited_config.pop('owner', None)
-        # add in db-Pod config
-        original_config = original_db_pod.get_dbconfig()
-        original_config['edited_config'] = original_pod.edited_config
-        original_db_pod.set_dbconfig(original_config, save=False)
-
-        return original_pod.as_dict()
 
     def get_owned(self):
         return self._get_owned()
@@ -519,8 +530,9 @@ class PodCollection(object):
 
         pod.set_dbconfig(config, save=False)
 
+    @catch_locked_pod
     @utils.atomic(nested=False)
-    def _set_entry(self, pod, data):
+    def _set_entry(self, pod, data, lock=False):
         """Immediately set fields "status", "name", "postDescription",
          "unpaid" in DB."""
         db_pod = DBPod.query.get(pod.id)
@@ -531,7 +543,7 @@ class PodCollection(object):
                 db_pod.status = commandOptions['status']
         if commandOptions.get('unpaid') is not None:
             if commandOptions['unpaid']:
-                self.stop_unpaid(pod)
+                self.stop_unpaid(pod, lock=lock)
             else:
                 db_pod.unpaid = False
                 pod.set_status(POD_STATUSES.stopped, send_update=True,
@@ -606,7 +618,7 @@ class PodCollection(object):
 
     @staticmethod
     @utils.atomic(nested=False)
-    def unbind_publicIP(pod_id):
+    def unbind_publicIP(pod_id, lock=False):
         """Temporary unbind publicIP, on next pod start publicIP will be
         reassigned. Unbinded publicIP saved in pod config as
         public_ip_before_freed.
@@ -616,23 +628,29 @@ class PodCollection(object):
         if ip is None:
             return
 
-        pod = ip.pod
-        pod_config = pod.get_dbconfig()
-        if pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
-            raise APIError("We can unbind ip only on stopped pod")
-        pod_config['public_ip_before_freed'] = pod_config.pop('public_ip',
-                                                              None)
-        pod_config['public_ip'] = 'true'
-        pod.set_dbconfig(pod_config, save=False)
+        with pod_lock_context(pod_id,
+                              operation=PodOperations.UNBIND_IP,
+                              acquire_lock=lock):
+            pod = ip.pod
+            pod_config = pod.get_dbconfig()
+            if pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
+                raise APIError("We can unbind ip only on stopped pod")
+            pod_config['public_ip_before_freed'] = pod_config.pop(
+                'public_ip', None)
+            pod_config['public_ip'] = 'true'
+            pod.set_dbconfig(pod_config, save=False)
 
-        network = IPPool.query.filter_by(network=ip.network).first()
-        node = network.node
-        if current_app.config['FIXED_IP_POOLS'] and node:
-            K8SNode(hostname=node.hostname).increment_free_public_ip_count(1)
+            network = IPPool.query.filter_by(network=ip.network).first()
+            node = network.node
+            if current_app.config['FIXED_IP_POOLS'] and node:
+                K8SNode(
+                    hostname=node.hostname).increment_free_public_ip_count(1)
 
-        IpState.end(pod_id, ip.ip_address)
-        db.session.delete(ip)
-        utils.send_event_to_user('pod:change', {'id': pod_id}, pod.owner_id)
+            IpState.end(pod_id, ip.ip_address)
+            db.session.delete(ip)
+            utils.send_event_to_user(
+                'pod:change', {'id': pod_id}, pod.owner_id
+            )
 
     @classmethod
     @utils.atomic()
@@ -690,6 +708,14 @@ class PodCollection(object):
         return db_pod
 
     def update(self, pod_id, data):
+        return self.update_with_options(pod_id, data, lock=True)
+
+    def update_with_options(self, pod_id, data, lock=False):
+        """Executes some command for pod, which is given in data['command']
+        parameter.
+        :param lock: flag defines should an operation lock other pod
+            operations ot not.
+        """
         pod = self._get_by_id(pod_id)
         command = data.pop('command', None)
         if command is None:
@@ -701,11 +727,11 @@ class PodCollection(object):
             'redeploy': self._redeploy,
 
             # NOTE: the next three commands may look similar, but they do
-            #   completely defferent things. Maybe we need to rename some of
+            #   completely different things. Maybe we need to rename some of
             #   them, or change outer logic to reduce differences to merge
             #   a few commands into one.
 
-            # immediately update confing in db and k8s.ReplicationController
+            # immediately update config in db and k8s.ReplicationController
             # currently, it's used only for binding pod with LS to current node
             'change_config': self._change_pod_config,
             # immediately set DB data
@@ -715,39 +741,46 @@ class PodCollection(object):
             'edit': self.edit,
             'unbind-ip': self._unbind_ip,
         }
+        # List of commands which do not require a lock for other operations on
+        # the pod.
+        # TODO: 'resize' is here just because it is not working now
+        non_locking_commands = ['resize']
         if command in dispatcher:
-            return dispatcher[command](pod, data)
+            if command in non_locking_commands:
+                return dispatcher[command](pod, data)
+            return dispatcher[command](pod, data, lock=lock)
         podutils.raise_("Unknown command")
 
+    @catch_locked_pod
     def delete(self, pod_id, force=False):
         pod = self._get_by_id(pod_id)
 
         if pod.owner.username == settings.KUBERDOCK_INTERNAL_USER \
                 and not force:
             podutils.raise_('Service pod cannot be removed', 400)
+        with pod_lock_context(pod_id, operation=PodOperations.DELETE):
+            pod.set_status(POD_STATUSES.deleting, send_update=True, force=True)
 
-        pod.set_status(POD_STATUSES.deleting, send_update=True, force=True)
+            PersistentDisk.free(pod.id)
+            # we remove service also manually
+            service_name = helpers.get_pod_config(pod.id, 'service')
+            if service_name:
+                rv = self.k8squery.delete(
+                    ['services', service_name], ns=pod.namespace
+                )
+                if not force:
+                    podutils.raise_if_failure(rv, "Could not remove a service")
 
-        PersistentDisk.free(pod.id)
-        # we remove service also manually
-        service_name = helpers.get_pod_config(pod.id, 'service')
-        if service_name:
-            rv = self.k8squery.delete(
-                ['services', service_name], ns=pod.namespace
-            )
-            if not force:
-                podutils.raise_if_failure(rv, "Could not remove a service")
+            if hasattr(pod, 'public_ip'):
+                self._remove_public_ip(pod_id=pod_id, force=force)
+            if hasattr(pod, 'domain'):
+                self._remove_pod_domain(pod_id=pod_id, pod_domain=pod.domain)
 
-        if hasattr(pod, 'public_ip'):
-            self._remove_public_ip(pod_id=pod_id, force=force)
-        if hasattr(pod, 'domain'):
-            self._remove_pod_domain(pod_id=pod_id, pod_domain=pod.domain)
-
-        self._drop_network_policies(pod.namespace, force=force)
-        # all deleted asynchronously, now delete namespace, that will ensure
-        # delete all content
-        self._drop_namespace(pod.namespace, force=force)
-        helpers.mark_pod_as_deleted(pod_id)
+            self._drop_network_policies(pod.namespace, force=force)
+            # all deleted asynchronously, now delete namespace, that will
+            # ensure delete all content
+            self._drop_namespace(pod.namespace, force=force)
+            helpers.mark_pod_as_deleted(pod_id)
 
     @staticmethod
     def remove_custom_domain(pod_id, domain):
@@ -830,15 +863,17 @@ class PodCollection(object):
             raise APIError('Image not found in registry')
         return image_id != image_id_in_registry
 
+    @catch_locked_pod
     def update_container(self, pod_id, container_name):
         """
         Update container image by restarting the pod.
 
         :raise APIError: if pod not found or if pod is not running
         """
-        pod = self._get_by_id(pod_id)
-        self._stop_pod(pod, block=True)
-        return self._start_pod(pod)
+        with pod_lock_context(pod_id, operation=PodOperations.RESTART):
+            pod = self._get_by_id(pod_id)
+            self._stop_pod(pod, block=True, lock=False)
+            return self._start_pod(pod, lock=False)
 
     def _make_namespace(self, namespace):
         data = self._get_namespace(namespace)
@@ -1134,7 +1169,6 @@ class PodCollection(object):
         elif has_public_ports and not had_public_ports:
             pod.public_ip = True
 
-
     def _update_public_aws(self, pod, old_config, new_config):
         has_public_ports = self.has_public_ports(new_config)
 
@@ -1164,53 +1198,63 @@ class PodCollection(object):
             client.remove_by_name(pod.namespace)
             # new ones will be created at prepare_and_run_pod(...)
 
-    def _sync_start_pod(self, pod, data=None):
+    def _sync_start_pod(self, pod, data=None, lock=False):
         if data is None:
             data = {}
         nested_dict_utils.set(data, 'commandOptions.asyncPodCreate', False)
-        return self._start_pod(pod, data=data)
+        return self._start_pod(pod, data=data, lock=lock)
 
-    def _start_pod(self, pod, data=None):
+    @catch_locked_pod
+    def _start_pod(self, pod, data=None, lock=False):
         if data is None:
             data = {}
         command_options = data.get('commandOptions', {})
-        db_pod = DBPod.query.get(pod.id)
-        db_config = db_pod.get_dbconfig()
-        if command_options.get('applyEdit'):
-            internal_edit = command_options.get('internalEdit', False)
-            pod, db_config = self._apply_edit(pod, db_pod, db_config,
-                                              internal_edit=internal_edit)
-            db.session.commit()
-        reject_replica_with_pv(db_config)
+        async_pod_create = command_options.get('asyncPodCreate', True)
 
-        if pod.status == POD_STATUSES.unpaid:
-            raise APIError("Pod is unpaid, we can't run it")
-        if pod.status in (POD_STATUSES.running, POD_STATUSES.pending,
-                          POD_STATUSES.preparing):
-            raise APIError("Pod is not stopped, we can't run it")
-        if not self._node_available_for_pod(pod):
-            raise NoSuitableNode()
+        with pod_lock_context(pod.id,
+                              operation=PodOperations.PREPARE_FOR_START,
+                              acquire_lock=lock):
+            db_pod = DBPod.query.get(pod.id)
+            db_config = db_pod.get_dbconfig()
+            if command_options.get('applyEdit'):
+                internal_edit = command_options.get('internalEdit', False)
+                pod, db_config = self._apply_edit(pod, db_pod, db_config,
+                                                  internal_edit=internal_edit)
+                db.session.commit()
+            reject_replica_with_pv(db_config)
 
-        if hasattr(pod, 'domain'):
-            self._handle_shared_ip(pod)
+            if pod.status == POD_STATUSES.unpaid:
+                raise APIError("Pod is unpaid, we can't run it")
+            if pod.status in (POD_STATUSES.running, POD_STATUSES.pending,
+                              POD_STATUSES.preparing):
+                raise APIError("Pod is not stopped, we can't run it")
+            if not self._node_available_for_pod(pod):
+                raise NoSuitableNode()
 
-        if pod.status == POD_STATUSES.succeeded \
-                or pod.status == POD_STATUSES.failed:
-            self._stop_pod(pod, block=True)
-        self._make_namespace(pod.namespace)
+            if hasattr(pod, 'domain'):
+                self._handle_shared_ip(pod)
 
-        pod.set_status(POD_STATUSES.preparing, send_update=True)
+            if pod.status == POD_STATUSES.succeeded \
+                    or pod.status == POD_STATUSES.failed:
+                self._stop_pod(pod, block=True, lock=False)
+            self._make_namespace(pod.namespace)
 
-        if not current_app.config['FIXED_IP_POOLS']:
-            self._assign_public_ip(pod, db_pod, db_config)
-            # prepare_and_run_pod_task read config from db in async task
-            # public_ip could not have time to save before read
-            db.session.commit()
+            pod.set_status(POD_STATUSES.preparing, send_update=True)
 
-        if command_options.get('asyncPodCreate', True):
-            prepare_and_run_pod_task.delay(pod, db_pod.id, db_config)
+            if not current_app.config['FIXED_IP_POOLS']:
+                self._assign_public_ip(pod, db_pod, db_config)
+                # prepare_and_run_pod_task read config from db in async task
+                # public_ip could not have time to save before read
+                db.session.commit()
+
+        if async_pod_create:
+            prepare_and_run_pod_task.delay(
+                pod, db_pod.id, db_config, lock=lock
+            )
         else:
-            prepare_and_run_pod(pod, db_pod, db_config)
+            with pod_lock_context(pod.id, operation=PodOperations.START,
+                                  acquire_lock=lock):
+                prepare_and_run_pod(pod, db_pod, db_config)
         return pod.as_dict()
 
     def _handle_shared_ip(self, pod):
@@ -1311,55 +1355,74 @@ class PodCollection(object):
             raise
 
     @staticmethod
-    def _stop_pod(pod, data=None, raise_=True, block=False):
-        # Call PD release in all cases. If the pod was already stopped and PD's
-        # were not released, then it will free them. If PD's already free, then
-        # this call will do nothing.
-        PersistentDisk.free(pod.id)
-        if (pod.status in (POD_STATUSES.stopping, POD_STATUSES.preparing,) and
-                pod.k8s_status is None):
-            pod.set_status(POD_STATUSES.stopped, send_update=True)
-            return pod.as_dict()
-        elif pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
-            if hasattr(pod, 'sid'):
-                pod.set_status(POD_STATUSES.stopping, send_update=True)
-                if block:
-                    scale_replicationcontroller(pod.id)
-                    pod = wait_pod_status(
-                        pod.id, POD_STATUSES.stopped,
-                        error_message=(
-                            u'During restart, Pod "{0}" did not become '
-                            u'stopped after a given timeout. It may become '
-                            u'later.'.format(pod.name)))
-                else:
-                    scale_replicationcontroller_task.apply_async((pod.id,))
-
-                # Remove ingresses if shared IP was used
-                if hasattr(pod, 'domain'):
-                    client = ingress_resource.IngressResourceClient()
-                    client.remove_by_name(pod.namespace)
-
+    @catch_locked_pod
+    def _stop_pod(pod, data=None, raise_=True, block=False, lock=False):
+        podlock = None
+        try:
+            release_lock = True
+            podlock = get_pod_lock(pod.id, operation=PodOperations.STOP,
+                                   acquire_lock=lock)
+            # Call PD release in all cases. If the pod was already stopped and
+            # PD's were not released, then it will free them. If PD's already
+            # free, then this call will do nothing.
+            PersistentDisk.free(pod.id)
+            if (pod.status in (POD_STATUSES.stopping, POD_STATUSES.preparing,)
+                    and pod.k8s_status is None):
+                pod.set_status(POD_STATUSES.stopped, send_update=True)
                 return pod.as_dict()
-                # FIXME: else: ??? (what if pod has no "sid"?)
-        elif raise_:
-            raise APIError('Pod is already stopped')
+            elif pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
+                if hasattr(pod, 'sid'):
+                    pod.set_status(POD_STATUSES.stopping, send_update=True)
+                    if block:
+                        scale_replicationcontroller(pod.id)
+                        pod = wait_pod_status(
+                            pod.id, POD_STATUSES.stopped,
+                            error_message=(
+                                u'During restart, Pod "{0}" did not become '
+                                u'stopped after a given timeout. It may '
+                                u'become later.'.format(pod.name)))
+                    else:
+                        release_lock = False
+                        if podlock:
+                            serialized_lock = podlock.serialize()
+                        else:
+                            serialized_lock = None
+                        scale_replicationcontroller_task.delay(
+                            pod.id, serialized_lock=serialized_lock)
 
-    def _change_pod_config(self, pod, data):
-        db_config = helpers.get_pod_config(pod.id)
-        utils.update_dict(db_config, data)
-        helpers.replace_pod_config(pod, db_config)
+                    # Remove ingresses if shared IP was used
+                    if hasattr(pod, 'domain'):
+                        client = ingress_resource.IngressResourceClient()
+                        client.remove_by_name(pod.namespace)
 
-        # get pod again after change
-        pod = PodCollection()._get_by_id(pod.id)
+                    return pod.as_dict()
+                    # FIXME: else: ??? (what if pod has no "sid"?)
+            elif raise_:
+                raise APIError('Pod is already stopped')
+        finally:
+            if release_lock and podlock:
+                podlock.release()
 
-        config = pod.prepare()
-        rv = self.k8squery.put(
-            ['replicationcontrollers', pod.sid], json.dumps(config),
-            rest=True, ns=pod.namespace
-        )
-        podutils.raise_if_failure(rv, "Could not change '{0}' pod".format(
-            pod.name.encode('ascii', 'replace')))
-        return pod.as_dict()
+    @catch_locked_pod
+    def _change_pod_config(self, pod, data, lock=False):
+        with pod_lock_context(pod.id, operation=PodOperations.CHANGE_CONFIG,
+                              acquire_lock=lock):
+            db_config = helpers.get_pod_config(pod.id)
+            utils.update_dict(db_config, data)
+            helpers.replace_pod_config(pod, db_config)
+
+            # get pod again after change
+            pod = PodCollection()._get_by_id(pod.id)
+
+            config = pod.prepare()
+            rv = self.k8squery.put(
+                ['replicationcontrollers', pod.sid], json.dumps(config),
+                rest=True, ns=pod.namespace
+            )
+            podutils.raise_if_failure(rv, "Could not change '{0}' pod".format(
+                pod.name.encode('ascii', 'replace')))
+
+            return pod.as_dict()
 
     def patch_running_pod(self, pod_id, data,
                           replace_lists=False, restart=False):
@@ -1394,13 +1457,35 @@ class PodCollection(object):
         pod = PodCollection()._get_by_id(pod_id)
         return pod.as_dict()
 
-    def _redeploy(self, pod, data):
-        owner_id = self.owner.id
-        command_options = data.get('commandOptions', {})
-        if command_options.get('async', True):
-            finish_redeploy.delay(pod.id, data)
-        else:
-            finish_redeploy(pod.id, data)
+    @catch_locked_pod
+    def _redeploy(self, pod, data, lock=False):
+        podlock = None
+        owner_id = None
+        if self.owner:
+            owner_id = self.owner.id
+        try:
+            # In case of any exception, release lock while we did not call
+            # celery task finish_redeploy
+            release_lock = True
+            podlock = get_pod_lock(pod.id, operation=PodOperations.REDEPLOY,
+                                   acquire_lock=lock)
+            command_options = data.get('commandOptions', {})
+            do_async = command_options.get('async', True)
+
+            if podlock and do_async:
+                serialized_lock = podlock.serialize()
+            else:
+                serialized_lock = None
+            if do_async:
+                # pass acquired lock to nested task, it must release the lock
+                release_lock = False
+                finish_redeploy_task.delay(
+                    pod.id, data, serialized_lock=serialized_lock)
+            else:
+                finish_redeploy(pod.id, data)
+        finally:
+            if podlock and release_lock:
+                podlock.release()
         # return updated pod
         return PodCollection(owner=User.get(owner_id)).get(pod.id,
                                                            as_json=False)
@@ -1629,19 +1714,23 @@ class PodCollection(object):
                          if node['status'] == NODE_STATUSES.running]
         return len(running_nodes) > 0
 
-    def _unbind_ip(self, pod, data=None):
-        self.unbind_publicIP(pod.id)
+    @catch_locked_pod
+    def _unbind_ip(self, pod, data=None, lock=False):
+        self.unbind_publicIP(pod.id, lock=lock)
 
     @classmethod
-    def stop_unpaid(cls, pod, block=False):
-        DBPod.query.filter_by(id=pod.id).update({'unpaid': True})
-        if pod.status == POD_STATUSES.unpaid:
-            return
-        if pod.status == POD_STATUSES.stopped:
-            pod.set_status(POD_STATUSES.unpaid, send_update=True)
-            return
-        PodCollection._stop_pod(pod, raise_=False, block=block)
-        db.session.flush()
+    def stop_unpaid(cls, pod, block=False, lock=False):
+        with pod_lock_context(pod.id,
+                              operation=PodOperations.STOP_UNPAIND,
+                              acquire_lock=lock):
+            DBPod.query.filter_by(id=pod.id).update({'unpaid': True})
+            if pod.status == POD_STATUSES.unpaid:
+                return
+            if pod.status == POD_STATUSES.stopped:
+                pod.set_status(POD_STATUSES.unpaid, send_update=True)
+                return
+            PodCollection._stop_pod(pod, raise_=False, block=block, lock=False)
+            db.session.flush()
 
     def _set_custom_domain(self, pod, domain, certificate=None):
         if not pod_domains.validate_domain_reachability(domain):
@@ -1723,18 +1812,19 @@ def scale_replicationcontroller(pod_id, size=0):
         wait_for_rescaling_task.apply_async((pod, size))
 
 
-@celery.task(ignore_results=True)
-def scale_replicationcontroller_task(*args, **kwargs):
-    scale_replicationcontroller(*args, **kwargs)
+@celery.task(bind=True, ignore_results=True)
+@task_release_podlock
+def scale_replicationcontroller_task(self, pod_id, size=0,
+                                     serialized_lock=None):
+    scale_replicationcontroller(pod_id, size=size)
 
 
-@celery.task(ignore_results=True)
 def finish_redeploy(pod_id, data, start=True):
     db_pod = DBPod.query.get(pod_id)
     pod_collection = PodCollection(db_pod.owner)
     pod = pod_collection._get_by_id(pod_id)
     try:
-        pod_collection._stop_pod(pod, block=True, raise_=False)
+        pod_collection._stop_pod(pod, block=True, raise_=False, lock=False)
     except APIError as e:
         utils.send_event_to_user('notify:error', {'message': e.message},
                                  db_pod.owner_id)
@@ -1746,20 +1836,42 @@ def finish_redeploy(pod_id, data, start=True):
     if command_options.get('wipeOut'):
         for volume in pod.volumes_public:
             pd = volume.get('persistentDisk')
-            if pd:
-                pd = PersistentDisk.get_all_query().filter(
-                    PersistentDisk.name == pd['pdName']
-                ).first()
-                pstorage.delete_drive_by_id(pd.id)
+            if not pd:
+                continue
+            pd = PersistentDisk.get_all_query().filter(
+                PersistentDisk.name == pd['pdName'],
+                PersistentDisk.owner_id == db_pod.owner_id
+            ).first()
+            if not pd:
+                current_app.logger.error(
+                    u"Can't find PD '{}', user {}, pod_id {}, "
+                    u"pod name '{}'".format(
+                        pd['pdName'], db_pod.owner_id,
+                        db_pod.id, db_pod.name
+                    )
+                )
+                continue
+            pstorage.delete_drive_by_id(pd.id)
 
     if start:  # start updated pod
-        PodCollection(db_pod.owner).update(
+        PodCollection(db_pod.owner).update_with_options(
             pod_id,
             {
                 # already in celery, use the same task, sync
                 'command': 'synchronous_start',
                 'commandOptions': command_options
-            })
+            },
+            # Do not acquire lock because we are already in lock.
+            # If serialized_lock is None, then also don't acquire a lock, as
+            # long as the task called without locking.
+            lock=False
+        )
+
+
+@celery.task(bind=True, ignore_results=True)
+@task_release_podlock
+def finish_redeploy_task(self, pod_id, data, start=True, serialized_lock=None):
+    finish_redeploy(pod_id, data, start)
 
 
 def restore_containers_host_ports_config(pod_containers, db_containers):
@@ -1857,9 +1969,11 @@ def fix_relative_mount_paths(containers):
 
 
 @celery.task(ignore_results=True)
-def prepare_and_run_pod_task(pod, pod_id, db_config):
-    db_pod = DBPod.query.get(pod_id)
-    return prepare_and_run_pod(pod, db_pod, db_config)
+def prepare_and_run_pod_task(pod, pod_id, db_config, lock=False):
+    with pod_lock_context(pod.id, operation=PodOperations.START,
+                          acquire_lock=lock):
+        db_pod = DBPod.query.get(pod_id)
+        return prepare_and_run_pod(pod, db_pod, db_config)
 
 
 def prepare_and_run_pod(pod, db_pod, db_config):
@@ -1916,7 +2030,7 @@ def prepare_and_run_pod(pod, db_pod, db_config):
         # We have to stop pod here to release all the things that was allocated
         # during partial start
         pods = PodCollection()
-        pods.update(pod.id, {'command': 'stop'})
+        pods.update_with_options(pod.id, {'command': 'stop'}, lock=False)
         # If we forget to do commit here all Pod's status changes will be lost
         # with rollback on raise as well as other changes related to
         # "teardown" part like releasing of PDs
@@ -2031,8 +2145,8 @@ def run_service(pod, annotations=None):
     if publicIP == 'true':
         publicIP = None
     public_svc = ingress_public_ports(pod.id, pod.namespace,
-                                      public_ports, pod.owner, publicIP, domain,
-                                      annotations)
+                                      public_ports, pod.owner, publicIP,
+                                      domain, annotations)
     cluster_ip = getattr(pod, 'podIP', None)
     local_svc = ingress_local_ports(pod.id, pod.namespace, ports,
                                     resolve, cluster_ip)
@@ -2285,7 +2399,12 @@ def pod_set_unpaid_state_task():
                                                 POD_STATUSES.deleted,
                                                 POD_STATUSES.unpaid]))
     for db_pod in q:
-        PodCollection.stop_unpaid(PodCollection()._get_by_id(db_pod.id))
+        try:
+            PodCollection.stop_unpaid(
+                PodCollection()._get_by_id(db_pod.id), lock=True)
+        except PodIsLockedError as err:
+            current_app.logger.warning(
+                u'pod_set_unpaid_state_task failed for pod: {}'.format(err))
 
 
 def reject_replica_with_pv(config, key='volumes_public'):

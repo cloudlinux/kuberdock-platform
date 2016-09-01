@@ -181,6 +181,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 volumeMounts: [],
                 env: [],
                 args: [],
+                command: [],
                 kubes: 1,
                 terminationMessagePath: null,
             };

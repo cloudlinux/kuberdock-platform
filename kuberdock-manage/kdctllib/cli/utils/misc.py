@@ -63,30 +63,28 @@ class SimpleCommandWithIdNameArgs(SimpleCommand):
     """Extension of `SimpleCommand` that allows to use name instead of id."""
     id_field = 'id'
     name_field = 'name'
+    name_kwarg = 'name'
 
     @classmethod
     def preprocess_args(cls, executor, kwargs):
         if kwargs['id'] is None:
-            kwargs['id'] = get_id_by_name(kwargs['name'],
+            kwargs['id'] = get_id_by_name(kwargs[cls.name_kwarg],
                                           executor.list()['data'],
                                           id_field=cls.id_field,
                                           name_field=cls.name_field)
-        kwargs.pop('name')
+        kwargs.pop(cls.name_kwarg)
 
 
-class SimpleCommandWithIdNameOwnerArgs(SimpleCommand):
+class SimpleCommandWithIdNameOwnerArgs(SimpleCommandWithIdNameArgs):
     """Extension of `SimpleCommand` that allows to use name instead of id.
 
     Use it when you have to specify owner to get list of objects.
     """
-    id_field = 'id'
-    name_field = 'name'
-
     @classmethod
     def preprocess_args(cls, executor, kwargs):
         if kwargs['id'] is None:
             objs = executor.list(owner=kwargs['owner'])['data']
-            kwargs['id'] = get_id_by_name(kwargs['name'], objs,
+            kwargs['id'] = get_id_by_name(kwargs[cls.name_kwarg], objs,
                                           id_field=cls.id_field,
                                           name_field=cls.name_field)
-        kwargs.pop('name')
+        kwargs.pop(cls.name_kwarg)

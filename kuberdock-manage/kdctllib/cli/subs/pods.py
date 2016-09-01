@@ -56,7 +56,7 @@ class Create(SimpleCommand):
 # todo: uncomment in api/v2
 # @kdclick.option('--owner')  # should be added in api/v2
 @kdclick.pass_obj
-class Update(SimpleCommandWithIdNameOwnerArgs):
+class Update(SimpleCommandWithIdNameArgs):
     pass
 
 

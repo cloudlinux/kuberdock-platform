@@ -177,3 +177,7 @@ class AlreadyExistsError(APIError):
 class CannotBeDeletedError(APIError):
     message_template = 'Resource cannot be deleted'
     status_code = 409
+
+
+class ServicePodDumpError(APIError):
+    message_template = 'Service pods are not subject to dump'

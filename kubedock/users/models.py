@@ -159,6 +159,9 @@ class User(BaseModelMixin, UserMixin, db.Model):
     def is_limited(self):
         return self.role.rolename == 'LimitedUser'
 
+    def is_internal(self):
+        return self.username == KUBERDOCK_INTERNAL_USER
+
     @property
     def last_activity(self):
         return get_user_last_activity(self.id)

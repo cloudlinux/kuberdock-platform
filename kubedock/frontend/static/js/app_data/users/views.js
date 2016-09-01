@@ -448,13 +448,14 @@ define(['app_data/app', 'app_data/model', 'app_data/controller', 'app_data/utils
                     middleInitials = that.ui.middle_initials.val(),
                     spaces = /\s/g,
                     numbers = /\d/g,
-                    symbols = /[!"#$%&'()*+,\-.\/\\:;<=>?@[\]^_`{\|}~]/g,
+                    symbols = /[!#$%*+\/\\:;<=>?@^{\|}~]/g,
                     pattern = /^("\S+"|[a-z0-9_\.+-]+)@(([a-z0-9-]+\.)+[a-z0-9-]+|\[[a-f0-9:\.]+\])$/i;
 
-                that.ui.first_name.val(firtsName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
-                that.ui.last_name.val(lastName.replace(symbols,'').replace(spaces,'').replace(numbers,''));
-                that.ui.middle_initials.val(middleInitials.replace(symbols,'').replace(spaces,'').replace(numbers,''));
+                that.ui.first_name.val(firtsName.trim());
+                that.ui.last_name.val(lastName.trim());
+                that.ui.middle_initials.val(middleInitials.trim());
                 that.ui.email.val(that.ui.email.val().trim());
+
                 if (isNew)
                     that.ui.username.val(that.ui.username.val().trim());
 
@@ -483,11 +484,29 @@ define(['app_data/app', 'app_data/model', 'app_data/controller', 'app_data/utils
                 case that.ui.first_name.val().length > 25:
                     that.addError(that.ui.first_name, 'Maximum length is 25 symbols.');
                     break;
+                case symbols.test(that.ui.first_name.val()) ||
+                     spaces.test(that.ui.first_name.val())  ||
+                     numbers.test(that.ui.first_name.val()) :
+                        that.addError(that.ui.first_name, 'First name can\'t have special' +
+                                                         ' symbols, numbers or spaces');
+                    break;
                 case that.ui.last_name.val().length > 25:
                     that.addError(that.ui.last_name, 'Maximum length is 25 symbols.');
                     break;
+                case symbols.test(that.ui.last_name.val()) ||
+                     spaces.test(that.ui.last_name.val())  ||
+                     numbers.test(that.ui.last_name.val()) :
+                        that.addError(that.ui.last_name, 'Last name can\'t have special' +
+                                                         ' symbols, numbers or spaces');
+                    break;
                 case that.ui.middle_initials.val().length > 25:
                     that.addError(that.ui.middle_initials, 'Maximum length is 25 symbols.');
+                    break;
+                case symbols.test(that.ui.middle_initials.val()) ||
+                     spaces.test(that.ui.middle_initials.val())  ||
+                     numbers.test(that.ui.middle_initials.val()) :
+                        that.addError(that.ui.middle_initials,
+                            'Middle initials can\'t have special symbols, numbers or spaces');
                     break;
                 /* password */
                 case that.ui.password.val() !== that.ui.password_again.val():

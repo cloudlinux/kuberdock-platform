@@ -129,8 +129,8 @@ name_schema = {
     'nullable': True,
     'maxlength': 25,
     'regex': {
-        'regex': re.compile(r'^[^\W\d]{,25}$', re.U),
-        'message': 'only alphabetic characters allowed'
+        'regex': re.compile(r'^(?:[^\W\d_]|[.,&"\'`()[\]-]){,25}$', re.U),
+        'message': 'Only alphabetic characters allowed'
     }
 }
 

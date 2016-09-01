@@ -219,17 +219,22 @@ class TestUserCreateValidation(unittest.TestCase):
             'John',
             'a' * 25,
             '',
+            'Joe-Smith',
+            "d'artagnan",
+            u"Д'Артаньян'",
         ]
 
         invalid_names = [
             'a' * 26,
             'Joe Smith',
-            'Joe-Smith',
+            '!@#$%',
         ]
 
         for field in ('first_name', 'last_name', 'middle_initials'):
-            self.assertValidList(self.validator, self._template, field, valid_names)
-            self.assertInvalidList(self.validator, self._template, field, invalid_names)
+            self.assertValidList(
+                self.validator, self._template, field, valid_names)
+            self.assertInvalidList(
+                self.validator, self._template, field, invalid_names)
 
 
 class TestUserEditValidation(TestUserCreateValidation):

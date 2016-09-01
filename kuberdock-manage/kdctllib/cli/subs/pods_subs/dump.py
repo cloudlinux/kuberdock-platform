@@ -10,6 +10,7 @@ from ...utils import file_utils
 @kdclick.argument('pod-id')
 @kdclick.pass_obj
 def dump(obj, **params):
+    """Dump pod"""
     return obj.executor.dump(**params)
 
 
@@ -24,6 +25,7 @@ def dump(obj, **params):
                      '<target_dir>/<owner_id>/<pod_id>')
 @kdclick.pass_obj
 def batch_dump(obj, owner=None, target_dir=None):
+    """Batch dump pods"""
     result = obj.executor.batch_dump(owner)
     if target_dir is None:
         return result

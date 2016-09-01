@@ -112,7 +112,7 @@ def _collect_force(force_delete, force_not_delete):
     return force
 
 
-@kdclick.command('restore', help='Restore pod from dump.', available_for=ADMIN)
+@kdclick.command('restore', available_for=ADMIN)
 @kdclick.data_argument('pod-dump')
 @kdclick.option('--owner', required=True, help="Pod's owner name.")
 @kdclick.option('--pv-backups-location', help='Url where backups are stored.')
@@ -133,6 +133,7 @@ def _collect_force(force_delete, force_not_delete):
 @kdclick.pass_obj
 def pod(obj, pod_dump, owner, pv_backups_location, pv_backups_path_template,
         force_delete, force_not_delete, max_tries):
+    """Restore pod from dump"""
     kdctl = obj.kdctl
     io = obj.io
     force = _collect_force(force_delete, force_not_delete)

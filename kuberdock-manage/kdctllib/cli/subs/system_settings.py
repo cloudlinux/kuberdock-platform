@@ -5,11 +5,10 @@ from ..kdclick.access import ADMIN, USER
 from ..utils import SimpleCommand, SimpleCommandWithIdNameArgs
 
 
-@kdclick.group('system-settings',
-               help='Commands for system settings management.',
-               available_for=(ADMIN, USER))
+@kdclick.group('system-settings', available_for=(ADMIN, USER))
 @kdclick.pass_obj
 def ss(obj):
+    """Commands for system settings management"""
     obj.executor = obj.kdctl.system_settings
 
 
@@ -27,6 +26,7 @@ def id_decorator(fn):
 @ss.command(available_for=(ADMIN, USER))
 @kdclick.pass_obj
 class List(SimpleCommand):
+    """List existing system settings"""
     pass
 
 
@@ -34,6 +34,7 @@ class List(SimpleCommand):
 @id_decorator
 @kdclick.pass_obj
 class Get(SimpleCommandWithIdNameArgs):
+    """Get existing system setting"""
     pass
 
 
@@ -42,4 +43,5 @@ class Get(SimpleCommandWithIdNameArgs):
 @kdclick.argument('value')
 @kdclick.pass_obj
 class Update(SimpleCommandWithIdNameArgs):
+    """Update existing system setting"""
     pass

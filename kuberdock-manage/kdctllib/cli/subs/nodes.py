@@ -5,9 +5,10 @@ from ..kdclick.access import ADMIN
 from ..utils import SimpleCommand, SimpleCommandWithIdNameArgs
 
 
-@kdclick.group(help='Commands for nodes management.', available_for=ADMIN)
+@kdclick.group(available_for=ADMIN)
 @kdclick.pass_obj
 def nodes(obj):
+    """Commands for nodes management"""
     obj.executor = obj.kdctl.nodes
 
 
@@ -31,6 +32,7 @@ class NodesCommandWithIdNameArgs(SimpleCommandWithIdNameArgs):
 @nodes.command()
 @kdclick.pass_obj
 class List(SimpleCommand):
+    """List existing nodes"""
     pass
 
 
@@ -38,6 +40,7 @@ class List(SimpleCommand):
 @id_decorator
 @kdclick.pass_obj
 class Get(NodesCommandWithIdNameArgs):
+    """Get existing node"""
     pass
 
 
@@ -45,6 +48,7 @@ class Get(NodesCommandWithIdNameArgs):
 @kdclick.data_argument('data')
 @kdclick.pass_obj
 class Create(SimpleCommand):
+    """Create new node"""
     pass
 
 
@@ -53,6 +57,7 @@ class Create(SimpleCommand):
 @kdclick.data_argument('data')
 @kdclick.pass_obj
 class Update(NodesCommandWithIdNameArgs):
+    """Update existing node"""
     pass
 
 
@@ -60,6 +65,7 @@ class Update(NodesCommandWithIdNameArgs):
 @id_decorator
 @kdclick.pass_obj
 class Delete(NodesCommandWithIdNameArgs):
+    """Delete existing node"""
     pass
 
 
@@ -67,4 +73,5 @@ class Delete(NodesCommandWithIdNameArgs):
 @kdclick.argument('hostname')
 @kdclick.pass_obj
 class CheckHost(SimpleCommand):
+    """Check hostname"""
     corresponding_method = 'check_host'

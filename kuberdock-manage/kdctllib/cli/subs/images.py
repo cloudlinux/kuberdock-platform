@@ -3,10 +3,10 @@ from ..kdclick.access import ADMIN, USER
 from ..utils import SimpleCommand
 
 
-@kdclick.group(help='Commands for docker images management.',
-               available_for=(ADMIN, USER))
+@kdclick.group(available_for=(ADMIN, USER))
 @kdclick.pass_obj
 def images(obj):
+    """Commands for docker images management"""
     obj.executor = obj.kdctl.images
 
 
@@ -17,4 +17,5 @@ def images(obj):
                 help='Registry to search in. By default dockerhub is used')
 @kdclick.pass_obj
 class Search(SimpleCommand):
+    """Search image by search key"""
     pass

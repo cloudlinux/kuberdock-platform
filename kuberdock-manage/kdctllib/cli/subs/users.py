@@ -5,9 +5,10 @@ from ..kdclick.access import ADMIN
 from ..utils import SimpleCommand, SimpleCommandWithIdNameArgs
 
 
-@kdclick.group(help='Commands for users management.', available_for=ADMIN)
+@kdclick.group(available_for=ADMIN)
 @kdclick.pass_obj
 def users(obj):
+    """Commands for users management"""
     obj.executor = obj.kdctl.users
 
 
@@ -31,6 +32,7 @@ class _UsersCommandWithIdNameArgs(SimpleCommandWithIdNameArgs):
 @kdclick.option('--with-deleted', is_flag=True)
 @kdclick.pass_obj
 class List(SimpleCommand):
+    """List existing users"""
     pass
 
 
@@ -40,6 +42,7 @@ class List(SimpleCommand):
 @kdclick.option('--with-deleted', is_flag=True)
 @kdclick.pass_obj
 class Get(_UsersCommandWithIdNameArgs):
+    """Get existing user"""
     pass
 
 
@@ -47,6 +50,7 @@ class Get(_UsersCommandWithIdNameArgs):
 @kdclick.data_argument('data')
 @kdclick.pass_obj
 class Create(SimpleCommand):
+    """Create new user"""
     pass
 
 
@@ -55,6 +59,7 @@ class Create(SimpleCommand):
 @kdclick.data_argument('data')
 @kdclick.pass_obj
 class Update(_UsersCommandWithIdNameArgs):
+    """Update existing user"""
     pass
 
 
@@ -63,4 +68,5 @@ class Update(_UsersCommandWithIdNameArgs):
 @kdclick.option('--force', is_flag=True)
 @kdclick.pass_obj
 class Delete(_UsersCommandWithIdNameArgs):
+    """Delete existing user"""
     pass

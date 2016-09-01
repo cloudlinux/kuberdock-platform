@@ -3,9 +3,10 @@ from ..kdclick.access import ADMIN
 from ..utils import SimpleCommand
 
 
-@kdclick.group(help='Commands for IP pool management.', available_for=ADMIN)
+@kdclick.group(available_for=ADMIN)
 @kdclick.pass_obj
 def ippool(obj):
+    """Commands for IP pool management"""
     obj.executor = obj.kdctl.ippool
 
 
@@ -23,6 +24,7 @@ def _verify_page(ctx, param, value):
 @kdclick.option('--free-only', is_flag=True)
 @kdclick.pass_obj
 class List(SimpleCommand):
+    """List all existing IP pools"""
     pass
 
 
@@ -31,6 +33,7 @@ class List(SimpleCommand):
 @kdclick.option('--page', type=int, callback=_verify_page)
 @kdclick.pass_obj
 class Get(SimpleCommand):
+    """Get existing IP pool by network"""
     pass
 
 
@@ -38,6 +41,7 @@ class Get(SimpleCommand):
 @kdclick.data_argument('data')
 @kdclick.pass_obj
 class Create(SimpleCommand):
+    """Create new IP pool"""
     pass
 
 
@@ -46,6 +50,7 @@ class Create(SimpleCommand):
 @kdclick.data_argument('data')
 @kdclick.pass_obj
 class Update(SimpleCommand):
+    """Update existing IP pool"""
     pass
 
 
@@ -53,4 +58,5 @@ class Update(SimpleCommand):
 @kdclick.argument('network')
 @kdclick.pass_obj
 class Delete(SimpleCommand):
+    """Delete existing IP pool"""
     pass

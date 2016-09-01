@@ -161,11 +161,73 @@ class _U167SystemSettings(_Update):
             ),
         ])
         db.session.commit()
+        db.engine.execute(
+            "UPDATE system_settings SET setting_group='billing'"
+            "WHERE id >= 1 AND id <= 5")
+        db.engine.execute(
+            "UPDATE system_settings SET setting_group='general'"
+            "WHERE id >= 6 AND id <= 9")
+        db.engine.execute(
+            "UPDATE system_settings SET setting_group='general'"
+            "WHERE id = 14")
+        db.engine.execute(
+            "UPDATE system_settings SET setting_group='domain'"
+            "WHERE id >= 10 AND id <= 13")
+        db.engine.execute(
+            """UPDATE system_settings SET """
+            """options=('["No provider", "cpanel_dnsonly"]') WHERE id= 10""")
+        db.engine.execute("UPDATE system_settings SET value='No provider' "
+                         "WHERE id= 10")
+        db.engine.execute(
+            "UPDATE system_settings SET label='Select DNS provider' WHERE id= 10")
+        db.engine.execute(
+            "UPDATE system_settings SET label='Link to cPanel'  WHERE id= 11")
+        db.engine.execute(
+            "UPDATE system_settings SET placeholder='e.g. https://example.com'"
+            "WHERE id= 11")
+        db.engine.execute(
+            "UPDATE system_settings SET label='cPanel admin username' WHERE id= 12"
+        )
+        db.engine.execute(
+            "UPDATE system_settings SET "
+            "placeholder='user with rights to configure DNS zones'  WHERE id= 12")
+        db.engine.execute(
+            "UPDATE system_settings SET label='cPanel access key'  WHERE id= 13")
+        db.engine.execute(
+            "UPDATE system_settings SET "
+            "placeholder='remote access key from cPanel'  WHERE id= 13")
 
     @classmethod
     def downgrade(cls, upd, with_testing, error):
         for setting_name in cls.NAMES:
             SystemSettings.query.filter_by(name=setting_name).delete()
+
+        db.engine.execute("UPDATE system_settings SET options='' where id= 10")
+        db.engine.execute("UPDATE system_settings SET value=''  WHERE id= 10")
+        db.engine.execute(
+            "UPDATE system_settings SET label='Select your DNS management system'"
+            "WHERE id= 10")
+        db.engine.execute(
+            "UPDATE system_settings SET label='cPanel URL for DNS management'"
+            "WHERE id= 11")
+        db.engine.execute(
+            "UPDATE system_settings SET "
+            "placeholder='Enter URL for cPanel which serve your DNS records'"
+            "WHERE id= 11")
+        db.engine.execute(
+            "UPDATE system_settings SET "
+            "label='cPanel user name for DNS management'  WHERE id= 12")
+        db.engine.execute(
+            "UPDATE system_settings SET "
+            "placeholder='Enter user for cPanel which serve your DNS records'"
+            "WHERE id= 12")
+        db.engine.execute(
+            "UPDATE system_settings SET "
+            "label='cPanel user token for DNS management'  WHERE id= 13")
+        db.engine.execute(
+            "UPDATE system_settings SET "
+            "placeholder='Enter token for cPanel which serve your DNS records'"
+            "WHERE id= 13")
 
 
 class _U182(_Update):
@@ -181,11 +243,11 @@ class _U182(_Update):
 
 
 updates = [
+    _U182,
     _U167Config,
     _U167Database,
     _U167NetworkPlugin,
     _U167Permissions,
-    _U182,
     _U167SystemSettings,
 ]
 

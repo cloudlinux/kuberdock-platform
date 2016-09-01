@@ -2,6 +2,7 @@
 
 from __future__ import print_function
 
+import errno
 import json
 import os
 import shutil
@@ -12,11 +13,12 @@ import tarfile
 import time
 import urlparse
 import zipfile
-from ConfigParser import ConfigParser
-from StringIO import StringIO
 from collections import OrderedDict
+from ConfigParser import ConfigParser
 from contextlib import contextmanager
+from StringIO import StringIO
 from tempfile import NamedTemporaryFile
+from urllib import urlopen
 
 import ipaddress
 import requests
@@ -420,6 +422,34 @@ class VolumeSpec(object):
         self.backup_url = backup_url
 
 
+class FileAdapter(requests.adapters.BaseAdapter):
+
+    def send(self, req, **kwargs):
+
+        resp = requests.Response()
+        try:
+            resp.raw = urlopen(req.url)
+            content_length = resp.raw.headers.get('content-length')
+            if content_length is not None:
+                resp.headers['Content-Length'] = content_length
+        except IOError as e:
+            if e.errno == errno.EACCES:
+                resp.status_code = requests.codes.forbidden
+            elif e.errno == errno.ENOENT:
+                resp.status_code = requests.codes.not_found
+            else:
+                resp.status_code = requests.codes.bad_request
+        except OSError:
+                resp.status_code = requests.codes.bad_request
+        else:
+            resp.status_code = requests.codes.ok
+
+        return resp
+
+    def close(self):
+        pass
+
+
 class VolumeManager(object):
     """Class that creates, restores from backup and deletes volumes."""
 
@@ -444,8 +474,13 @@ class VolumeManager(object):
                         x.strip('.') for x in extractor.supported_formats)
                 ))
 
+        requests_session = requests.session()
+        requests_session.mount('file://', FileAdapter())
+        requests_session.mount('ftp://', FileAdapter())
+
         try:
-            r = requests.get(volume_spec.backup_url, stream=True, verify=False)
+            r = requests_session.get(volume_spec.backup_url, stream=True,
+                                     verify=False)
             r.raise_for_status()
 
             with NamedTemporaryFile('w+b') as f:
@@ -459,11 +494,11 @@ class VolumeManager(object):
         except (requests.exceptions.RequestException, socket.timeout):
             raise VolumeRestoreException(
                 'Connection failure while downloading backup from {}'
-                    .format(volume_spec.backup_url))
+                .format(volume_spec.backup_url))
         except extractor.BadArchive:
             raise VolumeRestoreException(
                 'An error occurred while extracting archive got from {}'
-                    .format(volume_spec.backup_url))
+                .format(volume_spec.backup_url))
 
     def create(self, volume_spec):
         """

@@ -408,17 +408,20 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                         utils.notifyWindow('Persistent options must be set!');
                         return;
                     } else if (pd.pdSize > that.pod.pdSizeLimit){
-                        utils.notifyWindow('A persistent disk size isn\'t expected '
-                                           + 'to exceed ' + that.pod.pdSizeLimit + ' GB');
+                        utils.notifyWindow('A persistent disk size isn\'t expected ' +
+                                           'to exceed ' + that.pod.pdSizeLimit + ' GB');
                         return;
                     }
                 }
             }
 
             /* check CMD and ENTRYPOINT */
-            if (!this.model.get('command').length && !this.model.get('args').length
-                    && !this.model.originalImage.get('command').length
-                    && !this.model.originalImage.get('args').length){
+            if (!this.model.get('command')) this.model.set('command', []);
+            if (!this.model.get('args')) this.model.set('args', []);
+            var originalImage = this.model.originalImage;
+            if (!this.model.get('command').length && !this.model.get('args').length &&
+                    !(originalImage.get('command') && originalImage.get('command').length) &&
+                    !(originalImage.get('args') && originalImage.get('args').length)){
                 utils.notifyWindow('Please, specify value of the Command field.');
                 utils.scrollTo(this.ui.input_command);
                 return;

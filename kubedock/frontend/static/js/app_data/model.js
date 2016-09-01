@@ -147,6 +147,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         initialize: function(){
             this.on('change', this.resetID);
             this.resetID();
+            if (!this.get('hostPort'))
+                this.set('hostPort', this.get('containerPort'))
         },
         resetID: function(){
             // modelId works well for collections.get(ID), but it doesn't
@@ -164,7 +166,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             for (var i = 0; i < arguments.length; i++) {
                 for (var a = 0; a < this.models.length; a++) {
                     if (this.models[a].get('isPublic')) {
-                        if (this.models[a].get('containerPort') === arguments[i]) {
+                        if (this.models[a].get('hostPort') === arguments[i]) {
                             return true;
                         }
                     }

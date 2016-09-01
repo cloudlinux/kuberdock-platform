@@ -317,8 +317,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 show: true,
                 footer: {
                     buttonOk: function(){
-                        App.navigate('pods/' + podID + '/container/' + id
-                                        + '/general', {trigger: true});
+                        App.navigate('pods/' + podID + '/container/' +
+                                     id + '/general', {trigger: true});
                     },
                     buttonCancel: true,
                     buttonOkText: 'Yes, discard latest changes',
@@ -380,7 +380,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
             if (!portsCollection.publicPortsCheckVal(80, 443) && this.pod.get('domain')){
                 utils.notifyWindow('Support only ports 80 and 443 at pod port');
-                return false
+                return false;
             }
 
             // remove empty ports and volumeMounts
@@ -617,9 +617,9 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                         _.pick(newAttrs, 'containerPort', 'protocol')
                     )).without(that.model)[0];
                 if (dublicate) {
-                    utils.notifyWindow('Port ' + newAttrs.containerPort
-                                       + '/' + newAttrs.protocol
-                                       + ' already exists in this container.');
+                    utils.notifyWindow('Port ' + newAttrs.containerPort +
+                                       '/' + newAttrs.protocol +
+                                       ' already exists in this container.');
                     return true;
                 }
             };
@@ -733,7 +733,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         getPDModel: function(name){
-            name = name || (this.volume.persistentDisk||{}).pdName;
+            name = name || (this.volume.persistentDisk || {}).pdName;
             if (!name || !this.pod.persistentDrives) return;
             return this.pod.persistentDrives.findWhere({name: name});
         },
@@ -797,10 +797,10 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
             var conflicts = pd.conflictsWith(this.pod);
             if (conflicts.length){
-                utils.notifyWindow('Persistent Disk ' + name + ' conflicts with '
-                                   + conflicts.pluck('name').join(', ')
-                                   + '. All disks must be on the same node. '
-                                   + 'You need to eliminate this conflict to save the pod.');
+                utils.notifyWindow('Persistent Disk ' + name + ' conflicts with ' +
+                                    conflicts.pluck('name').join(', ') +
+                                    '. All disks must be on the same node. ' +
+                                    'You need to eliminate this conflict to save the pod.');
             }
 
             this.pod.persistentDrives.trigger('refreshSelects');
@@ -814,9 +814,9 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 this.ui.pdSize.addClass('error');
             } else if (size < 1 || this.pdSizeLimit !== undefined && size > this.pdSizeLimit) {
                 this.ui.pdSize.addClass('error');
-                utils.notifyWindow('Max size of persistent volume should be '
-                                   + 'more than zero and less than '
-                                   + this.pdSizeLimit + ' GB');
+                utils.notifyWindow('Max size of persistent volume should be ' +
+                                   'more than zero and less than ' +
+                                   this.pdSizeLimit + ' GB');
             } else {
                 this.ui.pdSize.removeClass('error');
                 this.getPDModel().set('size', size);
@@ -924,7 +924,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 liveSearchPlaceholder: 'Enter the name',
                 dropupAuto: false,
             });
-            this.ui.pdSelect.selectpicker('val', (this.volume.persistentDisk||{}).pdName);
+            this.ui.pdSelect.selectpicker('val', (this.volume.persistentDisk || {}).pdName);
         },
 
     });
@@ -1124,8 +1124,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 show: true,
                 footer: {
                     buttonOk: function(){
-                        App.navigate('pods/' + podID + '/container/' + id
-                                             + '/env', {trigger: true});
+                        App.navigate('pods/' + podID + '/container/' + id +
+                                     '/env', {trigger: true});
                     },
                     buttonCancel: true,
                     buttonOkText: 'Yes, discard latest changes',
@@ -1191,8 +1191,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 period: App.userPackage.get('period'),
                 price: this.model.price,
                 kubesLimit: this.kubesLimit,
-                showDelete: !this.model.getPod().editOf()  // it's a new pod or...
-                    || this.model.collection.length > 1,  // there is more then one container
+                showDelete: !this.model.getPod().editOf() ||  // it's a new pod or...
+                            this.model.collection.length > 1,  // there is more then one container
             };
         },
         onRender: function(){ this.ui.tooltip.tooltip(); },
@@ -1266,9 +1266,10 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 hasBilling       : this.hasBilling,
                 persistentDrives : _.chain(this.model.get('volumes'))
                     .map(function(vol){
-                        return vol.persistentDisk && vol.persistentDisk.pdName
-                            && this.model.persistentDrives.findWhere(
-                                {name: vol.persistentDisk.pdName});
+                        return vol.persistentDisk && vol.persistentDisk.pdName &&
+                               this.model.persistentDrives.findWhere(
+                                   {name: vol.persistentDisk.pdName}
+                               );
                     }, this).filter(_.identity).value(),
                 payg             : this.payg    // Pay-As-You-Go billing method
             };

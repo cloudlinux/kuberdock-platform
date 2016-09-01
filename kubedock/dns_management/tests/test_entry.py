@@ -90,12 +90,12 @@ class TestPlugin(TestCase):
         args = ['one', 'two', 'three']
         arg_value = 'qwerty'
         try:
-            plugin_module.args = args
+            plugin_module.ALLOWED_ARGS = args
             self.sys_settings_mock.get_by_name.return_value = arg_value
             kwargs = {item: arg_value for item in args}
             self.assertEqual(plugin.get_kwargs(), kwargs)
         finally:
-            plugin_module.args = []
+            plugin_module.ALLOWED_ARGS = []
         # check last call to get setting value (last parameter in args)
         self.sys_settings_mock.get_by_name.assert_called_with(
             entry.keys.KEY_PREFIX_DNS_MANAGEMENT + '_example_' + args[-1])

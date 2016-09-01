@@ -75,7 +75,7 @@ class _Plugin(object):
         plugin = self.get_plugin()
         if plugin is None:
             return None
-        args = plugin.args
+        args = plugin.ALLOWED_ARGS
         kwargs = {}
         for key in args:
             setting_name = u'dns_management_{0}_{1}'.format(self.name, key)

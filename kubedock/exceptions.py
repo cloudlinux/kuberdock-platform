@@ -140,6 +140,15 @@ class PredefinedAppExc(object):
 
     class InvalidTemplate(APIError):
         message_template = 'Invalid template structure'
+        # TODO: change type and don't replace message with schemaErrors
+        # for now clients expect this type, fix them first
+        type = 'ValidationError'
+
+        def __init__(self, *args, **kwargs):
+            super(PredefinedAppExc.InvalidTemplate, self).__init__(
+                *args, **kwargs)
+            if self.details.get('schemaErrors'):
+                self._message = self.details.get('schemaErrors')
 
     class NotPredefinedAppPod(APIError):
         message_template = 'Pod not created from predefined app'

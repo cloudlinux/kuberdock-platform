@@ -5,6 +5,7 @@ from ipaddress import ip_network
 from sqlalchemy import func
 
 from kubedock.billing.models import Kube, Package
+from kubedock.domains.models import BaseDomain
 from kubedock.predefined_apps.models import PredefinedApp
 from kubedock.rbac.models import Role
 from kubedock.settings import KUBERDOCK_INTERNAL_USER, AWS, CEPH
@@ -205,6 +206,11 @@ class V(cerberus.Validator):
             if Package.query.get(int(value)) is None:
                 self._error(field, ('Package with id "{0}" does not exist'
                                     .format(value)))
+
+    def _validate_domain_exists(self, exists, field, value):
+        if (exists and
+                BaseDomain.filter(BaseDomain.name == value).first() is None):
+            self._error(field, 'Domain "{0}" doesn\'t exists'.format(value))
 
 
 def check_int_id(id):

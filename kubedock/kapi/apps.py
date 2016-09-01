@@ -9,6 +9,7 @@ from numbers import Number
 from string import digits, lowercase
 from types import NoneType
 from kubedock.billing.models import Kube, Package
+from kubedock.domains.models import PodDomain
 from kubedock.predefined_apps.models import PredefinedApp as PredefinedAppModel
 from kubedock.exceptions import NotFound, PermissionDenied, PredefinedAppExc
 from kubedock.kapi.podcollection import PodCollection
@@ -453,6 +454,13 @@ class PredefinedApp(object):
         root = self._get_template_spec(new_config)
         kube_id = new_config['kuberdock']['appPackage']['kubeType']
         check_migratability(pod, kube_id)
+        domain = new_config['kuberdock']['appPackage'].get('domain')
+        pod_domain = PodDomain.query.filter(
+            PodDomain.pod_id == pod.id).first()
+        old_domain = pod_domain and pod_domain.base_domain.name
+        if domain != old_domain:
+            raise PredefinedAppExc.AppPackageChangeImpossible(details={
+                'message': 'public access type cannot be changed'})
         orig_config = pod.config
         orig_kube_id = pod.kube_id
         pod_config = json.loads(orig_config)
@@ -542,6 +550,8 @@ class PredefinedApp(object):
             for container in spec.get('containers', []):
                 for port in container.get('ports', []):
                     port['isPublic'] = False
+        if plan.get('domain'):
+            kuberdock['appPackage']['domain'] = plan.get('domain')
 
         if plan.get('packagePostDescription'):
             kuberdock['postDescription'] += \
@@ -558,7 +568,8 @@ class PredefinedApp(object):
             return
         plan['info'] = {'totalKubes': 0, 'totalPD': 0}
         plan['info']['publicIP'] = (plan.get('publicIP', True) and
-                                    self._has_public_ports())
+                                    self._has_public_ports() and
+                                    not plan.get('domain'))
         for pod in plan.get('pods', []):
             plan['info']['totalKubes'] += reduce(
                 lambda t, x: t + int(x['kubes']), pod['containers'], 0)
@@ -780,7 +791,8 @@ class PredefinedApp(object):
         if validate:
             if (len(plans) != 1 and
                     len([p for p in plans if p.get('recommended')]) != 1):
-                raise PredefinedAppExc.InvalidTemplate
+                raise PredefinedAppExc.InvalidTemplate(
+                    'Exactly one package must be "recommended"')
         return plans
 
     def _get_plan_by_name(self, name, index_only=False):
@@ -966,7 +978,8 @@ class PredefinedApp(object):
         validated = validator.validated(self._get_filled_template(),
                                         predefined_app_schema)
         if validator.errors:
-            raise PredefinedAppExc.InvalidTemplate
+            raise PredefinedAppExc.InvalidTemplate(
+                details={'schemaErrors': validator.errors})
         plans = self._get_plans(validated, validate=True)
         package = self._get_package(validated)
         available_kubes = set(kube.kube_id for kube in package.kubes)
@@ -1104,22 +1117,24 @@ def process_pod(pod, rc, service, template_id=None):
 
     spec_body = deepcopy(spec_body)
     kdSection = doc.get('kuberdock', {})
+    plan = kdSection.get('appPackage', {})
 
     new_pod = {
         'name': doc.get('metadata', {}).get('name', ''),
         'restartPolicy': spec_body.get('restartPolicy', "Always"),
         'replicas': replicas,
         'kube_type': kdSection.get(
-            'kubeType', kdSection.get(
-                'appPackage', {}).get('kubeType',
-                                      Kube.get_default_kube_type())),
+            'kubeType', plan.get('kubeType', Kube.get_default_kube_type())),
         'postDescription': kdSection.get('postDescription'),
         'kuberdock_template_id': kdSection.get('kuberdock_template_id',
                                                template_id),
-        'kuberdock_plan_name': kdSection.get('appPackage', {}).get('name'),
+        'kuberdock_plan_name': plan.get('name'),
         'kuberdock_resolve': kdSection.get('resolve') or spec_body.get(
             'resolve', []),
     }
+
+    if plan.get('domain'):
+        new_pod['domain'] = plan.get('domain')
 
     if 'containers' in spec_body:
         containers = spec_body['containers'] or []

@@ -695,7 +695,7 @@ def process_pod_states(data, app, live=True):
         process_pods_event(k8s_obj, app, event_time, live)
     r = requests.delete(ETCD_URL.format(key))
     if not r.ok:
-        current_app.logger.debug.warning("error while delete:{}".format(r.text))
+        current_app.logger.warning("error while delete:{}".format(r.text))
 
 
 listen_pods = listen_fabric(

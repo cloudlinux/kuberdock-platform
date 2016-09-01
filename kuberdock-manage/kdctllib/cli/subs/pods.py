@@ -7,10 +7,10 @@ from ..utils import (SimpleCommand, SimpleCommandWithIdNameArgs,
                      SimpleCommandWithIdNameOwnerArgs)
 
 
-@kdclick.group(help='Commands for pods management.',
-               available_for=(ADMIN, USER))
+@kdclick.group(available_for=(ADMIN, USER))
 @kdclick.pass_obj
 def pods(obj):
+    """Commands for pods management"""
     obj.executor = obj.kdctl.pods
 
 
@@ -32,6 +32,7 @@ def id_decorator(fn):
 @kdclick.option('--owner')
 @kdclick.pass_obj
 class List(SimpleCommand):
+    """List existing pods"""
     pass
 
 
@@ -40,6 +41,7 @@ class List(SimpleCommand):
 @kdclick.option('--owner')
 @kdclick.pass_obj
 class Get(SimpleCommandWithIdNameOwnerArgs):
+    """Get existing pod"""
     pass
 
 
@@ -48,6 +50,7 @@ class Get(SimpleCommandWithIdNameOwnerArgs):
 @kdclick.option('--owner')
 @kdclick.pass_obj
 class Create(SimpleCommand):
+    """Create new pod"""
     pass
 
 
@@ -58,6 +61,7 @@ class Create(SimpleCommand):
 # @kdclick.option('--owner')  # should be added in api/v2
 @kdclick.pass_obj
 class Update(SimpleCommandWithIdNameArgs):
+    """Update existing pod"""
     pass
 
 
@@ -66,6 +70,7 @@ class Update(SimpleCommandWithIdNameArgs):
 @kdclick.option('--owner')
 @kdclick.pass_obj
 class Delete(SimpleCommandWithIdNameOwnerArgs):
+    """Delete existing pod"""
     pass
 
 
@@ -81,6 +86,7 @@ pods.add_command(restore.pod)
 @pods.command(available_for=USER)
 @kdclick.pass_obj
 class List(SimpleCommand):
+    """List existing pods"""
     pass
 
 
@@ -88,6 +94,7 @@ class List(SimpleCommand):
 @id_decorator
 @kdclick.pass_obj
 class Get(SimpleCommandWithIdNameArgs):
+    """Get existing pod"""
     pass
 
 
@@ -95,6 +102,7 @@ class Get(SimpleCommandWithIdNameArgs):
 @kdclick.data_argument('data')
 @kdclick.pass_obj
 class Create(SimpleCommand):
+    """Create new pod"""
     pass
 
 
@@ -105,6 +113,7 @@ class Create(SimpleCommand):
 # @kdclick.option('--owner')  # should be added in api/v2
 @kdclick.pass_obj
 class Update(SimpleCommandWithIdNameArgs):
+    """Update existing pod"""
     pass
 
 
@@ -112,4 +121,5 @@ class Update(SimpleCommandWithIdNameArgs):
 @id_decorator
 @kdclick.pass_obj
 class Delete(SimpleCommandWithIdNameArgs):
+    """Delete existing pod"""
     pass

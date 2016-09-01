@@ -29,15 +29,14 @@ class Group(kdclick.Group):
 
 
 @kdclick.group(help=settings.app_description, cls=Group,
-               context_settings={
-                   'help_option_names': ['-h', '--help']
-               })
+               context_settings={'help_option_names': ['-h', '--help']})
 @kdclick.option('-c', '--config-dir',
                 type=kdclick.Path(dir_okay=True, writable=True,
                                   resolve_path=True, allow_dash=True),
                 help='Config directory. Default is %s'
                      % settings.working_directory)
-@kdclick.option('-d', '--debug', is_flag=True, help='Turn on curl logging.')
+@kdclick.option('-d', '--debug', is_flag=True,
+                help='Log all HTTP requests as cURL')
 @kdclick.option('-j', '--json-only', is_flag=True,
                 help='Display json data only, no any additional prompts')
 @kdclick.pass_context
@@ -62,30 +61,35 @@ def print_result(obj, result, **params):
         obj.io.out_json(result)
 
 
-@main.command(help='Login to remote server.', available_for=ALL)
-@kdclick.option('-u', '--username', prompt=True)
-@kdclick.option('-p', '--password', prompt=True, hide_input=True)
+@main.command(available_for=ALL)
+@kdclick.option('-u', '--username', prompt=True, help='Kuberdock user name')
+@kdclick.option('-p', '--password', prompt=True, hide_input=True,
+                help='Kuberdock user password')
 @kdclick.pass_obj
 def login(obj, username, password):
+    """Login to remote server"""
     obj.kdctl.login(username, password)
 
 
-@main.group(help='Commands for config management.', available_for=ALL)
+@main.group(available_for=ALL)
 def config():
+    """Commands for config management"""
     pass
 
 
-@config.command(help='Show current config.', available_for=ALL)
+@config.command(available_for=ALL)
 @kdclick.pass_obj
 def show(obj):
+    """Show current config"""
     return obj.kdctl.config
 
 
-@config.command(help='Set config key.', available_for=ALL)
+@config.command(available_for=ALL)
 @kdclick.argument('key')
 @kdclick.argument('value')
 @kdclick.pass_obj
 def set(obj, key, value):
+    """Set config value"""
     obj.kdctl.update_config(**{key: value})
     return obj.kdctl.config
 

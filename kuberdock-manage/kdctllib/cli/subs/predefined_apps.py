@@ -5,11 +5,10 @@ from ..kdclick.access import ADMIN, USER
 from ..utils import SimpleCommand, SimpleCommandWithIdNameArgs
 
 
-@kdclick.group('predefined-apps',
-               help='Commands for predefined applications management.',
-               available_for=(ADMIN, USER))
+@kdclick.group('predefined-apps', available_for=(ADMIN, USER))
 @kdclick.pass_obj
 def pa(obj):
+    """Commands for predefined applications management"""
     obj.executor = obj.kdctl.predefined_apps
 
 
@@ -28,6 +27,7 @@ def id_decorator(fn):
 @kdclick.option('--file-only', is_flag=True)
 @kdclick.pass_obj
 class List(SimpleCommand):
+    """List existing predefined applications"""
     pass
 
 
@@ -36,6 +36,7 @@ class List(SimpleCommand):
 @kdclick.option('--file-only', is_flag=True)
 @kdclick.pass_obj
 class Get(SimpleCommandWithIdNameArgs):
+    """Get existing predefined application"""
     pass
 
 
@@ -47,6 +48,7 @@ class Get(SimpleCommandWithIdNameArgs):
                 help='Provide if validation is needed.')
 @kdclick.pass_obj
 class Create(SimpleCommand):
+    """Create new predefined application"""
     pass
 
 
@@ -57,6 +59,7 @@ class Create(SimpleCommand):
                 help='Provide if validation is needed.')
 @kdclick.pass_obj
 class Update(SimpleCommandWithIdNameArgs):
+    """Update existing predefined application"""
     pass
 
 
@@ -64,6 +67,7 @@ class Update(SimpleCommandWithIdNameArgs):
 @id_decorator
 @kdclick.pass_obj
 class Delete(SimpleCommandWithIdNameArgs):
+    """Delete existing predefined application"""
     pass
 
 
@@ -71,6 +75,7 @@ class Delete(SimpleCommandWithIdNameArgs):
 @kdclick.data_argument('template', type=kdclick.types.text)
 @kdclick.pass_obj
 class ValidateTemplate(SimpleCommand):
+    """Validate template of predefined application"""
     corresponding_method = 'validate_template'
 
 
@@ -80,4 +85,5 @@ class ValidateTemplate(SimpleCommand):
 @kdclick.data_argument('data')
 @kdclick.pass_obj
 class CreatePod(SimpleCommand):
+    """Create pod from template"""
     corresponding_method = 'create_pod'

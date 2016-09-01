@@ -59,7 +59,8 @@ def data_argument(*args, **kwargs):
         kwargs2 = {
             'type': click.Path(exists=True, file_okay=True, dir_okay=False),
             'expose_value': False,
-            'help': 'Input file',
+            'help': 'File name. Use it to pass %s via file'
+                    % target_param_name,
             'callback': c2
         }
         d2 = click.option('-f', '--file', **kwargs2)

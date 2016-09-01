@@ -6,10 +6,10 @@ from ..utils import (SimpleCommand, SimpleCommandWithIdNameArgs,
                      SimpleCommandWithIdNameOwnerArgs)
 
 
-@kdclick.group(help='Commands for persistent volumes management.',
-               available_for=(ADMIN, USER))
+@kdclick.group(available_for=(ADMIN, USER))
 @kdclick.pass_obj
 def pstorage(obj):
+    """Commands for persistent volumes management"""
     obj.executor = obj.kdctl.pstorage
 
 
@@ -31,6 +31,7 @@ def id_decorator(fn):
 @kdclick.option('--owner')
 @kdclick.pass_obj
 class List(SimpleCommand):
+    """List existing persistent volumes"""
     pass
 
 
@@ -39,6 +40,7 @@ class List(SimpleCommand):
 @kdclick.option('--owner')
 @kdclick.pass_obj
 class Get(SimpleCommandWithIdNameOwnerArgs):
+    """Get existing persistent volume"""
     pass
 
 
@@ -47,6 +49,7 @@ class Get(SimpleCommandWithIdNameOwnerArgs):
 @kdclick.option('--owner')
 @kdclick.pass_obj
 class Create(SimpleCommand):
+    """Create new persistent volume"""
     pass
 
 
@@ -55,6 +58,7 @@ class Create(SimpleCommand):
 @kdclick.option('--owner')
 @kdclick.pass_obj
 class Delete(SimpleCommandWithIdNameOwnerArgs):
+    """Delete existing persistent volume"""
     pass
 
 
@@ -64,6 +68,7 @@ class Delete(SimpleCommandWithIdNameOwnerArgs):
 @pstorage.command(available_for=USER)
 @kdclick.pass_obj
 class List(SimpleCommand):
+    """List existing persistent volumes"""
     pass
 
 
@@ -71,6 +76,7 @@ class List(SimpleCommand):
 @id_decorator
 @kdclick.pass_obj
 class Get(SimpleCommandWithIdNameArgs):
+    """Get existing persistent volume"""
     pass
 
 
@@ -78,6 +84,7 @@ class Get(SimpleCommandWithIdNameArgs):
 @kdclick.data_argument('data')
 @kdclick.pass_obj
 class Create(SimpleCommand):
+    """Create new persistent volume"""
     pass
 
 
@@ -85,4 +92,5 @@ class Create(SimpleCommand):
 @id_decorator
 @kdclick.pass_obj
 class Delete(SimpleCommandWithIdNameArgs):
+    """Delete existing persistent volume"""
     pass

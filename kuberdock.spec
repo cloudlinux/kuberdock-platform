@@ -1,7 +1,7 @@
 Version: 1.3.0
 Name: kuberdock
 Summary: KuberDock
-Release: 6%{?dist}.cloudlinux
+Release: 7%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -650,7 +650,7 @@ fi
 - AC-1704: added processing for failed pods start when there are no resources
 
 * Wed Dec 16 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Igor Savenko <bliss@cloudlinux.com> 0.4-13.3
-- AC-1568: image search must accept any symbols; small improvements    
+- AC-1568: image search must accept any symbols; small improvements
 - Regex-validation should have human-readable messages.
 - AC-1773 Allow multistrings in pre-apps
 - AC-653: SSE; small refactoring; bugfix
@@ -820,7 +820,7 @@ fi
 - AC-1437: fixed null timezone error on user self-edit
 - undelete user api endpoint
 - Bug fix and improvement for upgrade system to do all db upgrades at once
-- 
+-
 
 * Fri Nov 06 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com> 0.4-6.2
 - added logs for terminated containers
@@ -853,7 +853,7 @@ fi
 - Fixed kuberdock.spec not to delete .ini at upgrade case.
 - AC-1396: added validation for kube type in predefined app creation
 - AC-1398: Fixed butons on env step if window has scroll
-- 
+-
 
 * Tue Nov 03 2015 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Aleksandr Kuznetsov <akuznetsov@cloudlinux.com>, Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Alex Tishin <atishin@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com>, Aborilov Pavel <paborilov@cloudlinux.com>, Michael Bagrov <mbagrov@cloudlinux.com>  0.4-4
 - AC-1269 Fixed error message
@@ -1325,7 +1325,7 @@ fi
 - Added reenabling feature to restart service helpers
 - AC-660: mount point problem
 - AC-622 Display actual kube data on single pod page
-- 
+-
 
 * Wed Jul 15 2015 Stanislav Sergiienko <ssergiienko@cloudlinux.com>, Oleg Bednarskiy <obednarsky@cloudlinux.com> 0.2-14
 - Added explicit docker installation on node
@@ -1685,7 +1685,7 @@ fi
 - AC-217 (SSH-key generation)
 - kube-public-ip fix, show count of kubes of pod,
   added price and kubes into validation scheme (added new type strnum)
-   
+
 
 * Thu Apr 16 2015 Oleg Bednarskiy <obednarsky@cloudlinux.com>, Andrey Lukyanov <alukyanov@cloudlinux.com> 0.1-27
 - Merge "AC-202: Default page for admin and user roles"
@@ -1696,4 +1696,3 @@ fi
 
 * Wed Apr 15 2015 Igor Savenko <bliss@cloudlinux.com> 0.1-26
 - First release
-

@@ -13,13 +13,19 @@ def nodes(ctx):
 
 def id_decorator(fn):
     @kdclick.option('--id', help='Id of required node')
-    @kdclick.option('--name', help='Use it to specify name instead of id')
-    @kdclick.required_exactly_one_of('id', 'name')
+    @kdclick.option('--hostname',
+                    help='Use it to specify hostname instead of id')
+    @kdclick.required_exactly_one_of('id', 'hostname')
     @wraps(fn)
     def wrapper(*args, **kwargs):
         return fn(*args, **kwargs)
 
     return wrapper
+
+
+class NodesCommandWithIdNameArgs(SimpleCommandWithIdNameArgs):
+    name_field = 'hostname'
+    name_kwarg = 'hostname'
 
 
 @nodes.command()
@@ -31,7 +37,7 @@ class List(SimpleCommand):
 @nodes.command()
 @id_decorator
 @kdclick.pass_obj
-class Get(SimpleCommandWithIdNameArgs):
+class Get(NodesCommandWithIdNameArgs):
     pass
 
 
@@ -46,14 +52,14 @@ class Create(SimpleCommand):
 @id_decorator
 @kdclick.data_argument('data')
 @kdclick.pass_obj
-class Update(SimpleCommandWithIdNameArgs):
+class Update(NodesCommandWithIdNameArgs):
     pass
 
 
 @nodes.command()
 @id_decorator
 @kdclick.pass_obj
-class Delete(SimpleCommandWithIdNameArgs):
+class Delete(NodesCommandWithIdNameArgs):
     pass
 
 

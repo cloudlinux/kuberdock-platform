@@ -55,3 +55,17 @@ class PredefinedAppsClient(ClientBase):
             self._url(endpoint),
             json=json
         )
+
+    def create_pod(self, template_id, plan_id, data):
+        # redirect to yaml_api
+        return self._YamlClient(self.client) \
+            .create_pod(template_id, plan_id, data)
+
+    class _YamlClient(ClientBase):
+        endpoint = '/yamlapi'
+
+        def create_pod(self, template_id, plan_id, data):
+            return self.transport.post(
+                self._url('create', template_id, plan_id),
+                json=data
+            )

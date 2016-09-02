@@ -1054,6 +1054,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         resetFielsdsValue: function(){
             this.model.set('env', _.map(this.model.originalImage.get('env'), _.clone));
+            this.render();
         },
     });
 

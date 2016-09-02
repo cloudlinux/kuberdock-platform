@@ -11,7 +11,7 @@ import os
 import argparse
 import subprocess
 import logging
-import zipfile
+import tarfile
 
 logger = logging.getLogger("kd_master_backup")
 logger.setLevel(logging.INFO)
@@ -85,18 +85,17 @@ def do_node_backup(backup_dir, callback, skip_errors, **kwargs):
             result_dir = os.path.join(dst, user_id)
             if not os.path.exists(result_dir):
                 os.makedirs(result_dir)
-            result = os.path.join(result_dir, "{0}.zip".format(volume_id))
+            result = os.path.join(result_dir, "{0}.tar.gz".format(volume_id))
             tmp_result = result + '.incomplete'
             logger.debug({"src": STORAGE_LOCATION, "user": user_id,
                           "volume_id": volume_id})
             logger.debug({"dst": result})
 
-            with zipfile.ZipFile(tmp_result, 'w',
-                                 zipfile.ZIP_DEFLATED) as zf:
+            with tarfile.open(tmp_result, "w:gz") as tgzf:
                 for fn in iterate_src(volume_dir):
                     try:
                         logger.debug([fn, os.path.relpath(fn, volume_dir)])
-                        zf.write(fn, os.path.relpath(fn, volume_dir))
+                        tgzf.add(fn, arcname=os.path.relpath(fn, volume_dir))
                     except (IOError, OSError) as err:
                         if not skip_errors:
                             if os.path.exists(tmp_result):
@@ -104,6 +103,7 @@ def do_node_backup(backup_dir, callback, skip_errors, **kwargs):
                             raise
                         logger.warning("File `{0}` backup skipped due to "
                                        "error `{1}`. Skipped".format(fn, err))
+
             os.rename(tmp_result, result)
             logger.info('Backup created: {0}'.format(result))
     if callback:

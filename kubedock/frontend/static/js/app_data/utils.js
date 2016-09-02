@@ -16,8 +16,6 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         modalDialog.css('margin-top', ( $(window).height() / 2 - 140 ));
         if (options.title) modal.find('.modal-title').html(options.title);
         if (options.body) modal.find('.modal-body').html(options.body);
-        if (options.large) modal.addClass('bs-example-modal-lg');
-        if (options.small) modal.addClass('bs-example-modal-sm');
         if (options.show) modal.modal('show');
         if (options.footer){
             modal.find('.modal-footer').empty();
@@ -25,7 +23,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
             if (options.type === 'delete'){
                 buttonText = 'Delete';
             } else if (options.type === 'saveAnyway'){
-                buttonText = 'save anyway';
+                buttonText = 'Save Anyway';
             } else if ( options.type === 'deleteAnyway'){
                 buttonText = 'Delete Anyway';
             } else {
@@ -88,13 +86,13 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
                 else if (data.status === 502) error = 'Server is unavailable';
                 else if (data.status === 500) error = 'Internal server error';
                 else error = data.statusText;
-                msg = 'It seems like something goes wrong (' + error + '). '
-                    + 'Reload page, try again later, or contact support if '
-                    + 'problem appears again.';
+                msg = 'It seems like something goes wrong (' + error + '). ' +
+                      'Reload page, try again later, or contact support if ' +
+                      'problem appears again.';
             }
         } else {
-            msg = typeof data.responseJSON.data == 'string' ? data.responseJSON.data :
-                JSON.stringify(data.responseJSON.data);
+            msg = typeof data.responseJSON.data == 'string' ? data.responseJSON.data
+                : JSON.stringify(data.responseJSON.data);
             if (!type)
                 type = data.responseJSON.status === 'ok' ? 'success' : 'error';
         }
@@ -121,6 +119,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
             $.notify({message: msg}, {className: type});
         }
     };
+
     utils.notifyList = {};  // Notify messages counter
     $.notify.defaults({
         autoHide: true,
@@ -245,8 +244,11 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
                 pars.splice(i, 1);
             }
         }
-        return urlParts[0] + (pars.length > 0 ? '?' + pars.join('&') : "")
-            + '#' + anchor;
+        var result = urlParts[0] + (pars.length > 0 ? '?' + pars.join('&') : "");
+        if (anchor){
+            result += '#' + anchor;
+        }
+        return result;
     };
 
     utils.deepClone = function(obj) {
@@ -264,7 +266,6 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
         var link = text,
             $txa = $('<textarea />', {val: link, css: {position: 'fixed'}})
                 .appendTo("body").select();
-
         if (document.execCommand('copy')){ // CH, FF, Edge, IE
             utils.notifyWindow(successMessage, messageState ? messageState : 'success');
         } else {

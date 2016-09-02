@@ -1,4 +1,7 @@
 define(['app_data/tests/specs/models',
-        'app_data/tests/specs/views'], function(){
-    console.log('all tests loaded');
+        'app_data/tests/specs/views',
+        'app_data/tests/specs/utils'
+
+], function(){
+
 });

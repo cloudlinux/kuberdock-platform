@@ -2,17 +2,18 @@ import json
 import os
 
 from ... import kdclick
+from ...kdclick.access import ADMIN
 from ...utils import file_utils
 
 
-@kdclick.command()
+@kdclick.command(available_for=ADMIN)
 @kdclick.argument('pod-id')
 @kdclick.pass_obj
 def dump(obj, **params):
     return obj.executor.dump(**params)
 
 
-@kdclick.command('batch-dump')
+@kdclick.command('batch-dump', available_for=ADMIN)
 @kdclick.option('--owner', required=False,
                 help='If specified, only pods of this user will be dumped')
 @kdclick.option('--target-dir', required=False,

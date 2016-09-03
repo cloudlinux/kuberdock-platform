@@ -9,7 +9,7 @@ from websocket import (create_connection, WebSocketException,
                        WebSocketConnectionClosedException)
 
 from flask import current_app
-from .core import ConnectionPool, ssh_connect
+from .core import ConnectionPool, ssh_connect, db
 from .billing.models import Kube
 from .nodes.models import Node
 from .pods.models import Pod, PersistentDisk
@@ -18,7 +18,8 @@ from .settings import KUBERDOCK_INTERNAL_USER
 from .utils import (get_api_url, unregistered_pod_warning,
                     send_event_to_role, send_event_to_user,
                     pod_without_id_warning, k8s_json_object_hook,
-                    send_pod_status_update, POD_STATUSES, nested_dict_utils)
+                    send_pod_status_update, POD_STATUSES, nested_dict_utils,
+                    session_scope)
 from .kapi.usage import update_states
 from .kapi.pstorage import get_storage_class
 from .kapi.podcollection import PodCollection, set_public_address
@@ -468,24 +469,24 @@ def listen_fabric(watch_url, list_url, func, k8s_json_object_hook=None):
     def result(app):
         retry = 0
         last_reconnect = datetime.fromtimestamp(0)
-        while True:
-            try:
-                with app.app_context():
+        with app.app_context():
+            while True:
+                try:
                     current_app.logger.debug(
                         'START WATCH {0} == pid: {1}'.format(
                             fn_name, os.getpid()))
                     redis = ConnectionPool.get_connection()
-                last_saved = redis.get(redis_key)
-                try:
-                    if not last_saved:
-                        last_saved = prelist_version(list_url)
-                    ws = create_connection(watch_url + '&resourceVersion={0}'
-                                           .format(last_saved))
-                    # Only after connection to ensure last_saved was correct
-                    # before save it to redis
-                    redis.set(redis_key, last_saved)
-                except (socket_error, WebSocketException) as e:
-                    with app.app_context():
+                    last_saved = redis.get(redis_key)
+                    try:
+                        if not last_saved:
+                            last_saved = prelist_version(list_url)
+                        ws = create_connection(watch_url +
+                                               '&resourceVersion={0}'
+                                               .format(last_saved))
+                        # Only after connection to ensure last_saved was correct
+                        # before save it to redis
+                        redis.set(redis_key, last_saved)
+                    except (socket_error, WebSocketException) as e:
                         now = datetime.now()
                         logger = current_app.logger.warning
                         if (now - last_reconnect).total_seconds() > ERROR_TIMEOUT:
@@ -494,47 +495,48 @@ def listen_fabric(watch_url, list_url, func, k8s_json_object_hook=None):
                         logger("WebSocker error()".format(fn_name),
                                exc_info=True)
 
-                    gevent.sleep(0.1)
-                    continue
-                while True:
-                    content = ws.recv()
-                    data = json.loads(content,
-                                      object_hook=k8s_json_object_hook)
-                    if data['type'].lower() == 'error' and \
-                       '401' in data['object']['message']:
-                        # Rewind to earliest possible
-                        new_version = str(int(prelist_version(list_url)) -
-                                          MAX_ETCD_VERSIONS)
-                        redis.set(redis_key, new_version)
-                        break
-                    data = filter_event(data, app)
-                    if not data:
+                        gevent.sleep(0.1)
                         continue
-                    evt_version = data['object']['metadata']['resourceVersion']
-                    last_saved = redis.get(redis_key)
-                    if int(evt_version) > int(last_saved or '0'):
-                        if retry < MAX_ATTEMPTS:
-                            func(data, app)
-                        else:
-                            message = "Problems in the listeners module have\
-                                been encountered. Please contact KuberDock\
-                                Support (see Settings, the License page)"
-                            with app.app_context():
+                    while True:
+                        content = ws.recv()
+                        data = json.loads(content,
+                                          object_hook=k8s_json_object_hook)
+                        if data['type'].lower() == 'error' and \
+                           '401' in data['object']['message']:
+                            # Rewind to earliest possible
+                            new_version = str(int(prelist_version(list_url)) -
+                                              MAX_ETCD_VERSIONS)
+                            redis.set(redis_key, new_version)
+                            break
+                        data = filter_event(data, app)
+                        if not data:
+                            continue
+                        evt_version = data['object']['metadata']['resourceVersion']
+                        last_saved = redis.get(redis_key)
+                        if int(evt_version) > int(last_saved or '0'):
+                            if retry < MAX_ATTEMPTS:
+                                # Because listeners aren't managed by flask we
+                                # have to do all transaction management manually
+                                with session_scope(db.session):
+                                    func(data, app)
+                            else:
+                                message = "Problems in the listeners module have\
+                                    been encountered. Please contact KuberDock\
+                                    Support (see Settings, the License page)"
                                 send_event_to_role('notify:error',
                                                    {'message': message},
                                                    'Admin')
                                 current_app.logger.error(
                                     'skip event {}'.format(data), exc_info=True)
 
-                        redis.set(redis_key, evt_version)
-                    retry = 0
-            except KeyboardInterrupt:
-                break
-            except Exception as e:
-                retry += 1
-                if not (isinstance(e, WebSocketConnectionClosedException) and
-                        e.message == 'Connection is already closed.'):
-                    with app.app_context():
+                            redis.set(redis_key, evt_version)
+                        retry = 0
+                except KeyboardInterrupt:
+                    break
+                except Exception as e:
+                    retry += 1
+                    if not (isinstance(e, WebSocketConnectionClosedException)
+                            and e.message == 'Connection is already closed.'):
                         now = datetime.now()
                         logger = current_app.logger.warning
                         if (now - last_reconnect).total_seconds() > ERROR_TIMEOUT:
@@ -542,7 +544,7 @@ def listen_fabric(watch_url, list_url, func, k8s_json_object_hook=None):
                             logger = current_app.logger.error
                         logger('restarting listen: {1}' .format(fn_name),
                                exc_info=True)
-                gevent.sleep(0.2)
+                    gevent.sleep(0.2)
     return result
 
 
@@ -579,7 +581,10 @@ def listen_fabric_etcd(url, func, list_func=None):
                         index = 0
                         continue
                     if retry < MAX_ATTEMPTS:
-                        func(data, app)
+                        # Because listeners aren't managed by flask we
+                        # have to do all transaction management manually
+                        with session_scope(db.session):
+                            func(data, app)
                     else:
                         message = "Problems in the listeners module have been\
                             encountered. Please contact KuberDock Support\

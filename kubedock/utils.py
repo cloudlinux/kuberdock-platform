@@ -1050,3 +1050,23 @@ def domainize(input_str):
     # remove any symbols except ASCII digits and lowercase letters
     str_ = re.sub('[^0-9a-z]', '', str_)
     return str_
+
+
+@contextmanager
+def session_scope(session):
+    """
+    Provide a transactional scope around a series of operations.
+    (Taken from http://docs.sqlalchemy.org/en/latest/orm/session_basics.html)
+    WARNING: this implementation doesn't create new session, but reuses existing
+    like:
+        with session_scope(db.session):
+            ...
+    """
+    try:
+        yield
+        session.commit()
+    except:
+        session.rollback()
+        raise
+    finally:
+        session.close()

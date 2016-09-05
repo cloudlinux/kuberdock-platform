@@ -32,6 +32,7 @@ DATABASES = ('kuberdock', )
 NICENESS = 19
 ETCD_DATA = '/var/lib/etcd/default.etcd/member/'
 KNOWN_TOKENS = '/etc/kubernetes/known_tokens.csv'
+NODE_CONFIGFILE = '/etc/kubernetes/configfile_for_nodes'
 SSH_KEY = '/var/lib/nginx/.ssh/id_rsa'
 ETCD_PKI = '/etc/pki/etcd/'
 LICENSE = '/var/opt/kuberdock/.license'
@@ -111,7 +112,7 @@ class BackupResource(object):
         pass
 
     @abc.abstractmethod
-    def restore(cls, zf):
+    def restore(cls, zip_archive):
         pass
 
 
@@ -128,13 +129,13 @@ class PostgresResource(BackupResource):
         return result
 
     @classmethod
-    def restore(cls, zf):
+    def restore(cls, zip_archive):
         fd, src = tempfile.mkstemp()
         try:
             uid = pwd.getpwnam("postgres").pw_uid
             os.fchown(fd, uid, -1)
             with os.fdopen(fd, 'w') as tmp:
-                shutil.copyfileobj(zf.open('postgresql.backup'), tmp)
+                shutil.copyfileobj(zip_archive.open('postgresql.backup'), tmp)
                 tmp.seek(0)
                 pg_restore(src)
         finally:
@@ -160,11 +161,11 @@ class EtcdResource(BackupResource):
         return result
 
     @classmethod
-    def restore(cls, zf):
+    def restore(cls, zip_archive):
         src = tempfile.mkdtemp()
         try:
-            zf.extractall(src, filter(lambda x: x.startswith('etcd'),
-                          zf.namelist()))
+            zip_archive.extractall(src, filter(lambda x: x.startswith('etcd'),
+                                   zip_archive.namelist()))
 
             pki_src = os.path.join(src, 'etcd_pki')
             for fn in os.listdir(pki_src):
@@ -199,12 +200,17 @@ class KubeTokenResource(BackupResource):
     @classmethod
     def backup(cls, dst):
         shutil.copy(KNOWN_TOKENS, dst)
+        shutil.copy(NODE_CONFIGFILE, dst)
+
         return os.path.join(dst, 'known_tokens.csv')
 
     @classmethod
-    def restore(cls, zf):
+    def restore(cls, zip_archive):
         with open(KNOWN_TOKENS, 'w') as tmp:
-            shutil.copyfileobj(zf.open('known_tokens.csv'), tmp)
+            shutil.copyfileobj(zip_archive.open('known_tokens.csv'), tmp)
+
+        with open(NODE_CONFIGFILE, 'w') as tmp:
+            shutil.copyfileobj(zip_archive.open('configfile_for_nodes'), tmp)
 
 
 class SSHKeysResource(BackupResource):
@@ -223,11 +229,11 @@ class SSHKeysResource(BackupResource):
         return result
 
     @classmethod
-    def restore(cls, zf):
+    def restore(cls, zip_archive):
         with open(SSH_KEY, 'w') as tmp:
-            shutil.copyfileobj(zf.open('id_rsa'), tmp)
+            shutil.copyfileobj(zip_archive.open('id_rsa'), tmp)
         with open(SSH_KEY + '.pub', 'w') as tmp:
-            shutil.copyfileobj(zf.open('id_rsa.pub'), tmp)
+            shutil.copyfileobj(zip_archive.open('id_rsa.pub'), tmp)
         return tmp
 
 
@@ -246,7 +252,7 @@ class EtcdCertResource(BackupResource):
         return result
 
     @classmethod
-    def restore(cls, zf):
+    def restore(cls, zip_archive):
         pass
 
 
@@ -259,10 +265,10 @@ class LicenseResource(BackupResource):
             return os.path.join(dst, '.license')
 
     @classmethod
-    def restore(cls, zf):
-        if '.license' in zf.namelist():
+    def restore(cls, zip_archive):
+        if '.license' in zip_archive.namelist():
             with open(LICENSE, 'w') as tmp:
-                shutil.copyfileobj(zf.open('.license'), tmp)
+                shutil.copyfileobj(zip_archive.open('.license'), tmp)
 
 
 class SharedNginxConfigResource(BackupResource):
@@ -281,11 +287,11 @@ class SharedNginxConfigResource(BackupResource):
         return result
 
     @classmethod
-    def restore(cls, zf):
+    def restore(cls, zip_archive):
         src = tempfile.mkdtemp()
         try:
-            zf.extractall(src, filter(lambda x: x.startswith('nginx'),
-                          zf.namelist()))
+            zip_archive.extractall(src, filter(lambda x: x.startswith('nginx'),
+                                   zip_archive.namelist()))
             pki_src = os.path.join(src, 'nginx_config')
             for fn in os.listdir(pki_src):
                 shutil.copy(os.path.join(pki_src, fn), cls.config_src)
@@ -342,10 +348,10 @@ def do_restore(backup_file, skip_errors, **kwargs):
 
     subprocess.check_call(["systemctl", "restart", "postgresql"])
     subprocess.check_call(["systemctl", "stop", "etcd", "kube-apiserver"])
-    with zipfile.ZipFile(backup_file, 'r') as zf:
+    with zipfile.ZipFile(backup_file, 'r') as zip_archive:
         for res in restore_chain:
             try:
-                subresult = res.restore(zf)
+                subresult = res.restore(zip_archive)
                 logger.info("File restored: {0} ({1})".format(subresult, res))
             except subprocess.CalledProcessError as err:
                 logger.error("%s restore error: %s" % (res, err))

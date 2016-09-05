@@ -49,7 +49,7 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         print_msg('{} -> {}\n'.format(pipeline_name, msg), color)
 
     def prettify_exception(exc):
-        return '{}: {}'.format(exc.__class__.__namexc__, str(exc))
+        return '{}: {}'.format(exc.__class__.__name__, str(exc))
 
     try:
         pipeline = Pipeline.from_name(pipeline_name)

@@ -1,13 +1,16 @@
+# coding=utf-8
 """Tests for helper.py classes"""
 import os
 import unittest
-from tempfile import NamedTemporaryFile
 from StringIO import StringIO
+from tempfile import NamedTemporaryFile
 
 import mock
+import pytest
 import responses
-from kubecli import helper
-from kubecli.container import container
+
+from .. import helper
+from ..container import container
 
 TEST_URL = 'http://localhost'
 TEST_USER = 'user1'
@@ -120,9 +123,8 @@ class TestParseConfig(unittest.TestCase):
                      "password = TrialUser"
 
     def setUp(self):
-        with NamedTemporaryFile('w', delete=False) as valid,  \
+        with NamedTemporaryFile('w', delete=False) as valid, \
                 NamedTemporaryFile('w', delete=False) as invalid:
-
             valid.write(self.VALID_CONFIG)
             invalid.write(self.INVALID_CONFIG)
             self.invalid_path, self.valid_path = invalid.name, valid.name
@@ -170,6 +172,34 @@ class TestEchoDecorator(unittest.TestCase):
         k = container.KuberDock(json=False)
         k.set()
         self.assertEqual('', _print.getvalue())
+
+
+@pytest.fixture()
+def print_out():
+    return helper.PrintOut(wants_header=True)
+
+
+class TestUnicodePrintOut(object):
+    @pytest.mark.parametrize('s', [
+        'Hello world',
+        'Привет мир',
+        u'Привет мир',
+        ['Привет мир'],
+        [u'Привет мир'],
+        {'Бугага': 'Привет мир'},
+        {u'Бугага': u'Привет мир'},
+    ])
+    def test_show(self, s, print_out):
+        print_out.show(s)
+
+    @pytest.mark.parametrize('s', [
+        [
+            {'name': 'Привет мир'},
+            {'name': u'Привет мир'},
+        ]
+    ])
+    def test_show_list(self, s, print_out):
+        print_out.show_list(s)
 
 
 if __name__ == '__main__':

@@ -9,6 +9,8 @@ import subprocess
 import warnings
 from pipes import quote
 
+import click
+
 from .. import exceptions
 from ..api_common import (PODAPI_PATH, AUTH_TOKEN_PATH, PSTORAGE_PATH,
                           IMAGES_PATH, PRICING_PATH, POD_CREATE_API_PATH,
@@ -396,8 +398,8 @@ class KubeCtl(object):
                                               stdout=open('/dev/null', 'a'),
                                               stderr=open('/dev/null', 'a'))
                     except subprocess.CalledProcessError:
-                        print "Could not delete rule for uid {0} ({1})".format(
-                            self.uid, fields[5])
+                        click.echo("Could not delete rule for uid {0} ({1})"
+                                   .format(self.uid, fields[5]))
 
     def _get_resource(self, printout):
         resource_cls = RESOURCE_MAP.get(self._args['resource'])

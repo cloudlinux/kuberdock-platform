@@ -161,18 +161,13 @@ class _U167SystemSettings(_Update):
             ),
         ])
         db.session.commit()
+        db.engine.execute("UPDATE system_settings SET setting_group='general'")
         db.engine.execute(
             "UPDATE system_settings SET setting_group='billing'"
-            "WHERE id >= 1 AND id <= 5")
-        db.engine.execute(
-            "UPDATE system_settings SET setting_group='general'"
-            "WHERE id >= 6 AND id <= 9")
-        db.engine.execute(
-            "UPDATE system_settings SET setting_group='general'"
-            "WHERE id = 14")
+            "WHERE name LIKE 'billing%")
         db.engine.execute(
             "UPDATE system_settings SET setting_group='domain'"
-            "WHERE id >= 10 AND id <= 13")
+            "WHERE name LIKE 'dns%")
         db.engine.execute(
             """UPDATE system_settings SET """
             """options=('["No provider", "cpanel_dnsonly"]') WHERE id= 10""")

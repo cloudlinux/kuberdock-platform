@@ -21,7 +21,8 @@ class IO(object):
         :param message: Message to be printed.
         :param kwargs: Is passed to `kdclick.echo()`.
         """
-        message = json.dumps(message, indent=4, sort_keys=True)
+        message = json.dumps(message, indent=4, sort_keys=True,
+                             ensure_ascii=False)
         kdclick.echo(message, **kwargs)
 
     def confirm(self, text, **kwargs):

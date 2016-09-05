@@ -12,19 +12,27 @@ from ..static_pages.models import MenuItem
 from ..system_settings.models import SystemSettings
 from ..validation import check_system_settings
 
+
 settings = Blueprint('settings', __name__, url_prefix='/settings')
 
 
 def enrich_with_plugin_list(data):
+    # TODO: move DNS data to database
     plugins = ['No billing'] + \
         current_app.billing_factory.list_billing_plugins()
+    dns_backends = ['No provider', 'cpanel_dnsonly', 'aws_route53']
     if isinstance(data, list):
-        rv = [i for i in data if i.get('name') == 'billing_type']
-        if rv:
-            rv[0]['options'] = plugins
+        btype = [i for i in data if i.get('name') == 'billing_type']
+        if btype:
+            btype[0]['options'] = plugins
+        dns = [i for i in data if i.get('name') == 'dns_management_system']
+        if dns:
+            dns[0]['options'] = dns_backends
     elif isinstance(data, dict):
         if data.get('name') == 'billing_type':
             data['options'] = plugins
+        if data.get('name') == 'dns_management_system':
+            data['options'] = dns_backends
     return data
 
 

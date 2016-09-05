@@ -45,13 +45,14 @@ class TestResultCollection(object):
         """
         self._results.append(self._make_test_result(pipeline, test, 'passed'))
 
-    def register_pipeline_error(self, pipeline, tests):
+    def register_pipeline_error(self, pipeline, tests, error_message=None):
         # type: (str, list) -> None
         """
         Adds given tests to the collection and marks them as failed
         """
         results = (
-            self._make_test_result(pipeline, t, 'pipeline_error')
+            self._make_test_result(
+                pipeline, t, 'pipeline_error', error_message)
             for t in tests
         )
         self._results.extend(results)
@@ -90,9 +91,11 @@ class TestResultCollection(object):
 
         def _make_report_entry(test):
             color = self._color_from_status(test.status)
-            return '{} {} {}{}{}'.format(
+            err_msg = '({})'.format(test.error_message) if \
+                test.error_message else ''
+            return '{} {} {}{} {}{}'.format(
                 test.pipeline, test.name, color, test.status.upper(),
-                Fore.RESET)
+                err_msg, Fore.RESET)
 
         results = sorted(self._results, key=attrgetter('pipeline'))
         entries = (_make_report_entry(t) for t in results)

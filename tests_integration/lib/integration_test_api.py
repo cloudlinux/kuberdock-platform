@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import pipes
+import subprocess
 import sys
 import time
 import urllib2
@@ -13,11 +14,11 @@ import vagrant
 import yaml
 from ipaddress import IPv4Network
 
-from exceptions import NonZeroRetCodeException, NodeWasNotRemoved, \
-    NodeIsNotPresent
+from exceptions import NodeWasNotRemoved
 from tests_integration.lib.exceptions import StatusWaitException, \
     UnexpectedKubectlResponse, DiskNotFound, PodIsNotRunning, \
-    IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
+    IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer, \
+    VmCreationError, VmProvisionError
 from tests_integration.lib.integration_test_utils import \
     ssh_exec, assert_eq, assert_in, kube_type_to_int, wait_net_port, \
     merge_dicts, retry, kube_type_to_str
@@ -177,13 +178,24 @@ class KDIntegrationTestAPI(object):
         LOG.debug('Cluster settings: {}'.format(settings))
 
         if provider == OPENNEBULA:
-            retry(self.vagrant.up, tries=3, interval=15,
-                  provider=provider, no_provision=True)
-            self.created_at = datetime.utcnow()
-            self.vagrant.provision()
+            try:
+                retry(self.vagrant.up, tries=3, interval=15,
+                      provider=provider, no_provision=True)
+                self.created_at = datetime.utcnow()
+            except subprocess.CalledProcessError as e:
+                raise VmCreationError('Failed to create VMs')
+
+            try:
+                self.vagrant.provision()
+            except subprocess.CalledProcessError:
+                raise VmProvisionError('Failed to provision VMs')
         else:
-            self.vagrant.up(provider=provider, no_provision=True)
-            self.created_at = datetime.utcnow()
+            try:
+                self.vagrant.up(provider=provider, no_provision=True)
+                self.created_at = datetime.utcnow()
+            except subprocess.CalledProcessError:
+                raise VmCreationError(
+                    'Failed either to create or provision VMs')
 
     def upgrade(self, upgrade_to='latest', use_testing=False,
                 skip_healthcheck=False):

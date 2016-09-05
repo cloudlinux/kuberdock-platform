@@ -1,6 +1,6 @@
+from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.integration_test_utils import \
     NO_FREE_IPS_ERR_MSG, assert_raises, assert_eq, get_rnd_string
-from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.pipelines import pipeline
 
 
@@ -9,7 +9,6 @@ def test_cadvisor_errors(cluster):
     """Check cadvisor error/warning appears in uwsgi (AC-3499)"""
 
     cluster.kdctl('pricing license show')
-
     # TODO: Remove once AC-3618 implemented
     cmd = "journalctl --since '15 min ago' -m -t uwsgi | " \
           "grep -v 'ssl_stapling' | egrep 'warn|err' | tail -n 100"

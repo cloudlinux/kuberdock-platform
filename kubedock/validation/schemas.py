@@ -452,7 +452,7 @@ new_pod_schema.update({
 
 command_pod_schema = {
     'command': {'type': 'string', 'allowed': ['start', 'stop', 'redeploy',
-                                              'set', 'edit']},
+                                              'set', 'edit', 'unbind-ip']},
     'commandOptions': {
         'type': 'dict',
         'schema': {

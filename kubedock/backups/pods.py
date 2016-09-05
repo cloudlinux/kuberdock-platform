@@ -8,7 +8,7 @@ from kubedock.pods.models import Pod as DBPod, PersistentDisk, \
 from kubedock.users import User
 from kubedock.utils import nested_dict_utils
 
-DEFAULT_BACKUP_PATH_TEMPLATE = '/{owner_id}/{volume_name}.zip'
+DEFAULT_BACKUP_PATH_TEMPLATE = '/{owner_id}/{volume_name}.tar.gz'
 
 
 def _filter_persistent_volumes(pod_spec):

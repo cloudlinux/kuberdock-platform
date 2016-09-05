@@ -156,9 +156,9 @@ class Pipeline(object):
         Cleans artifacts created by tests like pods/pvs, etc. Each pipeline
         may extend this method if it produces additional artifacts
         """
-        self.cluster.delete_all_pods()
-        self.cluster.forget_all_pods()
-        self.cluster.delete_all_pvs()
+        self.cluster.pods.clear()
+        self.cluster.pods.forget_all()
+        self.cluster.pvs.clear()
 
     def destroy(self):
         """

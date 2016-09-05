@@ -43,7 +43,7 @@ def test_restore_pod_from_cmd(cluster):
     file_name = BACKUP_FILES[NGINX_WITHOUT_PV]
     _, pod_dump, _ = cluster.ssh_exec("master",
                                       "cat {}".format(file_name))
-    pod = cluster.restore_pod(USER, pod_dump=pod_dump)
+    pod = cluster.pods.restore(USER, pod_dump=pod_dump)
     pod.wait_for_ports()
 
 
@@ -56,7 +56,7 @@ def test_restore_from_file(cluster):
     :type cluster: KDIntegrationTestAPI
     """
     file_name = BACKUP_FILES[NGINX_WITHOUT_PV]
-    pod = cluster.restore_pod(USER, file_path=file_name)
+    pod = cluster.pods.restore(USER, file_path=file_name)
     pod.wait_for_ports()
     cluster.assert_pods_number(1)
 
@@ -73,10 +73,10 @@ def test_pod_with_pv_restore(cluster):
     backup_url = "http://node1/backups"
     path_template = '{owner_id}/{volume_name}.tar.gz'
     # Test that pod with persistent volume can be restored
-    pod = cluster.restore_pod(USER, file_path=file_name,
-                              pv_backups_location=backup_url,
-                              pv_backups_path_template=path_template,
-                              wait_for_status="running")
+    pod = cluster.pods.restore(USER, file_path=file_name,
+                               pv_backups_location=backup_url,
+                               pv_backups_path_template=path_template,
+                               wait_for_status="running")
     pod.wait_for_ports()
     assert_in("This page has been restored from tar.gz",
               pod.do_GET(path='/restored_location/'))
@@ -86,21 +86,21 @@ def test_pod_with_pv_restore(cluster):
     # --force-not-delete flag
     with assert_raises(NonZeroRetCodeException,
                        'Pod with name .* already exists'):
-        cluster.restore_pod(USER, file_path=file_name,
-                            pv_backups_location=backup_url,
-                            pv_backups_path_template=path_template,
-                            flags="--force-not-delete")
+        cluster.pods.restore(USER, file_path=file_name,
+                             pv_backups_location=backup_url,
+                             pv_backups_path_template=path_template,
+                             flags="--force-not-delete")
     # If pod has't been restored, it's id should not be changed
     assert_eq(old_id, pod.pod_id)
 
     # Test that pod is removed together with disks if pod with same name
     # and same disks names is restored with --force-delete flag
     path_template = '{owner_name}/{volume_name}.zip'
-    pod2 = cluster.restore_pod(USER, file_path=file_name,
-                               pv_backups_location=backup_url,
-                               pv_backups_path_template=path_template,
-                               flags="--force-delete",
-                               return_as_json=True)
+    pod2 = cluster.pods.restore(USER, file_path=file_name,
+                                pv_backups_location=backup_url,
+                                pv_backups_path_template=path_template,
+                                flags="--force-delete",
+                                return_as_json=True)
     # If pod was restored than it's id should distinguish from id of pod
     # with same name, that has just been removed
     assert_not_eq(old_id, pod2.pod_id)
@@ -154,19 +154,19 @@ def _create_nginx_pod_with_pv(cluster):
     pv_name = "disk_to_restore"
     mount_path = "/usr/share/nginx/html"
     pod_name = "nginx_with_pv"
-    pv = cluster.create_pv("dummy", pv_name, mount_path)
-    pod = cluster.create_pod("nginx", pod_name, pvs=[pv],
-                             start=True, wait_for_status='running',
-                             open_all_ports=True)
+    pv = cluster.pvs.add("dummy", pv_name, mount_path)
+    pod = cluster.pods.create("nginx", pod_name, pvs=[pv],
+                              start=True, wait_for_status='running',
+                              open_all_ports=True)
     return pod, pv
 
 
 def _create_nginx_pod_without_pv(cluster):
     """:type cluster: KDIntegrationTestAPI"""
     pod_name = "nginx_without_pv"
-    pod = cluster.create_pod("nginx", pod_name, start=True,
-                             wait_for_status='running',
-                             open_all_ports=True)
+    pod = cluster.pods.create("nginx", pod_name, start=True,
+                              wait_for_status='running',
+                              open_all_ports=True)
     return pod
 
 

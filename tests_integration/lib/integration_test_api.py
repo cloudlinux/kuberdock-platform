@@ -22,7 +22,7 @@ from tests_integration.lib.exceptions import StatusWaitException, \
     IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
 from tests_integration.lib.integration_test_utils import \
     ssh_exec, assert_eq, assert_in, kube_type_to_int, wait_net_port, \
-    merge_dicts, retry, kube_type_to_str
+    merge_dicts, retry, kube_type_to_str, escape_command_arg
 
 OPENNEBULA = "opennebula"
 VIRTUALBOX = "virtualbox"
@@ -92,6 +92,12 @@ class KDIntegrationTestAPI(object):
                                        env=kd_env, out_cm=out_cm,
                                        err_cm=err_cm)
         self.kd_env = kd_env
+        self.ip_pools = IPPoolList(self)
+        self.pods = PodList(self)
+        self.pas = PAList(self)
+        self.nodes = NodeList(self)
+        self.pvs = PVList(self)
+        self.users = UserList(self)
         self.created_at, self._ssh_connections = None, {}
 
     @staticmethod
@@ -137,7 +143,7 @@ class KDIntegrationTestAPI(object):
         return sftp
 
     def recreate_routable_ip_pool(self):
-        self.delete_all_ip_pools()
+        self.ip_pools.clear()
         # First we parse get the default interface:
         # 8.8.8.8 via 192.168.115.254 dev ens3  src 192.168.113.245
         #
@@ -153,16 +159,7 @@ class KDIntegrationTestAPI(object):
         _, main_ip, _ = self.ssh_exec('master', cmd)
 
         ip_pool = str(IPv4Network(unicode(main_ip), strict=False))
-        self.add_ip_pool(ip_pool, includes=self.kd_env['KD_ONE_PUB_IPS'])
-
-    def _any_vm_is_running(self):
-        return any(vm.state != "not_created" for vm in self.vagrant.status())
-
-    def get_node_info(self, name):
-        # type: (str) -> dict
-        _, out, _ = self.manage(
-            'node-info -n {}'.format(pipes.quote(name)), out_as_dict=True)
-        return out
+        self.ip_pools.add(ip_pool, includes=self.kd_env['KD_ONE_PUB_IPS'])
 
     def start(self, provider=PROVIDER):
         if self._any_vm_is_running():
@@ -235,149 +232,14 @@ class KDIntegrationTestAPI(object):
         LOG.debug("VM Power On: '{}'".format(vm_name))
         retry(self.vagrant.up, tries=3, vm_name=vm_name)
 
-    def get_kd_users(self):
-        _, out, _ = self.kdctl('users list', out_as_dict=True)
-        sys_users = ['kuberdock-internal', 'admin']
-        user_names = (u['username'] for u in out['data'])
-        return (u for u in user_names if u not in sys_users)
-
-    def create_user(self, name, password, email, role="User", active="True",
-                    package="Standard package"):
-        name = self._escape_command_arg(name)
-        password = self._escape_command_arg(password)
-        email = self._escape_command_arg(email)
-        user = {
-            'active': active,
-            'email': email,
-            'package': package,
-            'rolename': role,
-            'username': name,
-            'password': password
-        }
-        self.kdctl("users create '{}'".format(json.dumps(user)))
-
-    def delete_user(self, name):
-        self.kdctl("users delete --id {}".format(self._escape_command_arg(
-            name)))
-
-    def delete_all_kd_users(self):
-        for user in self.get_kd_users():
-            self.delete_user(user)
-
-    def add_predefined_application(self, name, file_path, validate=False,
-                                   origin=None):
-        """
-        Add predefined application from yaml-file into list of predefined
-        applications
-        :param file_path: path to the yaml-file on the master (not on the
-        host!)
-        """
-        name = self._escape_command_arg(name)
-        file_path = self._escape_command_arg(file_path)
-        cmd = "predefined-apps create --name {} -f {}".format(name, file_path)
-        if validate:
-            cmd += " --validate"
-        if origin:
-            cmd += " --origin '{}'".format(origin)
-        self.kdctl(cmd)
-
-    def get_predefined_applications(self):
-        _, out, _ = self.kdctl("predefined-apps list", out_as_dict=True)
-        data = out['data']
-        return [pa for pa in data]
-
-    def delete_predefined_application(self, id):
-        self.kdctl("predefined-apps delete --id {}".format(id))
-
-    def delete_all_predefined_applications(self):
-        for pa in self.get_predefined_applications():
-            self.delete_predefined_application(pa['id'])
-
     def get_host_status(self, host):
         _, out, _ = self.kdctl("nodes list", out_as_dict=True)
         return next(s['status']
                     for s in out['data']
                     if s['hostname'] == host)
 
-    def delete_all_pods(self):
-        for user in self.get_kd_users():
-            for pod in self.get_all_pods(user):
-                name = self._escape_command_arg(pod['name'])
-                self.kcli(u'delete {}'.format(name), user=user)
-
-    def forget_all_pods(self):
-        for user in self.get_kd_users():
-            _, pods, _ = self.kcli('list', out_as_dict=True, user=user)
-
-            for pod in pods:
-                name = self._escape_command_arg(pod['name'])
-                self.kcli(u'forget {}'.format(name), user=user)
-
-    def delete_all_ip_pools(self):
-        _, pools, _ = self.manage('list-ip-pools', out_as_dict=True)
-        for pool in pools:
-            self.delete_ip_pool(pool)
-
-        self.forget_all_pods()
-
-    def get_all_pods(self, owner='test_user'):
-        # type: (str) -> dict
-        _, pods, _ = self.kubectl("get pods", out_as_dict=True, user=owner)
-        return pods
-
-    def wait_for_service_pods(self):
-        def _check_service_pods():
-            _, response, _ = self.kdctl(
-                'pods list --owner kuberdock-internal', out_as_dict=True)
-            statuses = (pod['status'] for pod in response['data'])
-            if not all(s == 'running' for s in statuses):
-                raise ServicePodsNotReady()
-
-        retry(_check_service_pods, tries=40, interval=15)
-
     def assert_pods_number(self, number):
-        assert_eq(len(self.get_all_pods()), number)
-
-    def delete_ip_pool(self, pool):
-        self.manage('delete-ip-pool -s {}'.format(pool['network']))
-
-    def add_ip_pool(self, subnet, hostname=None, excludes='', includes=''):
-        cmd = 'create-ip-pool -s {}'.format(subnet)
-        if hostname is not None:
-            cmd += ' --node {}'.format(hostname)
-        cmd += ' -e "{}"'.format(excludes)
-        cmd += ' -i "{}"'.format(includes)
-        self.manage(cmd)
-
-    def create_pod(self, image, name, kube_type="Standard", kubes=1,
-                   open_all_ports=False, restart_policy="Always", pvs=None,
-                   start=True, wait_ports=False, healthcheck=False,
-                   wait_for_status=None, owner='test_user'):
-        assert_in(kube_type, ("Tiny", "Standard", "High memory"))
-        assert_in(restart_policy, ("Always", "Never", "OnFailure"))
-
-        pod = KDPod.create(self, image, name, kube_type, kubes, open_all_ports,
-                           restart_policy, pvs, owner)
-        if start:
-            pod.start()
-        if wait_for_status:
-            pod.wait_for_status(wait_for_status)
-        if wait_ports:
-            pod.wait_for_ports()
-        if healthcheck:
-            pod.healthcheck()
-        return pod
-
-    def restore_pod(self, user, file_path=None, pod_dump=None,
-                    pv_backups_location=None, pv_backups_path_template=None,
-                    flags=None, return_as_json=False, wait_for_status=None):
-
-        pod = KDPod.restore(self, user, file_path, pod_dump,
-                            pv_backups_location, pv_backups_path_template,
-                            flags, return_as_json)
-        if wait_for_status:
-            pod.wait_for_status(wait_for_status)
-        return pod
+        assert_eq(len(self.pods.filter_by_owner()), number)
 
     def preload_docker_image(self, image, node=None):
         """
@@ -398,8 +260,15 @@ class KDIntegrationTestAPI(object):
             retry(self.docker, interval=2,
                   cmd='pull {}'.format(image), node=node)
 
-    def create_pa(self, yml, size="M", start=True):
-        pass
+    def wait_for_service_pods(self):
+        def _check_service_pods():
+            _, response, _ = self.kdctl(
+                'pods list --owner kuberdock-internal', out_as_dict=True)
+            statuses = (pod['status'] for pod in response['data'])
+            if not all(s == 'running' for s in statuses):
+                raise ServicePodsNotReady()
+
+        retry(_check_service_pods, tries=40, interval=15)
 
     def healthcheck(self):
         # Not passing for now: AC-3199
@@ -445,9 +314,6 @@ class KDIntegrationTestAPI(object):
             out = json.loads(out)
         return rc, out, err
 
-    def docker(self, cmd, node="node1"):
-        return self.ssh_exec(node, "docker {0}".format(cmd))
-
     def manage(self, args, out_as_dict=False, check_retcode=True):
         manage_cmd_path = os.path.join(self.kuberdock_root, 'manage.py')
         cmd = "/usr/bin/env python {} {}".format(manage_cmd_path, args)
@@ -456,55 +322,14 @@ class KDIntegrationTestAPI(object):
             return rc, json.loads(out), err
         return rc, out, err
 
+    def docker(self, cmd, node="node1"):
+        return self.ssh_exec(node, "docker {0}".format(cmd))
+
     def ssh_exec(self, node, cmd, check_retcode=True):
         ssh = self.get_ssh(node)
         # Forcibly source profile, so all additional ENV variables are exported
         cmd = '. /etc/profile; ' + cmd
         return ssh_exec(ssh, cmd, check_retcode=check_retcode)
-
-    def _escape_command_arg(self, arg):
-        return pipes.quote(arg)
-
-    def _kcli_config_path(self, user):
-        if user is not None:
-            return '/etc/kubecli_{}.conf'.format(user)
-
-    def create_pv(self, kind, name, mount_path='/some_mnt_pth', size=1):
-        return PV(self, kind, name, mount_path, size)
-
-    def delete_all_pvs(self):
-        for user in self.get_kd_users():
-            for pv in self.get_all_pvs(user):
-                name = self._escape_command_arg(pv['name'])
-                self.kcli('drives delete {0}'.format(name), user=user)
-
-    def get_all_pvs(self, owner=None):
-        _, pvs, _ = self.kcli("drives list", out_as_dict=True, user=owner)
-        return pvs
-
-    def delete_node(self, node_name, timeout=60):
-        self.manage("delete-node --hostname {}".format(node_name))
-        end = time.time() + timeout
-        while time.time() < end:
-            if not self.node_exists(node_name):
-                return
-        raise NodeWasNotRemoved("Node {} failed to be removed in past {} "
-                                "seconds".format(node_name, timeout))
-
-    def add_node(self, node_name, kube_type="Standard"):
-        self.manage(
-            'add-node --hostname {} --kube-type {} --do-deploy -t'
-                .format(node_name, kube_type)
-        )
-        self.manage("wait-for-nodes --nodes {}".format(node_name))
-
-    def node_exists(self, hostname):
-        _, out, _ = self.kdctl("nodes list", out_as_dict=True)
-        data = out['data']
-        for node in data:
-            if node['hostname'] == hostname:
-                return True
-        return False
 
     def set_system_setting(self, value, setting_id=None, name=None):
         cmd = "system-settings update "
@@ -523,6 +348,13 @@ class KDIntegrationTestAPI(object):
         _, data, _ = self.kdctl(cmd, out_as_dict=True)
         return data['data']['value']
 
+    def _any_vm_is_running(self):
+        return any(vm.state != "not_created" for vm in self.vagrant.status())
+
+    def _kcli_config_path(self, user):
+        if user is not None:
+            return '/etc/kubecli_{}.conf'.format(user)
+
 
 class RESTMixin(object):
     # Expectations:
@@ -537,6 +369,209 @@ class RESTMixin(object):
 
     def do_POST(self, path='/', headers=None, body=""):
         pass
+
+
+class UserList(object):
+    def __init__(self, cluster):
+        self.cluster = cluster
+
+    def get_kd_users(self):
+        _, out, _ = self.cluster.kdctl('users list', out_as_dict=True)
+        sys_users = ['kuberdock-internal', 'admin']
+        user_names = (u['username'] for u in out['data'])
+        return (u for u in user_names if u not in sys_users)
+
+    def create(self, name, password, email, role="User", active="True",
+               package="Standard package"):
+        name = escape_command_arg(name)
+        password = escape_command_arg(password)
+        email = escape_command_arg(email)
+        user = {
+            'active': active,
+            'email': email,
+            'package': package,
+            'rolename': role,
+            'username': name,
+            'password': password
+        }
+        self.cluster.kdctl("users create '{}'".format(json.dumps(user)))
+
+    def delete(self, name):
+        self.cluster.kdctl(
+            "users delete --id {}".format(escape_command_arg(name)))
+
+
+class PVList(object):
+    def __init__(self, cluster):
+        self.cluster = cluster
+
+    def add(self, kind, name, mount_path='/some_mnt_pth', size=1):
+        return PV(self.cluster, kind, name, mount_path, size)
+
+    def clear(self):
+        for user in self.cluster.users.get_kd_users():
+            for pv in self.filter(user):
+                name = escape_command_arg(pv['name'])
+                self.cluster.kcli('drives delete {0}'.format(name), user=user)
+
+    def filter(self, owner=None):
+        _, pvs, _ = self.cluster.kcli("drives list", out_as_dict=True,
+                                      user=owner)
+        return pvs
+
+
+class NodeList(object):
+    def __init__(self, cluster):
+        # type: (KDIntegrationTestAPI) -> None
+        self.cluster = cluster
+
+    def delete(self, node_name, timeout=60):
+        self.cluster.manage("delete-node --hostname {}".format(node_name))
+        end = time.time() + timeout
+        while time.time() < end:
+            if not self.node_exists(node_name):
+                return
+        raise NodeWasNotRemoved("Node {} failed to be removed in past {} "
+                                "seconds".format(node_name, timeout))
+
+    def add(self, node_name, kube_type="Standard"):
+        self.cluster.manage(
+            'add-node --hostname {} --kube-type {} --do-deploy -t'
+                .format(node_name, kube_type)
+        )
+        self.cluster.manage("wait-for-nodes --nodes {}".format(node_name))
+
+    def node_exists(self, hostname):
+        _, out, _ = self.cluster.kdctl("nodes list", out_as_dict=True)
+        data = out['data']
+        for node in data:
+            if node['hostname'] == hostname:
+                return True
+        return False
+
+    def get_node_info(self, name):
+        # type: (str) -> dict
+        _, out, _ = self.cluster.manage(
+            'node-info -n {}'.format(pipes.quote(name)), out_as_dict=True)
+        return out
+
+
+class PAList(object):
+    def __init__(self, cluster):
+        # type: (KDIntegrationTestAPI) -> None
+        self.cluster = cluster
+
+    def add(self, name, file_path, validate=False, origin=None):
+        """
+        Add predefined application from yaml-file into list of predefined
+        applications
+        :param file_path: path to the yaml-file on the master (not on the
+        host!)
+        """
+        name = escape_command_arg(name)
+        file_path = escape_command_arg(file_path)
+        cmd = "predefined-apps create --name {} -f {}".format(name, file_path)
+        if validate:
+            cmd += " --validate"
+        if origin:
+            cmd += " --origin '{}'".format(origin)
+        self.cluster.kdctl(cmd)
+
+    def get_all(self):
+        _, out, _ = self.cluster.kdctl("predefined-apps list",
+                                       out_as_dict=True)
+        data = out['data']
+        return [pa for pa in data]
+
+    def delete(self, id_):
+        self.cluster.kdctl("predefined-apps delete --id {}".format(id_))
+
+    def delete_all(self):
+        for pa in self.get_all():
+            self.delete(pa['id'])
+
+
+class IPPoolList(object):
+    def __init__(self, cluster):
+        # type: (KDIntegrationTestAPI) -> None
+        self.cluster = cluster
+
+    def add(self, subnet, hostname=None, excludes='', includes=''):
+        cmd = 'create-ip-pool -s {}'.format(subnet)
+        if hostname is not None:
+            cmd += ' --node {}'.format(hostname)
+        cmd += ' -e "{}"'.format(excludes)
+        cmd += ' -i "{}"'.format(includes)
+        self.cluster.manage(cmd)
+
+    def delete(self, pool):
+        self.cluster.manage('delete-ip-pool -s {}'.format(pool['network']))
+
+    def clear(self):
+        for p in self:
+            self.delete(p)
+        self.cluster.pods.forget_all()
+
+    def __iter__(self):
+        _, pools, _ = self.cluster.manage('list-ip-pools', out_as_dict=True)
+        for p in pools:
+            yield p
+
+
+class PodList(object):
+    def __init__(self, cluster):
+        # type: (KDIntegrationTestAPI) -> None
+        self.cluster = cluster
+
+    def create(self, image, name, kube_type="Standard", kubes=1,
+               open_all_ports=False, restart_policy="Always", pvs=None,
+               start=True, wait_ports=False, healthcheck=False,
+               wait_for_status=None, owner='test_user'):
+        assert_in(kube_type, ("Tiny", "Standard", "High memory"))
+        assert_in(restart_policy, ("Always", "Never", "OnFailure"))
+
+        pod = KDPod.create(self.cluster, image, name, kube_type, kubes,
+                           open_all_ports, restart_policy, pvs, owner)
+        if start:
+            pod.start()
+        if wait_for_status:
+            pod.wait_for_status(wait_for_status)
+        if wait_ports:
+            pod.wait_for_ports()
+        if healthcheck:
+            pod.healthcheck()
+        return pod
+
+    def restore(self, user, file_path=None, pod_dump=None,
+                pv_backups_location=None, pv_backups_path_template=None,
+                flags=None, return_as_json=False, wait_for_status=None):
+
+        pod = KDPod.restore(self.cluster, user, file_path, pod_dump,
+                            pv_backups_location, pv_backups_path_template,
+                            flags, return_as_json)
+        if wait_for_status:
+            pod.wait_for_status(wait_for_status)
+        return pod
+
+    def forget_all(self):
+        for user in self.cluster.users.get_kd_users():
+            _, pods, _ = self.cluster.kcli('list', out_as_dict=True, user=user)
+
+            for pod in pods:
+                name = escape_command_arg(pod['name'])
+                self.cluster.kcli('forget {}'.format(name), user=user)
+
+    def filter_by_owner(self, owner='test_user'):
+        # type: (str) -> dict
+        _, pods, _ = self.cluster.kubectl(
+            "get pods", out_as_dict=True, user=owner)
+        return pods
+
+    def clear(self):
+        for user in self.cluster.users.get_kd_users():
+            for pod in self.cluster.pods.filter_by_owner(user):
+                name = escape_command_arg(pod['name'])
+                self.cluster.kcli('delete {}'.format(name), user=user)
 
 
 class KDPod(RESTMixin):

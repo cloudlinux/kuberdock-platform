@@ -1,6 +1,7 @@
 import logging
 import operator
 import os
+import pipes
 import random
 import re
 import socket
@@ -221,7 +222,7 @@ def pod_factory(image, **create_kwargs):
     def _factory(cluster, num=1, **override_kwargs):
         params = merge_dicts(create_kwargs, override_kwargs)
         names = islice(name_generator, num)
-        return [cluster.create_pod(image, n, **params) for n in names]
+        return [cluster.pods.create(image, n, **params) for n in names]
 
     return _factory
 
@@ -441,6 +442,10 @@ def http_share(cluster, host, shared_dir):
 
 def _force_utf_string(text):
     return text if isinstance(text, unicode) else text.decode('utf-8')
+
+
+def escape_command_arg(arg):
+    return pipes.quote(arg)
 
 
 def set_eviction_timeout(cluster, timeout):

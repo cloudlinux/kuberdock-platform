@@ -1,7 +1,7 @@
 ﻿import os
 import pipes
-
 from collections import defaultdict
+
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.integration_test_utils import hooks
 from tests_integration.lib.pipelines import pipeline
@@ -9,8 +9,9 @@ from tests_integration.lib.pipelines import pipeline
 BACKUP_FOLDER = "/root/backups"
 DEFAULT_SETTING_VALUE = "10"
 SETTING_NAME = "persitent_disk_max_size"
-test_users = [("test_user_a", "test_user_a@cloudlinux.com"),
-              ("test_user_b", "test_user_b@cloudlinux.com")]
+test_users = [
+    ("test_user_a", "test_user_a@cloudlinux.com"),
+    ("test_user_b", "test_user_b@cloudlinux.com")]
 
 
 def _setup_restore_test(cluster):
@@ -48,11 +49,11 @@ def _clear_master(cluster):
     """
     Remove all pods, IP pools, PAs and node from master
     """
-    cluster.delete_all_ip_pools()
-    cluster.delete_all_pods()
-    cluster.delete_all_pvs()
-    cluster.delete_all_predefined_applications()
-    cluster.delete_node("node1")
+    cluster.ip_pools.clear()
+    cluster.pods.clear()
+    cluster.pvs.clear()
+    cluster.pas.delete_all()
+    cluster.nodes.delete("node1")
     cluster.set_system_setting(DEFAULT_SETTING_VALUE, name=SETTING_NAME)
 
 
@@ -62,28 +63,27 @@ def _fill_master_with_data_to_backup(cluster):
         ("drupal", "/tmp/kuberdock_predefined_apps/drupal.yaml")
     ]
     for name, path in predefined_applications:
-        cluster.add_predefined_application(name, path)
+        cluster.pas.add(name, path)
     for username, email in test_users:
         password = username
-        cluster.create_user(username, password, email)
+        cluster.users.create(username, password, email)
     # Change "Persistent disk maximum size" (id = 6) to 15.
     cluster.set_system_setting(15, name=SETTING_NAME)
 
     cluster.recreate_routable_ip_pool()
-    cluster.add_node("node1")
+    cluster.nodes.add("node1")
     cluster.preload_docker_image('nginx')
-    cluster.create_pod("nginx", "test_nginx_pod_1", open_all_ports=True,
-                       start=True)
-    cluster.create_pod("nginx", "test_nginx_pod_2", open_all_ports=True,
-                       start=True)
+    for name in ("test_nginx_pod_1", "test_nginx_pod_2"):
+        cluster.pods.create("nginx", name, open_all_ports=True, start=True)
 
 
 class _MasterState(object):
     def __init__(self, cluster):
-        self.predefined_applications = cluster.get_predefined_applications()
-        self.users = set(cluster.get_kd_users())
-        self.pods = set(pipes.quote(pod['name']) for pod in
-                        cluster.get_all_pods())
+        self.predefined_applications = cluster.pas.get_all()
+        self.users = set(cluster.users.get_kd_users())
+        self.pods = set(
+            pipes.quote(pod['name']) for pod in
+            cluster.pods.filter_by_owner())
         self.control_setting_value = cluster.get_system_setting(
             name=SETTING_NAME)
         self.free_ips, self.used_ips, self.blocked_ips = \
@@ -106,8 +106,8 @@ class _MasterState(object):
                      " users existing before backing up.",
             'pods': "List of pods of restored cluster differs from "
                     "list of pods existing before backing up.",
-            'control_setting_value': "Setting of restored cluster differs from "
-                                     "settings existing before backing up.",
+            'control_setting_value': "Setting of restored cluster differs from"
+                                     " settings existing before backing up.",
             'free_ips': "List of free IPs of restored cluster differs "
                         "from list existing before backing up.",
             'used_ips': "List of user IPs of restored cluster differs "
@@ -118,8 +118,9 @@ class _MasterState(object):
                                        "differs from list of PAs existing "
                                        "before backing up."
         }
-        errors = [err_msg for field, err_msg in checks.items() if
-                  getattr(self, field) != getattr(other, field)]
+        errors = [
+            err_msg for field, err_msg in checks.items()
+            if getattr(self, field) != getattr(other, field)]
         if errors:
             raise MasterRestoredWithErrors("\n".join(errors))
 

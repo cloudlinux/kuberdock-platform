@@ -1,18 +1,20 @@
-from tests_integration.lib.pipelines import pipeline
+from tests_integration.lib.exceptions import NonZeroRetCodeException
+from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.integration_test_utils import (
     assert_raises, wait_for)
-from tests_integration.lib.exceptions import NonZeroRetCodeException
+from tests_integration.lib.pipelines import pipeline
 
 
 @pipeline('move_pods')
 def test_pods_with_local_storage_stop(cluster):
+    # type: (KDIntegrationTestAPI) -> None
     """
     Tests that the pod with local storage will stop when host, on which local
     storage resides, becomes unavailable.
     """
-    pv = cluster.create_pv('dummy', 'fakepv', '/nginxpv')
-    pod = cluster.create_pod('nginx', 'test_nginx_pod', pvs=[pv],
-                             start=True)
+    pv = cluster.pvs.add('dummy', 'fakepv', '/nginxpv')
+    pod = cluster.pods.create(
+        'nginx', 'test_nginx_pod', pvs=[pv], start=True)
     pod.wait_for_status('running')
     host = pod.info['host']
     with cluster.temporary_stop_host(host):
@@ -21,11 +23,12 @@ def test_pods_with_local_storage_stop(cluster):
 
 @pipeline('move_pods')
 def test_pods_move_on_failure(cluster):
+    # type: (KDIntegrationTestAPI) -> None
     """
     Tests that the pod without local storage will move to another host in case
     of failure.
     """
-    pod = cluster.create_pod('nginx', 'test_nginx_pod', start=True)
+    pod = cluster.pods.create('nginx', 'test_nginx_pod', start=True)
     pod.wait_for_status('running')
     host = pod.info['host']
     with cluster.temporary_stop_host(host):
@@ -35,6 +38,7 @@ def test_pods_move_on_failure(cluster):
 
 @pipeline('move_pods')
 def test_error_start_with_shutdown_local_storage(cluster):
+    # type: (KDIntegrationTestAPI) -> None
     """
     Tests that the pod which has persistent volume on the host with status
     'troubles' will produce error on the start and won't start the pod.
@@ -46,26 +50,28 @@ def test_error_start_with_shutdown_local_storage(cluster):
     4. Create a new pod with the same persistent volume 'pv'.
     5. Starting the new pod should result in an immediate error.
     """
-    pv = cluster.create_pv('dummy', 'fakepv', '/nginxpv')
-    pod = cluster.create_pod('nginx', 'test_nginx_pod', pvs=[pv],
-                             start=True, wait_for_status='running')
+    pv = cluster.pvs.add('dummy', 'fakepv', '/nginxpv')
+    pod = cluster.pods.create('nginx', 'test_nginx_pod', pvs=[pv],
+                              start=True, wait_for_status='running')
     host = pod.info['host']
     pod.stop()
     pod.wait_for_status('stopped')
     with cluster.temporary_stop_host(host):
         wait_for(lambda: cluster.get_host_status(host) == 'troubles')
-        new_pod = cluster.create_pod('nginx', 'test_nginx_pod_new', pvs=[pv],
-                                     start=False)
+        new_pod = cluster.pods.create('nginx', 'test_nginx_pod_new',
+                                      pvs=[pv],
+                                      start=False)
         with assert_raises(
-            NonZeroRetCodeException,
-            "There are no suitable nodes for the pod. Please try"
-            " again later or contact KuberDock administrator"):
+                NonZeroRetCodeException,
+                "There are no suitable nodes for the pod. Please try"
+                " again later or contact KuberDock administrator"):
             new_pod.start()
         assert new_pod.status == 'stopped'
 
 
 @pipeline('move_pods')
 def test_error_with_shutdown_local_storage(cluster):
+    # type: (KDIntegrationTestAPI) -> None
     """
     Tests that the pod which has persistent volume on the host, which is about
     to be not working, will become stopped.
@@ -78,22 +84,24 @@ def test_error_with_shutdown_local_storage(cluster):
     5. Starting a pod should not produce any errors.
     6. Pod's status should become 'stopped'.
     """
-    pv = cluster.create_pv('dummy', 'fakepv', '/nginxpv')
-    pod = cluster.create_pod('nginx', 'test_nginx_pod', pvs=[pv],
-                             start=True, wait_for_status='running')
+    pv = cluster.pvs.add('dummy', 'fakepv', '/nginxpv')
+    pod = cluster.pods.create('nginx', 'test_nginx_pod', pvs=[pv],
+                              start=True, wait_for_status='running')
     host = pod.info['host']
     pod.stop()
     pod.wait_for_status('stopped')
     with cluster.temporary_stop_host(host):
-        new_pod = cluster.create_pod('nginx', 'test_nginx_pod_new', pvs=[pv],
-                                     start=False)
+        new_pod = cluster.pods.create('nginx', 'test_nginx_pod_new',
+                                      pvs=[pv],
+                                      start=False)
         new_pod.start()
         new_pod.wait_for_status('pending')
         new_pod.wait_for_status('stopped')
 
 
 @pipeline('move_pods')
-def test_pod_not_start_with_pv_on_shutted_down_host(cluster):
+def test_pod_not_start_with_pv_on_shut_down_host(cluster):
+    # type: (KDIntegrationTestAPI) -> None
     """
     Tests that pod will not be able to start, if it has the persistent volume
     on the node that is in troubles state.
@@ -109,24 +117,25 @@ def test_pod_not_start_with_pv_on_shutted_down_host(cluster):
     6. Create a new pod with the same persistent volume 'pv'.
     7. Starting the new pod should result in immediate error.
     """
-    pv = cluster.create_pv('dummy', 'pv', '/nginxpv')
-    pod = cluster.create_pod('nginx', 'test_nginx_pod', pvs=[pv],
-                             start=True, wait_for_status='running')
+    pv = cluster.pvs.add('dummy', 'pv', '/nginxpv')
+    pod = cluster.pods.create('nginx', 'test_nginx_pod', pvs=[pv],
+                              start=True, wait_for_status='running')
     pod.delete()
     pv.delete()
-    pv = cluster.create_pv('dummy', 'pv', '/nginxpv')
-    pod = cluster.create_pod('nginx', 'test_nginx_pod', pvs=[pv],
-                             start=True, wait_for_status='running')
+    pv = cluster.pvs.add('dummy', 'pv', '/nginxpv')
+    pod = cluster.pods.create('nginx', 'test_nginx_pod', pvs=[pv],
+                              start=True, wait_for_status='running')
     host = pod.info['host']
     pod.stop()
     pod.wait_for_status('stopped')
     with cluster.temporary_stop_host(host):
         wait_for(lambda: cluster.get_host_status(host) == 'troubles')
-        new_pod = cluster.create_pod('nginx', 'test_nginx_pod_new', pvs=[pv],
-                                     start=False)
+        new_pod = cluster.pods.create('nginx', 'test_nginx_pod_new',
+                                      pvs=[pv],
+                                      start=False)
         with assert_raises(
-            NonZeroRetCodeException,
-            "There are no suitable nodes for the pod. Please try"
-            " again later or contact KuberDock administrator"):
+                NonZeroRetCodeException,
+                "There are no suitable nodes for the pod. Please try"
+                " again later or contact KuberDock administrator"):
             new_pod.start()
         assert new_pod.status == 'stopped'

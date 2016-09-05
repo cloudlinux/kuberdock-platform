@@ -60,7 +60,7 @@ class NonfloatingPipeline(Pipeline):
 
     def cleanup(self):
         super(NonfloatingPipeline, self).cleanup()
-        self.cluster.delete_all_ip_pools()
+        self.cluster.ip_pools.clear()
 
 
 class CephPipeline(Pipeline):

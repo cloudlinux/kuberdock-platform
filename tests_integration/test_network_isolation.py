@@ -9,16 +9,16 @@ from tests_integration.lib.pipelines import pipeline
 
 def setup_pods(cluster):
     pods = {
-        'iso1': cluster.create_pod(
+        'iso1': cluster.pods.create(
             'hub.kuberdock.com/nginx', 'iso1', owner='test_user',
             open_all_ports=True),
-        'iso2': cluster.create_pod(
+        'iso2': cluster.pods.create(
             'hub.kuberdock.com/nginx', 'iso2', owner='alt_test_user',
             open_all_ports=True),
-        'iso3': cluster.create_pod(
+        'iso3': cluster.pods.create(
             'hub.kuberdock.com/nginx', 'iso3', owner='test_user',
             open_all_ports=False),
-        'iso4': cluster.create_pod(
+        'iso4': cluster.pods.create(
             'hub.kuberdock.com/nginx', 'iso4', owner='test_user',
             open_all_ports=False),
     }
@@ -27,17 +27,17 @@ def setup_pods(cluster):
     specs = {
         name: pods[name].get_spec()
         for name in pods.keys()
-    }
+        }
 
     container_ids = {
         name: specs[name]['containers'][0]['containerID']
         for name in pods.keys()
-    }
+        }
 
     container_ips = {
         name: pods[name].get_container_ip(container_ids[name])
         for name in pods.keys()
-    }
+        }
 
     return container_ids, container_ips, pods, specs
 

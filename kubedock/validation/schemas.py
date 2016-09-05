@@ -490,7 +490,7 @@ pod_dump_schema = {
 
 command_pod_schema = {
     'command': {'type': 'string', 'allowed': ['start', 'stop', 'redeploy',
-                                              'set', 'edit']},
+                                              'set', 'edit', 'unbind-ip']},
     'commandOptions': {
         'type': 'dict',
         'schema': {

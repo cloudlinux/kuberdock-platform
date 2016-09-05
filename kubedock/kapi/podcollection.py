@@ -578,6 +578,7 @@ class PodCollection(object):
             'set': self._set_entry,
             # add new pod config that will be applied after next manual restart
             'edit': self.edit,
+            'unbind-ip': self._unbind_ip,
         }
         if command in dispatcher:
             return dispatcher[command](pod, data)
@@ -1235,6 +1236,8 @@ class PodCollection(object):
                          if node['status'] == NODE_STATUSES.running]
         return len(running_nodes) > 0
 
+    def _unbind_ip(self, pod, data=None):
+        self.unbind_publicIP(pod.id)
 
 def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
                     error_message=None):

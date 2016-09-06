@@ -162,18 +162,6 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         modelId: function(attrs){
             return JSON.stringify(_.pick(attrs, 'containerPort', 'protocol'));
         },
-        publicPortsCheckVal: function(){
-            for (var i = 0; i < arguments.length; i++) {
-                for (var a = 0; a < this.models.length; a++) {
-                    if (this.models[a].get('isPublic')) {
-                        if (this.models[a].get('hostPort') === arguments[i]) {
-                            return true;
-                        }
-                    }
-                }
-            }
-            return false;
-        },
     });
 
     data.EnvVar = Backbone.AssociatedModel.extend({
@@ -545,11 +533,19 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 data.KubeType.noAvailableKubeTypes;
         },
 
-        countPublicPorts: function(){
+        getPublicPorts: function(){
             return this.get('containers').chain()
                 .map(function(c){ return c.get('ports').toJSON(); })
-                .flatten(true).pluck('isPublic')
-                .reduce(function(sum, isPublic){ return sum + isPublic; }, 0).value();
+                .flatten(true).where({isPublic: true}).value();
+        },
+
+        countPublicPorts: function(){ return this.getPublicPorts().length; },
+
+        publicPortsShouldContain: function(){
+            var portsList = _.toArray(arguments);
+            return _.any(this.getPublicPorts(), function(port){
+                return _.contains(portsList, port.hostPort || port.containerPort);
+            });
         },
 
         recalcInfo: function(pkg){

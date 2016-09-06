@@ -375,11 +375,10 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         },
 
         validateAndNormalize: function(){
-            var that = this,
-                portsCollection = this.ports.currentView.collection;
+            var that = this;
 
             if (this.pod.wizardState.flow === 'CREATE_POD'){
-                if (!portsCollection.publicPortsCheckVal(80, 443) && this.pod.get('domain')){
+                if (this.pod.get('domain') && !this.pod.publicPortsShouldContain(80, 443)){
                     utils.notifyWindow('Support only ports 80 and 443 at pod port');
                     return false;
                 }

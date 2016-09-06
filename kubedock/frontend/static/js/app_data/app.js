@@ -75,11 +75,11 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                     new ResourceClass().fetch({
                         wait: true,
                         success: function(resource, resp, options){
-                            deferred.resolveWith(this, [cache[name] = resource]);
+                            deferred.resolveWith(App, [cache[name] = resource]);
                         },
                         error: function(resource, response) {
                             Utils.notifyWindow(response);
-                            deferred.rejectWith(this, [response]);
+                            deferred.rejectWith(App, [response]);
                         },
                     });
                 } else {
@@ -88,14 +88,31 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                         url: url,
                     }).done(function(data){
                         cache[name] = _.has(data, 'data') ? data.data : data;
-                        deferred.resolveWith(this, [cache[name]]);
+                        deferred.resolveWith(App, [cache[name]]);
                     }).fail(function(response){
                         Utils.notifyWindow(response);
-                        deferred.rejectWith(this, [response]);
+                        deferred.rejectWith(App, [response]);
                     });
                 }
                 return deferred.promise();
             }, this);
+        },
+
+        /**
+         * Check that billing is enabled and count type of user's
+         * package is "fixed"
+         *
+         * @returns {Promise} - promise of boolean value.
+         */
+        isFixedBilling: function(){
+            var deferred = $.Deferred();
+            this.getSystemSettingsCollection().done(function(settings){
+                var billingType = settings.byName('billing_type').get('value');
+                deferred.resolveWith(this, [
+                    this.userPackage.get('count_type') === 'fixed' &&
+                        billingType.toLowerCase() !== 'no billing']);
+            }).fail(deferred.reject);
+            return deferred.promise();
         },
     });
 

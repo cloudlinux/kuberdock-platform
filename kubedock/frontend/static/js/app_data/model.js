@@ -453,6 +453,11 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             return status || 'stopped';
         },
 
+        /**
+         * Check that `command` is applicable to the current sate of the pod
+         * @param {string} command - name of the command
+         * @returns {boolean} - whether or not it's applicable
+         */
         ableTo: function(command){
             // 'unpaid', 'stopped', 'stopping', 'waiting', 'pending',
             // 'preparing', 'running', 'failed', 'succeeded'
@@ -470,6 +475,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             if (command === 'delete')
                 return _.contains(['unpaid', 'stopped', 'stopping', 'waiting',
                                    'running', 'failed', 'succeeded'], status);
+            if (command === 'switch-package')
+                return !!(this.get('template_id') && this.get('template_plan_name'));
         },
 
         /**
@@ -614,13 +621,62 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             return this.command('stop')
                 .always(utils.preloader.hide).fail(utils.notifyWindow);
         },
+        cmdSwitchPackage: function(planID){
+            var deferred = new $.Deferred(),
+                model = this;
+            App.isFixedBilling().done(function(fixedPrice){
+                utils.preloader.show();
+                if (!fixedPrice) {
+                    $.ajax({  // TODO: use Backbone.Model?
+                        authWrap: true,
+                        type: 'PUT',
+                        url: '/api/yamlapi/switch/' + model.id + '/' + planID,
+                    }).always(utils.preloader.hide).fail(utils.notifyWindow)
+                        .then(deferred.resolve, deferred.reject);
+                    return;
+                }
+                $.ajax({  // TODO: use Backbone.Model?
+                    authWrap: true,
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    url: '/api/billing/switch-app-package/' + model.id + '/' + planID,
+                    data: JSON.stringify({
+                        referer: window.location.href.replace(
+                            /#.*$/, '#pods/' + model.id),
+                    }),
+                }).always(utils.preloader.hide).fail(utils.notifyWindow).done(function(response){
+                    if (response.data.status === 'Paid') {
+                        deferred.resolveWith(model, arguments);
+                    } else {
+                        utils.modalDialog({
+                            title: 'Insufficient funds',
+                            body: 'Your account funds seem to be' +
+                                  ' insufficient for the action.' +
+                                  ' Would you like to go to billing' +
+                                  ' system to make the payment?',
+                            small: true,
+                            show: true,
+                            footer: {
+                                buttonOk: function(){
+                                    window.location = response.data.redirect;
+                                },
+                                buttonCancel: function(){
+                                    deferred.rejectWith(model, []);
+                                },
+                                buttonOkText: 'Go to billing',
+                                buttonCancelText: 'No, thanks',
+                            },
+                        });
+                    }
+                });
+            });
+            return deferred.promise();
+        },
         cmdPayAndStart: function(){
             var deferred = new $.Deferred(),
                 model = this;
-            App.getSystemSettingsCollection().done(function(settingCollection){
-                var billingType = settingCollection.findWhere({
-                    name: 'billing_type'}).get('value');
-                if (billingType.toLowerCase() === 'no billing') {
+            App.isFixedBilling().done(function(fixedPrice){
+                if (!fixedPrice) {
                     model.cmdStart().then(deferred.resolve, deferred.reject);
                 } else {
                     utils.preloader.show();
@@ -668,10 +724,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         cmdApplyChanges: function(){
             var deferred = new $.Deferred(),
                 model = this;
-            App.getSystemSettingsCollection().done(function(settings){
-                var fixedPrice = App.userPackage.get('count_type') === 'fixed' &&
-                    settings.byName('billing_type')
-                    .get('value').toLowerCase() !== 'no billing';
+            App.isFixedBilling().done(function(fixedPrice){
                 if (!fixedPrice){
                     var cmd = model.ableTo('start') ? 'start' : 'redeploy';
                     return model.command(cmd, {applyEdit: true})
@@ -1180,14 +1233,41 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         }
     });
 
-    data.AppModel = Backbone.Model.extend({
-        defaults: {
-            name: '',
-            template: '',
-            origin: 'kuberdock'
+    /* Represents filled predefined app */
+    data.Plan = Backbone.AssociatedModel.extend({
+        defaults: function(){
+            return {
+                name: '',
+                goodFor: '',
+                domain: null,
+                publicIP: true,
+                recommended: false,
+                pods: [{
+                    kubeType: null,
+                    containers: [],
+                    persistentDisks: [],
+                }],
+                info: {},
+            };
         },
-        urlRoot: '/api/predefined-apps',
-        parse: unwrapper
+    });
+
+    data.AppModel = Backbone.AssociatedModel.extend({
+        relations: [{
+            type: Backbone.Many,
+            key: 'plans',
+            relatedModel: data.Plan,
+        }],
+        defaults: function(){
+            return {
+                name: '',
+                plans: [],
+                template: '',
+                origin: 'kuberdock'
+            };
+        },
+        urlRoot: '/api/predefined-apps/',
+        parse: unwrapper,
     });
 
     data.AppCollection = Backbone.PageableCollection.extend({

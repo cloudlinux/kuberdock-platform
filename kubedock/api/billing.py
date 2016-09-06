@@ -6,7 +6,8 @@ from kubedock.login import auth_required
 from kubedock.utils import KubeUtils
 from kubedock.billing.models import Package, Kube
 from kubedock.system_settings.models import SystemSettings
-from kubedock.kapi.apps import PredefinedApp
+from kubedock.kapi.apps import Pod, PredefinedApp, PredefinedAppModel
+from kubedock.kapi.podcollection import PodCollection
 import json
 
 
@@ -86,6 +87,30 @@ def order_edit():
     if response.get('result') == 'error':
         raise APIError(response.get('message'))
     return response
+
+
+@billing.route('/switch-app-package/<pod_id>/<int:plan_id>',
+               methods=['POST'], strict_slashes=False)
+@auth_required
+@maintenance_protected
+@KubeUtils.jsonwrap
+def switch_app_package(pod_id, plan_id):
+    current_billing = SystemSettings.get_by_name('billing_type')
+    if current_billing == 'No billing':
+        raise WithoutBilling()
+    billing = current_app.billing_factory.get_billing(current_billing)
+    owner = KubeUtils.get_current_user()
+
+    old_pod = PodCollection(owner).get(pod_id, as_json=True)
+    PredefinedApp.update_pod_to_plan(pod_id, plan_id, async=False)
+    pod = PodCollection(owner).get(pod_id, as_json=True)
+
+    data = KubeUtils._get_params()
+    data['pod'] = pod
+    data['oldPod'] = old_pod
+    data['referer'] = data.get('referer') or ''
+
+    return billing.orderswitchapppackage(**data)
 
 
 @billing.route('/orderKubes', methods=['POST'], strict_slashes=False)

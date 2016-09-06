@@ -12,6 +12,7 @@ def upgrade(upd, with_testing):
     db.session.add_all([
         SystemSettings(
             name='email', label='Email for external services',
+            setting_group='general',
             placeholder='Enter an email address',
             description=('Cluster-wide email that is required for cluster '
                          'authentication in external services.')),

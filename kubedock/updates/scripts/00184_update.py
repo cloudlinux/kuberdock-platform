@@ -16,12 +16,14 @@ def upgrade(upd, with_testing, *args, **kwargs):
         SystemSettings(
             name=keys.DNS_MANAGEMENT_ROUTE53_ID,
             label='AWS Access Key ID',
+            setting_group='domain',
             description='AWS Access Key ID for Route 53 DNS management',
             placeholder='Enter AWS Access Key ID'
         ),
         SystemSettings(
             name=keys.DNS_MANAGEMENT_ROUTE53_SECRET,
             label='AWS Secret Access Key',
+            setting_group='domain',
             description='AWS Secret Access Key for Route 53 DNS management',
             placeholder='Enter AWS Secret Access Key'
         ),

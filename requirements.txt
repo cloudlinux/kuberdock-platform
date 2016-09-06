@@ -51,3 +51,4 @@ python-nginx
 pyyaml
 raven>=5.12
 simplejson==3.8.2
+cloudflare==1.1.5

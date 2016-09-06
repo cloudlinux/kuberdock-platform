@@ -20,7 +20,12 @@ def enrich_with_plugin_list(data):
     # TODO: move DNS data to database
     plugins = ['No billing'] + \
         current_app.billing_factory.list_billing_plugins()
-    dns_backends = ['No provider', 'cpanel_dnsonly', 'aws_route53']
+    dns_backends = [
+        'No provider',
+        'cpanel_dnsonly',
+        'aws_route53',
+        'cloudflare',
+    ]
     if isinstance(data, list):
         btype = [i for i in data if i.get('name') == 'billing_type']
         if btype:

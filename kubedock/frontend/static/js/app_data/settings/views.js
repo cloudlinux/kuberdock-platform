@@ -33,16 +33,32 @@ define(['app_data/app', 'marionette',
                      'dns_management_cpanel_dnsonly_user',
                      'dns_management_cpanel_dnsonly_token',
                      'dns_management_aws_route53_id',
-                     'dns_management_aws_route53_secret'], name)) {
+                     'dns_management_aws_route53_secret',
+                     'dns_management_cloudflare_email',
+                     'dns_management_cloudflare_token',
+                     'dns_management_cloudflare_certtoken'], name)) {
                 className += ' hidden';
             } else if (dnsSystem === 'cpanel_dnsonly' && _.contains(
                     ['dns_management_aws_route53_id',
-                     'dns_management_aws_route53_secret'], name)) {
+                     'dns_management_aws_route53_secret',
+                     'dns_management_cloudflare_email',
+                     'dns_management_cloudflare_token',
+                     'dns_management_cloudflare_certtoken'], name)) {
                 className += ' hidden';
             } else if (dnsSystem === 'aws_route53' && _.contains(
                     ['dns_management_cpanel_dnsonly_host',
                      'dns_management_cpanel_dnsonly_user',
-                     'dns_management_cpanel_dnsonly_token'], name)) {
+                     'dns_management_cpanel_dnsonly_token',
+                     'dns_management_cloudflare_email',
+                     'dns_management_cloudflare_token',
+                     'dns_management_cloudflare_certtoken'], name)) {
+                className += ' hidden';
+            } else if (dnsSystem === 'cloudflare' && _.contains(
+                    ['dns_management_cpanel_dnsonly_host',
+                     'dns_management_cpanel_dnsonly_user',
+                     'dns_management_cpanel_dnsonly_token',
+                     'dns_management_aws_route53_id',
+                     'dns_management_aws_route53_secret'], name)) {
                 className += ' hidden';
             }
             return className;
@@ -112,6 +128,8 @@ define(['app_data/app', 'marionette',
                     .toggleClass('hidden', this.model.get('value') !== 'cpanel_dnsonly');
                 $('#dns_management_aws_route53_id, #dns_management_aws_route53_secret').parent()
                     .toggleClass('hidden', this.model.get('value') !== 'aws_route53');
+                $('#dns_management_cloudflare_email, #dns_management_cloudflare_token, #dns_management_cloudflare_certtoken').parent()
+                    .toggleClass('hidden', this.model.get('value') !== 'cloudflare');
             }
         },
 

@@ -65,7 +65,7 @@ def create_or_update_type_A_record(domain, new_ips, **kwargs):
                                 zone=zone.name, domain=domain, ips=new_ips
                             ))
 
-                    break
+                    break  # exit for loop after dns record was processed
 
             else:
                 # dnsonly can assign only one ip address
@@ -79,7 +79,9 @@ def create_or_update_type_A_record(domain, new_ips, **kwargs):
                     'and ip "{ips}"'.format(
                         zone=zone.name, domain=domain, ips=new_ips
                     ))
-            break
+            break  # exit for loop after dns zone was processed
     else:
+        # this branch executes if for loop is not terminated by break
+        # e.g. there is no dns zone that we expect
         raise ValueError("Zone for domain {} not found. "
                          "Need to configure the zone".format(domain))

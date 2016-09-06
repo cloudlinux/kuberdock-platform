@@ -378,9 +378,11 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             var that = this,
                 portsCollection = this.ports.currentView.collection;
 
-            if (!portsCollection.publicPortsCheckVal(80, 443) && this.pod.get('domain')){
-                utils.notifyWindow('Support only ports 80 and 443 at pod port');
-                return false;
+            if (this.pod.wizardState.flow === 'CREATE_POD'){
+                if (!portsCollection.publicPortsCheckVal(80, 443) && this.pod.get('domain')){
+                    utils.notifyWindow('Support only ports 80 and 443 at pod port');
+                    return false;
+                }
             }
 
             // remove empty ports and volumeMounts

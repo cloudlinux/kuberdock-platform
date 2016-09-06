@@ -102,6 +102,21 @@ methods:
         endpoint: /includes/api.php
         return:
             - results
+    orderswitchapppackage:
+        method: post
+        args:
+            - pod
+            - oldPod
+            - referer
+        params:
+            action: orderkuberdockswitchplan
+            client_id: null          # filled in automatically
+            oldPod: oldPod
+            pod: pod
+            referer: referer
+        endpoint: /includes/api.php
+        return:
+            - results
     getclientid:
         method: post
         args:

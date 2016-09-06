@@ -88,7 +88,7 @@ class PredefinedApp(object):
     """Object that handles all predefined app related routines"""
 
     FIELDS = ('id', 'name', 'template', 'origin', 'qualifier', 'created',
-              'modified')
+              'modified', 'plans')
 
     def __init__(self, **kw):
         required_attrs = set(['name', 'template'])
@@ -121,9 +121,12 @@ class PredefinedApp(object):
             apps.append(cls(**dbapp.to_dict()))
         return apps
 
-    def to_dict(self):
+    def to_dict(self, with_plans=False):
         """Instance method that returns PA object as dict"""
-        return dict((k, v) for k, v in vars(self).items() if k in self.FIELDS)
+        data = dict((k, v) for k, v in vars(self).items() if k in self.FIELDS)
+        if with_plans:
+            data['plans'] = self.get_plans()
+        return data
 
     @classmethod
     def create(cls, **kw):
@@ -354,7 +357,8 @@ class PredefinedApp(object):
         app, pod = cls._get_instance_from_pod(pod_id)
         cls._check_permissions(user, pod)
         filled = app.get_filled_template_for_plan(plan_id, values)
-        return app._update_pod_config(pod, filled, async)
+        app._update_pod_config(pod, filled, async)
+        return app.get_plan(plan_id)
 
     @classmethod
     def update_pod_to_plan_by_name(cls, pod_id, plan_name, values=None,
@@ -370,7 +374,8 @@ class PredefinedApp(object):
         app, pod = cls._get_instance_from_pod(pod_id)
         cls._check_permissions(user, pod)
         filled = app.get_filled_template_for_plan_by_name(plan_name, values)
-        return app._update_pod_config(pod, filled, async)
+        app._update_pod_config(pod, filled, async)
+        return app.get_plan(app._get_plan_by_name(plan_name, index_only=True))
 
     @staticmethod
     def _check_permissions(user, pod=None):
@@ -452,9 +457,10 @@ class PredefinedApp(object):
         :param new_config: dict -> filled config with applied values
         """
         root = self._get_template_spec(new_config)
-        kube_id = new_config['kuberdock']['appPackage']['kubeType']
+        plan = new_config['kuberdock']['appPackage']
+        kube_id = plan['kubeType']
         check_migratability(pod, kube_id)
-        domain = new_config['kuberdock']['appPackage'].get('domain')
+        domain = plan.get('domain')
         pod_domain = PodDomain.query.filter(
             PodDomain.pod_id == pod.id).first()
         old_domain = pod_domain and pod_domain.base_domain.name
@@ -468,6 +474,7 @@ class PredefinedApp(object):
         self._update_IPs(pod, root, pod_config)
         try:
             pod.kube_id = kube_id
+            pod.template_plan_name = plan['name']
             pod.config = json.dumps(pod_config)
             if async:
                 update_plan_async.apply_async(

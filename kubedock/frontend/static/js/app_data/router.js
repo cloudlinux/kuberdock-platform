@@ -14,6 +14,7 @@ define(['marionette'], function(Marionette){
             'pods/:id/edit'                   : 'editEntirePod',
             'pods/:id/container/:name/edit/env': 'editContainerEnv',
             'pods/:id/container/:name/edit/general': 'editContainerGeneral',
+            'pods/:id/switch-package'         : 'changeAppPackage',
 
             'nodes'                           : 'showNodes',
             'nodes/add'                       : 'showAddNode',

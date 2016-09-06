@@ -66,15 +66,19 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
     decorators = [auth_required]
 
     @check_permission('get', 'predefined_apps')
-    def get(self, app_id=None):
+    @use_kwargs({'with-plans': {'type': 'boolean', 'coerce': extbool},
+                 'file-only': {'type': 'boolean', 'coerce': extbool}},
+                allow_unknown=True)
+    def get(self, app_id=None, **params):
         if app_id is None:
             return jsonify({'status': 'OK',
                             'data': PredefinedApp.all(as_dict=True)})
-        file_only = extbool(self._get_params().get('file-only', False))
+
         app = PredefinedApp.get(app_id)
-        if file_only:
+        if params.get('file-only'):
             return Response(app.template, content_type='application/x-yaml')
-        return jsonify({'status': 'OK', 'data': app.to_dict()})
+        return jsonify({'status': 'OK', 'data': app.to_dict(
+            with_plans=params.get('with-plans'))})
 
     @KubeUtils.jsonwrap
     @maintenance_protected

@@ -16,6 +16,54 @@ define([
             var admin = App.currentUser.get('rolename') === 'Admin';
             App.navigate(admin ? 'nodes' : 'pods', {trigger: true});
         },
+        changeAppPackage: function(podID){
+            if (!this.checkPermissions(['User', 'TrialUser', 'LimitedUser']))
+                return;
+            var that = this;
+            require(['app_data/pa/views'], function(Views){
+                App.getPodCollection().done(function(podCollection){
+                    var pod = podCollection.get(podID),
+                        templateID = pod.get('template_id'),
+                        currentPlanName = pod.get('template_plan_name');
+                    if (!templateID || !currentPlanName)
+                        return that.pageNotFound();
+                    var predefinedApp = new Model.AppModel({id: templateID});
+                    predefinedApp.fetch({data: {'with-plans': true}})
+                        .fail(_.bind(that.pageNotFound, that))
+                        .done(function(){
+                            var plans = predefinedApp.get('plans'),
+                                plansLayout = new Views.PlansLayout({
+                                    pod: pod, model: predefinedApp,
+                                }),
+                                plansListView = new Views.PlansList({
+                                    pod: pod, model: predefinedApp,
+                                    collection: plans,
+                                }),
+                                breadcrumbsLayout = new Breadcrumbs.Layout(
+                                    {points: ['pods', 'pod', 'container']}),
+                                navbar = new Menu.NavList({collection: App.menuCollection});
+
+                            plans.each(function(plan){
+                                plan.set('current', plan.get('name') === currentPlanName);
+                            });
+
+                            plansLayout.on('show', function(){
+                                plansLayout.header.show(navbar);
+                                plansLayout.breadcrumbs.show(breadcrumbsLayout);
+                                breadcrumbsLayout.pods.show(new Breadcrumbs.Link(
+                                    {text: 'Pods', href: '#pods'}));
+                                breadcrumbsLayout.pod.show(new Breadcrumbs.Link(
+                                    {text: pod.get('name'), href: '#pods/' + pod.get('id')}));
+                                breadcrumbsLayout.container.show(new Breadcrumbs.Text(
+                                    {text: "Switch Package for " + predefinedApp.get('name')}));
+
+                                plansLayout.plans.show(plansListView);
+                            });
+                            App.contents.show(plansLayout);
+                        });
+                });
+            });
+        },
         doLogin: function(options){
             var deferred = new $.Deferred();
             require(['app_data/login/views'], function(Views){

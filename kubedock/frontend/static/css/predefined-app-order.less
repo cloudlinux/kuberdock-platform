@@ -1,0 +1,280 @@
+.plans-change{
+    background-color: #f8f8f8;
+    font-family: @regular;
+    header{
+        min-height: 52px;
+        text-align: center;
+        margin-bottom: 28px;
+        padding: 10px 0 17px;
+        border-bottom: 8px solid #0070c2;
+    }
+    .plans h2,
+    #app-header,
+    #pre-description{
+        display: block;
+        color: #1d1d1d;
+        font-size: 14px;
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+    #pre-description{
+        padding: 0;
+        font-size: 12px;
+        text-align: left;
+        line-height: 16px;
+        font-weight: normal;
+        text-transform: none;
+    }
+
+    /* buttons style */
+    .buttons{
+        .choose-button,
+        .current-button{
+            .border-radius(2px);
+            .box-sizing(padding-box);
+            .transition(all 300ms);
+            .box-shadow(0px 2px 4px 0px rgba(0, 0, 0, 0.35));
+            border: none;
+            color: #fff;
+            height: 37px;
+            padding: 0 31px;
+            font-size: 12px;
+            min-width: 105px;
+            line-height: 37px;
+            text-align: center;
+            text-transform: uppercase;
+            background-color: #2490EA;
+            font-family: @regular;
+        }
+        .choose-button:hover{
+            .box-shadow(0 5px 11px 0 rgba(0, 0, 0, 0.18));
+            cursor: pointer;
+        }
+        .current-button {
+            background-color: #fff;
+            color: rgba(29,29,29,0.50);
+        }
+        .current-button:hover{
+            .box-shadow(0px 2px 4px 0px rgba(0, 0, 0, 0.35));
+            cursor: not-allowed;
+        }
+    }
+    /* end buttons */
+    /* plans section */
+
+    .text-right{ padding-right: 10%; }
+    .plans{
+        .box-shadow-materials();
+        font-size: 0;
+        text-align: center;
+        margin-bottom: 20px;
+        padding-bottom: 70px;
+        background-color: #fff;
+        .header{
+            padding: 26px 26px;
+            border-bottom: 1px solid #dfdfdf;
+            h2{
+                float: left;
+                margin-top: 0;
+                font-weight: 600;
+                margin-bottom: 0;
+            }
+            span{
+                float: right;
+                color: #00462b;
+                font-size: 14px;
+                font-weight: 600;
+                line-height: 14px;
+                position: relative;
+                padding-left: 33px;
+                &::before{
+                    top: 0;
+                    left: 0;
+                    bottom: 0;
+                    content: '';
+                    width: 19px;
+                    margin: auto;
+                    height: 25px;
+                    position: absolute;
+                    background: url('../img/lamp-icon.png') 0 0 no-repeat;
+                }
+            }
+        }
+        .plan{
+            .box-sizing();
+            width: 189px;
+            position: relative;
+            padding: 28px 1% 40px;
+            display: inline-block;
+            margin-top: 33px;
+            vertical-align: top;
+            * { .box-sizing(); }
+            &:nth-child(2){
+                .plan-img-wrapper{
+                    margin-top: 90px;
+                    padding-top: 30px;
+                }
+            }
+            &:nth-child(3){
+                .plan-img-wrapper{
+                    margin-top: 60px;
+                    padding-top: 60px;
+                }
+            }
+            &:nth-child(4){
+                .plan-img-wrapper{
+                    margin-top: 30px;
+                    padding-top: 90px;
+                }
+            }
+            &:nth-child(5){
+                .plan-img-wrapper{
+                    margin-top: 0px;
+                    padding-top: 120px;
+                }
+            }
+            &.current,
+            &.recommended{
+                .title{
+                    top: -12px;
+                    left: 0;
+                    padding: 3px 0;
+                    right: 0;
+                    color: #fff;
+                    margin: auto;
+                    width: 119px;
+                    font-size: 12px;
+                    font-weight: 800;
+                    position: absolute;
+                    text-align: center;
+                    text-transform: uppercase;
+                    background-color: #3d8acd;
+                }
+            }
+            &.recommended{
+                background: #fff;
+                border: 1px solid #e0e0e0;
+                .title{ background-color: #e65583; }
+                .plan-img-wrapper{
+                    .plan-name{ background-color: #e65583; }
+                }
+                .buttons{
+                    .choose-button{
+                        background-color: #e65583;
+                    }
+                }
+            }
+            .plan-img-wrapper{
+                width: 119px;
+                padding-top: 15px;
+                position: relative;
+                margin: 0 auto 18px;
+                background: url('../img/chocolate.png') 0 0 no-repeat;
+                .plan-name {
+                    .border-radius(50px);
+                    top: -10px;
+                    z-index: 1;
+                    right: -15px;
+                    height: 47px;
+                    color: #fffefe;
+                    min-width: 47px;
+                    padding: 0 10px;
+                    font-size: 17px;
+                    line-height: 47px;
+                    position: absolute;
+                    text-align: center;
+                    display: inline-block;
+                    background-color: #2490ea;
+                }
+                .price-wrapper {
+                    height: 133px;
+                    margin: 0 auto;
+                    position: relative;
+                    background: url('../img/price-area.png') 0 0 no-repeat;
+                    .plan-period,
+                    .plan-price-suffix{
+                        color: #fff;
+                        font-size: 14px;
+                    }
+                }
+                .plan-price{
+                    color: #fff;
+                    font-size: 19px;
+                    padding-top: 50%;
+                    line-height: 26px;
+                    word-spacing: -4px;
+                    text-align: right;
+                    padding-right: 10%;
+                    margin-bottom: 5px;
+                }
+            }
+            .plan-goodfor{
+                color: #e65583;
+                font-size: 13px;
+                text-align: left;
+                font-weight: 600;
+                padding: 0 0 0 10px;
+                margin-bottom: 15px;
+                span{
+                    font-size: 17px;
+                }
+            }
+            .show-more{
+                margin: 0 10px;
+                font-size: 14px;
+                cursor: pointer;
+                font-weight: 400;
+                text-align: left;
+                position: relative;
+                padding-left: 27px;
+                &:before{
+                    top: 0;
+                    left: 0;
+                    bottom: 0;
+                    content: '';
+                    width: 18px;
+                    margin: auto;
+                    height: 18px;
+                    position: absolute;
+                    background: url('../img/item-arrow.png') 0 0 no-repeat;
+                }
+                &.rotate{
+                    &:before{
+                        .rotate(90deg);
+                    }
+                }
+            }
+            .plan-details{
+                display: none;
+                padding: 10px;
+                font-size: 12px;
+                text-align: left;
+                margin-top: 15px;
+                border: 1px solid #e0e0e0;
+                &.show{ display: block; }
+                p{
+                    color: #000;
+                    font-size: 13px;
+                    word-spacing: -1px;
+                    margin-bottom: 5px;
+                    letter-spacing: 0px;
+                }
+            }
+            .buttons{
+                left: 0;
+                right: 0;
+                bottom: 0;
+                padding-top: 18px;
+                text-align: center;
+                position: absolute;
+                margin-bottom: -18px;
+            }
+        }
+    }
+
+    @-moz-document url-prefix(){
+        .plans .plan .plan-details p{ font-size: 12px; }
+        .plans .plan .plan-goodfor span{ font-size: 15px; }
+    }
+}

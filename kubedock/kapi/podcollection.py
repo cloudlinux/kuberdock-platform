@@ -552,8 +552,9 @@ class PodCollection(object):
         template_id = getattr(obj, 'kuberdock_template_id', None)
         template_plan_name = getattr(obj, 'kuberdock_plan_name', None)
         status = getattr(obj, 'status', POD_STATUSES.stopped)
-        excluded = ('kuberdock_template_id',  # duplicates of model's fields
-                    'owner', 'kube_type', 'status', 'id', 'name')
+        excluded = (  # duplicates of model's fields
+            'kuberdock_template_id', 'kuberdock_plan_name',
+            'owner', 'kube_type', 'status', 'id', 'name')
         data = {k: v for k, v in vars(obj).iteritems() if k not in excluded}
         if db_pod is None:
             db_pod = DBPod(name=obj.name, config=json.dumps(data), id=obj.id,
@@ -797,8 +798,6 @@ class PodCollection(object):
         for db_pod in db_pods:
             db_pod_config = json.loads(db_pod.config)
             namespace = db_pod.namespace
-            template_id = db_pod.template_id
-            template_plan_name = db_pod.template_plan_name
 
             # exists in DB only
             if (db_pod.id, namespace) not in self._collection:
@@ -839,8 +838,8 @@ class PodCollection(object):
 
             pod.name = db_pod.name
             pod.set_owner(db_pod.owner)
-            pod.template_id = template_id
-            pod.template_plan_name = template_plan_name
+            pod.template_id = db_pod.template_id
+            pod.template_plan_name = db_pod.template_plan_name
             pod.kube_type = db_pod.kube_id
             pod.db_status = db_pod.status
             pod.direct_access = (json.loads(db_pod.direct_access)

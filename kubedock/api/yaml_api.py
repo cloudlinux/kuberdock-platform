@@ -3,7 +3,7 @@ from flask import Blueprint, Response
 from flask.views import MethodView
 
 from kubedock.decorators import maintenance_protected
-from kubedock.exceptions import PredefinedAppExc, InsufficientData
+from kubedock.exceptions import APIError, PredefinedAppExc, InsufficientData
 from kubedock.login import auth_required
 from kubedock.utils import KubeUtils, register_api, send_event_to_user
 from kubedock.kapi.podcollection import PodCollection
@@ -48,6 +48,8 @@ class YamlAPI(KubeUtils, MethodView):
 
         try:
             res = PodCollection(user).add(new_pod)
+        except APIError as e:  # pass as is
+            raise
         except Exception as e:
             raise PredefinedAppExc.InternalPredefinedAppError(
                 details={'message': str(e)})

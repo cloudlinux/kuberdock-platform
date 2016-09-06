@@ -1221,7 +1221,8 @@ class PodCollection(object):
                     .filter(DBPod.id != original_pod.id)
             user_kubes = sum([pod.kubes for pod in pods_collection
                               if not pod.is_deleted])
-            kubes_left = settings.TRIAL_KUBES - user_kubes
+            max_kubes_trial_user = int(SystemSettings.get_by_name('max_kubes_trial_user') or 0)
+            kubes_left = max_kubes_trial_user - user_kubes
             pod_kubes = sum(c['kubes'] for c in containers)
             if pod_kubes > kubes_left:
                 podutils.raise_(

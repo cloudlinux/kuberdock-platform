@@ -64,6 +64,12 @@ def add_system_settings():
             placeholder='Enter value for Memory multiplier',
             setting_group='general'),
         SystemSettings(
+            name=keys.MAX_KUBES_TRIAL_USER, value='5',
+            label='Kubes limit for Trial user',
+            placeholder='Enter Kubes limit for Trial user',
+            setting_group='general'
+        ),
+        SystemSettings(
             name=keys.DNS_MANAGEMENT_SYSTEM,
             label='Select your DNS management system',
             value='cpanel_dnsonly',

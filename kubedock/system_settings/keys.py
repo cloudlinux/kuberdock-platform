@@ -10,6 +10,7 @@ PERSISTENT_DISK_MAX_SIZE = 'persitent_disk_max_size'
 MAX_KUBES_PER_CONTAINER = 'max_kubes_per_container'
 CPU_MULTIPLIER = 'cpu_multiplier'
 MEMORY_MULTIPLIER = 'memory_multiplier'
+MAX_KUBES_TRIAL_USER = 'max_kubes_trial_user'
 
 # DNS Management settings
 KEY_PREFIX_DNS_MANAGEMENT = 'dns_management'

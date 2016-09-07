@@ -233,7 +233,7 @@ class _U182(_Update):
         # Such workaround needed only once because in previous version of KD we
         # have a bug with unclosed DB transactions which blocks upgrade
         upd.print_log('Stopping Kuberdock server to upgrade DB schema. '
-                      'It will be restarted automatically upon'
+                      'It will be restarted automatically upon '
                       'successful upgrade')
         helpers.local("systemctl stop emperor.uwsgi")
 

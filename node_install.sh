@@ -295,8 +295,8 @@ setup_ntpd ()
     yum install -y ntp
     check_status
 
-    function _sync_time() {
-        grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -d
+    _sync_time() {
+        grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -u
     }
 
     # We use setup like this
@@ -304,7 +304,7 @@ setup_ntpd ()
     # Decrease poll interval to be more closer to master time
     for _retry in $(seq 3); do
         # http://www.planetcobalt.net/sdb/ntp_leap.shtml
-        echo "Attempt $_retry to run ntpdate -vdu.." && \
+        echo "Attempt $_retry to run ntpdate -u ..." && \
         _sync_time && break || sleep 30;
     done
     _sync_time

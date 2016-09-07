@@ -414,12 +414,12 @@ setup_ntpd ()
     yum erase -y chrony
     yum install -y ntp
 
-    function _sync_time() {
-        grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -d
+    _sync_time() {
+        grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -u
     }
 
     for _retry in $(seq 3); do
-        echo "Attempt $_retry to run ntpdate ..." && \
+        echo "Attempt $_retry to run ntpdate -u ..." && \
         _sync_time && break || sleep 30;
     done
 

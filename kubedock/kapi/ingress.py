@@ -10,6 +10,8 @@ from ..constants import (
 from ..exceptions import APIError
 from ..pods.models import Pod, IPPool
 from ..settings import IS_PRODUCTION_PKG
+from ..system_settings import keys
+from ..system_settings.models import SystemSettings
 from ..validation import check_internal_pod_data
 from ..users.models import User
 from ..utils import retry
@@ -69,9 +71,9 @@ def create_ingress_controller_pod():
             if backend_svc is None:
                 return False
 
-            # valid email needed (AC-3853)
+            email = SystemSettings.get_by_name(keys.EXTERNAL_SYSTEMS_AUTH_EMAIL)
             ingress_config = get_ingress_pod_config(backend_ns, backend_svc,
-                                                    'hoster@kuberdock.local')
+                                                    email)
             check_internal_pod_data(ingress_config, owner)
             ingress_pod = PodCollection(owner).add(ingress_config,
                                                    skip_check=True)
@@ -237,8 +239,16 @@ def get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
     return config
 
 
+def check_cluster_email():
+    """Check if cluster email is not empty"""
+    if SystemSettings.get_by_name(keys.EXTERNAL_SYSTEMS_AUTH_EMAIL):
+        return
+    raise APIError('Email for external services is empty')
+
+
 def prepare_ip_sharing():
     """Create all pods for IP Sharing"""
+    check_cluster_email()
     IPPool.get_free_host()
     create_default_backend_pod()
     create_ingress_controller_pod()

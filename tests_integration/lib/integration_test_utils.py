@@ -12,6 +12,7 @@ from contextlib import contextmanager
 from functools import wraps
 from itertools import count, islice
 from xmlrpclib import ProtocolError
+from paramiko.sftp import CMD_EXTENDED
 
 import oca
 from colorama import Fore, Style
@@ -462,7 +463,8 @@ def set_eviction_timeout(cluster, timeout):
     conf.close()
     tmp_file.close()
 
-    sftp.rename(tmp_filename, conf_filename)
+    sftp._request(CMD_EXTENDED, 'posix-rename@openssh.com', tmp_filename,
+                  conf_filename)
     cluster.ssh_exec('master', 'systemctl restart kube-controller-manager')
 
 

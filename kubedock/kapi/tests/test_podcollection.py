@@ -20,6 +20,7 @@ from ...exceptions import APIError, NoSuitableNode
 from ...rbac.models import Role
 from ...users.models import User
 from ...utils import POD_STATUSES, NODE_STATUSES
+from ...pods.models import Pod as DBPod
 
 global_patchers = [
     mock.patch.object(podcollection, 'current_app'),
@@ -838,7 +839,7 @@ class TestPodCollectionPreprocessNewPod(DBTestCase, TestCaseMixin):
     def test_check_trial_called(self):
         self.pod_collection._preprocess_new_pod(self.params)
         self.pod_collection._check_trial.assert_called_once_with(
-            self.params['containers'])
+            self.params['containers'], original_pod=None)
 
         self.pod_collection._check_trial.reset_mock()
         self.pod_collection._preprocess_new_pod(self.params, skip_check=True)
@@ -1359,11 +1360,17 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
         U = type('User', (), {'username': '4u5hfee'})
         self.user = U()
 
+    def pod_factory(self, id, kubes):
+        return type('Pod', (), {
+            'is_deleted': False,
+            'kubes': kubes,
+            'id': id})()
+
     @mock.patch.object(podcollection.podutils, 'raise_')
     def test_enough_kubes(self, raise_mock):
         """ user is trial and have enough kubes for a new pod """
         self.user.is_trial = lambda: True
-        self.user.kubes = 5
+        self.user.pods = [self.pod_factory(None, 5)]
         containers = [{'kubes': 2}, {'kubes': 2}, {'kubes': 1}]
         podcollection.PodCollection(self.user)._check_trial(containers)
         self.assertFalse(raise_mock.called)
@@ -1372,7 +1379,7 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
     def test_not_enough_kubes(self, raise_mock):
         """ user is trial and don't have enough kubes for a new pod """
         self.user.is_trial = lambda: True
-        self.user.kubes = 5
+        self.user.pods = [self.pod_factory(None, 5)]
         containers = [{'kubes': 2}, {'kubes': 4}]
         podcollection.PodCollection(self.user)._check_trial(containers)
         raise_mock.assert_called_once_with(mock.ANY)
@@ -1380,10 +1387,49 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
     @mock.patch.object(podcollection.podutils, 'raise_')
     def test_user_is_not_trial(self, raise_mock):
         self.user.is_trial = lambda: False
-        self.user.kubes = 5
+        self.user.pods = [type('Pod', (), {'is_deleted': False, 'kubes': 5})]
         containers = [{'kubes': 2}, {'kubes': 4}]
         podcollection.PodCollection(self.user)._check_trial(containers)
         self.assertFalse(raise_mock.called)
+
+    @mock.patch.object(podcollection.podutils, 'raise_')
+    def test_add_kubes_to_exists_pod_enough(self, raise_mock):
+        """ user is trial and have enough kubes for a exists pod """
+        self.user.is_trial = lambda: True
+        edit_pod = self.pod_factory('bbbbbbbb-72b4-49c0-869d-34d87fb4edf6', 3)
+        pods = type("Pods", (), {
+            'filter': lambda q, a: filter(
+                lambda x: not a.compare(DBPod.id != x.id), [
+                    self.pod_factory('aaaaaaaa-72b4-49c0-869d-34d87fb4edf6', 2),
+                    edit_pod
+                ])})
+
+        self.user.pods = pods()
+
+        containers = [{'kubes': 3}, {'kubes': 3}, {'kubes': 2}]
+        podcollection.PodCollection(self.user)._check_trial(containers,
+                                 original_pod=edit_pod)
+        self.assertFalse(raise_mock.called)
+
+    @mock.patch.object(podcollection.podutils, 'raise_')
+    def test_add_kubes_to_exists_pod_not_enough(self, raise_mock):
+        """ user is trial and don't have enough kubes for a exists pod """
+        self.user.is_trial = lambda: True
+
+        edit_pod = self.pod_factory('bbbbbbbb-72b4-49c0-869d-34d87fb4edf6', 3)
+        pods = type("Pods", (), {
+            'filter': lambda q, a: filter(
+                lambda x: not a.compare(DBPod.id != x.id), [
+                    self.pod_factory('aaaaaaaa-72b4-49c0-869d-34d87fb4edf6', 3),
+                    edit_pod
+                ])})
+
+        self.user.pods = pods()
+
+        containers = [{'kubes': 3}, {'kubes': 3}, {'kubes': 2}]
+        podcollection.PodCollection(self.user)\
+            ._check_trial(containers, original_pod=edit_pod)
+        raise_mock.assert_called_once_with(mock.ANY)
 
 
 class TestPodCollectionGetSecrets(unittest.TestCase, TestCaseMixin):

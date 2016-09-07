@@ -113,7 +113,8 @@ class PodCollection(object):
             secrets.update(self.get_secrets(original_pod).values())
         secrets = sorted(secrets)
 
-        self._preprocess_containers(params['containers'], secrets, skip_check)
+        self._preprocess_containers(params['containers'], secrets, skip_check,
+                                    original_pod=original_pod)
 
         params['owner'] = self.owner
 
@@ -151,7 +152,8 @@ class PodCollection(object):
         pod_data['owner'] = self.owner
         return pod_data, secrets
 
-    def _preprocess_containers(self, containers, secrets, skip_check):
+    def _preprocess_containers(self, containers, secrets, skip_check,
+                               original_pod=None):
         fix_relative_mount_paths(containers)
 
         # TODO: with cerberus 0.10 use "default" normalization rule
@@ -161,7 +163,7 @@ class PodCollection(object):
             container.setdefault('kubes', 1)
 
         if not skip_check:
-            self._check_trial(containers)
+            self._check_trial(containers, original_pod=original_pod)
             Image.check_containers(containers, secrets)
 
     def _check_status(self, pod_data):
@@ -1211,9 +1213,14 @@ class PodCollection(object):
                 return False
         return True
 
-    def _check_trial(self, containers):
+    def _check_trial(self, containers, original_pod=None):
         if self.owner.is_trial():
-            user_kubes = self.owner.kubes
+            pods_collection = self.owner.pods
+            if original_pod:
+                pods_collection = pods_collection\
+                    .filter(DBPod.id != original_pod.id)
+            user_kubes = sum([pod.kubes for pod in pods_collection
+                              if not pod.is_deleted])
             kubes_left = settings.TRIAL_KUBES - user_kubes
             pod_kubes = sum(c['kubes'] for c in containers)
             if pod_kubes > kubes_left:
@@ -1253,6 +1260,7 @@ class PodCollection(object):
 
     def _unbind_ip(self, pod, data=None):
         self.unbind_publicIP(pod.id)
+
 
 def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
                     error_message=None):

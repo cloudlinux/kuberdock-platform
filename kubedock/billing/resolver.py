@@ -173,7 +173,7 @@ class Billing(object):
             expected_args = data.get('args', [])    # list
             prepared_args = dict(zip(expected_args, args))  # dict
             prepared_args.update(kw)
-            if sorted(prepared_args.keys()) != sorted(expected_args):
+            if set(expected_args) - set(prepared_args.keys()):
                 raise TypeError('Improper number of arguments')
             filled_params = self._fill_params(params, prepared_args)
             request_args = self._compose_args(m, filled_params)

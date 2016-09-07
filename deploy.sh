@@ -43,6 +43,8 @@ DATA_TEMPLATE='{'\
 '\"tags\":{\"uname\":\"$uname\", \"owner\":\"$KD_OWNER_EMAIL\"},'\
 ' \"release\":\"$release\", \"server_name\":\"$hostname\($ip_address\)\"}'
 
+KEY_BITS="${KEY_BITS:-4096}"
+
 
 isRpmFileNotSigned(){
     package="$@"
@@ -391,9 +393,9 @@ function create_k8s_certs {
         curl -L -O --connect-timeout 20 --retry 6 --retry-delay 2 https://storage.googleapis.com/kubernetes-release/easy-rsa/easy-rsa.tar.gz
         tar xzf easy-rsa.tar.gz
         cd easy-rsa-master/easyrsa3
-        ./easyrsa init-pki
-        ./easyrsa --batch "--req-cn=${primary_cn}@$(date +%s)" build-ca nopass
-        ./easyrsa --subject-alt-name="${sans}" build-server-full "$(hostname)" nopass
+        ./easyrsa --keysize="$KEY_BITS" init-pki
+        ./easyrsa --keysize="$KEY_BITS" --batch "--req-cn=${primary_cn}@$(date +%s)" build-ca nopass
+        ./easyrsa --keysize="$KEY_BITS" --subject-alt-name="${sans}" build-server-full "$(hostname)" nopass
     ) &>${cert_create_debug_output} || {
         cat "${cert_create_debug_output}" >&2
         echo "=== Failed to generate certificates: Aborting ===" >&2
@@ -673,28 +675,28 @@ yum_wrapper install -y bridge-utils
 #6 Setting up etcd
 log_it echo 'Generating etcd-ca certificates...'
 do_and_log mkdir /etc/pki/etcd
-etcd-ca --depot-path /root/.etcd-ca init --passphrase ""
+etcd-ca --depot-path /root/.etcd-ca init --passphrase "" --key-bits "$KEY_BITS"
 etcd-ca --depot-path /root/.etcd-ca export --insecure --passphrase "" | tar -xf -
 do_and_log mv ca.crt /etc/pki/etcd/
 do_and_log rm -f ca.key.insecure
 
 # first instance of etcd cluster
 etcd1=$(uname -n)
-etcd-ca --depot-path /root/.etcd-ca new-cert --ip "127.0.0.1,$MASTER_IP" --passphrase "" $etcd1
+etcd-ca --depot-path /root/.etcd-ca new-cert --ip "127.0.0.1,$MASTER_IP" --passphrase "" --key-bits "$KEY_BITS" $etcd1
 etcd-ca --depot-path /root/.etcd-ca sign --passphrase "" $etcd1
 etcd-ca --depot-path /root/.etcd-ca export $etcd1 --insecure --passphrase "" | tar -xf -
 do_and_log mv $etcd1.crt /etc/pki/etcd/
 do_and_log mv $etcd1.key.insecure /etc/pki/etcd/$etcd1.key
 
 # generate dns-pod's certificate
-etcd-ca --depot-path /root/.etcd-ca new-cert --ip "10.254.0.10" --passphrase "" etcd-dns
+etcd-ca --depot-path /root/.etcd-ca new-cert --ip "10.254.0.10" --passphrase "" --key-bits "$KEY_BITS" etcd-dns
 etcd-ca --depot-path /root/.etcd-ca sign --passphrase "" etcd-dns
 etcd-ca --depot-path /root/.etcd-ca export etcd-dns --insecure --passphrase "" | tar -xf -
 do_and_log mv etcd-dns.crt /etc/pki/etcd/
 do_and_log mv etcd-dns.key.insecure /etc/pki/etcd/etcd-dns.key
 
 # generate client's certificate
-etcd-ca --depot-path /root/.etcd-ca new-cert --passphrase "" etcd-client
+etcd-ca --depot-path /root/.etcd-ca new-cert --passphrase ""  --key-bits "$KEY_BITS" etcd-client
 etcd-ca --depot-path /root/.etcd-ca sign --passphrase "" etcd-client
 etcd-ca --depot-path /root/.etcd-ca export etcd-client --insecure --passphrase "" | tar -xf -
 do_and_log mv etcd-client.crt /etc/pki/etcd/

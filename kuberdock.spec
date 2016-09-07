@@ -20,8 +20,8 @@ Requires: fabric >= 1.10.2
 Requires: etcd == 1:2.2.5
 Requires: kubernetes-master == 1:1.2.4-3.el7.cloudlinux
 Requires: kubernetes-node == 1:1.2.4-3.el7.cloudlinux
-Requires: docker == 1:1.8.2-11.el7
-Requires: docker-selinux == 1:1.8.2-11.el7
+Requires: docker == 1:1.12.1-2.el7
+Requires: docker-selinux == 1:1.12.1-2.el7
 
 # For semanage, but in new CentOS it's installed by default:
 Requires: policycoreutils-python >= 2.2

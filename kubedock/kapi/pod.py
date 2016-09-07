@@ -494,39 +494,8 @@ class Pod(object):
             for p in data.get('ports', []):
                 p.pop('hostPort', None)
 
-        self.add_origin_root(data, volumes)
-
         data['imagePullPolicy'] = 'Always'
         return data
-
-    def add_origin_root(self, container, volumes):
-        """If there are lifecycle in container, then mount origin root from
-        docker overlay path. Need this for container hooks.
-        """
-        if 'lifecycle' not in container:
-            # No container hooks defined for container
-            return
-
-        volume_name = '-'.join([container['name'], ORIGIN_ROOT])
-
-        # Make sure we remove previous info, to handle case when image changes
-        origin_root_vol = filter(lambda v: v['name'] == volume_name,
-                                 volumes)
-        if origin_root_vol:
-            volumes.remove(origin_root_vol[0])
-        origin_root_mnt = filter(lambda m: m['name'] == volume_name,
-                                 container['volumeMounts'])
-        if origin_root_mnt:
-            container['volumeMounts'].remove(origin_root_mnt[0])
-
-        image = Image(container['image'])
-        image_id = image.get_id()
-        volumes.append(
-            {u'hostPath': {u'path': OVERLAY_PATH.format(image_id)},
-             u'name': volume_name})
-        container['volumeMounts'].append(
-            {u'readOnly': True, u'mountPath': u'/{}'.format(ORIGIN_ROOT),
-             u'name': volume_name})
 
     def _parse_cmd_string(self, cmd_string):
         lex = shlex.shlex(cmd_string, posix=True)

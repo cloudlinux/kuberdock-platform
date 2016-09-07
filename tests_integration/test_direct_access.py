@@ -1,4 +1,6 @@
 import logging
+import re
+
 import pexpect
 import time
 import os
@@ -419,7 +421,8 @@ def _test_ssh_to_stopped_container(host, user, password):
 
     def _assert_container_stopped(cmd, password, container_id):
         out = _run_ssh_pexpect(cmd, password)
-        assert 'Container {} is not running'.format(container_id) in out
+        assert re.search(
+            r'Container {}.* is not running'.format(container_id), out)
 
     retry(_assert_container_stopped, cmd=cmd, password=password,
           container_id=user, tries=3, interval=1)

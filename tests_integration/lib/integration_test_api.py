@@ -19,7 +19,7 @@ import memcache
 import pymongo
 from ipaddress import IPv4Network
 
-from pg import DB
+# from pg import DB
 
 from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
     VmCreationError, VmProvisionError

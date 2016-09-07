@@ -29,7 +29,7 @@ class _Update(object):
         pass
 
     @classmethod
-    def upgrade_node(cls, upd, with_testing, env):
+    def upgrade_node(cls, upd, with_testing, env, *args, **kwargs):
         pass
 
     @classmethod
@@ -209,7 +209,7 @@ class _U167NetworkPlugin(_Update):
     PLUGIN_PATH = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/'
 
     @classmethod
-    def upgrade_node(cls, upd, with_testing, env):
+    def upgrade_node(cls, upd, with_testing, env, *args, **kwargs):
         upd.print_log('Update network plugin...')
         run('ipset -exist create kuberdock_ingress hash:ip')
         put('/var/opt/kuberdock/node_network_plugin.sh',
@@ -604,7 +604,7 @@ updates = [
 
 
 def _apply(method):
-    def fn(*args):
+    def fn(*args, **kwargs):
         if method.startswith('down'):
             us = reversed(updates)
         else:
@@ -612,7 +612,7 @@ def _apply(method):
 
         for u in us:
             m = getattr(u, method)
-            m(*args)
+            m(*args, **kwargs)
 
     return fn
 

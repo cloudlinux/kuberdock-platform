@@ -18,6 +18,8 @@ import redis
 import memcache
 from ipaddress import IPv4Network
 
+# from pg import DB
+
 from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
     VmCreationError, VmProvisionError
 from tests_integration.lib.exceptions import StatusWaitException, \
@@ -630,7 +632,7 @@ class KDPod(RESTMixin):
     Port = namedtuple('Port', 'port proto')
 
     def __init__(self, cluster, image, name, kube_type, kubes,
-                 open_all_ports, restart_policy, pvs, owner, public_ports):
+                 open_all_ports, restart_policy, pvs, owner, public_ports=None):
         self.cluster = cluster
         self.name = name
         self.image = image
@@ -664,7 +666,7 @@ class KDPod(RESTMixin):
     @classmethod
     def create(cls, cluster, image, name, kube_type, kubes,
                open_all_ports, restart_policy, pvs, owner, password,
-               public_ports):
+               public_ports=None):
         """
         Create new pod in kuberdock
         :param open_all_ports: if true, open all ports of image (does not mean
@@ -790,8 +792,8 @@ class KDPod(RESTMixin):
         kube_type = kube_type_to_str(data['kube_type'])
         restart_policy = data['restartPolicy']
         this_pod_class = cls._get_pod_class(image)
-        return this_pod_class(cluster, "", name, kube_type, "", True,
-                              restart_policy, "", owner)
+        return this_pod_class(
+            cluster, "", name, kube_type, "", True, restart_policy, "", owner)
 
     @classmethod
     def _get_pod_class(cls, image):

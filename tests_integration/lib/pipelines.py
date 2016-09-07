@@ -48,6 +48,11 @@ class NetworkingPipeline(Pipeline):
 class NetworkingUpgradedPipeline(UpgradedPipelineMixin, NetworkingPipeline):
     NAME = 'networking_upgraded'
 
+    def post_create_hook(self):
+        super(NetworkingUpgradedPipeline, self).post_create_hook()
+        self.cluster.ssh_exec(
+            'rhost1', 'echo admin | bash /rhost_deploy/kcli-deploy.sh -C -u admin')
+
 
 class NetworkingRhostCent6Pipeline(NetworkingPipeline):
     NAME = 'networking_rhost_cent6'

@@ -6,7 +6,21 @@
 - name: Copy kcli-deploy.sh to deploy directory on remote host (rhost)
   copy: src="{{ host_proj_root }}/kuberdock-cli/kcli-deploy.sh" dest="{{ rhost_deploy_path }}"
 
+- name: Download release version of kcli-deploy.sh
+  get_url:
+    url: "http://repo.cloudlinux.com/kuberdock-client/kcli-deploy.sh"
+    dest: "{{ rhost_deploy_path }}/kcli-deploy-release.sh"
+    force: true
+  when: is_release_install
+
 - name: Deploy kcli on rhost
   shell: echo "{{ admin_password }}" | bash kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" chdir="{{ rhost_deploy_path }}"
   tags:
       - deploy
+  when: not is_release_install
+
+- name: Deploy kcli on rhost (release)
+  shell: echo "{{ admin_password }}" | bash kcli-deploy-release.sh -k "{{hostvars[groups['master'][0]].ansible_default_ipv4.address }}" chdir="{{ rhost_deploy_path }}"
+  tags:
+      - deploy
+  when: is_release_install

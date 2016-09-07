@@ -1,10 +1,13 @@
 import json
 from StringIO import StringIO
+
+import yaml
 from fabric.operations import run, get, put
 from fabric.context_managers import quiet
 from os import path
 import socket
 
+from kubedock.kapi.node_utils import complete_calico_node_config
 from kubedock.kapi.nodes import (
     KUBERDOCK_DNS_POD_NAME,
     create_policy_pod,
@@ -422,12 +425,9 @@ def _node_calico(node_name, node_ip):
     run('chmod +x /opt/bin/calicoctl')
     etcd_conf = _NODE_ETCD_CONF.format(MASTER_IP)
     run('echo "{0}" >> /etc/kubernetes/config'.format(etcd_conf))
-    token = run(
-        "grep token /etc/kubernetes/configfile | grep -oP '[a-zA-Z0-9]+$'"
-    )
-    run('mkdir -p /etc/cni/net.d')
-    cni_conf = _NODE_CNI_CONF.format(MASTER_IP, token)
-    run("echo '{0}' > /etc/cni/net.d/10-calico.conf".format(cni_conf))
+
+    _create_calico_config()
+
     run('python /var/lib/kuberdock/scripts/kubelet_args.py --network-plugin=')
     run(
         'python /var/lib/kuberdock/scripts/kubelet_args.py '
@@ -448,6 +448,15 @@ def _node_calico(node_name, node_ip):
             '--node-image=kuberdock/calico-node:0.22.0.confd'
             .format(MASTER_IP, node_name, node_ip)
         )
+
+
+def _create_calico_config():
+    kube_config = StringIO()
+    get('/etc/kubernetes/configfile', kube_config)
+    token = yaml.load(kube_config.getvalue())['users'][0]['user']['token']
+    run('mkdir -p /etc/cni/net.d')
+    cni_conf = _NODE_CNI_CONF.format(MASTER_IP, token)
+    run("echo '{0}' > /etc/cni/net.d/10-calico.conf".format(cni_conf))
 
 
 def _node_policy_agent(hostname):

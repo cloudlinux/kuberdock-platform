@@ -1,8 +1,8 @@
 define(['app_data/app', 'marionette',
-        'tpl!app_data/misc/templates/message_list.tpl',
-        'tpl!app_data/misc/templates/message_list_item.tpl',
-        'tpl!app_data/misc/templates/page_layout.tpl',
-        'tpl!app_data/misc/templates/page_not_found.tpl'],
+        'app_data/misc/templates/message_list.tpl',
+        'app_data/misc/templates/message_list_item.tpl',
+        'app_data/misc/templates/page_layout.tpl',
+        'app_data/misc/templates/page_not_found.tpl'],
        function(App, Marionette,
                 messageListTpl, messageListItemTpl,
                 pageLayoutTpl, pageNotFoundTpl){

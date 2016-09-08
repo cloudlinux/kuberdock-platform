@@ -68,16 +68,25 @@
         "radix": [1],
         "yoda": [1]
     },
+    "parser": "babel-eslint",
+    "parserOptions": {
+        "ecmaVersion": 7,
+        "sourceType": "module",
+    },
     "plugins": [],
     "env": {
-        "es6": false,
+        "es6": true,
         "node": false,
         "amd": true,
+        "commonjs": true,
         "browser": true,
         "jquery": true
     },
     "globals": {
         "_" : false,
+        "TEST": false,
+        "PROD": false,
+        "API_HOST": false,
         "Backbone": false,
         "Marionette": false,
         "BBCodeParser": false,

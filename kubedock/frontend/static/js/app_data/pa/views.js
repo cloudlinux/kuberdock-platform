@@ -1,9 +1,9 @@
 define([
     'app_data/app',
-    'tpl!app_data/pa/templates/header_for_anon.tpl',
-    'tpl!app_data/pa/templates/plans_layout.tpl',
-    'tpl!app_data/pa/templates/plans/list.tpl',
-    'tpl!app_data/pa/templates/plans/item.tpl',
+    'app_data/pa/templates/header_for_anon.tpl',
+    'app_data/pa/templates/plans_layout.tpl',
+    'app_data/pa/templates/plans/list.tpl',
+    'app_data/pa/templates/plans/item.tpl',
 ], function(
     App,
     headerForAnonTpl,

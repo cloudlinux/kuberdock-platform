@@ -1,10 +1,10 @@
 define(['app_data/app',
-        'tpl!app_data/pods/templates/pod_list/layout.tpl',
-        'tpl!app_data/pods/templates/pod_list/item.tpl',
-        'tpl!app_data/pods/templates/pod_list/empty.tpl',
-        'tpl!app_data/pods/templates/pod_list/list.tpl',
+        'app_data/pods/templates/pod_list/layout.tpl',
+        'app_data/pods/templates/pod_list/item.tpl',
+        'app_data/pods/templates/pod_list/empty.tpl',
+        'app_data/pods/templates/pod_list/list.tpl',
         'app_data/utils',
-        'bootstrap', 'tooltip'],
+        'tooltip'],
        function(App, layoutPodListTpl, podListItemTpl, podListEmptyTpl, podListTpl, utils){
     'use strict';
 

@@ -1266,7 +1266,7 @@ define([
                     }
                     // TODO: move it in views in AC-3434
                     require([
-                        'tpl!app_data/papps/templates/validation_error.tpl',
+                        'app_data/papps/templates/validation_error.tpl',
                         'js-yaml'
                     ], function(validationErrorTpl, jsyaml){
                         utils.modalDialog({

@@ -1,17 +1,16 @@
-define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
+define(['app_data/app', 'app_data/controller', 'app_data/utils',
+        'app_data/ippool/templates/subnets/empty.tpl',
+        'app_data/ippool/templates/subnets/item.tpl',
+        'app_data/ippool/templates/subnets/list.tpl',
 
-        'tpl!app_data/ippool/templates/subnets/empty.tpl',
-        'tpl!app_data/ippool/templates/subnets/item.tpl',
-        'tpl!app_data/ippool/templates/subnets/list.tpl',
+        'app_data/ippool/templates/subnet_ips/empty.tpl',
+        'app_data/ippool/templates/subnet_ips/item.tpl',
+        'app_data/ippool/templates/subnet_ips/list.tpl',
 
-        'tpl!app_data/ippool/templates/subnet_ips/empty.tpl',
-        'tpl!app_data/ippool/templates/subnet_ips/item.tpl',
-        'tpl!app_data/ippool/templates/subnet_ips/list.tpl',
-
-        'tpl!app_data/ippool/templates/ippool_create_subnetwork.tpl',
-        'tpl!app_data/ippool/templates/ippool_layout.tpl',
-        'bootstrap', 'jquery-ui', 'selectpicker', 'bootstrap3-typeahead', 'mask'],
-       function(App, Controller, Marionette, utils,
+        'app_data/ippool/templates/ippool_create_subnetwork.tpl',
+        'app_data/ippool/templates/ippool_layout.tpl',
+        'bootstrap-select', 'jquery-mask-plugin'],
+       function(App, Controller, utils,
 
                 subnetsListItemTplEmptyTpl,
                 subnetsListItemTpl,

@@ -1,7 +1,7 @@
 define([
     'app_data/model',
-    'tpl!app_data/breadcrumbs/templates/breadcrumb_layout.tpl',
-    'tpl!app_data/breadcrumbs/templates/breadcrumb_controls.tpl',
+    'app_data/breadcrumbs/templates/breadcrumb_layout.tpl',
+    'app_data/breadcrumbs/templates/breadcrumb_controls.tpl',
     'tooltip'
 ], function(Model, breadcrumbLayoutTpl, breadcrumbControlsTpl){
 

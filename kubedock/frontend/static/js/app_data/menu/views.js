@@ -1,8 +1,7 @@
 define(['app_data/app', 'app_data/utils', 'marionette',
-        'tpl!app_data/menu/templates/nav_list.tpl',
-        'tpl!app_data/menu/templates/nav_list_item.tpl',
-        'bootstrap'],
-       function(App, utils, Marionette, navListTpl, navListItemTpl){
+        'app_data/menu/templates/nav_list.tpl',
+        'app_data/menu/templates/nav_list_item.tpl',
+], function(App, utils, Marionette, navListTpl, navListItemTpl){
 
     var views = {};
 

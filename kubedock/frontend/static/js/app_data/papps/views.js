@@ -1,11 +1,11 @@
 define(['app_data/app', 'app_data/utils', 'marionette',
-        'tpl!app_data/papps/templates/main.tpl',
-        'tpl!app_data/papps/templates/breadcrumbs.tpl',
-        'tpl!app_data/papps/templates/app_list_empty.tpl',
-        'tpl!app_data/papps/templates/app_list_item.tpl',
-        'tpl!app_data/papps/templates/app_list.tpl',
-        'tpl!app_data/papps/templates/app_load_form.tpl',
-        'bootstrap','nicescroll'],
+        'app_data/papps/templates/main.tpl',
+        'app_data/papps/templates/breadcrumbs.tpl',
+        'app_data/papps/templates/app_list_empty.tpl',
+        'app_data/papps/templates/app_list_item.tpl',
+        'app_data/papps/templates/app_list.tpl',
+        'app_data/papps/templates/app_load_form.tpl',
+        'nicescroll'],
     function(App, utils, Marionette, mainTpl, breadcrumbsTpl, appListEmptyTpl,
              appListItemTpl, appListTpl, appLoadFormTpl){
         'use strict';

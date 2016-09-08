@@ -1,13 +1,12 @@
 define([
     'app_data/app', 'app_data/controller', 'app_data/utils',
 
-    'tpl!app_data/domains/templates/list/empty.tpl',
-    'tpl!app_data/domains/templates/list/item.tpl',
-    'tpl!app_data/domains/templates/list/list.tpl',
+    'app_data/domains/templates/list/empty.tpl',
+    'app_data/domains/templates/list/item.tpl',
+    'app_data/domains/templates/list/list.tpl',
 
-    'tpl!app_data/domains/templates/add_domain.tpl',
-    'tpl!app_data/domains/templates/domains_layout.tpl',
-    'marionette', 'bootstrap',
+    'app_data/domains/templates/add_domain.tpl',
+    'app_data/domains/templates/domains_layout.tpl',
 ], function(
     App, Controller, utils,
 
@@ -16,8 +15,7 @@ define([
     domainsListTpl,
 
     domainsAddDomainTpl,
-    domainsLayoutTpl,
-    Marionette
+    domainsLayoutTpl
 ){
     var views = {};
 

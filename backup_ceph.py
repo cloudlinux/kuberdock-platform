@@ -30,14 +30,15 @@ NOTE#5 Ceph user should have 'class-read object_prefix rbd_children` right
 
 """
 
-import sys
-import datetime
-import os
 import argparse
-import subprocess
+import datetime
 import logging
+import os
+import random
+import string
+import subprocess
+import sys
 import zipfile
-
 from contextlib import contextmanager
 
 LOCKFILE = '/var/lock/kd-ceph-backup.lock'
@@ -154,7 +155,8 @@ def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors, 
                 "cluster to image format 2 yourself (http://ceph.com/planet/"
                 "convert-rbd-to-format-v2/), or contact support to get help.")
 
-        snap = '{0}/{1}@snap4'.format(pool, drive)
+        snap_id = ''.join(random.sample(string.ascii_letters + string.digits, 9))
+        snap = '{0}/{1}@snap-{2}'.format(pool, drive, snap_id)
         child = '{0}/{1}_child'.format(pool, drive)
         logger.debug("Snapshot `{0}` creating".format(snap))
         subprocess.check_call(rbd_with_creds + ['snap', 'create', snap])

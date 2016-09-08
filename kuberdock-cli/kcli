@@ -12,7 +12,10 @@ def process_args():
     parser.add_argument('-c', '--config', default='~/.kubecli.conf')
     parser.add_argument(
         '-j', '--json', action="store_true", help="Output data as JSON")
-    parser.add_argument('-d', '--debug', action="store_true", help="Turn on curl logging")
+    parser.add_argument('-d', '--debug', action="store_true",
+                        help="Log all HTTP requests as cURL")
+    parser.add_argument('-k', '--no-http-warnings', action="store_true",
+                        help='Disable HTTP warnings')
 
     subs = parser.add_subparsers(
         help="Commands",
@@ -26,6 +29,15 @@ def process_args():
     return parser.parse_args()
 
 
+def _disable_requests_warnings():
+    import requests
+    requests.packages.urllib3.disable_warnings()
+
+
 if __name__ == '__main__':
     args = process_args()
+
+    if args.no_http_warnings:
+        _disable_requests_warnings()
+
     args.call(args)

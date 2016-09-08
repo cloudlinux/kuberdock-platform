@@ -11,6 +11,11 @@ from ..api_client import APIError, UnknownAnswer
 settings = context.settings
 
 
+def _disable_requests_warnings():
+    import requests
+    requests.packages.urllib3.disable_warnings()
+
+
 class Group(kdclick.Group):
     def invoke(self, ctx):
         try:
@@ -39,8 +44,12 @@ class Group(kdclick.Group):
                 help='Log all HTTP requests as cURL')
 @kdclick.option('-j', '--json-only', is_flag=True,
                 help='Display json data only, no any additional prompts')
+@kdclick.option('-k', '--no-http-warnings', is_flag=True,
+                help='Disable HTTP warnings')
 @kdclick.pass_context
-def main(ctx, config_dir, debug, json_only):
+def main(ctx, config_dir, debug, json_only, no_http_warnings):
+    if no_http_warnings:
+        _disable_requests_warnings()
     if config_dir is None:
         config_dir = settings.working_directory
     kdctl = KDCtl.create(config_dir, debug)

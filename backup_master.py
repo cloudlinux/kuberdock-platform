@@ -342,8 +342,46 @@ def do_backup(backup_dir, callback, skip_errors, **kwargs):
     return result
 
 
+def purge_nodes():
+    """ Delete all remains of nodes. Usefull when restored master
+    have no need in nodes from backup. [AC-4339]
+    """
+    from kubedock.users import User
+    from kubedock.api import create_app
+    from kubedock.kapi.node_utils import get_all_nodes
+    from kubedock.kapi.nodes import delete_node
+    from kubedock.nodes.models import Node
+    from kubedock.pods.models import PersistentDisk
+    from kubedock.kapi.podcollection import PodCollection
+
+    create_app(fake_sessions=True).app_context().push()
+
+    internal_pods = [pod['name'] for pod in PodCollection(
+        User.get_internal()).get(as_json=False)]
+
+    pod_collection = PodCollection()
+    for pod in pod_collection.get(as_json=False):
+        if pod['name'] not in internal_pods:
+            pod_collection.delete(pod['id'])
+            logger.debug("Pod `{0}` deleted".format(pod['name']))
+
+    for node in get_all_nodes():
+        node_name = node['metadata']['name']
+        db_node = Node.get_by_name(node_name)
+        PersistentDisk.get_by_node_id(db_node.id).delete(
+            synchronize_session=False)
+        delete_node(node=db_node, force=True)
+        logger.debug("Node `{0}` deleted".format(node_name))
+
+
 @lock(LOCKFILE)
-def do_restore(backup_file, skip_errors, **kwargs):
+def do_restore(backup_file, without_nodes, skip_errors, **kwargs):
+    """ Restore from backup file.
+    If skip_error is True it will not interrupt restore due to errors
+    raised on some step from restore_chain.
+    If without_nodes is True it will remove any traces of old nodes
+    right after restore is succeded.
+    """
     logger.info('Restore started {0}'.format(backup_file))
 
     subprocess.check_call(["systemctl", "restart", "postgresql"])
@@ -357,12 +395,17 @@ def do_restore(backup_file, skip_errors, **kwargs):
                 logger.error("%s restore error: %s" % (res, err))
                 if not skip_errors:
                     raise
+
+
     subprocess.check_call(["systemctl", "start", "etcd"])
     time.sleep(5)
     subprocess.check_call(["systemctl", "start", "kube-apiserver"])
 
     subprocess.check_call(["systemctl", "restart", "nginx"])
     subprocess.check_call(["systemctl", "restart", "emperor.uwsgi"])
+
+    if without_nodes:
+        purge_nodes()
 
     logger.info('Restore finished')
 
@@ -377,6 +420,9 @@ def parse_args(args):
     group.add_argument('-q', '--quiet', help='Silent mode, only log warnings',
                        action='store_const', const=logging.WARN,
                        dest='loglevel')
+    parser.add_argument("-n", '--without-nodes', action='store_true',
+                        dest='without_nodes',
+                        help="Do not stop if one steps is failed")
     parser.add_argument("-s", '--skip', action='store_false',
                         dest='skip_errors',
                         help="Do not stop if one steps is failed")

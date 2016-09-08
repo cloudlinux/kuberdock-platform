@@ -387,7 +387,8 @@ class KDIntegrationTestAPI(object):
 
         nodes = node if node is not None else self.node_names
         for node in nodes:
-            self.docker('pull {}'.format(image), node)
+            retry(self.docker, interval=2,
+                  cmd='pull {}'.format(image), node=node)
 
     def create_pa(self, yml, size="M", start=True):
         pass

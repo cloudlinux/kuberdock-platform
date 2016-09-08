@@ -1,14 +1,15 @@
 import ConfigParser
 import collections
+import hashlib
 import json
 import logging
-import hashlib
 import operator
 import os
 import stat
 import warnings
 from functools import wraps
 
+import click
 import requests
 from requests.auth import HTTPBasicAuth
 
@@ -156,7 +157,10 @@ class PrintOut(object):
                  indent=4,
                  as_json=False):
         self.wants_header = wants_header
-        self.fields = fields
+        if fields is None:
+            self.fields = None
+        else:
+            self.fields = [(_u(f_name), f_len) for f_name, f_len in fields]
         self.indent = indent
         self.as_json = as_json
         PrintOut.instantiated = True
@@ -176,10 +180,10 @@ class PrintOut(object):
     @staticmethod
     def _print_json(data):
         try:
-            print json.dumps(data)
+            click.echo(json.dumps(data, ensure_ascii=False))
         except (ValueError, TypeError):
-            print json.dumps(
-                {'status': 'ERROR', 'message': 'Unparseable format'})
+            click.echo(json.dumps(
+                {'status': 'ERROR', 'message': 'Unparseable format'}))
 
     def _print(self, data):
         if isinstance(data, collections.Mapping):
@@ -193,39 +197,39 @@ class PrintOut(object):
             raise SystemExit("Unknown format")
 
     def _r_print(self, data, offset=0):
+        indent = u' ' * (self.indent * offset)
         if isinstance(data, dict):
             for k, v in sorted(data.items(), key=operator.itemgetter(0)):
                 if isinstance(v, (list, dict)):
-                    print "{0}{1}:".format(' ' * (self.indent * offset), k)
+                    click.echo(u'{0}{1}:'.format(indent, _u(k)))
                     self._r_print(v, offset + 1)
                 else:
-                    print '{0}{1}: {2}'.format(
-                        ' ' * (self.indent * offset), k, v)
+                    click.echo(u'{0}{1}: {2}'.format(indent, _u(k), _u(v)))
         elif isinstance(data, list):
             for item in data:
                 self._r_print(item, offset)
         elif isinstance(data, basestring):
-            print '{0}{1}'.format(' ' * (self.indent * offset), data)
+            click.echo(u'{0}{1}'.format(indent, _u(data)))
         else:
             raise SystemExit("Unknown format")
 
     def _print_header(self):
-        fmt = ''.join(['{{{0}:<{1[1]}}}'.format(i, v)
-                       for i, v in enumerate(self.fields)])
-        print fmt.format(
-            *[i[0].upper().replace('_', ' ') for i in self.fields])
+        fmt = u''.join([u'{{{0}:<{1[1]}}}'.format(i, v)
+                        for i, v in enumerate(self.fields)])
+        click.echo(fmt.format(
+            *[i[0].upper().replace('_', ' ') for i in self.fields]))
 
     def _list_data(self, data):
         if self.fields is None:
-            self.fields = list((k, 32) for k, v in data.items())
-        fmt = ''.join(
-            ['{{{0[0]}:<{0[1]}.{0[1]}}}'.format(i) for i in self.fields])
+            self.fields = [(_u(k), 32) for k, v in data.items()]
+        fmt = u''.join(
+            [u'{{{0[0]}:<{0[1]}.{0[1]}}}'.format(i) for i in self.fields])
         try:
-            print fmt.format(**data)
+            click.echo(fmt.format(**{k: _u(v) for k, v in data.items()}))
         except ValueError:
-            fmt = ''.join(
-                ['{{{0[0]}:<{0[1]}}}'.format(i) for i in self.fields])
-            print fmt.format(**data)
+            fmt = u''.join(
+                [u'{{{0[0]}:<{0[1]}}}'.format(i) for i in self.fields])
+            click.echo(fmt.format(**{k: _u(v) for k, v in data.items()}))
 
 
 class RequestsLogger(object):
@@ -235,6 +239,7 @@ class RequestsLogger(object):
         if logger.level > logging.DEBUG:
             def _do_nothing(*args, **kwargs):
                 pass
+
             self.log_curl_request = _do_nothing
             self.log_http_response = _do_nothing
             self.req = _do_nothing
@@ -347,6 +352,16 @@ def echo(func):
         func(*args, **kw)
         if getattr(args[0], 'as_json', False):
             if not getattr(PrintOut, 'instantiated', False):
-                print json.dumps({'status': 'OK'})
+                click.echo(json.dumps({'status': 'OK'}))
 
     return inner
+
+
+def _u(s):
+    """Convert any string to unicode"""
+    if isinstance(s, unicode):
+        return s
+    elif isinstance(s, str):
+        return s.decode('utf-8')
+    else:
+        return unicode(s)

@@ -1,6 +1,5 @@
 """Tests for kapi.predefined_apps
 """
-import json
 import unittest
 from uuid import uuid4
 
@@ -11,7 +10,6 @@ from kubedock.pods.models import Pod
 from kubedock.testutils.testcases import DBTestCase
 from kubedock.exceptions import PredefinedAppExc
 from kubedock.utils import POD_STATUSES
-from kubedock.predefined_apps.models import PredefinedApp as PredefinedAppModel
 
 VALID_TEMPLATE1 = """---
 apiVersion: v1
@@ -162,7 +160,7 @@ class TestEntitiesFilled(unittest.TestCase):
         patcher = mock.patch('kubedock.kapi.apps.PredefinedAppModel')
         self.addCleanup(patcher.stop)
         patcher.start()
-        apps.PredefinedAppModel.query.get = mock.Mock(
+        apps.PredefinedAppModel.query.filter_by().first = mock.Mock(
             return_value=FakeObj())
 
     def test_variable_is_substituted(self):
@@ -170,7 +168,8 @@ class TestEntitiesFilled(unittest.TestCase):
         values = {'MYSQL_PD_SIZE': 200}
         app = apps.PredefinedApp.get(1)
         tpl = app.get_filled_template_for_plan(0, values)
-        apps.PredefinedAppModel.query.get.assert_called_once_with(1)
+        apps.PredefinedAppModel.query.filter_by()\
+            .first.assert_called_once_with()
         vols = tpl['spec']['template']['spec']['volumes']
         value = [v['persistentDisk']['pdSize'] for v in vols
                  if v['name'].startswith('mysql-persistent-storage')][0]
@@ -180,7 +179,8 @@ class TestEntitiesFilled(unittest.TestCase):
         """Variable values non-presented in values left by default"""
         app = apps.PredefinedApp.get(1)
         tpl = app.get_filled_template_for_plan(0, None)
-        apps.PredefinedAppModel.query.get.assert_called_once_with(1)
+        apps.PredefinedAppModel.query.filter_by()\
+            .first.assert_called_once_with()
         vols = tpl['spec']['template']['spec']['volumes']
         value = [v['persistentDisk']['pdSize'] for v in vols
                  if v['name'].startswith('mysql-persistent-storage')][0]
@@ -193,7 +193,7 @@ class TestFillingWorkflow(unittest.TestCase):
         patcher = mock.patch('kubedock.kapi.apps.PredefinedAppModel')
         self.addCleanup(patcher.stop)
         patcher.start()
-        apps.PredefinedAppModel.query.get = mock.Mock(
+        apps.PredefinedAppModel.query.filter_by().first = mock.Mock(
             return_value=FakeObj())
 
     @mock.patch('kubedock.kapi.apps.PredefinedApp'
@@ -265,7 +265,7 @@ class TestPodIsBaseOfTemplate(unittest.TestCase):
         patcher = mock.patch('kubedock.kapi.apps.PredefinedAppModel')
         self.addCleanup(patcher.stop)
         patcher.start()
-        apps.PredefinedAppModel.query.get = mock.Mock(
+        apps.PredefinedAppModel.query.filter_by().first = mock.Mock(
             return_value=FakeObj())
 
     def test_template_is_base_of_data(self):
@@ -283,7 +283,7 @@ class TestHowTemplateIsPreprocessed(unittest.TestCase):
         $$NOT_VAR|default:0|nope$$
         $$$VAR_IN_DOLLARS|default:0|wow$$$"""
         obj = FakeObj(tpl)
-        dbo.query.get = mock.Mock(return_value=obj)
+        dbo.query.filter_by().first = mock.Mock(return_value=obj)
         pa = apps.PredefinedApp.get(1)
         rv = pa._get_preprocessed_template()
         self.assertEqual(set(pa._entities.keys()), set(
@@ -299,7 +299,7 @@ class TestHowTemplateIsPreprocessed(unittest.TestCase):
         $VAR|default:0|yea$
         $VAR|default:1|nope$"""
         obj = FakeObj(tpl)
-        dbo.query.get = mock.Mock(return_value=obj)
+        dbo.query.filter_by().first = mock.Mock(return_value=obj)
         pa = apps.PredefinedApp.get(1)
         pa._get_preprocessed_template()
         self.assertEqual(pa._entities['VAR'].label, 'yea')
@@ -308,7 +308,7 @@ class TestHowTemplateIsPreprocessed(unittest.TestCase):
         tpl = """
         $VAR$"""
         obj = obj = FakeObj(tpl)
-        dbo.query.get = mock.Mock(return_value=obj)
+        dbo.query.filter_by().first = mock.Mock(return_value=obj)
         pa = apps.PredefinedApp.get(1)
         with self.assertRaises(PredefinedAppExc.InvalidTemplate):
             pa._get_preprocessed_template()
@@ -325,7 +325,7 @@ class TestHowTemplateIsLoaded(unittest.TestCase):
                 'VAR_1', '0', 'first var label'),
             'VAR_2': apps.PredefinedApp.TemplateField(
                 'VAR_2', '0', 'second var label')}
-        dbo.query.get = mock.Mock(return_value=obj)
+        dbo.query.filter_by().first = mock.Mock(return_value=obj)
         pt.return_value = """
         a: {0}
         b: just some string
@@ -365,7 +365,7 @@ class TestHowTemplateIsFilled(unittest.TestCase):
                 'VAR_2', 'default-2', 'second var label'),
             'VAR_3': apps.PredefinedApp.TemplateField(
                 'VAR_3', 'default-2', 'third var label')}
-        dbo.query.get = mock.Mock(return_value=obj)
+        dbo.query.filter_by().first = mock.Mock(return_value=obj)
         lt.return_value = {
             'a': fields['VAR_1'],
             'b': 'just some string',
@@ -399,7 +399,7 @@ class TestCommonTemplateRoutines(unittest.TestCase):
         kuberdock:
           appPackages: PACKAGES"""
         obj = FakeObj(tpl)
-        dbo.query.get = mock.Mock(return_value=obj)
+        dbo.query.filter_by().first = mock.Mock(return_value=obj)
         pa = apps.PredefinedApp.get(1)
         plans = pa._get_plans()
         self.assertEqual(plans, 'PACKAGES')
@@ -409,7 +409,7 @@ class TestCommonTemplateRoutines(unittest.TestCase):
         kuberdock:
           missingAppPackages: NOPE"""
         obj = FakeObj(tpl)
-        dbo.query.get = mock.Mock(return_value=obj)
+        dbo.query.filter_by().first = mock.Mock(return_value=obj)
         pa = apps.PredefinedApp.get(1)
         with self.assertRaises(PredefinedAppExc.InvalidTemplate):
             pa._get_plans()
@@ -417,7 +417,7 @@ class TestCommonTemplateRoutines(unittest.TestCase):
     @mock.patch('kubedock.kapi.apps.yaml.safe_load')
     def test_when_template_is_passed_yaml_not_processed(self, ysl, dbo):
         obj = FakeObj()
-        dbo.query.get = mock.Mock(return_value=obj)
+        dbo.query.filter_by().first = mock.Mock(return_value=obj)
         pa = apps.PredefinedApp.get(1)
         pa._get_plans({'kuberdock': {'appPackages': [{'one': 'two'}]}})
         ysl.assert_not_called()
@@ -433,7 +433,7 @@ class TestLoadedPlans(unittest.TestCase):
             patcher = mock.patch.object(apps, mod)
             self.addCleanup(patcher.stop)
             patcher.start()
-        apps.PredefinedAppModel.query.get = mock.Mock(
+        apps.PredefinedAppModel.query.filter_by().first = mock.Mock(
             return_value=FakeObj())
         apps.Kube.get_default_kube_type = mock.Mock(
             return_value=2048)
@@ -504,7 +504,7 @@ class TestCheckPlans(DBTestCase):
         patcher = mock.patch('kubedock.kapi.apps.PredefinedAppModel')
         self.addCleanup(patcher.stop)
         patcher.start()
-        apps.PredefinedAppModel.query.get = mock.Mock(
+        apps.PredefinedAppModel.query.filter_by().first = mock.Mock(
             return_value=FakeObj())
 
     def test_check_kuberdock_section_valid(self):
@@ -593,27 +593,23 @@ def fake_pod(**kwargs):
 
 class TestPodConfig(DBTestCase):
 
-    @mock.patch('kubedock.kapi.apps.PredefinedApp._update_IPs')
-    @mock.patch('kubedock.kapi.apps.PodCollection._get_namespaces')
-    @mock.patch('kubedock.kapi.apps.PodCollection.update')
-    @mock.patch('kubedock.kapi.apps.update_plan_async')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._update_IPs', mock.Mock())
+    @mock.patch('kubedock.kapi.apps.update_plan_async', mock.Mock())
+    @mock.patch('kubedock.kapi.apps.PodCollection.update', mock.Mock())
+    @mock.patch('kubedock.kapi.apps.PodCollection._get_namespaces',
+                mock.MagicMock())
     @mock.patch.object(apps.STORAGE_CLASS, 'is_pv_resizable',
-                       return_value=True)
+                       mock.Mock(return_value=True))
     @mock.patch('kubedock.kapi.apps.change_pv_size')
-    def test_new_sizes(self, change_pv_size, is_pv_resizable,
-                       update_plan_async,
-                       pod_collection_update,
-                       _get_namespaces,
-                       _update_IPs,
-                       ):
+    def test_new_sizes(self, change_pv_size):
         pod_id = str(uuid4())
-        PredefinedAppModel(id=1, name='test', template=VALID_TEMPLATE1).save()
+        db_app = self.fixtures.predefined_app(template=VALID_TEMPLATE1)
         self.fixtures.pod(
             id=pod_id,
             owner_id=1,
             name='pod1',
             kube_id=0,
-            template_id=1,
+            template_id=db_app.id,
             config={
                 'volumes_public': [{
                     'persistentDisk': {
@@ -622,8 +618,7 @@ class TestPodConfig(DBTestCase):
                     },
                     'name': 'mysql-persistent-storage'
 
-                },
-                {
+                }, {
                     'persistentDisk': {
                         'pdName': 'wordpress-persistent-storage',
                         'pdSize': 1
@@ -640,8 +635,7 @@ class TestPodConfig(DBTestCase):
                                 "size": 2
                             }
                         }
-                    },
-                    {
+                    }, {
                         "name": "pd2",
                         "annotation": {
                             "localStorage": {
@@ -669,29 +663,24 @@ class TestPodConfig(DBTestCase):
             size=1
         )
 
-        apps.PredefinedApp(
-            id=1,
-            name='test',
-            template=VALID_TEMPLATE1
-        ).update_pod_to_plan(pod_id, plan_id=1, async=False)
+        apps.PredefinedApp.get(db_app.id).update_pod_to_plan(
+            pod_id, plan_id=1, async=False)
         change_pv_size.assert_called_once_with(pd2.id, 2, dry_run=False)
 
-    @mock.patch('kubedock.kapi.apps.PredefinedApp._update_IPs')
-    @mock.patch('kubedock.kapi.apps.PodCollection._get_namespaces')
-    @mock.patch('kubedock.kapi.apps.PodCollection.update')
-    @mock.patch('kubedock.kapi.apps.update_plan_async')
-    def test_set_public_ip(self, update_plan_async,
-                           pod_collection_update,
-                           _get_namespaces,
-                           _update_IPs):
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._update_IPs', mock.Mock())
+    @mock.patch('kubedock.kapi.apps.update_plan_async', mock.Mock())
+    @mock.patch('kubedock.kapi.apps.PodCollection.update', mock.Mock())
+    @mock.patch('kubedock.kapi.apps.PodCollection._get_namespaces',
+                mock.MagicMock())
+    def test_set_public_ip(self):
         pod_id = str(uuid4())
-        PredefinedAppModel(id=1, name='test', template=VALID_TEMPLATE1).save()
+        db_app = self.fixtures.predefined_app(template=VALID_TEMPLATE1)
         self.fixtures.pod(
             id=pod_id,
             owner_id=1,
             name='pod1',
             kube_id=0,
-            template_id=1,
+            template_id=db_app.id,
             config={
                 'volumes_public': [],
                 "volumes": [],
@@ -705,7 +694,8 @@ class TestPodConfig(DBTestCase):
                          "initialDelaySeconds": 1,
                          "tcpSocket": {"port": 3306}
                      },
-                     "ports": [{"podPort": 3306, "containerPort": 3306,"isPublic": False}]
+                     "ports": [{"podPort": 3306, "containerPort": 3306,
+                                "isPublic": False}]
                      },
                     {"sourceUrl": "hub.docker.com/_/wordpress",
                      "name": "wordpress",
@@ -723,26 +713,22 @@ class TestPodConfig(DBTestCase):
             }
         )
 
-
         pod_db = Pod.query.get(pod_id)
         config = pod_db.get_dbconfig()
-        wordpress_container = filter(lambda x: x['name'] == 'wordpress',
-                                     config['containers'])[0]
+        wordpress_container = (c for c in config['containers']
+                               if c['name'] == 'wordpress').next()
         self.assertFalse(wordpress_container['ports'][0].get('isPublic',
                                                              False))
 
-        apps.PredefinedApp(
-            id=1,
-            name='test',
-            template=VALID_TEMPLATE1
-        ).update_pod_to_plan(pod_id, plan_id=1, async=False)
+        apps.PredefinedApp.get(db_app.id).update_pod_to_plan(
+            pod_id, plan_id=1, async=False)
 
         pod_db = Pod.query.get(pod_id)
         config = pod_db.get_dbconfig()
-        wordpress_container = filter(lambda x: x['name'] == 'wordpress',
-                                     config['containers'])[0]
-        mysql_container = filter(lambda x: x['name'] == 'mysql',
-                                     config['containers'])[0]
+        wordpress_container = (c for c in config['containers']
+                               if c['name'] == 'wordpress').next()
+        mysql_container = (c for c in config['containers']
+                           if c['name'] == 'mysql').next()
 
         self.assertTrue(wordpress_container['ports'][0].get('isPublic'))
         self.assertFalse(mysql_container['ports'][0].get('isPublic', False))

@@ -14,6 +14,7 @@ from kubedock.models import User, Pod
 from kubedock.billing.models import Kube
 from kubedock.nodes.models import Node
 from kubedock.notifications.fixtures import add_notifications
+from kubedock.predefined_apps.models import PredefinedApp
 from kubedock.rbac.fixtures import add_all_permissions
 from kubedock.rbac.models import Role
 from kubedock.system_settings.fixtures import add_system_settings
@@ -122,6 +123,15 @@ def persistent_disk(**kwargs):
     if 'owner_id' not in kwargs and 'owner' not in kwargs:
         kwargs['owner'], _ = user_fixtures()
     return PersistentDisk(**kwargs).save()
+
+
+def predefined_app(**kwargs):
+    db_app = PredefinedApp(name=kwargs.get('name', randstr()))
+    db.session.add(db_app)
+    for key, value in kwargs.items():
+        setattr(db_app, key, value)
+    db.session.commit()
+    return db_app
 
 
 class K8SAPIStubs(object):

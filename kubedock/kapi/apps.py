@@ -12,7 +12,8 @@ from kubedock.billing.models import Kube, Package
 from kubedock.core import db
 from kubedock.domains.models import PodDomain
 from kubedock.kapi.pstorage import STORAGE_CLASS
-from kubedock.predefined_apps.models import PredefinedApp as PredefinedAppModel
+from kubedock.predefined_apps.models import \
+    PredefinedApp as PredefinedAppModel, PredefinedAppTemplate
 from kubedock.exceptions import NotFound, PermissionDenied, PredefinedAppExc, \
     APIError
 from kubedock.kapi.podcollection import PodCollection, change_pv_size
@@ -20,13 +21,12 @@ from kubedock.kd_celery import celery
 from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod, IPPool, PersistentDisk
 from kubedock.settings import KUBE_API_VERSION
-from kubedock.utils import send_event_to_user
+from kubedock.utils import send_event_to_user, atomic
 from kubedock.validation import V, predefined_app_schema
 from kubedock.validation.exceptions import ValidationError
 from kubedock.validation.validators import check_new_pod_data
 from kubedock.rbac import check_permission
 from kubedock.billing import has_billing
-
 
 FIELD_PARSER = re.compile(ur"""
     \$(?:
@@ -94,6 +94,8 @@ class PredefinedApp(object):
     FIELDS = ('id', 'name', 'template', 'origin', 'qualifier', 'created',
               'modified', 'plans')
 
+    FIELD_VERSION = ('active', 'switchingPackagesAllowed')
+
     def __init__(self, **kw):
         required_attrs = set(['name', 'template'])
         if required_attrs.intersection(kw.keys()) != required_attrs:
@@ -127,12 +129,15 @@ class PredefinedApp(object):
 
     def to_dict(self, with_plans=False):
         """Instance method that returns PA object as dict"""
-        data = dict((k, v) for k, v in vars(self).items() if k in self.FIELDS)
+        data = dict((k, v) for k, v in vars(self).items()
+                    if k in self.FIELDS + self.FIELD_VERSION)
+
         if with_plans:
             data['plans'] = self.get_plans()
         return data
 
     @classmethod
+    @atomic()
     def create(cls, **kw):
         """
         Class method which creates PA instance, saves it and returns it
@@ -140,29 +145,55 @@ class PredefinedApp(object):
         :return: object -> PA instance
         """
         dbapp = PredefinedAppModel(**kw)
-        dbapp.save()
+        db.session.flush()
         return cls(**dbapp.to_dict())
 
     @classmethod
-    def delete(cls, id):
+    @atomic()
+    def delete(cls, id, version_id=None):
         """
         Class method which deletes PA
         :param id: int -> PA database ID
+        :param version_id: int -> PA version id
         """
-        app = PredefinedAppModel.query.get(id)
-        if app is not None:
-            app.delete()
+        app = PredefinedAppModel.query\
+            .filter_by(is_deleted=False, id=id).first()
+        if app is None:
+            raise PredefinedAppExc.NoSuchPredefinedApp
+        if version_id:
+            app_template = app.templates\
+                .filter_by(is_deleted=False, id=version_id).first()
+            if not app_template:
+                raise PredefinedAppExc.NoSuchPredefinedAppVersion
+            app_template.is_deleted = True
+            if app_template.active:
+                app_template.active = False
+                # find new template for active
+                new_active_template = app.templates\
+                    .filter_by(is_deleted=False)\
+                    .order_by(PredefinedAppTemplate.id.desc()).first()
+                if new_active_template:
+                    new_active_template.active = True
+                    db.session.flush()
+            db.session.flush()
+
+        else:
+            app.is_deleted = True
+            db.session.flush()
 
     @classmethod
-    def get(cls, id):
+    def get(cls, id, version_id=None):
         """
         Class method to return instance by ID
         :param id: int -> PA database ID
         :return: PA intance
         """
-        dbapp = PredefinedAppModel.query.get(id)
+        dbapp = PredefinedAppModel.query\
+            .filter_by(is_deleted=False, id=id).first()
         if dbapp is None:
             raise PredefinedAppExc.NoSuchPredefinedApp
+        if version_id:
+            dbapp.select_version(version_id)
         return cls(**dbapp.to_dict())
 
     @classmethod
@@ -172,7 +203,8 @@ class PredefinedApp(object):
         :param qualifier: string -> PA database qualifier (unique string)
         :return: PA intance
         """
-        dbapp = PredefinedAppModel.query.filter_by(qualifier=qualifier).first()
+        dbapp = PredefinedAppModel.query\
+            .filter_by(qualifier=qualifier).first()
         if dbapp is None:
             raise PredefinedAppExc.NoSuchPredefinedApp
         return cls(**dbapp.to_dict())
@@ -310,7 +342,7 @@ class PredefinedApp(object):
                     return False
                 stack.extend(zip(left, right))
             elif (left in entities_set and
-                    isinstance(right, (Number, basestring, NoneType))):
+                  isinstance(right, (Number, basestring, NoneType))):
                 if not hasattr(left, 'value'):
                     left.value = right
                 elif left.value != right:
@@ -331,20 +363,30 @@ class PredefinedApp(object):
             self._package = package
 
     @classmethod
-    def update(cls, id, **kw):
+    @atomic()
+    def update(cls, id, version_id=None, new_version=None, **kw):
         """
         Class method that updates one or more PA object fields
+        :param new_version: save as new version
+        :param version_id: None edit active version
         :param id: int -> PA database ID
         :return: object -> PA instance
         """
         app = PredefinedAppModel.query.get(id)
         if app is None:
             return
-        allowed_fields = set(cls.FIELDS) - {'id', 'created', 'modified'}
+        if version_id or new_version:
+            app.select_version(version_id, new_version)
+        allowed_fields = set(cls.FIELDS + cls.FIELD_VERSION) - \
+            {'id', 'created', 'modified'}
         fields_to_update = allowed_fields & set(kw)
+        if not kw.get('origin'):
+            kw['origin'] = 'unknown'
+        if not kw.get('template'):
+            fields_to_update = fields_to_update - {'template'}
         for attr in fields_to_update:
             setattr(app, attr, kw[attr])
-        app.save()
+        db.session.flush()
         return cls(**app.to_dict())
 
     @classmethod
@@ -939,6 +981,7 @@ class PredefinedApp(object):
         Method that populates entities replacing template ones with random UIDs
         :return: string -> processed yaml document
         """
+
         def processor(m):
             full_match = m.group()
             if full_match == '$$':
@@ -1043,6 +1086,7 @@ class PredefinedApp(object):
             if isinstance(target, Sequence):
                 return [fill(v) for v in target]
             return target
+
         return fill(loaded)
 
     @staticmethod
@@ -1136,7 +1180,7 @@ class PredefinedApp(object):
             self.uid = generate(self.uid_length)
             self.defined = False
             self.name = name
-            self.line, self.col = line, col    # for message on exception
+            self.line, self.col = line, col  # for message on exception
             if default is not None:
                 self.set_up(default.lstrip('\\'), label)
 
@@ -1207,7 +1251,7 @@ def start_pod_from_yaml(pod_data, user=None, template_id=None, dry_run=False):
 
 
 def dispatch_kind(docs, template_id=None):
-    if not docs or not docs[0]:     # at least one needed
+    if not docs or not docs[0]:  # at least one needed
         raise ValidationError("No objects found in data")
     pod, rc, service = None, None, None
     for doc in docs:

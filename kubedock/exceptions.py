@@ -170,6 +170,10 @@ class PredefinedAppExc(object):
         message_template = 'No such predefined app'
         status_code = 404
 
+    class NoSuchPredefinedAppVersion(APIError):
+        message_template = 'No such predefined app version'
+        status_code = 404
+
     class NoSuchAppPackage(APIError):
         message_template = 'No such app package'
         status_code = 404

@@ -110,8 +110,14 @@ clean_node(){
     if [ ! -z "$CEPH_CONF" ]; then
         remove_unneeded ceph-common
     else
-        # clean any localtorage LVM group
+        # clean any LocalStorage (LVM group, ZFS pool)
         echo "Clean local storage ..."
+
+        # TODO remove along with deprecated LVM
+        # Needed because of import error lvm in case of cluster with non-zfs and
+        # non-lvm LocalStorage
+        yum_wrapper -y install lvm2-python-libs
+
         PYTHONPATH=/ python2 -m ${NODE_STORAGE_MANAGE_DIR}.manage remove-storage
         remove_unneeded zfs
         remove_unneeded zfs-release

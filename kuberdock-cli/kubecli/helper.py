@@ -30,13 +30,14 @@ class KubeQuery(object):
     READ_TIMEOUT = 15
 
     def __init__(self, url='', user='user', password='passwrod',
-                 token=None, jsonify_errors=False, **kwargs):
+                 token=None, jsonify_errors=False, debug=False, **kwargs):
         """
         :param url: Base URL of kuberdock API server
         :param user: user for HTTP Authentication in API calls
         :param password: password for HTTP Authentication in API calls
         :param token: optional token for API calls
         :param jsonify_errors: print out errors messages as json string
+        :param debug: Log all http requests as cURL.
         """
         self.user = user
         self.url = url
@@ -46,7 +47,7 @@ class KubeQuery(object):
         self.conn = requests.Session()
         self.conn.verify = False
         self.request_logger = RequestsLogger(self.conn, requests_logger)
-        if kwargs.get('debug', False):
+        if debug:
             requests_logger.setLevel(logging.DEBUG)
 
     def _compose_args(self):

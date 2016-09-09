@@ -3,13 +3,9 @@
 from __future__ import print_function
 
 if __name__ == '__main__':
-    import requests
-
     import logging
 
     logging.basicConfig(format='%(message)s')
-
-    requests.packages.urllib3.disable_warnings()
 
     from kdctllib.cli import access, settings, initialize
     initialize(access.USER, settings.KCliSettings)

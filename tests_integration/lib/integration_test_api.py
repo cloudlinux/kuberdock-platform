@@ -399,7 +399,7 @@ class KDIntegrationTestAPI(object):
         assert_eq(rc, 0)
 
     def kcli(self, cmd, out_as_dict=False, user=None):
-        kcli_cmd = ['kcli']
+        kcli_cmd = ['kcli', '-k']
 
         if user is not None:
             config_path = self._kcli_config_path(user)
@@ -416,7 +416,7 @@ class KDIntegrationTestAPI(object):
     # TODO: Kubectl will be moved out of KCLI so this code duplication won't
     #  hurt that much
     def kubectl(self, cmd, out_as_dict=False, user=None):
-        kcli_cmd = ['kcli']
+        kcli_cmd = ['kcli', '-k']
 
         if user is not None:
             config_path = self._kcli_config_path(user)
@@ -431,7 +431,7 @@ class KDIntegrationTestAPI(object):
         return self.ssh_exec('master', ' '.join(kcli_cmd))
 
     def kdctl(self, cmd, out_as_dict=False):
-        rc, out, err = self.ssh_exec("master", "kdctl {}".format(cmd))
+        rc, out, err = self.ssh_exec("master", "kdctl -k {}".format(cmd))
         if out_as_dict:
             out = json.loads(out)
         return rc, out, err

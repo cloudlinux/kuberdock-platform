@@ -276,6 +276,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             this.payg = options.payg;
             this.hasBilling = options.hasBilling;
             this.domains = options.domains;
+            this.isAWS = options.ipMode === 'aws' ? true : false;
         },
 
         templateHelpers: function(){
@@ -294,6 +295,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 this.publicAccessControls.show(new views.PublicAccessControls({
                     model: this.pod,
                     domains : this.domains,
+                    isAWS: this.isAWS,
                 }), {replaceElement: true});
             }
 
@@ -303,6 +305,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             }), {replaceElement: true});
 
             this.listenTo(this.pod, 'change-public-access-need', function(needs){
+                if (this.isAWS) return;
                 this.ui.publicAccessTypeNote.toggle(needs);
             });
         },
@@ -505,12 +508,14 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
 
         initialize: function(options){
             this.domains = options.domains;
+            this.isAWS = options.isAWS;
         },
 
         templateHelpers: function(){
             return {
                 domains: this.domains,
                 flow: this.model.wizardState.flow,
+                isAWS: this.isAWS,
             };
         },
 
@@ -554,7 +559,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         togglePublic: function(){
             if (this.model.countPublicPorts()){
                 this.$el.slideDown();
-                if (this.model.get('domain') != null)
+                if (this.model.get('domain') != null || this.isAWS)
                     this.ui.domainsWrapper.slideDown();
                 else
                     this.ui.domainsWrapper.slideUp();

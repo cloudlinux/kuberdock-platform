@@ -1,1 +1,5 @@
----plesk_deploy_script_url: http://autoinstall.plesk.com/one-click-installerkcli_deploy_script_url: http://repo.cloudlinux.com/kuberdock-client/kcli-deploy.shlicense_key_file_dst: /tmp/lic.xml
+---
+
+plesk_deploy_script_url: http://autoinstall.plesk.com/one-click-installer
+kcli_deploy_script_url: http://repo.cloudlinux.com/kuberdock-client/kcli-deploy.sh
+license_key_file_dst: /tmp/lic.xml

@@ -1,4 +1,4 @@
----
+#---
 - name: Setup common tasks
   hosts: all
   become: yes
@@ -39,14 +39,15 @@
       with_items:
           - "{{ pa_async_results }}"
       tags:
-      - predefined_apps
+        - predefined_apps
 
     - set_fact: kd_url="{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}"
     - debug: msg="https://{{ kd_url }} [user:admin, password:admin]"
       run_once: true
 
-    - set_fact: kd_url="{{ hostvars[groups['rhost1'][0]].ansible_default_ipv4.address }}"
+    - set_fact: kd_url="{{ hostvars[groups['rhost'][0]].ansible_default_ipv4.address }}"
       when: install_plesk
-    - debug: msg="https://{{ kd_url }} [user:admin, password:admin]"
+
+    - debug: msg="Plesk url{{':'}} https://{{ kd_url }}:8443/smb/ [user:admin, password:qwerty]"
       run_once: true
       when: install_plesk

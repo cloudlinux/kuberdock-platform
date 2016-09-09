@@ -1,5 +1,4 @@
 ---
-- debug: var=playbook_dir
 
 - include: check_rpms.yml
   when: not is_release_install

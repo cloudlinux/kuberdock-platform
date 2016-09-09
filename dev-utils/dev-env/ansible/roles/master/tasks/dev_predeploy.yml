@@ -4,7 +4,11 @@
   file: path="{{ master_kd_src_path }}" state=directory
 
 - name: Copy project source files to src directory on master
-  synchronize: src="{{ host_proj_root }}" dest="{{ master_kd_src_path }}"
+  synchronize:
+      src: "{{ host_proj_root }}"
+      dest: "{{ master_kd_src_path }}"
+      rsync_opts:
+          - "--exclude-from='{{ host_proj_root }}/.gitignore'"
 
 - include: build_rpm.yml
 - include: process_rpm.yml

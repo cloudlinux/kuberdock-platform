@@ -157,12 +157,25 @@ def _filter_test_by_name(name, pipelines):
     raise click.BadArgumentUsage('Test "{}" was not found'.format(name))
 
 
-def _filter_pipelines(pipelines):
-    if not pipelines:
+def _filter_pipelines(include, exclude):
+    """
+    Filters a global list of pipelines to use given include/exclude masks
+    If both arguments aren't specified - all pipelines are used
+    By design can't be specified both
+    :param include: a list of pipeline names to include
+    :param exclude: a list of pipeline names to exclude
+    :return: dictionary of pipelines
+    """
+    if not include and not exclude:
         return registered_pipelines
 
+    # If include is empty - we are in "exclude" mode
+    if not include:
+        include = registered_pipelines
+
     return {k: v
-        for k, v in registered_pipelines.items() if k[0] in pipelines}
+            for k, v in registered_pipelines.items()
+            if k[0] in include and k[0] not in exclude}
 
 
 def _verify_paths(ctx, param, items):
@@ -177,13 +190,15 @@ def _verify_paths(ctx, param, items):
 def _verify_pipelines(ctx, param, items):
     if not items:
         return []
-    return items.split(',')
+    return [i.strip() for i in items.split(',')]
 
 
 @click.command(context_settings={'help_option_names': ['-h', '--help']})
 @click.argument('paths', nargs=-1, callback=_verify_paths)
 @click.option('--pipelines', callback=_verify_pipelines,
               help='Comma separated pipeline names to use')
+@click.option('--pipelines-skip', callback=_verify_pipelines,
+              help='Comma separated pipeline names to skip')
 @click.option('--live-log', is_flag=True,
               help='Instantly print test logs to the console')
 @click.option('--all-tests', is_flag=True, help='Grab all available tests')
@@ -193,10 +208,15 @@ def _verify_pipelines(ctx, param, items):
 @click.option('--junit-xml', type=click.File(mode='w'))
 @click.option('--test', type=str, help='A name of a test to run')
 def main(
-        paths, pipelines, live_log, all_tests, cluster_debug, junit_xml, test):
+        paths, pipelines, pipelines_skip, live_log, all_tests, cluster_debug,
+        junit_xml, test):
     if bool(all_tests) == bool(test):
         raise click.BadOptionUsage(
             'You should specify either --test NAME or --all-tests')
+
+    if bool(pipelines) and bool(pipelines_skip):
+        raise click.BadOptionUsage(
+            'You can not use both --pipelines and --pipelines-skip')
 
     with closing(multilogger.init_handler(logger, live_log)) as multilog:
         discovered = discover_integration_tests(
@@ -205,7 +225,7 @@ def main(
         message = 'Discovered tests in:\n{}\n'.format('\n'.join(discovered))
         print_msg(message)
 
-        requested_pipelines = _filter_pipelines(pipelines)
+        requested_pipelines = _filter_pipelines(pipelines, pipelines_skip)
 
         if test:
             requested_pipelines = _filter_test_by_name(
@@ -215,7 +235,8 @@ def main(
                 requested_pipelines) > 1:
             sys.exit('Can not run multiple pipelines with unset BUILD_CLUSTER')
 
-        threads = [start_test(pipe, tests, cluster_debug)
+        threads = [
+            start_test(pipe, tests, cluster_debug)
             for pipe, tests in requested_pipelines.items()]
 
         for t in threads:

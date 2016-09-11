@@ -35,6 +35,8 @@ NODE_CONFIGFILE = '/etc/kubernetes/configfile_for_nodes'
 SSH_KEY = '/var/lib/nginx/.ssh/id_rsa'
 ETCD_PKI = '/etc/pki/etcd/'
 LICENSE = '/var/opt/kuberdock/.license'
+CEPH_SETTINGS = '/var/opt/kuberdock/kubedock/ceph_settings.py'
+CEPH_CONFIG = '/var/lib/kuberdock/conf'
 LOCKFILE = '/var/lock/kd-master-backup.lock'
 
 
@@ -271,14 +273,55 @@ class EtcdDataResource(BackupResource):
         return src
 
 
+class KubeConfigResource(BackupResource):
+
+    @classmethod
+    def backup(cls, dst):
+        try:
+            from kubedock import ceph_settings
+        except ImportError:
+            return
+
+        shutil.copy(CEPH_SETTINGS, dst)
+        conf_tmp = tempfile.mkdtemp(prefix="ceph-", dir=dst,
+                                    suffix="-inprogress")
+
+        for fn in os.listdir(CEPH_CONFIG):
+            copy_from = os.path.join(CEPH_CONFIG, fn)
+            copy_to = os.path.join(conf_tmp, fn)
+            shutil.copy(copy_from, copy_to)
+
+        result = os.path.join(dst, "conf")
+        os.rename(conf_tmp, result)
+        return result
+
+    @classmethod
+    def restore(cls, zip_archive):
+        src = tempfile.mkdtemp()
+        file_to_extract = filter(lambda x: x.startswith('conf/'),
+                                 zip_archive.namelist())
+        print(file_to_extract)
+        if file_to_extract:
+            zip_archive.extractall(src, file_to_extract)
+            pki_src = os.path.join(src, 'conf')
+            for fn in os.listdir(pki_src):
+                shutil.copy(os.path.join(pki_src, fn), CEPH_CONFIG)
+
+            with open(CEPH_SETTINGS, 'w') as tmp:
+                with zip_archive.open('ceph_settings.py') as zip_file:
+                    shutil.copyfileobj(zip_file, tmp)
+
+
 class KubeTokenResource(BackupResource):
 
     @classmethod
     def backup(cls, dst):
         shutil.copy(KNOWN_TOKENS, dst)
         shutil.copy(NODE_CONFIGFILE, dst)
-
-        return os.path.join(dst, 'known_tokens.csv')
+        return ', '.join([os.path.join(dst, os.path.basename(x)) for x in [
+            KNOWN_TOKENS,
+            NODE_CONFIGFILE,
+        ]])
 
     @classmethod
     def restore(cls, zip_archive, **kwargs):
@@ -360,11 +403,11 @@ class SharedNginxConfigResource(BackupResource):
 
 backup_chain = [PostgresResource, EtcdDataResource, SSHKeysResource,
                 EtcdCertResource, KubeTokenResource, LicenseResource,
-                SharedNginxConfigResource]
+                SharedNginxConfigResource, KubeConfigResource]
 
 restore_chain = [PostgresResource, EtcdDataResource, SSHKeysResource,
                  EtcdCertResource, KubeTokenResource, LicenseResource,
-                 SharedNginxConfigResource]
+                 SharedNginxConfigResource, KubeConfigResource]
 
 
 @lock(LOCKFILE)
@@ -385,7 +428,7 @@ def do_backup(backup_dir, callback, skip_errors, **kwargs):
             logger.debug("Starting backup of {} resource".format(res.__name__))
             subresult = res.backup(backup_dst)
             if subresult:
-                logger.info("File collected: {0}".format(subresult))
+                logger.info("File(s) collected: {0}".format(subresult))
         except subprocess.CalledProcessError as err:
             logger.error("%s backup error: %s" % (res, err))
             if not skip_errors:
@@ -456,12 +499,6 @@ def parse_args(args):
     group.add_argument('-q', '--quiet', help='Silent mode, only log warnings',
                        action='store_const', const=logging.WARN,
                        dest='loglevel')
-    parser.add_argument("-d", '--drop-nodes', action='store_true',
-                        dest='drop_nodes',
-                        help="Drop nodes which exist in DB dump (choose this "
-                             "if you are going to re-deploy nodes thereafter). "
-                             "Note that this option also implies removing "
-                             "all user pods from the DB dump.")
     parser.add_argument("-s", '--skip-errors', action='store_true',
                         dest='skip_errors',
                         help="Do not stop if one of the steps is failed.")
@@ -477,6 +514,12 @@ def parse_args(args):
     parser_backup.set_defaults(func=do_backup)
 
     parser_restore = subparsers.add_parser('restore', help='restore')
+    parser_restore.add_argument(
+        "-d", '--drop-nodes', action='store_true', dest='drop_nodes',
+        help="Drop nodes which exist in DB dump (choose this "
+             "if you are going to re-deploy nodes thereafter)."
+             " Note that this option also implies removing "
+             "all user pods from the DB dump.")
     parser_restore.add_argument('backup_file')
     parser_restore.set_defaults(func=do_restore)
 

@@ -197,9 +197,18 @@ class Pod(object):
         return rv
 
     def get_volumes(self):
-        vols = (vol for vol in getattr(self, 'volumes', [])
-                if 'name' in vol and 'hostPath' in vol)
-        return {vol['name']: vol['hostPath']['path'] for vol in vols}
+        sys_vol = [
+            '/usr/lib/kdtools',
+        ]
+        volumes = getattr(self, 'volumes', [])
+        p_vols = (vol for vol in volumes if
+                  'name' in vol and
+                  'hostPath' in vol and
+                  vol['hostPath']['path'] not in sys_vol)
+        result = {vol['name']: vol['hostPath']['path'] for vol in p_vols}
+        ceph_vols = (vol for vol in volumes if 'rbd' in vol)
+        result.update({vol['name']: 'ceph' for vol in ceph_vols})
+        return result
 
     def get_secrets(self):
         """Retrieve secrets of type '.dockercfg' from kubernetes.

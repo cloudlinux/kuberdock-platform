@@ -119,7 +119,7 @@ class PodCollection(object):
                 params['node'] = pinned_node_name
 
         if not skip_check:
-            self._check_trial(params)
+            self._check_trial(params['containers'], original_pod=original_pod)
             Image.check_containers(params['containers'], secrets)
 
         return params, secrets
@@ -1121,11 +1121,16 @@ class PodCollection(object):
                 return False
         return True
 
-    def _check_trial(self, params):
+    def _check_trial(self, containers, original_pod=None):
         if self.owner.is_trial():
-            user_kubes = self.owner.kubes
+            pods_collection = self.owner.pods
+            if original_pod:
+                pods_collection = pods_collection\
+                    .filter(DBPod.id != original_pod.id)
+            user_kubes = sum([pod.kubes for pod in pods_collection
+                              if not pod.is_deleted])
             kubes_left = TRIAL_KUBES - user_kubes
-            pod_kubes = sum(c['kubes'] for c in params['containers'])
+            pod_kubes = sum(c['kubes'] for c in containers)
             if pod_kubes > kubes_left:
                 podutils.raise_(
                     'Trial User limit is exceeded. '
@@ -1163,6 +1168,7 @@ class PodCollection(object):
 
     def _unbind_ip(self, pod, data=None):
         self.unbind_publicIP(pod.id)
+
 
 def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
                     error_message=None):

@@ -1352,7 +1352,7 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
         ])
 
 
-@mock.patch.object(podcollection.settings, 'TRIAL_KUBES', 10)
+@mock.patch.object(podcollection.SystemSettings, 'get_by_name', return_value=10)
 class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
     def setUp(self):
         self.mock_methods(podcollection.PodCollection, '_get_namespaces',
@@ -1367,7 +1367,7 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
             'id': id})()
 
     @mock.patch.object(podcollection.podutils, 'raise_')
-    def test_enough_kubes(self, raise_mock):
+    def test_enough_kubes(self, raise_mock, systemSettings_mock):
         """ user is trial and have enough kubes for a new pod """
         self.user.is_trial = lambda: True
         self.user.pods = [self.pod_factory(None, 5)]
@@ -1376,7 +1376,7 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
         self.assertFalse(raise_mock.called)
 
     @mock.patch.object(podcollection.podutils, 'raise_')
-    def test_not_enough_kubes(self, raise_mock):
+    def test_not_enough_kubes(self, raise_mock, systemSettings_mock):
         """ user is trial and don't have enough kubes for a new pod """
         self.user.is_trial = lambda: True
         self.user.pods = [self.pod_factory(None, 5)]
@@ -1385,7 +1385,7 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
         raise_mock.assert_called_once_with(mock.ANY)
 
     @mock.patch.object(podcollection.podutils, 'raise_')
-    def test_user_is_not_trial(self, raise_mock):
+    def test_user_is_not_trial(self, raise_mock, systemSettings_mock):
         self.user.is_trial = lambda: False
         self.user.pods = [type('Pod', (), {'is_deleted': False, 'kubes': 5})]
         containers = [{'kubes': 2}, {'kubes': 4}]
@@ -1393,7 +1393,7 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
         self.assertFalse(raise_mock.called)
 
     @mock.patch.object(podcollection.podutils, 'raise_')
-    def test_add_kubes_to_exists_pod_enough(self, raise_mock):
+    def test_add_kubes_to_exists_pod_enough(self, raise_mock, systemSettings_mock):
         """ user is trial and have enough kubes for a exists pod """
         self.user.is_trial = lambda: True
         edit_pod = self.pod_factory('bbbbbbbb-72b4-49c0-869d-34d87fb4edf6', 3)
@@ -1412,7 +1412,7 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
         self.assertFalse(raise_mock.called)
 
     @mock.patch.object(podcollection.podutils, 'raise_')
-    def test_add_kubes_to_exists_pod_not_enough(self, raise_mock):
+    def test_add_kubes_to_exists_pod_not_enough(self, raise_mock, systemSettings_mock):
         """ user is trial and don't have enough kubes for a exists pod """
         self.user.is_trial = lambda: True
 

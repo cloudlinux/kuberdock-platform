@@ -328,7 +328,7 @@ def check_system_settings(data):
             raise APIError(
                 fmt.format(' '.join(name.split('_')).capitalize(), ))
 
-    if name in ['persitent_disk_max_size', 'max_kubes_per_container']:
+    if name in ['persitent_disk_max_size', 'max_kubes_per_container', 'max_kubes_trial_user']:
         if not validator.validate({'value': value},
                                   {'value': positive_non_zero_integer_schema}):
             fmt = 'Incorrect value for "{0}" limit'

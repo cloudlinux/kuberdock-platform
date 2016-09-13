@@ -107,8 +107,9 @@ class CephPipeline(Pipeline):
     NAME = 'ceph'
     ROUTABLE_IP_COUNT = 2
     ENV = {
-        'KD_NODES_COUNT': '3',
-        'KD_NODE_TYPES': 'node1=Standard,node2=Tiny,node3=High memory',
+        'KD_NODES_COUNT': '4',
+        'KD_NODE_TYPES':
+            'node1=Standard,node2=Tiny,node3=High memory,node4=Standard',
         'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',
         'KD_CEPH': '1',
         'KD_CEPH_USER': 'jenkins',
@@ -122,6 +123,10 @@ class CephPipeline(Pipeline):
         Remove all Ceph images
         """
         self.cleanup()
+
+    def post_create_hook(self):
+        super(CephPipeline, self).post_create_hook()
+        set_eviction_timeout(self.cluster, '30s')
 
 
 class CephUpgradedPipeline(UpgradedPipelineMixin, CephPipeline):
@@ -377,6 +382,14 @@ class PACatalogPipelineAWS(PACatalogPipeline):
     skip_reason = "AWS will be enabled in AC-5178"
     INFRA_PROVIDER = 'aws'
     NAME = 'PA_catalog_aws'
+
+
+class DeleteNodePipeline(Pipeline):
+    NAME = 'delete_node'
+    ENV = {
+        'KD_NODES_COUNT': '2',
+        'KD_NODE_TYPES': 'node1=Standard,node2=Tiny',
+    }
 
 
 class ZFSStoragePipeline(Pipeline):

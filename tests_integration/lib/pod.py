@@ -13,7 +13,7 @@ from tests_integration.lib.exceptions import StatusWaitException, \
     IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
 from tests_integration.lib.utils import \
     assert_eq, assert_in, kube_type_to_int, wait_net_port, \
-    retry, kube_type_to_str, get_rnd_low_string, all_subclasses
+    retry, kube_type_to_str, get_rnd_low_string, all_subclasses, log_debug
 
 DEFAULT_WAIT_PORTS_TIMEOUT = 5 * 60
 
@@ -324,10 +324,19 @@ class KDPod(RESTMixin):
         """
         time.sleep(delay)
         for _ in range(tries):
-            if self.status == status:
+            st = self.status
+            spec = self.get_spec()
+            log_debug(
+                "Pod status: '{}' host: '{}' wait for status: '{}'".format(
+                    st, spec.get('host'), status), LOG)
+            if st == status:
                 return
             time.sleep(interval)
         raise StatusWaitException()
+
+    @property
+    def node(self):
+        return self.info.get('host')
 
     @property
     def info(self):

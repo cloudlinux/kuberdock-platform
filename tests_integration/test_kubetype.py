@@ -1,6 +1,5 @@
-from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.utils import assert_eq, kube_type_to_int, \
-    gen_rnd_ceph_pv_name
+    gen_rnd_ceph_pv_name, assert_in
 from tests_integration.lib.pipelines import pipeline
 
 
@@ -45,19 +44,19 @@ def test_pod_lands_on_correct_node_after_change_kubetype(cluster):
         "nginx", "test_nginx_pod", kube_type='Tiny',
         wait_ports=True, healthcheck=True,
         wait_for_status='running', open_all_ports=True)
-    assert_eq(pod.get_spec()['host'], 'node2')
+    assert_eq(pod.node, 'node2')
 
     pod.change_kubetype(kube_type=1)
     pod.wait_for_status('running')
     pod.wait_for_ports()
     pod.healthcheck()
-    assert_eq(pod.get_spec()['host'], 'node1')
+    assert_eq(pod.node, 'node1')
 
     pod.change_kubetype(kube_type=2)
     pod.wait_for_status('running')
     pod.wait_for_ports()
     pod.healthcheck()
-    assert_eq(pod.get_spec()['host'], 'node3')
+    assert_in(pod.node, 'node3')
 
 
 @pipeline('ceph')
@@ -85,7 +84,7 @@ def test_pod_migrate_on_correct_node_after_change_kubetype(cluster):
                               start=True, wait_for_status='running',
                               wait_ports=True, open_all_ports=True)
     assert_eq(pv.exists(), True)
-    assert_eq(pod.get_spec()['host'], 'node2')
+    assert_eq(pod.node, 'node2')
 
     c_id = pod.get_container_id(container_image='nginx')
     pod.docker_exec(c_id,
@@ -98,14 +97,14 @@ def test_pod_migrate_on_correct_node_after_change_kubetype(cluster):
     pod.wait_for_ports()
     ret = pod.do_GET(path='/test.txt')
     assert_eq('TEST', ret)
-    assert_eq(pod.get_spec()['host'], 'node1')
+    assert_in(pod.node, ['node1', 'node4'])
 
     pod.change_kubetype(kube_type=2)
     pod.wait_for_status('running')
     pod.wait_for_ports()
     ret = pod.do_GET(path='/test.txt')
     assert_eq('TEST', ret)
-    assert_eq(pod.get_spec()['host'], 'node3')
+    assert_eq(pod.node, 'node3')
 
     # It's possible to remove PV created together with pod
     pod.delete()

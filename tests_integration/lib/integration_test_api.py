@@ -378,7 +378,7 @@ class NodeList(object):
         self.cluster = cluster
 
     def delete(self, node_name, timeout=60):
-        self.cluster.manage("delete-node --hostname {}".format(node_name))
+        self.cluster.kdctl('nodes delete --hostname {}'.format(node_name))
         end = time.time() + timeout
         while time.time() < end:
             if not self.node_exists(node_name):

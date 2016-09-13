@@ -486,3 +486,7 @@ def highlight_code(code):
     """
     return highlight(code, PythonTracebackLexer(),
                      Terminal256Formatter(style='manni'))
+
+
+def log_debug(msg, logger=LOG, color=Fore.CYAN):
+    logger.debug('{}{}{}'.format(color, msg, Style.RESET_ALL))

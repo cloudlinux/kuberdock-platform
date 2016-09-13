@@ -138,6 +138,7 @@ class VagrantProvider(InfraProvider):
             "node1": "kd_node1",
             "node2": "kd_node2",
             "node3": "kd_node3",
+            "node4": "kd_node4",
             "rhost1": "kd_rhost1",
         }
 

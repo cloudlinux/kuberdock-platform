@@ -723,8 +723,9 @@ define([
             $.when(
                 this.podWizardBase(options),
                 App.getSystemSettingsCollection(),
-                App.getDomainsCollection()
-            ).done(_.bind(function(base, settingsCollection, domainsCollection){
+                App.getDomainsCollection(),
+                App.getIppoolMode()
+            ).done(_.bind(function(base, settingsCollection, domainsCollection, ipMode){
                 var options = base[0], Views = base[1];
                 var containerModel = options.podModel.wizardState.container,
                     billingType = settingsCollection.byName('billing_type').get('value'),
@@ -734,6 +735,7 @@ define([
                         hasBilling: billingType.toLowerCase() !== 'no billing',
                         payg: payg,
                         domains: domainsCollection,
+                        ipMode: ipMode,
                     });
 
                 this.listenTo(view, 'step:envconf', this.podWizardStepEnv);
@@ -1399,7 +1401,7 @@ define([
                                 item = ippoolCollection.at(0);
                                 view = new Views.SubnetIpsListView({
                                     model: item,
-                                    collection: item.getIPs()
+                                    collection: item.getIPs().getFiltered(function(m){return true;})
                                 });
                             } else {
                                 button = {id: 'create_network',

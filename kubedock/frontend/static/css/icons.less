@@ -186,6 +186,10 @@
 .help{
     .mdi('help_outline',20px, @defaultIconColor, @defaultIconColorDarken);
     &:hover{ cursor: default; }
+    &.inline{
+        display: inline-block;
+        vertical-align: middle;
+    }
 }
 .close{ .mdi('close',20px, @defaultIconColor, @hoverIconColor); }
 

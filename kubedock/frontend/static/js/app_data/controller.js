@@ -574,8 +574,8 @@ define([
                                     delete originalModel.applyingChangesStarted;
                                     pod.editOf().cleanup();  // backbone-associations, prevent leak
                                     var url = 'pods/' + originalModel.id,
-                                        containerID = pod.wizardState.container
-                                            && pod.wizardState.container.id;
+                                        containerID = (pod.wizardState.container &&
+                                                       pod.wizardState.container.id);
                                     if (pod.wizardState.flow === 'EDIT_CONTAINER_GENERAL')
                                         url += '/container/' + containerID + '/general';
                                     else if (pod.wizardState.flow === 'EDIT_CONTAINER_ENV')
@@ -583,7 +583,27 @@ define([
                                     App.navigate(url, {trigger: true});
                                 });
                         });
-                        that.listenTo(options.layout, 'pod:pay_and_apply', function(){
+
+
+                        var warnAboutSwitchingAppPackages = function(){
+                            if (!pod.editOf().ableTo('switch-package'))
+                                return $.Deferred().resolve().promise();
+                            var deferred = $.Deferred();
+                            utils.modalDialog({
+                                title: 'Warning',
+                                body: 'If you apply this changes, you won\'t be ' +
+                                    'able to switch packages for this application.',
+                                small: true,
+                                show: true,
+                                footer: {
+                                    buttonOk: deferred.resolve,
+                                    buttonCancel: deferred.reject,
+                                    buttonOkText: 'Continue',
+                                }
+                            });
+                            return deferred.promise();
+                        };
+                        var payAndApply = function(){
                             utils.preloader.show();
                             var originalModel = podCollection.fullCollection.get(pod.editOf()),
                                 oldEdited = originalModel.get('edited_config');
@@ -597,14 +617,17 @@ define([
                                         App.navigate('pods/' + originalModel.id, {trigger: true});
                                     }).done(function(){
                                         utils.notifyWindow(
-                                            'Pod will be restarted with the new '
-                                            + 'configuration soon', 'success');
+                                            'Pod will be restarted with the ' +
+                                            'new configuration soon', 'success');
                                     }).fail(function(){
                                         utils.notifyWindow(
-                                            'New configuration saved successfully, '
-                                            + 'but it\'s not applied yet', 'success');
+                                            'New configuration saved successfully, ' +
+                                            'but it\'s not applied yet', 'success');
                                     });
                                 });
+                        };
+                        that.listenTo(options.layout, 'pod:pay_and_apply', function(){
+                            warnAboutSwitchingAppPackages().done(payAndApply);
                         });
 
                     }

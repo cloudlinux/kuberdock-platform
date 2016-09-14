@@ -471,9 +471,14 @@ class PredefinedApp(object):
         if domain != old_domain:
             raise PredefinedAppExc.AppPackageChangeImpossible(details={
                 'message': 'public access type cannot be changed'})
+
         orig_config = pod.config
         orig_kube_id = pod.kube_id
         pod_config = json.loads(orig_config)
+        if pod_config.get('forbidSwitchingAppPackage'):
+            raise PredefinedAppExc.AppPackageChangeImpossible(details={
+                'message': pod_config.get('forbidSwitchingAppPackage')})
+
         self._update_kubes(root, pod_config)
         self._update_IPs(pod, root, pod_config)
         try:

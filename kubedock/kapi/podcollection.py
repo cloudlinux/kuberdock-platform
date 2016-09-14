@@ -825,6 +825,8 @@ class PodCollection(object):
                 pod.service = db_pod_config.get('service')
                 pod.postDescription = db_pod_config.get('postDescription')
                 pod.edited_config = db_pod_config.get('edited_config')
+                pod.forbidSwitchingAppPackage = db_pod_config.get(
+                    'forbidSwitchingAppPackage')
 
                 if db_pod_config.get('public_ip'):
                     pod.public_ip = db_pod_config['public_ip']
@@ -887,6 +889,7 @@ class PodCollection(object):
 
         old_pod = pod
         db_config = db_config['edited_config']
+        db_config['forbidSwitchingAppPackage'] = 'the pod was edited'
         db_config['podIP'] = getattr(old_pod, 'podIP', None)
         db_config['service'] = getattr(old_pod, 'service', None)
         db_config['postDescription'] = getattr(

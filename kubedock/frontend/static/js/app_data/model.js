@@ -483,7 +483,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 return _.contains(['unpaid', 'stopped', 'stopping', 'waiting',
                                    'running', 'failed', 'succeeded'], status);
             if (command === 'switch-package')
-                return !!(this.get('template_id') && this.get('template_plan_name'));
+                return !!(this.get('template_id') &&
+                          this.get('template_plan_name') &&
+                          !this.get('forbidSwitchingAppPackage'));
         },
 
         /**

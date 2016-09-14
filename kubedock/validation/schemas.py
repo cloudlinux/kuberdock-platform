@@ -618,7 +618,7 @@ app_package_schema = {
         'type': 'boolean',
         'coerce': extbool,
     },
-    'domain': dict(domain_schema, domain_exists=True),
+    'baseDomain': dict(domain_schema, domain_exists=True),
     'pods': {
         'type': 'list',
         'maxlength': 1,  # we don't support multiple pods in one app yet

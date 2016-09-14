@@ -8,6 +8,7 @@ from sqlalchemy import func
 
 from kubedock.billing.models import Kube, Package
 from kubedock.domains.models import BaseDomain
+from kubedock.kapi.images import Image
 from kubedock.predefined_apps.models import PredefinedApp
 from kubedock.rbac.models import Role
 from kubedock.settings import AWS, CEPH, KUBERDOCK_INTERNAL_USER
@@ -15,14 +16,14 @@ from kubedock.system_settings.models import SystemSettings
 from kubedock.users.models import User
 from kubedock.users.utils import strip_offset_from_timezone
 from kubedock.utils import get_timezone
-
 from .exceptions import APIError, ValidationError
 from .schemas import (command_pod_schema, cpu_multiplier_schema,
                       email_domain_regex, email_literal_regex,
                       email_local_regex, hostname_schema, image_request_schema,
                       image_search_schema, memory_multiplier_schema,
                       new_pod_schema, node_schema, pod_dump_schema,
-                      positive_non_zero_integer_schema, user_schema)
+                      positive_non_zero_integer_schema, user_schema,
+                      container_image_regex)
 
 
 class V(cerberus.Validator):
@@ -30,6 +31,9 @@ class V(cerberus.Validator):
     This class is for all custom and our app-specific validators and types,
     implement any new here.
     """
+
+    ERROR_SHOULD_NOT_USE_LATEST = "Tag \":latest\" should not be used "
+    "otherwise,\n proper restore is not guaranteed."
 
     # TODO: add readable error messages for regexps in old schemas
 
@@ -226,6 +230,15 @@ class V(cerberus.Validator):
         if should_be_with_schema and not urlparse(value).scheme:
             self._error(field, ('Schema is missing. Please, specify URL '
                                 'with "http[s]://".'))
+
+    def _validate_image(self, obj, field, value):
+        if not isinstance(obj, dict):
+            obj = {}
+        if not container_image_regex.match(value) and \
+                obj.get('validate_image'):
+            self._error(field, "Image URL must be in format [registry/]image")
+        elif Image(value).tag == 'latest' and obj.get('validate_latest'):
+            self._error(field, self.ERROR_SHOULD_NOT_USE_LATEST)
 
 
 def check_int_id(id):

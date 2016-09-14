@@ -97,7 +97,7 @@ spec:
             -
               name: WP_ENV4
               value: $WPENV1|default:2|test var 1 2$
-          image: wordpress
+          image: wordpress:4.6
           name: wordpress
           ports:
             -
@@ -127,7 +127,7 @@ spec:
             -
               name: TEST_AUTOGEN1
               value: $TESTAUTO1|default:autogen|test auto1$
-          image: mysql
+          image: mysql:5.7
           name: mysql
           ports:
             -
@@ -625,20 +625,23 @@ class TestPodConfig(DBTestCase):
             kube_id=0,
             template_id=db_app.id,
             config={
-                'volumes_public': [{
-                    'persistentDisk': {
-                        'pdName': 'mysql-persistent-storage',
-                        'pdSize': 2
-                    },
-                    'name': 'mysql-persistent-storage'
+                'volumes_public': [
+                    {
+                        'persistentDisk': {
+                            'pdName': 'mysql-persistent-storage',
+                            'pdSize': 2
+                        },
+                        'name': 'mysql-persistent-storage'
 
-                }, {
-                    'persistentDisk': {
-                        'pdName': 'wordpress-persistent-storage',
-                        'pdSize': 1
                     },
-                    'name': 'wordpress-persistent-storage'
-                }],
+                    {
+                        'persistentDisk': {
+                            'pdName': 'wordpress-persistent-storage',
+                            'pdSize': 1
+                        },
+                        'name': 'wordpress-persistent-storage'
+                    }
+                ],
                 "volumes": [
                     {
                         "name": "pd1",

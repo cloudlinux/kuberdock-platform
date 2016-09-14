@@ -17,10 +17,10 @@ container_image_name_schema = {
     'empty': False,
     'required': True,
     'maxlength': 128,
-    'regex': {
-        'regex': r'^[a-zA-Z0-9_]+[a-zA-Z0-9/:_!.\-]*$',
-        'message': 'image URL must be in format [registry/]image[:tag]',
-    },
+    'image': {
+        'validate_image': True,
+        'validate_latest': False,
+    }
 }
 
 image_search_schema = {
@@ -91,6 +91,7 @@ email_literal_regex = re.compile(
     # literal form, ipv4 or ipv6 address (SMTP 4.1.3)
     r'\[([A-f0-9:\.]+)\]\Z',
     re.IGNORECASE)
+container_image_regex = re.compile(r'^[a-zA-Z0-9_]+[a-zA-Z0-9/:_!.\-]*$')
 
 #: Restriction for environment variables names - uppercase letters, underscore,
 # digits and must not start with digits.
@@ -472,7 +473,6 @@ new_pod_schema.update({
     },
 })
 
-
 pod_dump_data_schema = copy(new_pod_schema)  # deepcopy doesn't work
 del pod_dump_data_schema['node']
 del pod_dump_data_schema['podIP']
@@ -694,9 +694,12 @@ predefined_apps_kuberdock_schema = {
 predefined_apps_spec_schema = {
     'restartPolicy': restart_policy_schema,
     'resolve': pod_resolve_schema,
-    'containers': new_pod_schema['containers'],
+    'containers': deepcopy(edited_pod_config_schema['containers']),
     'volumes': new_pod_schema['volumes'],
 }
+predefined_apps_spec_schema['containers']['schema']['schema']['image'][
+    'image']['validate_latest'] = True
+
 predefined_app_schema = {
     'apiVersion': {
         'type': 'string',

@@ -51,10 +51,13 @@ def create_ingress_controller_pod():
     """Create Ingress Controller pod"""
     owner = User.get_internal()
 
+    # Check if pod is already exists and if not - check free public ip for it
+    if Pod.query.filter_by(name=KUBERDOCK_INGRESS_POD_NAME,
+                           owner=owner).first():
+        return
+    IPPool.get_free_host()  # will raise exception if there are no free IPs
+
     def _create_pod():
-        if Pod.query.filter_by(name=KUBERDOCK_INGRESS_POD_NAME,
-                               owner=owner).first():
-            return True
         try:
             default_backend_pod = Pod.query.filter_by(
                 name=KUBERDOCK_BACKEND_POD_NAME,
@@ -71,7 +74,8 @@ def create_ingress_controller_pod():
             if backend_svc is None:
                 return False
 
-            email = SystemSettings.get_by_name(keys.EXTERNAL_SYSTEMS_AUTH_EMAIL)
+            email = SystemSettings.get_by_name(
+                keys.EXTERNAL_SYSTEMS_AUTH_EMAIL)
             ingress_config = get_ingress_pod_config(backend_ns, backend_svc,
                                                     email)
             check_internal_pod_data(ingress_config, owner)
@@ -249,6 +253,5 @@ def check_cluster_email():
 def prepare_ip_sharing():
     """Create all pods for IP Sharing"""
     check_cluster_email()
-    IPPool.get_free_host()
     create_default_backend_pod()
     create_ingress_controller_pod()

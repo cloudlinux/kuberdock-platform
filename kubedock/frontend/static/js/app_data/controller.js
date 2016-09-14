@@ -367,7 +367,7 @@ define([
                         }
                         if (model !== diff){
                             model = diff;
-                            wizardLayout.trigger('show');
+                            showTab(tab);
                         }
                     });
 

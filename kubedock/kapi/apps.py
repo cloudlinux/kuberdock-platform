@@ -464,7 +464,7 @@ class PredefinedApp(object):
         plan = new_config['kuberdock']['appPackage']
         kube_id = plan['kubeType']
         check_migratability(pod, kube_id)
-        domain = plan.get('domain')
+        domain = plan.get('baseDomain')
         pod_domain = PodDomain.query.filter(
             PodDomain.pod_id == pod.id).first()
         old_domain = pod_domain and pod_domain.base_domain.name
@@ -561,8 +561,8 @@ class PredefinedApp(object):
             for container in spec.get('containers', []):
                 for port in container.get('ports', []):
                     port['isPublic'] = False
-        if plan.get('domain'):
-            kuberdock['appPackage']['domain'] = plan.get('domain')
+        if plan.get('baseDomain'):
+            kuberdock['appPackage']['baseDomain'] = plan.get('baseDomain')
 
         if plan.get('packagePostDescription'):
             kuberdock['postDescription'] += \
@@ -580,7 +580,7 @@ class PredefinedApp(object):
         plan['info'] = {'totalKubes': 0, 'totalPD': 0}
         plan['info']['publicIP'] = (plan.get('publicIP', True) and
                                     self._has_public_ports() and
-                                    not plan.get('domain'))
+                                    not plan.get('baseDomain'))
         for pod in plan.get('pods', []):
             plan['info']['totalKubes'] += reduce(
                 lambda t, x: t + int(x['kubes']), pod['containers'], 0)
@@ -1144,8 +1144,8 @@ def process_pod(pod, rc, service, template_id=None):
             'resolve', []),
     }
 
-    if plan.get('domain'):
-        new_pod['domain'] = plan.get('domain')
+    if plan.get('baseDomain'):
+        new_pod['domain'] = plan.get('baseDomain')
 
     if 'containers' in spec_body:
         containers = spec_body['containers'] or []

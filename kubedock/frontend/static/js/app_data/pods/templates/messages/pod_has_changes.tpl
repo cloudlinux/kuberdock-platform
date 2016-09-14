@@ -15,5 +15,13 @@
         <% } %>
             <button class="gray reset-changes">Reset changes</button>
         </div>
+        <% if (template_plan_name && (typeof forbidSwitchingAppPackage == 'undefined' ||
+                                      !forbidSwitchingAppPackage)){ %>
+            <p>
+                Warnging: if you apply this edit, you won't be able to
+                <a href='#pods/<%- id %>/switch-package'>switch packages</a>
+                for this pod.
+            </p>
+        <% } %>
     </p>
 </div>

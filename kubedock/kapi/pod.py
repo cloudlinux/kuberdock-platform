@@ -190,6 +190,10 @@ class Pod(object):
                 new_volumes.append(volume_mount)
             container['volumeMounts'] = new_volumes
 
+            # Filter internal variables
+            container['env'] = [var for var in container.get('env', [])
+                                if var['name'] not in ('KUBERDOCK_SERVICE',)]
+
         if data.get('edited_config') is not None:
             data['edited_config'] = Pod(data['edited_config']).as_dict()
 

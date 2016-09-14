@@ -20,6 +20,13 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         getParentWithType = function(model, typeOfPatent, throughCollection){
             return _.find(model.parents || [],
                           function(parent){ return parent instanceof typeOfPatent; });
+        },
+        /**
+         * backbone-associations doesn't work right with modelID, so simple
+         * coll.get() doesn't work sometimes
+         */
+        byID = function(coll, id){
+            return coll.get(id) || _.findWhere(coll.models, {id: id});
         };
 
     data.DiffCollection = Backbone.Collection.extend({
@@ -49,11 +56,11 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             this.reset([].concat(
                 // models "after" change, each with corresponding "before" model or undefined
                 this.after.chain().map(function(model){
-                    return {id: model.id, before: this.before.get(model.id), after: model};
+                    return {id: model.id, before: byID(this.before, model.id), after: model};
                 }, this).value(),
                 // remaining models "before" change (that do not have corresponding "after-model")
                 this.before.chain().map(function(model){
-                    return {id: model.id, before: model, after: this.after.get(model.id)};
+                    return {id: model.id, before: model, after: byID(this.after, model.id)};
                 }, this).reject(_.property('after')).value()
             ));
         },
@@ -160,7 +167,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     data.Ports = Backbone.Collection.extend({
         model: data.Port,
         modelId: function(attrs){
-            return JSON.stringify(_.pick(attrs, 'containerPort', 'protocol'));
+            return attrs.containerPort + ':' + attrs.protocol;
         },
     });
 

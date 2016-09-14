@@ -5,6 +5,7 @@ from .utils import use_kwargs
 from ..backups import pods as backup_pods
 from ..decorators import maintenance_protected
 from ..exceptions import PermissionDenied
+from ..kapi.apps import PredefinedApp
 from ..kapi.podcollection import PodCollection, PodNotFound
 from ..login import auth_required
 from ..pods.models import Pod
@@ -231,3 +232,11 @@ restore_args_schema = {
 def restore(pod_dump, owner, **kwargs):
     with check_permission('own', 'pods', user=owner):
         return backup_pods.restore(pod_dump=pod_dump, owner=owner, **kwargs)
+
+
+@podapi.route('/<pod_id>/plans-info', methods=['GET'], strict_slashes=False)
+@auth_required
+@KubeUtils.jsonwrap
+def get_plans_info_for_pod(pod_id):
+    current_user = KubeUtils.get_current_user()
+    return PredefinedApp.get_plans_info_for_pod(pod_id, user=current_user)

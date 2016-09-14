@@ -27,12 +27,14 @@ define([
                         currentPlanName = pod.get('template_plan_name');
                     if (!templateID || !currentPlanName)
                         return that.pageNotFound();
-                    var predefinedApp = new Model.AppModel({id: templateID});
-                    predefinedApp.fetch({data: {'with-plans': true}})
+                    var predefinedApp = new Model.AppModel({id: templateID}),
+                        plans = new Model.Plans();
+                    plans.podID = podID;
+                    $.when(predefinedApp.fetch(), plans.fetch())
                         .fail(_.bind(that.pageNotFound, that))
                         .done(function(){
-                            var plans = predefinedApp.get('plans'),
-                                plansLayout = new Views.PlansLayout({
+                            predefinedApp.set('plans', plans);
+                            var plansLayout = new Views.PlansLayout({
                                     pod: pod, model: predefinedApp,
                                 }),
                                 plansListView = new Views.PlansList({

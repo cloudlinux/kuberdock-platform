@@ -377,6 +377,38 @@ class PredefinedApp(object):
         app._update_pod_config(pod, filled, async)
         return app.get_plan(app._get_plan_by_name(plan_name, index_only=True))
 
+    @classmethod
+    def get_plans_info_for_pod(cls, pod_id, user=None):
+        """
+        Class method that returns info about packages available for the pod.
+        :param pod_id: string -> uuid, pod (database) ID
+        """
+        app, pod = cls._get_instance_from_pod(pod_id)
+        check_permission('get' if pod.owner == user else 'get_non_owned',
+                         'pods').check()
+
+        return app._get_plans_info_for_pod(pod)
+
+    def _get_plans_info_for_pod(self, pod):
+        """
+        Get info about packages available for the pod.
+        :param obj -> pod object retrieved from DB
+        """
+        plans = self._expand_plans(self._get_filled_template(),
+                                   with_info=False)
+        pod_config = pod.get_dbconfig()
+
+        disks_size = {vol.get('name'): vol.get('persistentDisk')['pdSize']
+                      for vol in pod_config.get('volumes_public', [])
+                      if vol.get('persistentDisk')}
+        for plan in plans:  # TODO: remove after AC-4067 (resize PD: backend)
+            for pod in plan['pods']:
+                for pd in pod['persistentDisks']:
+                    if pd['name'] in disks_size:
+                        pd['pdSize'] = disks_size[pd['name']]
+            self._calculate_info(plan)
+        return plans
+
     @staticmethod
     def _check_permissions(user, pod=None):
         """

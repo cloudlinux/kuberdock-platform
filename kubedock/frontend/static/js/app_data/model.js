@@ -1261,6 +1261,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
     });
 
+    /* Represents filled predefined app */
+    data.Plans = Backbone.Collection.extend({
+        parse: unwrapper,
+        model: data.Plan,
+        url: function(){
+            return '/api/podapi/' + this.podID + '/plans-info';
+        },
+    });
+
     data.AppModel = Backbone.AssociatedModel.extend({
         relations: [{
             type: Backbone.Many,

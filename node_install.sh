@@ -4,7 +4,7 @@
 # IMPORTANT: each package must be installed with separate command because of
 # yum incorrect error handling!
 
-# SOME VARS:
+# ========================= DEFINED VARS ===============================
 AWS=${AWS}
 KUBERNETES_CONF_DIR='/etc/kubernetes'
 EXIT_MESSAGE="Installation error."
@@ -26,23 +26,57 @@ KD_SSH_GC_CMD="flock -n $KD_SSH_GC_LOCK -c '$KD_SSH_GC_PATH;rm $KD_SSH_GC_LOCK'"
 KD_SSH_GC_CRON="@hourly  $KD_SSH_GC_CMD >/dev/null 2>&1"
 
 NODE_STORAGE_MANAGE_DIR=node_storage_manage
+# ======================= // DEFINED VARS ===============================
+
+
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
 echo "Using MASTER_IP=${MASTER_IP}"
+if [ "$ZFS" = yes ]; then
+    echo "Using ZFS as storage backend"
+else
+    echo "Using LVM as storage backend"
+fi
 echo "Set time zone to $TZ"
 timedatectl set-timezone "$TZ"
 echo "Deploy started: $(date)"
 
-# SOME HELPERS
 
-remove_unneeded(){
-    rpm -q --whatrequires $@ &> /dev/null
-    if [[ $? -ne 0 ]];then
-        yum -y autoremove $@ &> /dev/null
+
+# ======================== JUST COMMON HELPERS ================================
+# SHOULD BE DEFINED FIRST, AND BEFORE USE
+# Most common helpers are defined first.
+check_status()
+{
+    local temp=$?
+    if [ $temp -ne 0 ];then
+        echo $EXIT_MESSAGE
+        exit $temp
     fi
 }
 
+
+yum_wrapper()
+{
+    if [ -z "$WITH_TESTING" ];then
+        yum -d 1 --enablerepo=kube $@
+    else
+        yum -d 1 --enablerepo=kube,kube-testing $@
+    fi
+    check_status
+}
+
+
+chk_ver()
+{
+    python -c "import rpmUtils.miscutils as misc; print misc.compareEVR(misc.stringToVersion('$1'), misc.stringToVersion('$2')) < 0"
+}
+# ========================== // HELPERS =======================================
+
+
+
+# ========================== Node cleanup procedure ===========================
 unmap_ceph(){
     which rbd &> /dev/null
     if [[ $? -eq 0 ]];then
@@ -54,6 +88,15 @@ unmap_ceph(){
     fi
 }
 
+
+remove_unneeded(){
+    rpm -q --whatrequires $@ &> /dev/null
+    if [[ $? -ne 0 ]];then
+        yum -y autoremove $@ &> /dev/null
+    fi
+}
+
+
 del_existed(){
     for i in "$@";do
         if [[ -e "$i" ]];then
@@ -63,6 +106,8 @@ del_existed(){
     done
 }
 
+
+# WARN: This helper used both to setup and cleanup cron
 setup_cron(){
     if [[ "$1" = 'cleanup' ]];then
         (crontab -l 2>/dev/null) | grep -v "$KD_SSH_GC_CRON" | crontab -
@@ -70,6 +115,20 @@ setup_cron(){
         (crontab -l 2>/dev/null; echo "$KD_SSH_GC_CRON")| crontab -
     fi
 }
+
+
+# Setup proper backend for local storage to enable it's cleanup in clean_node
+cd /${NODE_STORAGE_MANAGE_DIR}
+rm -f storage.py
+if [ "$ZFS" = yes ]; then
+    echo "Will cleanup ZFS-based storage"
+    ln -s node_zfs_manage.py storage.py
+else
+    echo "Will cleanup LVM-based storage"
+    ln -s node_lvm_manage.py storage.py
+fi
+check_status
+cd - > /dev/null
 
 
 clean_node(){
@@ -169,6 +228,12 @@ clean_node(){
     echo "=== Node clean up finished === $(date)"
 }
 
+clean_node  # actual clean up
+# ========================== //Node cleanup procedure =========================
+
+
+
+# =============== Various KD requirements checking (after cleanup!) ===========
 RELEASE="CentOS Linux release 7.2"
 ARCH="x86_64"
 MIN_RAM_KB=1572864
@@ -241,20 +306,6 @@ if [[ $ERRORS ]]; then
     exit 3
 fi
 
-# Setup proper backend for local storage to enable it's cleanup in clean_node
-cd /${NODE_STORAGE_MANAGE_DIR}
-rm -f storage.py
-if [ "$ZFS" = yes ]; then
-    ln -s node_zfs_manage.py storage.py
-else
-    ln -s node_lvm_manage.py storage.py
-fi
-check_status
-cd -
-
-
-clean_node
-
 check_disk
 
 if [[ $ERRORS ]]; then
@@ -271,34 +322,17 @@ if [[ $WARNS ]]; then
     printf "$WARNS"
     printf "For details refer Requirements section of KuberDock Documentation, http://docs.kuberdock.com/index.html?requirements.htm\n"
 fi
+# ================= // Various KD requirements checking ====================
 
-check_status()
-{
-    local temp=$?
-    if [ $temp -ne 0 ];then
-        echo $EXIT_MESSAGE
-        exit $temp
-    fi
-}
-
-
-yum_wrapper()
-{
-    if [ -z "$WITH_TESTING" ];then
-        yum -d 1 --enablerepo=kube $@
-    else
-        yum -d 1 --enablerepo=kube,kube-testing $@
-    fi
-    check_status
-}
 
 
 setup_ntpd ()
 {
+    # TODO Actually we can use here yum wrapper if we sure about added repos
     # AC-3199 Remove chrony which prevents ntpd service to start after boot
-    yum erase -y chrony
+    yum -d 1 erase -y chrony
     check_status
-    yum install -y ntp
+    yum -d 1 install -y ntp
     check_status
 
     _sync_time() {
@@ -327,11 +361,6 @@ setup_ntpd ()
     check_status
     systemctl reenable ntpd
     check_status
-}
-
-chk_ver()
-{
-    python -c "import rpmUtils.miscutils as misc; print misc.compareEVR(misc.stringToVersion('$1'), misc.stringToVersion('$2')) < 0"
 }
 
 
@@ -463,6 +492,7 @@ yum_wrapper -y install python-ipaddress
 yum_wrapper -y install ipset
 # tuned - daemon to set proper performance profile.
 # It is installed by default, but ensure it is here
+# TODO why installed here but used very later in script?
 yum_wrapper -y install tuned
 # kdtools - statically linked binaries to provide ssh access into containers
 yum_wrapper -y install kdtools
@@ -828,7 +858,7 @@ fi
 # We need maximum performance to valid work of cpu limits and multipliers.
 # All CPUfreq drivers are built in as part of the kernel-tools package.
 systemctl reenable tuned
-systemctl start tuned
+systemctl restart tuned
 # check if we are in guest VN
 systemd-detect-virt --vm --quiet
 if [ $? -ne 0 ]; then

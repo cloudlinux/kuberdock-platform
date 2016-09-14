@@ -9,6 +9,14 @@ _FORCE_DELETE = 1
 _FORCE_NOT_DELETE = 2
 
 
+def _get_owner_from_dump(pod_dump):
+    try:
+        return pod_dump['owner']['username']
+    except KeyError:
+        raise Exception('Pod dump has unexpected structure. Cannot find '
+                        'owner\'s username')
+
+
 class _RestorePodCommand(object):
     def __init__(self, kdctl, io, pod_dump, owner, pv_backups_location,
                  pv_backups_path_template, force, max_tries):
@@ -16,7 +24,10 @@ class _RestorePodCommand(object):
         self.kdctl = kdctl
         self.io = io
         self.pod_dump = pod_dump
-        self.owner = owner
+        if owner is not None:
+            self.owner = owner
+        else:
+            self.owner = _get_owner_from_dump(pod_dump)
         self.pv_backups_location = pv_backups_location
         self.pv_backups_path_template = pv_backups_path_template
         self.force = force
@@ -114,7 +125,9 @@ def _collect_force(force_delete, force_not_delete):
 
 @kdclick.command('restore', available_for=ADMIN)
 @kdclick.data_argument('pod-dump')
-@kdclick.option('--owner', required=True, help="Pod's owner name.")
+@kdclick.option('--owner', required=False,
+                help="Pod's owner name. If it is not provided, one will be "
+                     "taken from pod's dump.")
 @kdclick.option('--pv-backups-location', help='Url where backups are stored.')
 @kdclick.option('--pv-backups-path-template',
                 help='Template of path to backup at backups location. '

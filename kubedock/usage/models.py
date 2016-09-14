@@ -1,7 +1,8 @@
 import ipaddress
 from datetime import datetime
-from sqlalchemy.dialects import postgresql
 from flask import current_app
+from sqlalchemy.dialects import postgresql
+
 from ..core import db
 from ..models_mixin import BaseModelMixin
 
@@ -32,7 +33,8 @@ class ContainerState(BaseModelMixin, db.Model):
     pod_state = db.relationship('PodState', backref='container_states')
 
     def __repr__(self):
-        data = {field: getattr(self, field) for field in self.__table__.c.keys()}
+        data = {field: getattr(self, field)
+                for field in self.__table__.c.keys()}
         return '<ContainerState({0})>'.format(
             ', '.join('{0}={1}'.format(*item) for item in data.iteritems()))
 
@@ -40,10 +42,11 @@ class ContainerState(BaseModelMixin, db.Model):
         """Shift end_time timestamp of container state to fix overlaping."""
         db.session.refresh(self)
         if self.end_time is None or self.end_time > end_time:
-            current_app.logger.warn(
-                'Overlaping ContainerStates was found: {0} at {1} ({2} -> {3}).'
-                .format(self.container_name, self.start_time,
-                        self.end_time, end_time))
+            msg = 'Overlaping ContainerStates was found: ' \
+                  '{0} at {1} ({2} -> {3}).' \
+                .format(self.container_name, self.start_time, self.end_time,
+                        end_time)
+            current_app.logger.warn(msg)
             self.end_time = end_time
             if self.exit_code is None and self.reason is None:
                 self.exit_code, self.reason = self.REASONS.missed
@@ -56,7 +59,8 @@ class ContainerState(BaseModelMixin, db.Model):
         if end is not None:
             query = query.filter(cls.start_time < end)
         if start is not None:
-            query = query.filter(cls.end_time.is_(None) | (cls.end_time > start))
+            query = query.filter(
+                cls.end_time.is_(None) | (cls.end_time > start))
         return query
 
 
@@ -65,8 +69,10 @@ class PodState(BaseModelMixin, db.Model):
     __table_args__ = (db.Index('ix_pod_id_start_time',
                                'pod_id', 'start_time', unique=True),)
 
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
-    pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True,
+                   nullable=False)
+    pod_id = db.Column(postgresql.UUID, db.ForeignKey('pods.id'),
+                       nullable=False)
     start_time = db.Column(db.DateTime, nullable=False)
     end_time = db.Column(db.DateTime, nullable=True)
     last_event_time = db.Column(db.DateTime, nullable=True)
@@ -77,8 +83,9 @@ class PodState(BaseModelMixin, db.Model):
     @classmethod
     def save_state(cls, pod_id, event, hostname):
         """Creates new or updates existing one pod state entity.
+
         If existing pod entities are closed and/or belongs to another host
-        name , then will be created new state. If there is one not closed state
+        name, then will be created new state. If there is one not closed state
         for the same pod_id and host, then it will be updated.
         Returns created or updated PodState entity.
         """
@@ -133,7 +140,8 @@ class PodState(BaseModelMixin, db.Model):
             cls.end_time: start_time
         })
         if count:
-            current_app.logger.warn('{0} unclosed PodStates found'.format(count))
+            current_app.logger.warn(
+                '{0} unclosed PodStates found'.format(count))
 
         if commit:
             try:
@@ -165,8 +173,10 @@ class IpState(BaseModelMixin, db.Model):
                            viewonly=True, uselist=False)
 
     def __repr__(self):
-        return ("<IpState(pod_id='{0}', ip_address='{1}', start='{2}', end='{3}')>"
-                .format(self.pod_id, self.ip_address, self.start_time, self.end_time))
+        return (
+            "<IpState(pod_id='{0}', ip_address='{1}', start='{2}', end='{3}')>"
+                .format(self.pod_id, self.ip_address, self.start_time,
+                        self.end_time))
 
     @classmethod
     def start(cls, pod_id, ip_address):
@@ -177,7 +187,7 @@ class IpState(BaseModelMixin, db.Model):
     @classmethod
     def end(cls, pod_id, ip_address):
         cls.query.filter_by(pod_id=pod_id, end_time=None,
-                            ip_address=int(ipaddress.ip_address(ip_address)))\
+                            ip_address=int(ipaddress.ip_address(ip_address))) \
             .update({'end_time': datetime.utcnow()})
 
     def to_dict(self):
@@ -199,8 +209,10 @@ class PersistentDiskState(BaseModelMixin, db.Model):
     user = db.relationship('User', backref='pd_states')
 
     def __repr__(self):
-        return ("<PersistentDiskState(user_id='{0}', pd_name='{1}', start='{2}', end='{3}')>"
-                .format(self.user_id, self.pd_name, self.start_time, self.end_time))
+        return (
+            "<PersistentDiskState(user_id='{0}', pd_name='{1}', start='{2}', "
+            "end='{3}')>".format(self.user_id, self.pd_name, self.start_time,
+                                 self.end_time))
 
     @classmethod
     def start(cls, user_id, pd_name, size):

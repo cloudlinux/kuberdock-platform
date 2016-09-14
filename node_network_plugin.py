@@ -252,8 +252,8 @@ def handle_public_ip(
         action, public_ip, pod_ip, iface, namespace, k8s_pod_id, pod_data,
         pod_spec_file):
     with send_feedback_context(namespace, k8s_pod_id):
-        nonfloating = (public_ip == 'true')
-        if nonfloating:
+        fixed_ip_pools = (public_ip == 'true')
+        if fixed_ip_pools:
             public_ip = get_public_ip(namespace)
             if public_ip is None:
                 raise PluginException('Cannot get Public IP for {0}'.format(
@@ -292,17 +292,17 @@ def handle_public_ip(
                     delete_ip(container_port, host_port, pod_ip, proto,
                               public_ip)
         # Temporarily disable check. Maybe will be removed completely
-        # if not (nonfloating or is_nonfloating_ip_mode_enabled()):
+        # if not (fixed_ip_pools or is_fixed_ip_pools_mode_enabled()):
         #    modify_ip(action, public_ip, iface)
         modify_ip(action, public_ip, iface)
         return 0
     return 1
 
 
-def is_nonfloating_ip_mode_enabled():
+def is_fixed_ip_pools_mode_enabled():
     enabled_options = ('1', 'on', 't', 'true', 'y', 'yes')
     config = read_config_json(KD_CONF_PATH)
-    return config['nonfloating_public_ips'].lower() in enabled_options
+    return config['fixed_ip_pools'].lower() in enabled_options
 
 
 def delete_ip(container_port, host_port, pod_ip, proto, public_ip):

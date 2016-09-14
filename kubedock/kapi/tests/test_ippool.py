@@ -32,7 +32,7 @@ class TestIpPool(DBTestCase):
         self.stubs.node_info_in_k8s_api(self.node.hostname)
         self.stubs.node_info_update_in_k8s_api(self.node.hostname)
 
-        current_app.config['NONFLOATING_PUBLIC_IPS'] = True
+        current_app.config['FIXED_IP_POOLS'] = True
 
     def test_get_returns_emtpy_list_by_default(self):
         res = ippool.IpAddrPool().get()
@@ -98,7 +98,7 @@ class TestIpPool(DBTestCase):
                 ippool.IpAddrPool().create(invalid)
 
     def test_cant_add_overlapping_network(self):
-        current_app.config['NONFLOATING_PUBLIC_IPS'] = False
+        current_app.config['FIXED_IP_POOLS'] = False
         # 192.168.0.9 - 192.168.0.10
         ippool.IpAddrPool().create({'network': u'192.168.1.8/30'})
 

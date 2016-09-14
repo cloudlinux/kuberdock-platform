@@ -5,7 +5,7 @@ ssh_pub_keys_path: ../shared_pub_keys
 master_kd_src_path: /var/opt/kuberdock
 
 add_testing_repo: "{{ '-t' if (testing_repo is defined and testing_repo) else '' }}"
-non_floating_ips_mode: "{{ '--nonfloating-ip' if (non_floating_ips is defined and non_floating_ips) else '' }}"
+fixed_ip_pools_mode: "{{ '--fixed-ip-pools' if (fixed_ip_pools is defined and fixed_ip_pools) else '' }}"
 
 install_type: qa
 is_dev_install: "{{ install_type == 'dev'}}"

@@ -107,9 +107,9 @@ export VAGRANT_CWD=dev-utils/dev-env/
 #export KD_CEPH_USER_KEYRING=/path/to/client.your_ceph_user.keyring
 #export KD_PD_NAMESPACE=your_namespace
 
-# Uncomment to enable NONFLOATING_PUBLIC_IPS mode
+# Uncomment to enable FIXED_IP_POOLS mode
 # default: nothing
-#export KD_NONFLOATING_PUBLIC_IPS=true
+#export KD_FIXED_IP_POOLS=true
 
 # Add SSH public keys from ./dev-utils/dev-env/shared_pub_keys to each server
 # default: do not add anything

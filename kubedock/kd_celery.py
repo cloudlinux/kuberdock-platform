@@ -51,8 +51,8 @@ def exclusive_task(timeout, task_id=None, blocking=False):
             lock = ExclusiveLock(lock_id, timeout)
             res = None
             if lock.lock(blocking=blocking):
+                start_time = time.time()
                 try:
-                    start_time = time.time()
                     current_app.logger.debug(
                         'Starting exclusive task %s', task_name
                     )

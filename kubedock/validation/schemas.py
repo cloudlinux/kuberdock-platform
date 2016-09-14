@@ -749,7 +749,7 @@ ippool_schema = {
         'type': 'string',
         'nullable': True,
         # Optional because schema should be the same both when
-        # NONFLOATING_PUBLIC_IPS is either True and False.
+        # FIXED_IP_POOLS is either True and False.
         'required': False,
     },
 }

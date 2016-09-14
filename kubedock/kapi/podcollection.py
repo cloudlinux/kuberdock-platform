@@ -486,7 +486,8 @@ class PodCollection(object):
 
         network = IPPool.query.filter_by(network=ip.network).first()
         node = network.node
-        if current_app.config['NONFLOATING_PUBLIC_IPS'] and node:
+
+        if current_app.config['FIXED_IP_POOLS'] and node:
             try:
                 K8SNode(hostname=node.hostname).increment_free_public_ip_count(1)
             except NodeException as e:
@@ -494,6 +495,7 @@ class PodCollection(object):
                     raise
                 current_app.logger.debug(
                     "Cannot increment pubic IP count: {}".format(repr(e)))
+
         IpState.end(pod_id, ip.ip_address)
         db.session.delete(ip)
 
@@ -520,7 +522,7 @@ class PodCollection(object):
 
         network = IPPool.query.filter_by(network=ip.network).first()
         node = network.node
-        if current_app.config['NONFLOATING_PUBLIC_IPS'] and node:
+        if current_app.config['FIXED_IP_POOLS'] and node:
             K8SNode(hostname=node.hostname).increment_free_public_ip_count(1)
 
         IpState.end(pod_id, ip.ip_address)
@@ -966,7 +968,7 @@ class PodCollection(object):
 
         pod.set_status(POD_STATUSES.preparing, send_update=True)
 
-        if not current_app.config['NONFLOATING_PUBLIC_IPS']:
+        if not current_app.config['FIXED_IP_POOLS']:
             self._assign_public_ip(pod, db_pod, db_config)
 
         if async_pod_create:

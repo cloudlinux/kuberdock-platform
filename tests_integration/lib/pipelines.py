@@ -50,16 +50,16 @@ class NetworkingRhostCent6Pipeline(NetworkingPipeline):
     }
 
 
-class NonfloatingPipeline(Pipeline):
-    NAME = 'nonfloating'
+class FixedIPPoolsPipeline(Pipeline):
+    NAME = 'fixed_ip_pools'
     ROUTABLE_IP_COUNT = 3
     ENV = {
-        'KD_NONFLOATING_PUBLIC_IPS': 'true',
+        'KD_FIXED_IP_POOLS': 'true',
         'KD_NODES_COUNT': '2',
     }
 
     def cleanup(self):
-        super(NonfloatingPipeline, self).cleanup()
+        super(FixedIPPoolsPipeline, self).cleanup()
         self.cluster.ip_pools.clear()
 
 

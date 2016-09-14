@@ -24,8 +24,8 @@ def add_users_and_roles(password):
     r = Role.filter_by(rolename='Admin').first()
     u = User.filter_by(username='admin').first()
     if u is None:
-        u = User.create(username='admin', password=password, role=r, package=p1,
-                        active=True)
+        u = User.create(username='admin', password=password, role=r,
+                        package=p1, active=True)
         db.session.add(u)
     kr = Role.filter_by(rolename='User').first()
     ku = User.filter_by(username=KUBERDOCK_INTERNAL_USER).first()

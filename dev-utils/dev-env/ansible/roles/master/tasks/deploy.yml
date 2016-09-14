@@ -1,7 +1,7 @@
 ---
 
 - name: Deploy
-  shell: echo "{{ ansible_default_ipv4.address }}" | KEY_BITS=1024 KD_OWNER_EMAIL=vagrant@dummy.com bash deploy.sh {{ add_testing_repo }} {{ non_floating_ips_mode }} {{ ceph_params|default("") }} chdir="{{ master_rpms_dir }}"
+  shell: echo "{{ ansible_default_ipv4.address }}" | KEY_BITS=1024 KD_OWNER_EMAIL=vagrant@dummy.com bash deploy.sh {{ add_testing_repo }} {{ fixed_ip_pools_mode }} {{ ceph_params|default("") }} chdir="{{ master_rpms_dir }}"
   register: deploy_result
   ignore_errors: True
   tags:

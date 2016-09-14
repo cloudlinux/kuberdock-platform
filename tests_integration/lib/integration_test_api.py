@@ -75,7 +75,7 @@ class KDIntegrationTestAPI(object):
             "KD_CEPH_CONFIG",
             "KD_CEPH_USER_KEYRING",
             "KD_PD_NAMESPACE",
-            "KD_NONFLOATING_PUBLIC_IPS",
+            "KD_FiXED_IP_POOLS",
             "KD_NEBULA_TEMPLATE_ID",
             "KD_NEBULA_RHOST_TEMPLATE_ID"
             "KD_NODE_TYPES",

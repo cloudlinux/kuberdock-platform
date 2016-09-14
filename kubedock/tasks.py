@@ -271,7 +271,7 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
         deploy_cmd = 'AWS={0} NODE_KUBERNETES={1} MASTER_IP={2} '\
                      'FLANNEL_IFACE={3} TZ={4} NODENAME={5} '\
                      'CPU_MULTIPLIER={6} MEMORY_MULTIPLIER={7} ' \
-                     'NONFLOATING_PUBLIC_IPS={8} TOKEN="{9}" '\
+                     'FIXED_IP_POOLS={8} TOKEN="{9}" '\
                      'bash /node_install.sh'
         if CEPH:
             deploy_cmd = 'CEPH_CONF={} '.format(
@@ -294,7 +294,7 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
                                 MASTER_IP, node_interface, timezone,
                                 host, cpu_multiplier, memory_multiplier,
                                 current_app.config[
-                                    'NONFLOATING_PUBLIC_IPS'], token)
+                                    'FIXED_IP_POOLS'], token)
 
         i, o, e = ssh.exec_command(cmd,
                                    timeout=NODE_INSTALL_TIMEOUT_SEC,

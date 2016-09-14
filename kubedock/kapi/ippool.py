@@ -92,7 +92,7 @@ class IpAddrPool(object):
             block_list = cls.parse_autoblock(auto_block) if auto_block else []
             pool.block_ip(block_list)
 
-            if node_name and current_app.config['NONFLOATING_PUBLIC_IPS']:
+            if node_name and current_app.config['FIXED_IP_POOLS']:
                 try:
                     node = K8SNode(hostname=node_name)
                     node.increment_free_public_ip_count(len(pool.free_hosts()))
@@ -124,11 +124,11 @@ class IpAddrPool(object):
         if unbind_ip:
             PodCollection._remove_public_ip(ip=unbind_ip)
 
-        if node_name and current_app.config['NONFLOATING_PUBLIC_IPS']:
+        if node_name and current_app.config['FIXED_IP_POOLS']:
             net.node = cls._get_node_by_name(net, node_name)
             cls._update_free_public_ip_counter(net.node.hostname, block_ip,
-                                                unblock_ip,
-                                                unbind_ip)
+                                               unblock_ip,
+                                               unbind_ip)
         return net.to_dict()
 
     @staticmethod
@@ -205,7 +205,7 @@ class IpAddrPool(object):
         free_ip_count = len(pool.free_hosts())
         IPPool.query.filter_by(network=network).delete()
 
-        if pool.node and current_app.config['NONFLOATING_PUBLIC_IPS']:
+        if pool.node and current_app.config['FIXED_IP_POOLS']:
             try:
                 node = K8SNode(hostname=pool.node.hostname)
                 node.increment_free_public_ip_count(-free_ip_count)
@@ -288,6 +288,6 @@ class IpAddrPool(object):
     def get_mode():
         if AWS:
             return 'aws'
-        if current_app.config['NONFLOATING_PUBLIC_IPS']:
-            return 'non-floating'
+        if current_app.config['FIXED_IP_POOLS']:
+            return 'fixed'
         return 'floating'

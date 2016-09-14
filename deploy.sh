@@ -223,8 +223,8 @@ while [[ $# -gt 0 ]];do
         -g|--hostgw-backend)
         CONF_FLANNEL_BACKEND='host-gw'
         ;;
-        --nonfloating-ip)
-        NONFLOATING_PUBLIC_IPS=true
+        --fixed-ip-pools)
+        FIXED_IP_POOLS=true
         ;;
         --vni)
         VNI="$2";   # vxlan network id. Defaults to 1
@@ -1037,11 +1037,11 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 
-if [ "$NONFLOATING_PUBLIC_IPS" = true ]; then
-    sed -i 's/^KUBE_SCHEDULER_ARGS.*/KUBE_SCHEDULER_ARGS="--enable-non-floating-ip=true"/' $KUBERNETES_CONF_DIR/scheduler
-    echo "NONFLOATING_PUBLIC_IPS=yes" >> $KUBERDOCK_MAIN_CONFIG
+if [ "$FiXED_IP_POOLS" = true ]; then
+    sed -i 's/^KUBE_SCHEDULER_ARGS.*/KUBE_SCHEDULER_ARGS="--enable-fixed-ip-pools=true"/' $KUBERNETES_CONF_DIR/scheduler
+    echo "FIXED_IP_POOLS=yes" >> $KUBERDOCK_MAIN_CONFIG
 else
-    echo "NONFLOATING_PUBLIC_IPS=no" >> $KUBERDOCK_MAIN_CONFIG
+    echo "FIXED_IP_POOLS=no" >> $KUBERDOCK_MAIN_CONFIG
 fi
 
 log_it echo "Starting kubernetes..."

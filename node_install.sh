@@ -617,13 +617,13 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 
-if [ "$NONFLOATING_PUBLIC_IPS" = True ]; then
-    nonfloating="yes"
+if [ "$FIXED_IP_POOLS" = True ]; then
+    fixed_ip_pools="yes"
 else
-    nonfloating="no"
+    fixed_ip_pools="no"
 fi
 cat <<EOF > "$PLUGIN_DIR/kuberdock.json"
-{"nonfloating_public_ips": "$nonfloating",
+{"fixed_ip_pools": "$fixed_ip_pools",
 "master": "$MASTER_IP",
 "node": "$NODENAME",
 "token": "$TOKEN"}

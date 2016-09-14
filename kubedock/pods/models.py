@@ -1,23 +1,23 @@
 import json
+import operator
 import random
 import string
 import types
 import uuid
-import operator
-from datetime import datetime
-from hashlib import md5
 from functools import reduce
+from hashlib import md5
 
 import ipaddress
+from datetime import datetime
 from flask import current_app
 from sqlalchemy.dialects import postgresql
 
 from ..core import db
+from ..exceptions import NoFreeIPs
 from ..kapi import pd_utils
 from ..models_mixin import BaseModelMixin
 from ..settings import DOCKER_IMG_CACHE_TIMEOUT, KUBERDOCK_INTERNAL_USER
 from ..users.models import User
-from ..exceptions import NoFreeIPs
 
 
 class Pod(BaseModelMixin, db.Model):
@@ -44,8 +44,10 @@ class Pod(BaseModelMixin, db.Model):
     status = db.Column(db.String(length=32), default='unknown')
 
     def __repr__(self):
-        return "<Pod(id='%s', name='%s', owner_id='%s', kubes='%s', config='%s', status='%s')>" % (
-            self.id, self.name.encode('ascii', 'replace'), self.owner_id, self.kubes, self.config, self.status)
+        return "<Pod(id='{}', name='{}', owner_id='{}', kubes='{}', " \
+               "config='{}', status='{}')>" \
+            .format(self.id, self.name.encode('ascii', 'replace'),
+                    self.owner_id, self.kubes, self.config, self.status)
 
     @property
     def kubes(self):
@@ -119,13 +121,13 @@ class Pod(BaseModelMixin, db.Model):
     @property
     def pinned_node(self):
         """
-        Check if pod is pinned to a node (local storage or non-floating IP).
+        Check if pod is pinned to a node (local storage or fixed IP pools).
 
         :returns: node hostname or None
         :rtype: str or None
         """
         hostname = self.get_dbconfig('node', None)
-        if self.has_local_storage or self.has_nonfloating_public_ip:
+        if self.has_local_storage or self.has_fixed_public_ip:
             # TODO: The initial idea was to return nodes.models.Node instance
             # here. However this caused a problem with circular(cyclic)
             # imports.
@@ -133,8 +135,8 @@ class Pod(BaseModelMixin, db.Model):
         return None
 
     @property
-    def has_nonfloating_public_ip(self):
-        return (current_app.config['NONFLOATING_PUBLIC_IPS'] and
+    def has_fixed_public_ip(self):
+        return (current_app.config['FIXED_IP_POOLS'] and
                 self.ip is not None)
 
     def delete(self):
@@ -173,8 +175,8 @@ class ImageCache(db.Model):
     time_stamp = db.Column(db.DateTime, nullable=False)
 
     def __repr__(self):
-        return "<ImageCache(query='%s', data='%s', time_stamp='%s'')>" % (
-            self.query, self.data, self.time_stamp)
+        return "<ImageCache(query='{}', data='{}', time_stamp='{}'')>" \
+                .format(self.query, self.data, self.time_stamp)
 
     @property
     def outdated(self):
@@ -189,8 +191,8 @@ class DockerfileCache(db.Model):
     time_stamp = db.Column(db.DateTime, nullable=False)
 
     def __repr__(self):
-        return "<DockerfileCache(image='%s', data='%s', time_stamp='%s'')>" % (
-            self.image, self.data, self.time_stamp)
+        return "<DockerfileCache(image='{}', data='{}', time_stamp='{}'')>" \
+            .format(self.image, self.data, self.time_stamp)
 
     @property
     def outdated(self):
@@ -262,8 +264,9 @@ class IPPool(BaseModelMixin, db.Model):
     def get_blocked_set(self, as_int=False):
         blocked_set = set()
         try:
-            blocked_set = self._to_ip_set(json.loads(self.blocked_list or "[]"),
-                                          int if as_int else str)
+            blocked_set = self._to_ip_set(
+                json.loads(self.blocked_list or "[]"),
+                int if as_int else str)
         except Exception, e:
             current_app.logger.warning("IPPool.get_blocked_set failed: "
                                        "{0}".format(e))
@@ -515,8 +518,10 @@ class PersistentDisk(BaseModelMixin, db.Model):
             self.id = md5(self.drive_name).hexdigest()
 
     def __str__(self):
-        return ('PersistentDisk(drive_name={0}, name={1}, owner={2}, size={3}, pod={4})'
-                .format(self.drive_name, self.name, self.owner, self.size, self.pod))
+        return 'PersistentDisk(drive_name={0}, name={1}, owner={2}, ' \
+               'size={3}, pod={4})' \
+            .format(self.drive_name, self.name, self.owner, self.size,
+                    self.pod)
 
     @classmethod
     def take(cls, pod_id, drives):
@@ -529,27 +534,30 @@ class PersistentDisk(BaseModelMixin, db.Model):
         """
         db.session.expire_all()
         current_app.logger.debug(
-            "Locking drives %s for pod id %s" % (drives, pod_id))
+            "Locking drives %s for pod id %s", drives, pod_id)
         all_drives = cls.filter(
             cls.drive_name.in_(drives)).with_for_update().all()
         current_app.logger.debug(
-            "LOCKED drives %s for pod id %s" % (drives, pod_id))
+            "LOCKED drives %s for pod id %s", drives, pod_id)
 
         free = [item for item in all_drives if
                 item.pod_id is None]
         now_taken = []
-        taken_by_another = [item for item in all_drives if
-                            (item.pod_id is not None and item.pod_id != pod_id)]
+
+        taken_by_another = [
+            item for item in all_drives
+            if (item.pod_id is not None and item.pod_id != pod_id)]
+
         if not taken_by_another:
             for drive in free:
                 drive.pod_id = pod_id
             now_taken = free
 
         current_app.logger.debug(
-            "Releasing drives %s for pod id %s" % (drives, pod_id))
+            "Releasing drives %s for pod id %s", drives, pod_id)
         db.session.commit()
         current_app.logger.debug(
-            "RELEASED drives %s for pod id %s" % (drives, pod_id))
+            "RELEASED drives %s for pod id %s", drives, pod_id)
         return now_taken, taken_by_another
 
     @classmethod

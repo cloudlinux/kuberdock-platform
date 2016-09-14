@@ -111,10 +111,10 @@ class TestNodes(DBTestCase):
 
     @mock.patch.object(nodes, 'remove_ls_storage')
     @mock.patch.object(nodes.tasks, 'remove_node_by_host')
-    def test_node_cant_be_deleted_in_nonfloating_mode_with_active_ip_pools(
+    def test_node_cant_be_deleted_in_fixed_ip_pools_mode_with_active_ip_pools(
             self, remove_by_host_mock, remove_ls_storage_mock):
         remove_ls_storage_mock.return_value = ''
-        current_app.config['NONFLOATING_PUBLIC_IPS'] = True
+        current_app.config['FIXED_IP_POOLS'] = True
 
         node1, node2 = self.add_two_nodes()
         pool = IPPool(network='192.168.1.0/24', node=node2)

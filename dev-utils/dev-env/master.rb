@@ -59,7 +59,7 @@ def config_ansible(ansible, nodesCount, rhostsCount)
         "git_ref" => ENV['KD_GIT_REF'],
         "testing_repo" => true, #ENV['KD_TESTING_REPO'],
         "public_ips" => ENV['KD_ONE_PUB_IPS'],
-        "non_floating_ips" => ENV['KD_NONFLOATING_PUBLIC_IPS'],
+        "fixed_ip_pools" => ENV['KD_FIXED_IP_POOLS'],
 
         "use_ceph" => ENV['KD_CEPH'],
         "ceph_user" => ENV['KD_CEPH_USER'],

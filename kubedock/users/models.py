@@ -198,7 +198,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
     def to_dict(self, for_profile=False, full=False, exclude=None):
 
         if for_profile and full:
-            raise RuntimeWarning('Serialize user for profile or full, not both')
+            raise RuntimeWarning(
+                'Serialize user for profile or full, not both')
 
         if for_profile:
             valid = self.profile_fields + [
@@ -209,7 +210,9 @@ class User(BaseModelMixin, UserMixin, db.Model):
             return data
 
         valid = self.profile_fields + ['id', 'username', 'active', 'suspended']
-        data = {k: v for k, v in super(User, self).to_dict().items() if k in valid}
+        data = {k: v
+                for k, v in super(User, self).to_dict().items()
+                if k in valid}
         data['rolename'] = self.role.rolename if self.role else None
         data['package'] = self.package.name if self.package else None
 
@@ -257,7 +260,8 @@ class User(BaseModelMixin, UserMixin, db.Model):
             id=pkg.id,
             name=pkg.name,
             kube_id=[package_kube.kube_id for package_kube in pkg.kubes],
-            kube_info=[package_kube.kube.to_dict() for package_kube in pkg.kubes],
+            kube_info=[package_kube.kube.to_dict()
+                       for package_kube in pkg.kubes],
             first_deposit=pkg.first_deposit,
             currency=pkg.currency,
             period=pkg.period

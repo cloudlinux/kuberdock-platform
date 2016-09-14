@@ -7,7 +7,7 @@ from tests_integration.lib.pipelines import pipeline
 create_new_pods = pod_factory('nginx', start=True)
 
 
-@pipeline('nonfloating')
+@pipeline('fixed_ip_pools')
 def test_cannot_create_pod_with_public_ip_with_no_pools(cluster):
     with assert_raises(NonZeroRetCodeException, NO_FREE_IPS_ERR_MSG):
         create_new_pods(cluster, num=1, open_all_ports=True)
@@ -15,13 +15,13 @@ def test_cannot_create_pod_with_public_ip_with_no_pools(cluster):
     assert_eq(cluster.pods.filter_by_owner(), [])
 
 
-@pipeline('nonfloating')
+@pipeline('fixed_ip_pools')
 def test_can_create_pod_without_public_ip_with_no_ip_pools(cluster):
     create_new_pods(cluster, num=1, open_all_ports=False,
                     wait_for_status='running')
 
 
-@pipeline('nonfloating')
+@pipeline('fixed_ip_pools')
 def test_cannot_add_pod_if_no_free_ips_available(cluster):
     expected_pod_count = 3
     # 2 IP addresses in a network
@@ -56,7 +56,7 @@ def test_cannot_add_pod_if_no_free_ips_available(cluster):
     assert_eq(pod_count, expected_pod_count + 1)
 
 
-@pipeline('nonfloating')
+@pipeline('fixed_ip_pools')
 def test_pods_are_not_created_on_node_without_free_ips(cluster):
     # 2 IP addresses in a network
     cluster.ip_pools.add('192.168.0.0/30', 'node1')

@@ -1,5 +1,6 @@
 from ..core import db
 
+
 class StatWrap5Min(db.Model):
     __tablename__ = 'stat_wrap_5min'
     __table_args__ = (

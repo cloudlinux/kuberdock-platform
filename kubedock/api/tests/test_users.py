@@ -188,7 +188,7 @@ class UserCRUDTestCase(APITestCase):
 
         # Disable as otherwise test breaks. Was created before introducing
         # this feature
-        current_app.config['NONFLOATING_PUBLIC_IPS'] = False
+        current_app.config['FIXED_IP_POOLS'] = False
 
         user = self.user
         url = self.item_url(self.user.id)

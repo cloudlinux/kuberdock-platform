@@ -13,7 +13,7 @@ class TestPod(DBTestCase, TestCaseMixin):
         self.user, _ = self.fixtures.user_fixtures()
         self.internal_user = User.get_internal()
         self.mock_methods(models, 'current_app')
-        models.current_app.config = {'NONFLOATING_PUBLIC_IPS': False}
+        models.current_app.config = {'FIXED_IP_POOLS': False}
 
         # Service pod
         service_config = {
@@ -94,34 +94,34 @@ class TestPod(DBTestCase, TestCaseMixin):
         res = self.pod_with_ip.is_service_pod
         self.assertFalse(res)
 
-    def test_has_nonfloating_public_ip(self):
+    def test_has_fixed_public_ip(self):
         """
-        Test pod.has_nonfloating_public_ip
+        Test pod.has_fixed_public_ip
         """
-        models.current_app.config = {'NONFLOATING_PUBLIC_IPS': True}
+        models.current_app.config = {'FIXED_IP_POOLS': True}
 
-        res = self.service_pod.has_nonfloating_public_ip
+        res = self.service_pod.has_fixed_public_ip
         self.assertFalse(res)
 
-        res = self.pod_with_ls.has_nonfloating_public_ip
+        res = self.pod_with_ls.has_fixed_public_ip
         self.assertFalse(res)
 
-        res = self.pod_with_ip.has_nonfloating_public_ip
+        res = self.pod_with_ip.has_fixed_public_ip
         self.assertTrue(res)
 
-        models.current_app.config = {'NONFLOATING_PUBLIC_IPS': False}
-        res = self.pod_with_ip.has_nonfloating_public_ip
+        models.current_app.config = {'FIXED_IP_POOLS': False}
+        res = self.pod_with_ip.has_fixed_public_ip
         self.assertFalse(res)
 
     def test_pinned_node(self):
         """
         Test pod.pinned_node
         """
-        models.current_app.config = {'NONFLOATING_PUBLIC_IPS': True}
+        models.current_app.config = {'FIXED_IP_POOLS': True}
         res = self.pod_with_ip.pinned_node
         self.assertEqual(res, self.node)
 
-        models.current_app.config = {'NONFLOATING_PUBLIC_IPS': False}
+        models.current_app.config = {'FIXED_IP_POOLS': False}
         res = self.service_pod.pinned_node
         self.assertEqual(res, None)
 

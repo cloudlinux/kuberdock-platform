@@ -381,7 +381,7 @@ def setup_node_storage(ssh, node_id, devices=None, ebs_volume=None,
         )
         if not res:
             raise NodeInstallException(
-                'Failed to setup LVM to AWS node: {}'.format(message))
+                'Failed to setup storage to AWS node: {}'.format(message))
         return
 
     if not devices:

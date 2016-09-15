@@ -64,7 +64,7 @@ def create_node(ip, hostname, kube_id,
                        'Check that file has not been renamed by package '
                        'manager to .rpmsave or similar'
                        .format(KUBERDOCK_SETTINGS_FILE))
-    if ZFS and not any(AWS and ls_devices):
+    if ZFS and not (AWS or ls_devices):
         raise APIError(
             'Kuberdock configured with ZFS backend, there must be at least '
             'one device specified during node creation.'

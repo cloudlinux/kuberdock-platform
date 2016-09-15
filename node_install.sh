@@ -25,6 +25,9 @@ KD_SSH_GC_LOCK="/var/run/kuberdock-ssh-gc.lock"
 KD_SSH_GC_CMD="flock -n $KD_SSH_GC_LOCK -c '$KD_SSH_GC_PATH;rm $KD_SSH_GC_LOCK'"
 KD_SSH_GC_CRON="@hourly  $KD_SSH_GC_CMD >/dev/null 2>&1"
 
+ZFS_MODULES_LOAD_CONF="/etc/modules-load.d/kuberdock-zfs.conf"
+ZFS_POOLS_LOAD_CONF="/etc/modprobe.d/kuberdock-zfs.conf"
+
 NODE_STORAGE_MANAGE_DIR=node_storage_manage
 # ======================= // DEFINED VARS ===============================
 
@@ -180,6 +183,9 @@ clean_node(){
         PYTHONPATH=/ python2 -m ${NODE_STORAGE_MANAGE_DIR}.manage remove-storage
         remove_unneeded zfs
         remove_unneeded zfs-release
+
+        del_existed "$ZFS_MODULES_LOAD_CONF"
+        del_existed "$ZFS_POOLS_LOAD_CONF"
     fi
 
     # kubelet auth token and etcd certs
@@ -228,6 +234,8 @@ clean_node(){
     echo "=== Node clean up finished === $(date)"
 }
 
+# TODO run only when node already been installed in KD. This will require
+# file-marker and upgrade script to place it on all nodes
 clean_node  # actual clean up
 # ========================== //Node cleanup procedure =========================
 
@@ -844,6 +852,18 @@ else
         # Use exact version of kernel-headers as current kernel.
         # If it differs, then installation of spl-dkms, zfs-dkms will fail
         yum_wrapper -y install kernel-devel-$current_kernel zfs
+
+        # Zfs could mount pools automatically at boot time even without
+        # fstab records, but this is disabled by default in most
+        # cases (e.g. AWS case) so enable this:
+        echo 'options zfs zfs_autoimport_disable=0' > "$ZFS_POOLS_LOAD_CONF"
+
+        # Kernel will load zfs modules automatically only in case when zfs is
+        # detected on any block device attached to the node. But we should load
+        # them explicitly because in case of deploy/workflow errors we could
+        # stay in not usable state
+        echo 'zfs' > "$ZFS_MODULES_LOAD_CONF"
+
         /sbin/modprobe zfs
     else
         # If it is not CEPH-enabled installation, then manage persistent storage

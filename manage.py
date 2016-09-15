@@ -165,7 +165,8 @@ class NodeManager(Command):
         Option('-t', '--testing', dest='testing', action='store_true'),
         Option('--docker-options', dest='docker_options'),
         Option('--ebs-volume', dest='ebs_volume', required=False),
-        Option('--localstorage-device', dest='ls_device', required=False),
+        Option('--localstorage-device', dest='ls_device', default=(),
+               required=False),
         Option('-v', '--verbose', dest='verbose', required=False,
                action='store_true'),
     ]
@@ -193,8 +194,8 @@ class NodeManager(Command):
             )
         try:
             check_node_data({'hostname': hostname, 'kube_type': kube_type_id})
-            if ls_device:
-                ls_device = [ls_device]
+            if not isinstance(ls_device, (tuple, list)):
+                ls_device = (ls_device,)
             res = create_node(None, hostname, kube_type_id, do_deploy, testing,
                               options=options,
                               ls_devices=ls_device, ebs_volume=ebs_volume)

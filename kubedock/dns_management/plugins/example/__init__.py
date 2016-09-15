@@ -5,8 +5,8 @@ to write another plugins.
 Dns management system expects plugin package contains:
 
 * entry module with two functions:
-    create_or_update_type_A_record, delete_type_A_record - see .entry module for
-    details
+    create_or_update_type_A_record, delete_type_A_record - see .entry module
+    for details
 * `args` variable, a list containing names of the plugin parameters.
 * `is_valid_arg` function to validate plugin configuration parameters
 """

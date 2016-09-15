@@ -411,7 +411,11 @@ class PredefinedApp(object):
         """
 
         def str_presenter(dumper, data):
-            if len(data.splitlines()) > 1:  # check for multiline string
+            # check for multiline strings
+            if len(data.splitlines()) == 1 and data[-1] == '\n':
+                return dumper.represent_scalar(
+                    'tag:yaml.org,2002:str', data, style='>')
+            if len(data.splitlines()) > 1:
                 return dumper.represent_scalar(
                     'tag:yaml.org,2002:str', data, style='|')
             return dumper.represent_scalar(
@@ -530,7 +534,7 @@ class PredefinedApp(object):
             pd_by_volname[pd.get('name')] = pd.get('pdSize')
         for vol in right.get('volumes', []):
             if vol.get('persistentDisk'):
-                vol_size = pd_by_volname[vol.get('name')]
+                vol_size = pd_by_volname.get(vol.get('name'), 1)
                 vol['persistentDisk']['pdSize'] = vol_size
 
     def _apply_package(self, tpl, plan):

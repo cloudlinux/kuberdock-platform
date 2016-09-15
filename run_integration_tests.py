@@ -10,8 +10,9 @@ import click
 from colorama import Fore
 
 from tests_integration.lib import multilogger
-from tests_integration.lib.integration_test_runner import TestResultCollection, \
-    discover_integration_tests, format_exception, write_junit_xml
+from tests_integration.lib.integration_test_runner import \
+    TestResultCollection, discover_integration_tests, format_exception, \
+    write_junit_xml
 from tests_integration.lib.integration_test_utils import get_test_full_name, \
     center_text_message
 from tests_integration.lib.pipelines import pipelines as \
@@ -171,7 +172,7 @@ def _filter_pipelines(include, exclude):
 
     # If include is empty - we are in "exclude" mode
     if not include:
-        include = registered_pipelines
+        include = [p for (p, _) in registered_pipelines]
 
     return {k: v
             for k, v in registered_pipelines.items()

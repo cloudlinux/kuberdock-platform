@@ -2,6 +2,7 @@ export VAGRANT_CWD=dev-utils/dev-env/
 export KD_LICENSE=patch
 export BUILD_CLUSTER=1
 export PATH=dev-utils:$PATH # enables docker-based vagrant
+export VAGRANT_NO_PARALLEL=1
 export KD_ONE_URL=https://some.nebula.host.com:2633/RPC2
 export KD_ADD_SHARED_PUB_KEYS=1
 # Bump templates explicitly (yum update), before making each new release branch.

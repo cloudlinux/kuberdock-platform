@@ -62,7 +62,6 @@ class Pipeline(object):
             'KD_LICENSE': 'patch',
             'KD_TESTING_REPO': 'true',
             'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch',
-            'VAGRANT_NO_PARALLEL': '1',
         }
         env_list = (
             getattr(c, 'ENV', {}) for c in reversed(self.__class__.__mro__))

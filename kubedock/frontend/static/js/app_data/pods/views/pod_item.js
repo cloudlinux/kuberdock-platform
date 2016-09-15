@@ -242,7 +242,7 @@ define(['app_data/app', 'app_data/model',
                 podName         : this.model.get('name'),
                 period          : pkg.get('period'),
                 ableTo          : _.bind(this.model.ableTo, this.model),
-                currentUserRole : App.currentUser.get('rolename')
+                currentUser     : App.currentUser
             };
         },
 

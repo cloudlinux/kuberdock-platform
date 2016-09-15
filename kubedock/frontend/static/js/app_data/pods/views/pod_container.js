@@ -201,7 +201,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 updateIsAvailable: before && before.updateIsAvailable,
                 kube_type: this.podBefore.getKubeType(),
                 restart_policy: this.podBefore.get('restartPolicy'),
-                currentUserRole : App.currentUser.get('rolename')
+                currentUser : App.currentUser
             };
         },
 
@@ -292,7 +292,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 updateIsAvailable: before && before.updateIsAvailable,
                 kube_type: this.podBefore.getKubeType(),
                 restart_policy: this.podBefore.get('restartPolicy'),
-                currentUserRole : App.currentUser.get('rolename')
+                currentUser : App.currentUser
             };
         },
 
@@ -434,7 +434,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 image: before.get('image'),
                 sourceUrl: before.get('sourceUrl'),
                 kubes: before.get('kubes'),
-                currentUserRole : App.currentUser.get('rolename')
+                currentUser : App.currentUser
             };
 
         },
@@ -512,7 +512,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 image: before.get('image'),
                 sourceUrl: before.get('sourceUrl'),
                 kubes: before.get('kubes'),
-                currentUserRole : App.currentUser.get('rolename')
+                currentUser : App.currentUser
             };
         },
 

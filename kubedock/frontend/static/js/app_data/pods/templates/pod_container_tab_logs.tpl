@@ -27,7 +27,7 @@
                             <% } else { %>
                                 <span class="container-update" title="Update <%- image %> container"><span>Update</span></span>
                             <% } %>
-                            <% if (currentUserRole !== 'LimitedUser') {%>
+                            <% if ( !currentUser.roleIs('LimitedUser') && !currentUser.usernameIs('kuberdock-internal')) {%>
                                 <a class="upgrade-btn" href="#pods/<%- parentID %>/edit"
                                     title="Change the amount of resources for <%- image %>"><span>Upgrade resources</span></a>
                             <% } %>

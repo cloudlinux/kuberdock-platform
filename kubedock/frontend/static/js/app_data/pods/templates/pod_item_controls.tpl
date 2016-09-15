@@ -21,7 +21,7 @@
             </span>
         </span>
         <ul class="dropdown-menu" role="menu">
-        <% if (currentUserRole !== 'LimitedUser') {%>
+        <% if ( !currentUser.roleIs('LimitedUser') && !currentUser.usernameIs('kuberdock-internal')) {%>
             <li><a class="edit-btn" href="#pods/<%- id %>/edit"><span>Edit</span></a></li>
         <% } %>
         <% if (ableTo('switch-package')) { %>

@@ -87,13 +87,14 @@ define([
                 return;
             var that = this;
             require(['app_data/pods/views/pods_list'], function(Views){
-                var suspendedTitle;
+                var suspendedTitle,
+                    isInternalUser = App.currentUser.usernameIs('kuberdock-internal');
                 if (App.currentUser.get('suspended')) {
                     suspendedTitle = 'Suspended users can\'t create new containers';
                 }
                 var listLayout = new Views.PodListLayout(),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods']}),
-                    button = App.currentUser.roleIs('User', 'TrialUser') && {
+                    button = App.currentUser.roleIs('User', 'TrialUser') && !isInternalUser && {
                         id: 'add_pod', href: '#pods/new', title: 'Add new container',
                         suspendedTitle: suspendedTitle},
                     breadcrumbsControls = new Breadcrumbs.Controls(

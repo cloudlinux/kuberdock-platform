@@ -24,7 +24,7 @@
                     <% } else  if (state == "stopped"){ %>
                         <span id="startContainer"><span>Start pod</span></span>
                     <% } %>
-                    <% if (currentUserRole !== 'LimitedUser') {%>
+                    <% if ( !currentUser.roleIs('LimitedUser') && !currentUser.usernameIs('kuberdock-internal')) {%>
                         <a class="edit-container-general" href="#pods/<%- podID %>/container/<%- id %>/edit/general"><span>Edit</span></a>
                     <% } %>
                     <% if (sourceUrl !== undefined) { %>

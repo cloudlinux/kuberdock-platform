@@ -468,7 +468,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         ableTo: function(command){
             // 'unpaid', 'stopped', 'stopping', 'waiting', 'pending',
             // 'preparing', 'running', 'failed', 'succeeded'
-            var status = this.get('status');
+            var status = this.get('status'),
+                isInternalUser = App.currentUser.usernameIs('kuberdock-internal');
             if (command === 'start')
                 return _.contains(['stopped'], status);
             if (command === 'redeploy')
@@ -481,7 +482,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 return _.contains(['unpaid'], status);
             if (command === 'delete')
                 return _.contains(['unpaid', 'stopped', 'stopping', 'waiting',
-                                   'running', 'failed', 'succeeded'], status);
+                                   'running', 'failed', 'succeeded'], status) &&
+                                    !isInternalUser;
             if (command === 'switch-package')
                 return !!(this.get('template_id') &&
                           this.get('template_plan_name') &&
@@ -1339,6 +1341,13 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             }
             return false;
         },
+        usernameIs: function(/* ...usernames */){
+            for (var i = 0; i < arguments.length; i++){
+                if (this.get('username') === arguments[i])
+                    return true;
+            }
+            return false;
+        }
     });
     App.getCurrentUser = App.resourcePromiser('user', data.CurrentUserModel);
 

@@ -933,8 +933,7 @@ class KuberDock(KubeCtl):
                     'containerPort': x.get('number'),
                     'hostPort': x.get('number'),
                     'protocol': x.get('protocol')
-                } for x in pulled['ports']
-                ]
+                } for x in pulled['ports']]
         image.update(pulled)
         self.containers.append(image)
         return Image(image, **self._args)

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -e
 
 IMG=lobur/rpm-build:v1
 

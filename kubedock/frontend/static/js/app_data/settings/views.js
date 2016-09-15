@@ -153,8 +153,43 @@ define(['app_data/app', 'marionette',
         },
 
         submitSettings: function(){
-            var changed = this.collection.filter(function(m){ return m.hasChanged('value'); });
+            var allNonEmpty = true,
+                billing = this.collection.findWhere({name: 'billing_type'}),
+                dnsSystem = this.collection.findWhere({name: 'dns_management_system'});
 
+            if (billing) billing = billing.get('value');
+            if (dnsSystem) dnsSystem = dnsSystem.get('value');
+
+            if (billing === 'WHMCS'){
+                allNonEmpty = this.collection.chain().filter(function(model){
+                        return _.contains(['billing_url', 'billing_username', 'billing_password'],
+                        model.get('name'));
+                    }).map(function(model){ return model.get('value'); }).all().value();
+            }
+
+            if (dnsSystem === 'cpanel_dnsonly'){
+                allNonEmpty = this.collection.chain().filter(function(model){
+                        return _.contains(['dns_management_cpanel_dnsonly_host',
+                                           'dns_management_cpanel_dnsonly_user',
+                                           'dns_management_cpanel_dnsonly_token'],
+                                            model.get('name'));
+                    }).map(function(model){ return model.get('value'); }).all().value();
+            }
+
+            if (dnsSystem === 'aws_route53'){
+                allNonEmpty = this.collection.chain().filter(function(model){
+                        return _.contains(['dns_management_aws_route53_id',
+                                           'dns_management_aws_route53_secret'],
+                                            model.get('name'));
+                    }).map(function(model){ return model.get('value'); }).all().value();
+            }
+
+            if (!allNonEmpty) {
+                utils.notifyWindow('All fields are required');
+                return false;
+            }
+
+            var changed = this.collection.filter(function(m){ return m.hasChanged('value'); });
             if (changed.length) {
                 _.each(changed, function(m){
                     m.save(null, {wait: true})

@@ -23,11 +23,17 @@
   tags:
     - timezone
 
+- name: Remove origin timezone
+  file: path=/etc/localtime state=absent
+  when: (timezone | default("")) != ""
+  tags:
+    - timezone
+
 - name: Set timezone
   file:
     src: "/usr/share/zoneinfo/{{ timezone }}"
     dest: /etc/localtime
     state: link
-  when:  not ((timezone | default("")) == "")
+  when: (timezone | default("")) != ""
   tags:
     - timezone

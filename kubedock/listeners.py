@@ -542,7 +542,7 @@ def listen_fabric(watch_url, list_url, func, k8s_json_object_hook=None):
                         if (now - last_reconnect).total_seconds() > ERROR_TIMEOUT:
                             last_reconnect = now
                             logger = current_app.logger.error
-                        logger('restarting listen: {1}' .format(fn_name),
+                        logger('restarting listen: {}'.format(fn_name),
                                exc_info=True)
                     gevent.sleep(0.2)
     return result

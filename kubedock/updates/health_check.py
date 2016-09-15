@@ -204,11 +204,6 @@ def check_cluster():
 
 
 if __name__ == '__main__':
-    msg = ''
     app = create_app()
     with app.app_context():
-        msg = check_cluster()
-    if msg:
-        print msg
-    else:
-        print "All OK"
+        print check_cluster() or "All OK"

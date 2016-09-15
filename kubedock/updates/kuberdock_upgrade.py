@@ -388,14 +388,25 @@ def ask_upgrade():
     return ans in ('y', 'yes')
 
 
-def health_check():
+def health_check(post_upgrade_check=False):
     if not args.skip_health_check:
         print "Performing cluster health check..."
         msg = check_cluster()
         if msg:
             print >> sys.stderr, "There are some problems with cluster."
             print >> sys.stderr, msg
-            print >> sys.stderr, "Please, solve problems or use key --skip-health-check.(on your own risk)"
+            if post_upgrade_check:
+                print >> sys.stderr, "Some of them could be temporary due " \
+                                     "restarts of various KuberDock " \
+                                     "services/pods/nodes during upgrade " \
+                                     "process and will gone in few minutes.\n" \
+                                     "It's strongly recommended to re-run " \
+                                     "health check later soon to ensure this " \
+                                     "problems are gone and fix them if they " \
+                                     "still remains."
+            else:
+                print >> sys.stderr, "Please, solve problems or use key " \
+                                     "--skip-health-check (on your own risk)"
             return False
         print "Health check: OK"
     else:
@@ -434,6 +445,7 @@ def post_upgrade(for_successful=True, reason=None):     # teardown
         # We should clear cache for licencing info after successful upgrade:
         redis.delete('KDCOLLECTION')
         print SUCCESSFUL_UPDATE_MESSAGE
+        health_check(post_upgrade_check=True)
     else:
         if reason is not None:
             print >> sys.stderr, reason

@@ -316,21 +316,21 @@ class KDIntegrationTestAPI(object):
         return self.ssh_exec('master', ' '.join(kcli_cmd))
 
     def kdctl(self, cmd, out_as_dict=False):
-        rc, out, err = self.ssh_exec("master", "kdctl -k {}".format(cmd))
+        rc, out, err = self.ssh_exec("master", u"kdctl -k {}".format(cmd))
         if out_as_dict:
             out = json.loads(out)
         return rc, out, err
 
     def manage(self, args, out_as_dict=False, check_retcode=True):
         manage_cmd_path = os.path.join(self.kuberdock_root, 'manage.py')
-        cmd = "/usr/bin/env python {} {}".format(manage_cmd_path, args)
+        cmd = u"/usr/bin/env python {} {}".format(manage_cmd_path, args)
         rc, out, err = self.ssh_exec("master", cmd, check_retcode)
         if out_as_dict:
             return rc, json.loads(out), err
         return rc, out, err
 
     def docker(self, cmd, node="node1"):
-        return self.ssh_exec(node, "docker {0}".format(cmd))
+        return self.ssh_exec(node, u"docker {}".format(cmd))
 
     def ssh_exec(self, node, cmd, check_retcode=True):
         ssh = self.get_ssh(node)
@@ -343,15 +343,15 @@ class KDIntegrationTestAPI(object):
         if setting_id:
             cmd += "--id {}".format(setting_id)
         if name:
-            cmd += "--name {}".format(name)
-        self.kdctl("{} {}".format(cmd, value))
+            cmd += u"--name {}".format(name)
+        self.kdctl(u"{} {}".format(cmd, value))
 
     def get_system_setting(self, setting_id=None, name=None):
         cmd = "system-settings get "
         if setting_id:
             cmd += "--id {}".format(setting_id)
         if name:
-            cmd += "--name {}".format(name)
+            cmd += u"--name {}".format(name)
         _, data, _ = self.kdctl(cmd, out_as_dict=True)
         return data['data']['value']
 
@@ -401,7 +401,8 @@ class UserList(object):
             'username': name,
             'password': password
         }
-        self.cluster.kdctl("users create '{}'".format(json.dumps(user)))
+        data = json.dumps(user, ensure_ascii=False)
+        self.cluster.kdctl(u"users create '{}'".format(data))
 
     def delete(self, name):
         self.cluster.kdctl(
@@ -419,7 +420,7 @@ class PVList(object):
         for user in self.cluster.users.get_kd_users():
             for pv in self.filter(user):
                 name = escape_command_arg(pv['name'])
-                self.cluster.kcli('drives delete {0}'.format(name), user=user)
+                self.cluster.kcli(u'drives delete {0}'.format(name), user=user)
 
     def filter(self, owner=None):
         _, pvs, _ = self.cluster.kcli("drives list", out_as_dict=True,
@@ -459,7 +460,7 @@ class NodeList(object):
     def get_node_info(self, name):
         # type: (str) -> dict
         _, out, _ = self.cluster.manage(
-            'node-info -n {}'.format(pipes.quote(name)), out_as_dict=True)
+            u'node-info -n {}'.format(pipes.quote(name)), out_as_dict=True)
         return out
 
 
@@ -566,7 +567,7 @@ class PodList(object):
 
             for pod in pods:
                 name = escape_command_arg(pod['name'])
-                self.cluster.kcli('forget {}'.format(name), user=user)
+                self.cluster.kcli(u'forget {}'.format(name), user=user)
 
     def filter_by_owner(self, owner='test_user'):
         # type: (str) -> dict
@@ -578,7 +579,7 @@ class PodList(object):
         for user in self.cluster.users.get_kd_users():
             for pod in self.cluster.pods.filter_by_owner(user):
                 name = escape_command_arg(pod['name'])
-                self.cluster.kcli('delete {}'.format(name), user=user)
+                self.cluster.kcli(u'delete {}'.format(name), user=user)
 
 
 class KDPod(RESTMixin):
@@ -681,11 +682,11 @@ class KDPod(RESTMixin):
             )
         elif file_path:
             image = get_image(file_path=file_path)
-            cmd += "pods restore -f {}" \
+            cmd += u"pods restore -f {}" \
                 .format(file_path)
         elif pod_dump:
             image = get_image(pod_dump=pod_dump)
-            cmd += "pods restore \'{}\'" \
+            cmd += u"pods restore \'{}\'" \
                 .format(pod_dump)
         else:
             raise IncorrectPodDescription(
@@ -818,7 +819,7 @@ class KDPod(RESTMixin):
 
         node_name = self.info['host']
         args = '-d' if detached else ''
-        docker_cmd = 'exec {} {} bash -c {}'.format(
+        docker_cmd = u'exec {} {} bash -c {}'.format(
             args, container_id, pipes.quote(command))
         return self.cluster.docker(docker_cmd, node_name)
 
@@ -888,7 +889,7 @@ class PV(object):
         and also create new PV in the Kuberdock.
         """
         self.size = size
-        self.cluster.kcli("drives add --size {} {}".format(
+        self.cluster.kcli(u"drives add --size {} {}".format(
             self.size, self.name), self.owner)
 
     def _create_dummy(self, size):
@@ -912,8 +913,7 @@ class PV(object):
         # TODO: it can be removed together with exception
         pv = self._get_by_name(self.name)
         if not pv:
-            raise DiskNotFound("Disk {0} doesn't exist".
-                               format(self.name))
+            raise DiskNotFound(u"Disk {0} doesn't exist".format(self.name))
         self.size = pv['size']
 
     def _get_by_name(self, name):

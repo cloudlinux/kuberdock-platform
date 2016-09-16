@@ -55,7 +55,8 @@ class TestV(unittest.TestCase):
 
 class TestUserCreateValidation(unittest.TestCase):
     def setUp(self):
-        patcher = mock.patch.object(UserValidator, '_validate_unique_case_insensitive')
+        patcher = mock.patch.object(UserValidator,
+                                    '_validate_unique_case_insensitive')
         self.addCleanup(patcher.stop)
         self.unique_validation_mock = patcher.start()
 
@@ -98,7 +99,8 @@ class TestUserCreateValidation(unittest.TestCase):
     def assertRequired(self, validator, template, field):
         data = template()
         data.pop(field, None)
-        with self.assertRaises(ValidationError, msg='Test "{0}" is required'.format(field)):
+        with self.assertRaises(ValidationError,
+                               msg='Test "{0}" is required'.format(field)):
             validator(data)
 
     def test_username(self):
@@ -175,8 +177,10 @@ class TestUserCreateValidation(unittest.TestCase):
         ]
 
         self.assertRequired(self.validator, self._template, 'email')
-        self.assertValidList(self.validator, self._template, 'email', valid_emails)
-        self.assertInvalidList(self.validator, self._template, 'email', invalid_emails)
+        self.assertValidList(
+            self.validator, self._template, 'email', valid_emails)
+        self.assertInvalidList(
+            self.validator, self._template, 'email', invalid_emails)
 
         data = self._template(email='wpfwj344d@test.test')
         self.validator(data)
@@ -243,7 +247,8 @@ class TestUserEditValidation(TestUserCreateValidation):
     def setUp(self):
         super(TestUserEditValidation, self).setUp()
 
-        self.validator = partial(UserValidator(id=1).validate_user, update=True)
+        self.validator = partial(
+            UserValidator(id=1).validate_user, update=True)
 
     def assertRequired(self, *args, **kwargs):  # partial update allowed
         pass

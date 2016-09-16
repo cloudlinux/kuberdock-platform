@@ -2,6 +2,7 @@ import yaml
 from flask import Blueprint, Response
 from flask.views import MethodView
 
+from kubedock.api.utils import use_kwargs
 from kubedock.decorators import maintenance_protected
 from kubedock.exceptions import APIError, PredefinedAppExc, InsufficientData
 from kubedock.login import auth_required
@@ -89,13 +90,17 @@ def create_pod(template_id, plan_id):
 @yamlapi.route('/switch/<pod_id>/<plan_id>', methods=['PUT'])
 @auth_required
 @KubeUtils.jsonwrap
-def switch_pod_plan(pod_id, plan_id):
-    params = KubeUtils._get_params()
-    async = params.get('async') != 'false'
+@use_kwargs({'async': {'type': 'boolean', 'coerce': extbool},
+             'dry-run': {'type': 'boolean', 'coerce': extbool}},
+            allow_unknown=True)
+def switch_pod_plan(pod_id, plan_id, **params):
+    async = params.get('async', True)
+    dry_run = params.get('dry-run', False)
     current_user = KubeUtils.get_current_user()
     if plan_id.isdigit():   # plan_id specified with index (e.g. 0)
         plan_id = int(plan_id)
         func = PredefinedApp.update_pod_to_plan
     else:  # plan_id specified with name ('M', 'XXL')
         func = PredefinedApp.update_pod_to_plan_by_name
-    return func(pod_id, plan_id, async=async, user=current_user)
+    return func(pod_id, plan_id,
+                async=async, dry_run=dry_run, user=current_user)

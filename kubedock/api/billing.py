@@ -1,9 +1,10 @@
 from flask import Blueprint, current_app, request
 
+from kubedock.core import db
 from kubedock.decorators import maintenance_protected
 from kubedock.exceptions import APIError, BillingExc
 from kubedock.login import auth_required
-from kubedock.utils import KubeUtils
+from kubedock.utils import atomic, KubeUtils
 from kubedock.billing.models import Package, Kube
 from kubedock.system_settings.models import SystemSettings
 from kubedock.kapi.apps import PredefinedApp
@@ -104,9 +105,13 @@ def switch_app_package(pod_id, plan_id):
     billing = current_app.billing_factory.get_billing(current_billing)
     owner = KubeUtils.get_current_user()
 
-    old_pod = PodCollection(owner).get(pod_id, as_json=True)
-    PredefinedApp.update_pod_to_plan(pod_id, plan_id, async=False)
-    pod = PodCollection(owner).get(pod_id, as_json=True)
+    transaction = db.session.begin_nested()
+    with atomic():
+        old_pod = PodCollection(owner).get(pod_id, as_json=True)
+        PredefinedApp.update_pod_to_plan(
+            pod_id, plan_id, async=False, dry_run=True)
+        pod = PodCollection(owner).get(pod_id, as_json=True)
+    transaction.rollback()
 
     data = KubeUtils._get_params()
     data['pod'] = pod

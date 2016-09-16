@@ -3,8 +3,8 @@
 
 
 Name:       kuberdock-manage
-Version:    1.0
-Release:    2%{?dist}
+Version:    1.0.0
+Release:    1%{?dist}
 Summary:    Kuberdock command line utilities
 Group:      System Environment/Libraries
 License:    CloudLinux Commercial License
@@ -54,5 +54,5 @@ rm -rf %{buildroot}
 
 
 %changelog
-* Tue May 17 2016 Sergey Fokin <sfokin@cloudlinux.com> - 1.0-2
+* Tue May 17 2016 Sergey Fokin <sfokin@cloudlinux.com> - 1.0.0-1
 - Initial project

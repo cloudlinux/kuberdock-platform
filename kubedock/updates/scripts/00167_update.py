@@ -566,6 +566,12 @@ class _U184(_Update):
         db.session.commit()
 
 
+class _U188(_Update):
+    @classmethod
+    def upgrade(cls, upd, with_testing):
+        rbac_fixtures.change_permissions(rbac_fixtures.PERMISSIONS)
+
+
 updates = [
     _U163,
     _U182,
@@ -582,6 +588,7 @@ updates = [
     _U178,
     _U180,
     _U184,
+    _U188,
 ]
 
 

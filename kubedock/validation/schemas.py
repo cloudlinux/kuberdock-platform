@@ -727,7 +727,17 @@ predefined_app_schema = {
     },
 }
 
-node_schema = {'hostname': hostname_schema, 'kube_type': kube_type_schema}
+node_schema = {
+    'hostname': hostname_schema,
+    'kube_type': kube_type_schema,
+    'lsdevices': {'type': 'list',
+                  'required': False,
+                  'schema': {
+                      'type': 'string',
+                      'empty': False,
+                      'coerce': str
+                  }}
+}
 
 ippool_schema = {
     'network': {'type': 'ipv4_net', 'required': True},

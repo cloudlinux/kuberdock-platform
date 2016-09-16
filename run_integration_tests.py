@@ -33,7 +33,7 @@ debug_messages = []
 
 def print_msg(msg='', color=Fore.MAGENTA):
     with print_lock:
-        print('{}{}{}'.format(color, msg, Fore.RESET))
+        print(u'{}{}{}'.format(color, msg, Fore.RESET))
         sys.stdout.flush()
 
 
@@ -47,10 +47,10 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
 
     # Helper function to make code less verbose
     def pipe_log(msg, color=Fore.MAGENTA):
-        print_msg('{} -> {}\n'.format(pipeline_name, msg), color)
+        print_msg(u'{} -> {}\n'.format(pipeline_name, msg), color)
 
     def prettify_exception(exc):
-        return '{}: {}'.format(exc.__class__.__name__, str(exc))
+        return u'{}: {}'.format(exc.__class__.__name__, str(exc))
 
     try:
         pipeline = Pipeline.from_name(pipeline_name)
@@ -62,22 +62,22 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
                                              prettify_exception(e))
 
         msg = format_exception(sys.exc_info())
-        pipe_log('CLUSTER CREATION FAILED\n{}'.format(msg), Fore.RED)
+        pipe_log(u'CLUSTER CREATION FAILED\n{}'.format(msg), Fore.RED)
         return
 
     for test in tests:
         test_name = get_test_full_name(test)
-        pipe_log('{} -> STARTED'.format(test_name))
+        pipe_log(u'{} -> STARTED'.format(test_name))
 
         try:
             pipeline.run_test(test)
             test_results.register_success(test, pipeline_name)
 
-            pipe_log('{} -> PASSED'.format(test_name), Fore.GREEN)
+            pipe_log(u'{} -> PASSED'.format(test_name), Fore.GREEN)
         except:
             test_results.register_failure(test, pipeline_name)
             msg = format_exception(sys.exc_info())
-            pipe_log('{} -> FAILED\n{}'.format(test_name, msg), Fore.RED)
+            pipe_log(u'{} -> FAILED\n{}'.format(test_name, msg), Fore.RED)
 
     if cluster_debug and test_results.has_any_failures(pipeline_name):
         add_debug_info(pipeline)
@@ -110,7 +110,7 @@ def start_test(pipeline, tests, cluster_debug):
     :return: created Thread object
     """
 
-    full_name = '{}_{}'.format(*pipeline)
+    full_name = u'{}_{}'.format(*pipeline)
     t = Thread(
         name=full_name, target=run_tests_in_a_pipeline,
         args=(full_name, tests, cluster_debug))
@@ -133,7 +133,7 @@ def get_pipeline_logs(multilog):
         if test_results.has_any_failures(name)
     )
 
-    msg = '\n' + '\n'.join(entries)
+    msg = '\n' + u'\n'.join(entries)
 
     return center_text_message(
         'PIPELINE DETAILED LOGS', fill_char='=', color=Fore.MAGENTA) + msg
@@ -182,7 +182,7 @@ def _filter_pipelines(include, exclude):
 def _verify_paths(ctx, param, items):
     bad_paths = [i for i in items if not os.path.exists(i)]
     if bad_paths:
-        message = 'could not find following paths:\n{}'.format('\n'.join(
+        message = u'could not find following paths:\n{}'.format('\n'.join(
             bad_paths))
         raise click.BadArgumentUsage(message)
     return items
@@ -223,7 +223,7 @@ def main(
         discovered = discover_integration_tests(
             paths or [INTEGRATION_TESTS_PATH])
 
-        message = 'Discovered tests in:\n{}\n'.format('\n'.join(discovered))
+        message = u'Discovered tests in:\n{}\n'.format('\n'.join(discovered))
         print_msg(message)
 
         requested_pipelines = _filter_pipelines(pipelines, pipelines_skip)

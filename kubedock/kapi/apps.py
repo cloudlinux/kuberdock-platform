@@ -345,7 +345,7 @@ class PredefinedApp(object):
 
     @classmethod
     def update_pod_to_plan(cls, pod_id, plan_id, values=None, async=True,
-                           user=None):
+                           dry_run=False, user=None):
         """
         Class method that updates predefined app pod to a particular plan
         :param pod_id: string -> uuid, pod (database) ID
@@ -357,12 +357,12 @@ class PredefinedApp(object):
         app, pod = cls._get_instance_from_pod(pod_id)
         cls._check_permissions(user, pod)
         filled = app.get_filled_template_for_plan(plan_id, values)
-        app._update_pod_config(pod, filled, async)
+        app._update_pod_config(pod, filled, async, dry_run=dry_run)
         return app.get_plan(plan_id)
 
     @classmethod
     def update_pod_to_plan_by_name(cls, pod_id, plan_name, values=None,
-                                   async=True, user=None):
+                                   async=True, dry_run=False, user=None):
         """
         Class method that updates predefined app pod to a particular plan
         :param pod_id: string -> uuid, pod (database) ID
@@ -374,7 +374,7 @@ class PredefinedApp(object):
         app, pod = cls._get_instance_from_pod(pod_id)
         cls._check_permissions(user, pod)
         filled = app.get_filled_template_for_plan_by_name(plan_name, values)
-        app._update_pod_config(pod, filled, async)
+        app._update_pod_config(pod, filled, async, dry_run=dry_run)
         return app.get_plan(app._get_plan_by_name(plan_name, index_only=True))
 
     @classmethod
@@ -458,7 +458,7 @@ class PredefinedApp(object):
         return yaml.dump(applied, default_flow_style=False, width=1000)
 
     @staticmethod
-    def _update_IPs(pod, root, pod_config):
+    def _update_IPs(pod, root, pod_config, dry_run=False):
         """
         Toggles pod publicIP
         :param pod: obj -> pod to be processed
@@ -471,11 +471,13 @@ class PredefinedApp(object):
             if not IPPool.has_public_ips():
                 raise PredefinedAppExc.AppPackageChangeImpossible(
                     details={'message': 'Unable to pick up public IP'})
-            PodCollection._prepare_for_public_address(pod, root)
+            if not dry_run:
+                PodCollection._prepare_for_public_address(pod, root)
             pod_config['public_ip'] = root.get('public_ip')
         elif not wanted and curr_IP is not None:
             ip = pod_config.pop('public_ip', None)
-            PodCollection._remove_public_ip(pod_id=pod.id, ip=ip)
+            if not dry_run:
+                PodCollection._remove_public_ip(pod_id=pod.id, ip=ip)
 
     @staticmethod
     def _update_and_restart(pod, owner):
@@ -486,7 +488,7 @@ class PredefinedApp(object):
         pod_collection.update(pod.id,
                               {'command': 'start', 'commandOptions': {}})
 
-    def _update_pod_config(self, pod, new_config, async=True):
+    def _update_pod_config(self, pod, new_config, async=True, dry_run=False):
         """
         Updates existing pod config to switch to new plan
         :param pod: obj -> pod object retrieved from DB
@@ -512,26 +514,27 @@ class PredefinedApp(object):
                 'message': pod_config.get('forbidSwitchingAppPackage')})
 
         self._update_kubes(root, pod_config)
-        self._update_IPs(pod, root, pod_config)
+        self._update_IPs(pod, root, pod_config, dry_run=dry_run)
         try:
             pod.kube_id = kube_id
             pod.template_plan_name = plan['name']
             pod.config = json.dumps(pod_config)
-            if async:
-                update_plan_async.apply_async(
-                    args=[pod, pod.owner],
-                    link_error=on_update_error.s(
-                        pod, pod.owner, orig_config, orig_kube_id))
-                return
-            self._update_and_restart(pod, pod.owner)
-
+            if not dry_run:
+                if async:
+                    update_plan_async.apply_async(
+                        args=[pod, pod.owner],
+                        link_error=on_update_error.s(
+                            pod, pod.owner, orig_config, orig_kube_id))
+                    return
+                self._update_and_restart(pod, pod.owner)
         except Exception:
             pod.config = orig_config
             pod.kube_id = orig_kube_id
-            pod.save()
-            pod_collection = PodCollection(pod.owner)
-            pod_collection.update(pod.id,
-                                  {'command': 'start', 'commandOptions': {}})
+            if not dry_run:
+                pod.save()
+                pod_collection = PodCollection(pod.owner)
+                pod_collection.update(pod.id, {
+                    'command': 'start', 'commandOptions': {}})
             raise
 
     @classmethod

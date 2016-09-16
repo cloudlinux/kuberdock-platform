@@ -177,7 +177,9 @@ define([
 
                         itemLayout.messages.show(messagesLayout);
                         messagesLayout.podHasChanges.show(
-                            new PodMessages.PodHasChanges({model: model}));
+                            new PodMessages.PodHasChanges({
+                                fixedPrice: fixedPrice, model: model
+                            }));
                         messagesLayout.postDescription.show(
                             new PodMessages.PostDescription({model: model}));
                     });
@@ -292,7 +294,9 @@ define([
                 'app_data/pods/views/pod_container',
                 'app_data/pods/views/messages',
             ], function(Views, PodMessages){
-                App.getPodCollection().done(function(podCollection){
+                $.when(App.getPodCollection(),
+                    App.getSystemSettingsCollection()
+                    ).done(function(podCollection, settings){
                     var wizardLayout = new Views.PodWizardLayout(),
                         pod = podCollection.fullCollection.get(id),
                         diffCollection = pod.getContainersDiffCollection(),
@@ -306,7 +310,10 @@ define([
                             stats: Views.WizardStatsSubView,
                             general: Views.WizardGeneralSubView,
                             env: Views.WizardEnvSubView,
-                        };
+                        },
+                        fixedPrice = App.userPackage.get('count_type') === 'fixed'
+                            && settings.byName('billing_type')
+                                .get('value').toLowerCase() !== 'no billing';
 
                     if (!model || !_.contains(_.keys(tabViews), tab))
                         return that.pageNotFound();
@@ -355,7 +362,9 @@ define([
 
                         wizardLayout.messages.show(messagesLayout);
                         messagesLayout.podHasChanges.show(
-                            new PodMessages.PodHasChanges({model: pod}));
+                            new PodMessages.PodHasChanges({
+                                fixedPrice: fixedPrice, model: pod
+                            }));
 
                         showTab(tab);
                     });

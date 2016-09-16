@@ -17,12 +17,17 @@ class ValidationError(APIError):
             if self.legacy:
                 kwargs['details'] = dict(data, **kwargs)
             else:
-                self.message_template = data
+                self.error_message = data
         super(ValidationError, self).__init__(**kwargs)
 
     @property
     def message(self):
         if (self.legacy and has_request_context() and g.get('api_version') and
                 g.api_version == API_VERSIONS.v1):
-            return self.details
-        return 'Invalid data: {0}'.format(json.dumps(self.details))
+            return self.details  # legacy for v1: return dict in message
+        if getattr(self, 'error_message', None) is not None:
+            return self.error_message  # raise ValidateError('error message')
+        if self.details:  # raise ValidateError(details={'smth': 'wrong'})
+            return u'Invalid data: {0}'.format(
+                json.dumps(self.details, ensure_ascii=False))
+        return u'Invalid data'  # raise ValidateError()

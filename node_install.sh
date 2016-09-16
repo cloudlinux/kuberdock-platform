@@ -178,7 +178,8 @@ clean_node(){
         # TODO remove along with deprecated LVM
         # Needed because of import error lvm in case of cluster with non-zfs and
         # non-lvm LocalStorage
-        yum_wrapper -y install lvm2-python-libs
+        # Use "raw" yum because yum_wrapper needs kube repos
+        yum -d 1 -y install lvm2-python-libs
 
         PYTHONPATH=/ python2 -m ${NODE_STORAGE_MANAGE_DIR}.manage remove-storage
         remove_unneeded zfs

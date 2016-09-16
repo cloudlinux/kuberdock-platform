@@ -267,5 +267,17 @@ class TestExtbool(unittest.TestCase):
         with self.assertRaises(TypeError):
             validation.extbool({'a': 2})
 
+
+class TestValidationError(unittest.TestCase):
+    def test_message(self):
+        self.assertEqual(ValidationError().message, 'Invalid data')
+        self.assertEqual(ValidationError('msg').message, 'msg')
+        self.assertEqual(ValidationError(u'фывапройвц').message, u'фывапройвц')
+        self.assertEqual(ValidationError(details={'smth': 'wrong'}).message,
+                         'Invalid data: {"smth": "wrong"}')
+        self.assertEqual(
+            ValidationError(details={u'что-то': u'не так'}).message,
+            u'Invalid data: {"что-то": "не так"}')
+
 if __name__ == '__main__':
     test = unittest.main()

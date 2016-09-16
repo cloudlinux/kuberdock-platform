@@ -129,6 +129,7 @@ define(['moment-timezone', 'numeral', 'notify'], function(moment, numeral){
     });
     $.notify.addStyle('bootstrap', {  // notify template
         html: "<div>" +
+                  "<span class='notify-icon'/>" +
                   "<span class='notify-msg' data-notify-text='message'/>" +
                   "<span class='notify-count' data-notify-text='count'/>" +
                   "<span class='notify-close'/>" +

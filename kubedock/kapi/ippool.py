@@ -1,23 +1,25 @@
-import ipaddress
+import json
 import operator
-import sqlalchemy
 
+import ipaddress
 from flask import current_app
-from ..usage.models import IpState
-from ..core import db
-from ..exceptions import APIError, NoFreeIPs
-from .podcollection import PodCollection
-from ..pods.models import IPPool, PodIP, ip_network, Pod
-from ..utils import atomic, ip2int, int2ip
-from ..validation import V, ippool_schema
-from ..nodes.models import Node
-from ..kapi.node import Node as K8SNode, NodeException, NodeNotFound
+
 from .lbpoll import LoadBalanceService
+from .podcollection import PodCollection
+from .. import utils
+from .. import validation
+from ..exceptions import APIError, NoFreeIPs
+from ..kapi import podutils
+from ..kapi.helpers import KubeQuery
+from ..kapi.node import Node as K8SNode, NodeException, NodeNotFound
+from ..nodes.models import Node
+from ..pods.models import IPPool, PodIP, ip_network, Pod
 from ..settings import AWS, KUBERDOCK_INTERNAL_USER
 
 
 class IpAddrPool(object):
-    def get(self, net=None, page=None):
+    @staticmethod
+    def get(net=None, page=None):
         """Returns list of networks or a single network.
         :param net: network ('x.x.x.x/x') optional. If it is not specified,
         then will be returned list of all networks. If it specified, then will
@@ -48,14 +50,16 @@ class IpAddrPool(object):
         if rv is not None:
             return rv.to_dict(page=page)
 
-    def get_free(self):
+    @staticmethod
+    def get_free():
         """Returns first free ip address from pool of defined networks."""
         try:
             return IPPool.get_free_host()
         except NoFreeIPs:
             return None
 
-    def create(self, data):
+    @classmethod
+    def create(cls, data):
         # type: (dict) -> dict
         """Creates network instance in db pool of networks.
         :param data: dict with fields 'network' ('x.x.x.x/x'), and optional
@@ -66,9 +70,10 @@ class IpAddrPool(object):
         :return: dict with fields 'network' and 'autoblock'
 
         """
-        data = V()._api_validation(data or {}, ippool_schema)
+        data = validation.V()._api_validation(data or {},
+                                              validation.ippool_schema)
 
-        self._check_if_network_exists(data['network'])
+        cls._check_if_network_exists(data['network'])
 
         node_name = data.get('node')
         node = Node.query.filter_by(hostname=node_name).first()
@@ -76,15 +81,15 @@ class IpAddrPool(object):
             if node is None:
                 raise APIError('Node does not exist ({})'.format(node_name))
 
-        with atomic():
-            pool = IPPool(network=data['network'], node=node)
+        with utils.atomic():
+            pool = IPPool.create(network=data['network'], node=node)
             auto_block = data.get('autoblock')
 
             # Strip out any spaces between symbols
             if auto_block:
                 auto_block = auto_block.replace(' ', '')
 
-            block_list = self.parse_autoblock(auto_block) if auto_block else []
+            block_list = cls.parse_autoblock(auto_block) if auto_block else []
             pool.block_ip(block_list)
 
             if node_name and current_app.config['NONFLOATING_PUBLIC_IPS']:
@@ -98,9 +103,10 @@ class IpAddrPool(object):
         pool.save()
         return pool.to_dict(page=1)
 
-    @atomic(nested=False)
-    def update(self, network, params):
-        net = self._get_network_by_cidr(network)
+    @classmethod
+    @utils.atomic(nested=False)
+    def update(cls, network, params):
+        net = cls._get_network_by_cidr(network)
         if not params:
             return net.to_dict()
 
@@ -119,13 +125,14 @@ class IpAddrPool(object):
             PodCollection._remove_public_ip(ip=unbind_ip)
 
         if node_name and current_app.config['NONFLOATING_PUBLIC_IPS']:
-            net.node = self._get_node_by_name(net, node_name)
-            self._update_free_public_ip_counter(net.node.hostname, block_ip,
+            net.node = cls._get_node_by_name(net, node_name)
+            cls._update_free_public_ip_counter(net.node.hostname, block_ip,
                                                 unblock_ip,
                                                 unbind_ip)
         return net.to_dict()
 
-    def _update_free_public_ip_counter(self, hostname, block_ip, unblock_ip,
+    @staticmethod
+    def _update_free_public_ip_counter(hostname, block_ip, unblock_ip,
                                        unbind_ip):
         delta, k8s_node = 0, K8SNode(hostname=hostname)
 
@@ -143,7 +150,8 @@ class IpAddrPool(object):
         except NodeException:
             raise APIError('Could not modify IP. Please try later')
 
-    def _get_node_by_name(self, net, node_name):
+    @staticmethod
+    def _get_node_by_name(net, node_name):
         if PodIP.filter_by(network=net.network).first() is not None:
             raise APIError(
                 "You cannot change the node of network '{0}' while "
@@ -155,7 +163,8 @@ class IpAddrPool(object):
             raise APIError('Node is not exists ({0})'.format(node_name))
         return node
 
-    def _check_if_network_exists(self, network):
+    @staticmethod
+    def _check_if_network_exists(network):
         net = ipaddress.IPv4Network(network)
         for pool in IPPool.all():
             if pool.network == net:
@@ -165,7 +174,8 @@ class IpAddrPool(object):
                     'New {} network overlaps {} which already exists'.format(
                         network, pool.network))
 
-    def get_user_addresses(self, user):
+    @staticmethod
+    def get_user_addresses(user):
         pods = {pod.id: pod.name
                 for pod in user.pods if pod.status != 'deleted'}
 
@@ -175,22 +185,23 @@ class IpAddrPool(object):
             return [dict(id=v, pod=pods.get(k), pod_id=k)
                     for k, v in elb_dict.items()]
 
-        return [{
-            'id': str(ipaddress.ip_address(i.ip_address)),
-            'pod': pods[i.pod_id],
-            'pod_id': i.pod_id}
-            for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
+        return [{'id': str(ipaddress.ip_address(i.ip_address)),
+                 'pod': pods[i.pod_id],
+                 'pod_id': i.pod_id}
+                for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
 
-    @atomic(nested=False)
-    def delete(self, network):
+    @classmethod
+    @utils.atomic(nested=False)
+    def delete(cls, network):
         network = str(ip_network(network))
         pool = IPPool.filter_by(network=network).first()
         if not pool:
             raise APIError("Network '{0}' does not exist".format(network), 404)
-        self._check_if_network_used_by_pod(network)
-        self._delete_network(network, pool)
+        cls._check_if_network_used_by_pod(network)
+        cls._delete_network(network, pool)
 
-    def _delete_network(self, network, pool):
+    @staticmethod
+    def _delete_network(network, pool):
         free_ip_count = len(pool.free_hosts())
         IPPool.query.filter_by(network=network).delete()
 
@@ -203,20 +214,23 @@ class IpAddrPool(object):
                 # because ip counters are missing too
                 pass
 
-    def _check_if_network_used_by_pod(self, network):
+    @staticmethod
+    def _check_if_network_used_by_pod(network):
         pod_ip = PodIP.filter_by(network=network).first()
         if pod_ip is not None:
             raise APIError("You cannot delete this network '{0}' while "
                            "some of IP-addresses of this network are "
                            "assigned to Pods".format(network))
 
-    def _get_network_by_cidr(self, network):
+    @staticmethod
+    def _get_network_by_cidr(network):
         net = IPPool.filter_by(network=network).first()
         if net is None:
             raise APIError("Network '{0}' does not exist".format(network), 404)
         return net
 
-    def parse_autoblock(self, data):
+    @staticmethod
+    def parse_autoblock(data):
         # type: (str) -> set
         def _parse(item):
             # Try to parse item as a single IP
@@ -228,8 +242,8 @@ class IpAddrPool(object):
 
             # Try parse item as ip range: ip1-ip2
             try:
-                first_ip, last_ip = [ip2int(i) for i in item.split('-')]
-                return {int2ip(n) for n in range(first_ip, last_ip + 1)}
+                first_ip, last_ip = [utils.ip2int(i) for i in item.split('-')]
+                return {utils.int2ip(n) for n in range(first_ip, last_ip + 1)}
             except ValueError:
                 raise APIError(
                     'Exclude IP\'s are expected to be in the form of '
@@ -239,7 +253,8 @@ class IpAddrPool(object):
         ip_sets = (_parse(unicode(d)) for d in data.split(','))
         return reduce(operator.or_, ip_sets)
 
-    def assign_ip_to_pod(self, pod_id, node_hostname=None):
+    @staticmethod
+    def assign_ip_to_pod(pod_id, node_hostname=None):
         """
         Picks free pubic IP and assigns it to the specified pod
         :param pod_id: id of the pod IP should be assigned to
@@ -247,33 +262,27 @@ class IpAddrPool(object):
         from this node will be used
         :return: string representation of the picked IP
         """
-        try:
-            pod = Pod.query.get(pod_id)
-        except sqlalchemy.exc.DataError:  # if pod_id is not uuid
-            db.session.rollback()  # needed because of session saving exception
-            pod = None
-        if pod is None:
-            raise APIError('Pod is not exists {0}'.format(pod_id))
-        if pod.ip is not None:
-            return str(pod.ip)
+        pc = PodCollection()
+        assigned_ip = pc.assign_public_ip(pod_id, node=node_hostname)
+        kq = KubeQuery()
+        pods = kq.get(['pods'],
+                      {'labelSelector':
+                       'kuberdock-pod-uid={}'.format(pod_id)})
 
-        db_config = pod.get_dbconfig()
-        prev_ip = db_config.get('public_ip_before_freed')
-        ip = IPPool.get_free_host(as_int=True, node=node_hostname, ip=prev_ip)
-        ip_pool = IPPool.get_network_by_ip(ip)
-        pod_ip = PodIP(pod=pod, network=ip_pool.network, ip_address=ip)
-        pod_ip.save()
-        repr_ip = str(pod_ip)
-        PodCollection().update(
-            pod_id,
-            {
-                'command': 'change_config',
-                'node': node_hostname,
-                'public_ip': repr_ip,
-            }
-        )
-        IpState.start(pod.id, ip)
-        return repr_ip
+        for p in pods.get('items', tuple()):
+            namespace = p['metadata']['namespace']
+            name = p['metadata']['name']
+            data = json.dumps({'metadata':
+                               {'labels':
+                                {'kuberdock-public-ip': assigned_ip}}})
+            rv = kq.patch(['pods', name], data=data, ns=namespace)
+            podutils.raise_if_failure(rv, 'Error while try to patch')
+
+        pc.update(pod_id,
+                  {'command': 'change_config',
+                   'node': node_hostname,
+                   'public_ip': assigned_ip})
+        return assigned_ip
 
     @staticmethod
     def get_mode():

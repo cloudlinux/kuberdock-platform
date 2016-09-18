@@ -397,10 +397,6 @@ class PodCollection(object):
         """Prepare pod for Public IP assigning"""
         conf = pod.get_dbconfig() if config is None else config
         public_ip = conf.get('public_ip')
-        if public_ip:
-            ip_address = IPPool.get_free_host(as_int=True, ip=public_ip)
-            if ip_address is None:
-                raise NoFreeIPs
         if public_ip or not PodCollection.needs_public_ip(conf):
             conf.pop('domain', None)
             return
@@ -917,7 +913,7 @@ class PodCollection(object):
         pod.id = db_pod.id
         pod.set_owner(db_pod.owner)
         update_service(pod)
-        self._save_pod(pod, db_pod=db_pod)
+        db_pod = self._save_pod(pod, db_pod=db_pod)
         if self.needs_public_ip(db_config):
             if getattr(db_pod, 'public_ip', None):
                 pod.public_ip = db_pod.public_ip
@@ -925,38 +921,14 @@ class PodCollection(object):
                 pod.public_aws = db_pod.public_aws
         else:
             self._remove_public_ip(pod_id=db_pod.id)
+            pod.public_ip = None
         pod.name = db_pod.name
         pod.kube_type = db_pod.kube_id
         pod.forge_dockers()
         return pod, db_pod.get_dbconfig()
 
-    @staticmethod
-    @utils.atomic()
-    def _assign_public_ip(pod, desired_ip=None):
-        ip_address = IPPool.get_free_host(as_int=True, ip=desired_ip)
-        if desired_ip and ip_address != utils.ip2int(desired_ip):
-            # send event 'IP changed'
-            send_to_ids = {
-                KubeUtils.get_current_user().id,
-                pod.owner.id  # can be the same as current user
-            }
-            msg = ('Please, take into account that IP address of pod '
-                   '{pod_name} was changed from {old_ip} to {new_ip}'
-                   .format(pod_name=pod.name, old_ip=desired_ip,
-                           new_ip=utils.int2ip(ip_address)))
-            for user_id in send_to_ids:
-                utils.send_event_to_user(
-                    event_name='notify:error', data={'message': msg},
-                    user_id=user_id)
-        network = IPPool.get_network_by_ip(ip_address)
-
-        pod_ip = PodIP.create(pod_id=pod.id, network=network.network,
-                              ip_address=ip_address)
-        db.session.add(pod_ip)
-        rv = str(pod_ip)
-        pod.public_ip = rv
-        IpState.start(pod.id, pod_ip)
-        return rv
+    def _sync_start_pod(self, pod, data=None):
+        return self._start_pod(pod, data={'async-pod-create': False})
 
     def _start_pod(self, pod, data=None):
         if data is None:
@@ -995,19 +967,7 @@ class PodCollection(object):
         pod.set_status(POD_STATUSES.preparing)
 
         if not current_app.config['NONFLOATING_PUBLIC_IPS']:
-            pod_public_ip = getattr(pod, 'public_ip', None)
-
-            if pod_public_ip is not None:
-                if pod_public_ip == 'true':
-                    desired_ip = None
-                else:
-                    current_app.logger.warning(
-                        'PodIP {0} is already allocated'.format(pod_public_ip))
-                    desired_ip = pod_public_ip
-
-                ip = self._assign_public_ip(pod, desired_ip)
-                db_config['public_ip'] = ip
-                db_pod.set_dbconfig(db_config)
+            self._assign_public_ip(pod, db_pod, db_config)
 
         if async_pod_create:
             prepare_and_run_pod_task.delay(pod)
@@ -1015,7 +975,94 @@ class PodCollection(object):
             prepare_and_run_pod(pod)
         return pod.as_dict()
 
-    def _stop_pod(self, pod, data=None, raise_=True, block=False):
+    def assign_public_ip(self, pod_id, node=None):
+        """Returns assigned ip"""
+        pod = self._get_by_id(pod_id)
+        db_pod = DBPod.query.get(pod_id)
+        ":type: DBPod"
+        if db_pod is None:
+            raise Exception('Something goes wrong. Pod is present, but db_pod '
+                            'is absent')
+        db_conf = db_pod.get_dbconfig()
+        return self._assign_public_ip(pod, db_pod, db_conf, node)
+
+    @staticmethod
+    def _assign_public_ip(pod, db_pod, db_config, node=None):
+        """Returns assigned ip"""
+
+        #@utils.atomic()  # atomic does not work
+        def _assign(desired_ip, notify_on_change=False):
+            """Try to assign desired IP to pod.
+
+            If desired ip cannot be assigned, next available ip will be
+            assigned and if notify_on_change is True then notifications will be
+            sent to current user and pod's owner (can be the same one).
+
+            Attention:
+                Before call ensure that PodIP for specified pod is not present
+                in db.
+            """
+            ip_address = IPPool.get_free_host(as_int=True, node=node,
+                                              ip=desired_ip)
+
+            if notify_on_change and ip_address != utils.ip2int(desired_ip):
+                # send event 'IP changed'
+                send_to_ids = {
+                    KubeUtils.get_current_user().id,
+                    pod.owner.id  # can be the same as current user
+                }
+                msg = ('Please, take into account that IP address of pod '
+                       '{pod_name} was changed from {old_ip} to {new_ip}'
+                       .format(pod_name=pod.name, old_ip=desired_ip,
+                               new_ip=utils.int2ip(ip_address)))
+                for user_id in send_to_ids:
+                    utils.send_event_to_user(
+                        # TODO: change event_name to 'notify:warning' when it
+                        # will be implemented
+                        event_name='notify:error', data={'message': msg},
+                        user_id=user_id)
+
+            network = IPPool.get_network_by_ip(ip_address)
+
+            pod_ip = PodIP.create(pod_id=pod.id, network=network.network,
+                                  ip_address=ip_address)
+            db.session.add(pod_ip)
+            assigned_ip = str(pod_ip)
+            pod.public_ip = assigned_ip
+            IpState.start(pod.id, pod_ip)
+            db_config['public_ip'] = assigned_ip
+            db_pod.set_dbconfig(db_config)
+            return assigned_ip
+
+        try:
+            pod_public_ip = getattr(pod, 'public_ip', None)
+
+            if pod_public_ip is None:
+                return
+
+            if pod_public_ip == 'true':
+                ip = db_config.get('public_ip_before_freed')
+                rv = _assign(ip, notify_on_change=False)
+            elif PodIP.filter_by(pod_id=pod.id).first() is None:
+                # pod ip is specified but is not present in db
+                rv = _assign(pod_public_ip, notify_on_change=True)
+            else:
+                current_app.logger.warning('PodIP %s is already allocated',
+                                           pod_public_ip)
+                rv = pod_public_ip
+
+            return rv
+
+        except NoFreeIPs:
+            pod.set_status(POD_STATUSES.stopped, send_update=True)
+            raise
+        except Exception:
+            current_app.logger.exception('Failed to bind publicIP: %s', pod)
+            pod.set_status(POD_STATUSES.stopped, send_update=True)
+            raise
+
+    @staticmethod
+    def _stop_pod(pod, data=None, raise_=True, block=False):
         # Call PD release in all cases. If the pod was already stopped and PD's
         # were not released, then it will free them. If PD's already free, then
         # this call will do nothing.
@@ -1259,7 +1306,7 @@ class PodCollection(object):
         if self.owner.is_trial():
             pods_collection = self.owner.pods
             if original_pod:
-                pods_collection = pods_collection\
+                pods_collection = pods_collection \
                     .filter(DBPod.id != original_pod.id)
             user_kubes = sum([pod.kubes for pod in pods_collection
                               if not pod.is_deleted])
@@ -1517,14 +1564,10 @@ def prepare_and_run_pod(pod):
                 ok, message = ingress_resource.create_ingress(
                     pod.containers, pod.namespace, pod.domain, pod.service)
             if not ok:
+                msg = u'Failed to run pod with domain "{}": {}'
                 utils.send_event_to_role(
                     'notify:error',
-                    {
-                        'message': u'Failed to run pod with domain "{}": {}'
-                            .format(pod.domain, message)
-                    },
-                    'Admin'
-                )
+                    {'message': msg.format(pod.domain, message)}, 'Admin')
                 pods = PodCollection()
                 pods.update(pod.id, {'command': 'stop'})
                 raise APIError(
@@ -1536,8 +1579,7 @@ def prepare_and_run_pod(pod):
             # We need to update db_pod in case if the pod status was changed
             # since the last retrieval from DB
             db.session.refresh(db_pod)
-            if (not isinstance(err, PodStartFailure)
-                    or not db_pod.is_deleted()):
+            if not isinstance(err, PodStartFailure) or not db_pod.is_deleted():
                 utils.send_event_to_user(
                     'notify:error', {'message': err.message},
                     db_pod.owner_id)

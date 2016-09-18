@@ -17,9 +17,9 @@ ippool = Blueprint('ippool', __name__, url_prefix='/ippool')
 def get_ippool(network=None):
     params = KubeUtils._get_params()
     if 'free-only' in params:
-        return IpAddrPool().get_free()
+        return IpAddrPool.get_free()
     page = int(params.get('page', 1))
-    return IpAddrPool().get(network, page)
+    return IpAddrPool.get(network, page)
 
 
 # @ippool.route('/getFreeHost', methods=['GET'], strict_slashes=False)
@@ -34,7 +34,7 @@ def get_ippool(network=None):
 @KubeUtils.jsonwrap
 def get_user_address():
     user = KubeUtils.get_current_user()
-    return IpAddrPool().get_user_addresses(user)
+    return IpAddrPool.get_user_addresses(user)
 
 
 @ippool.route('/', methods=['POST'], strict_slashes=False)
@@ -43,7 +43,7 @@ def get_user_address():
 @KubeUtils.jsonwrap
 def create_item():
     params = KubeUtils._get_params()
-    return IpAddrPool().create(params)
+    return IpAddrPool.create(params)
 
 
 @ippool.route('/<path:network>', methods=['PUT'], strict_slashes=False)
@@ -52,7 +52,7 @@ def create_item():
 @KubeUtils.jsonwrap
 def update_ippool(network):
     params = KubeUtils._get_params()
-    return IpAddrPool().update(network, params)
+    return IpAddrPool.update(network, params)
 
 
 @ippool.route('/<path:network>', methods=['DELETE'], strict_slashes=False)
@@ -60,7 +60,7 @@ def update_ippool(network):
 @check_permission('delete', 'ippool')
 @KubeUtils.jsonwrap
 def delete_ippool(network):
-    return IpAddrPool().delete(network)
+    return IpAddrPool.delete(network)
 
 
 @ippool.route('/get-public-ip/<path:node>/<path:pod>', methods=['GET'],
@@ -68,11 +68,11 @@ def delete_ippool(network):
 @auth_required
 @KubeUtils.jsonwrap
 def get_public_ip(node, pod):
-    return IpAddrPool().assign_ip_to_pod(pod, node)
+    return IpAddrPool.assign_ip_to_pod(pod, node)
 
 
 @ippool.route('/mode', methods=['GET'], strict_slashes=False)
 @auth_required
 @KubeUtils.jsonwrap
 def get_mode():
-    return IpAddrPool().get_mode()
+    return IpAddrPool.get_mode()

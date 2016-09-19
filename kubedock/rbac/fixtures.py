@@ -1,7 +1,6 @@
 from kubedock.core import db
 from .models import Resource, Role, Permission
 
-
 ROLES = (
     # rolename, is_internal
     ("Admin", False),
@@ -32,7 +31,7 @@ resources = {
 permissions_base = {
     (resource, action): False
     for resource, actions in resources.iteritems() for action in actions
-}
+    }
 permissions = {
     'Admin': dict(permissions_base, **{
         ('users', 'create'): True,
@@ -118,7 +117,7 @@ PERMISSIONS = [
     (resource, role, action, allowed)
     for role, perms in permissions.iteritems()
     for (resource, action), allowed in perms.iteritems()
-]
+    ]
 
 
 def add_roles(roles=()):
@@ -203,12 +202,15 @@ def change_permissions(new_permissions):
     for res, role, perm, allow in new_permissions:
         res = Permission.query.join(Role).join(Resource) \
             .filter(Permission.name == perm, Role.rolename == role,
+                    Resource.id == Permission.resource_id,
+                    Role.id == Permission.role_id,
                     Resource.name == res)\
             .update({'allow': allow}, synchronize_session=False)
         if res == 0:  # there is no updated rows
             db.session.rollback()
             raise KeyError('Permission not found: %s'
                            % [res, role, perm, allow])
+
     db.session.commit()
 
 

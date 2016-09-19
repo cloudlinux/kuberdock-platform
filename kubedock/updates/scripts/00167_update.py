@@ -223,9 +223,18 @@ class _U167Permissions(_Update):
         ('domains', 'Admin', 'get', True),
         ('domains', 'Admin', 'edit', True),
         ('domains', 'Admin', 'delete', True),
+        ('domains', 'User', 'create', False),
         ('domains', 'User', 'get', True),
+        ('domains', 'User', 'edit', False),
+        ('domains', 'User', 'delete', False),
+        ('domains', 'LimitedUser', 'create', False),
         ('domains', 'LimitedUser', 'get', True),
+        ('domains', 'LimitedUser', 'edit', False),
+        ('domains', 'LimitedUser', 'delete', False),
+        ('domains', 'TrialUser', 'create', False),
         ('domains', 'TrialUser', 'get', True),
+        ('domains', 'TrialUser', 'edit', False),
+        ('domains', 'TrialUser', 'delete', False),
     ]
 
     @classmethod
@@ -254,6 +263,7 @@ class _U167SystemSettings(_Update):
     def upgrade(cls, upd, with_testing):
         for setting_name in cls.NAMES:
             SystemSettings.query.filter_by(name=setting_name).delete()
+        db.session.commit()
         db.session.add_all([
             SystemSettings(
                 name='dns_management_system',
@@ -322,6 +332,7 @@ class _U167SystemSettings(_Update):
     def downgrade(cls, upd, with_testing, error):
         for setting_name in cls.NAMES:
             SystemSettings.query.filter_by(name=setting_name).delete()
+        db.session.commit()
 
         db.engine.execute("UPDATE system_settings SET options='' WHERE id=10")
         db.engine.execute("UPDATE system_settings SET value='' WHERE id=10")

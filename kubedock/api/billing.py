@@ -1,12 +1,12 @@
 from flask import Blueprint, current_app, request
 
 from kubedock.decorators import maintenance_protected
-from kubedock.exceptions import APIError
+from kubedock.exceptions import APIError, BillingExc
 from kubedock.login import auth_required
 from kubedock.utils import KubeUtils
 from kubedock.billing.models import Package, Kube
 from kubedock.system_settings.models import SystemSettings
-from kubedock.kapi.apps import Pod, PredefinedApp, PredefinedAppModel
+from kubedock.kapi.apps import PredefinedApp
 from kubedock.kapi.podcollection import PodCollection
 import json
 
@@ -84,6 +84,9 @@ def order_edit():
     billing = current_app.billing_factory.get_billing(current_billing)
     data['referer'] = data['referer'] if 'referer' in data else ''
     response = billing.orderpodedit(**data)
+    if isinstance(response, basestring):
+        raise BillingExc.InternalBillingError(
+                    details={'message': response})
     if response.get('result') == 'error':
         raise APIError(response.get('message'))
     return response

@@ -318,6 +318,9 @@ class PodCollection(object):
 
         return original_pod.as_dict()
 
+    def get_owned(self):
+        return self._get_owned()
+
     def get(self, pod_id=None, as_json=True):
         if pod_id is None:
             pods = [p.as_dict() for p in self._get_owned()]

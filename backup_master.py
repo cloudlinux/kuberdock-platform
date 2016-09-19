@@ -14,7 +14,6 @@ import subprocess
 import sys
 import tempfile
 import zipfile
-import urllib
 
 logger = logging.getLogger("kd_master_backup")
 logger.setLevel(logging.INFO)
@@ -70,7 +69,7 @@ def nice(cmd, n):
 
 
 def sudo(cmd, as_user):
-    return ["sudo", "-u", as_user] + cmd
+    return ["sudo", "-Hiu", as_user] + cmd
 
 
 def zipdir(path, ziph):
@@ -80,9 +79,15 @@ def zipdir(path, ziph):
             ziph.write(full_fn, os.path.relpath(full_fn, path))
 
 
-def pg_dump(src, dst, username="postgres"):
+def rmtree(path):
+    # Workaround for https://github.com/hashdist/hashdist/issues/113
+    cmd = ["rm", "-rf", path]
+    subprocess.check_call(cmd)
+
+
+def pg_dump(src, dst, db_username="postgres"):
     cmd = sudo(nice(["pg_dump", "-C", "-Fc", "-U",
-                     username, src], NICENESS), "postgres")
+                     db_username, src], NICENESS), "postgres")
     with open(dst, 'wb') as out:
         subprocess.check_call(cmd, stdout=out)
 
@@ -93,9 +98,18 @@ def etcd_backup(src, dst):
     subprocess.check_call(cmd, stdout=subprocess.PIPE)
 
 
-def pg_restore(src, username="postgres"):
-    cmd = sudo(["pg_restore", "-U", username, "-n", "public",
-                "-c", "-1", "-d", "kuberdock", src], "postgres")
+def pg_restore(src, db_username="postgres"):
+    cmd = sudo(["psql", "-c", "DROP DATABASE {}".format(DATABASES[0])],
+               "postgres")
+    subprocess.check_call(cmd)
+
+    cmd = sudo(["psql", "-c", "CREATE DATABASE {} ENCODING 'UTF8'".format(
+        DATABASES[0])], "postgres")
+    subprocess.check_call(cmd)
+
+    cmd = sudo(["pg_restore", "-U", db_username, "-n", "public",
+                "-1", "-d", "kuberdock", src],
+               "postgres")
     subprocess.check_call(cmd)
 
 
@@ -104,7 +118,40 @@ def etcd_restore(src, dst):
     subprocess.check_call(cmd, stdout=subprocess.PIPE)
 
 
+def purge_nodes():
+    """ Delete all nodes from restored cluster.
+
+    When restoring cluster after a full crush it makes sense to drop nodes
+    from restored db because they will be added again (re-deployed). This also
+    implies purging of the pods - in this case they also need to be re-deployed
+    (or restored from pod backups)
+    """
+
+    from kubedock.kapi.node_utils import get_all_nodes
+    from kubedock.kapi.nodes import delete_node
+    from kubedock.nodes.models import Node
+    from kubedock.pods.models import PersistentDisk
+    from kubedock.api import create_app
+    from kubedock.kapi.podcollection import PodCollection
+
+    create_app(fake_sessions=True).app_context().push()
+    pod_collection = PodCollection()
+    for pod in pod_collection.get_owned():
+        if not pod.owner.is_internal():
+            pod_collection.delete(pod.id)
+            logger.debug("Pod `{0}` purged".format(pod.name))
+
+    for node in get_all_nodes():
+        node_name = node['metadata']['name']
+        db_node = Node.get_by_name(node_name)
+        PersistentDisk.get_by_node_id(db_node.id).delete(
+            synchronize_session=False)
+        delete_node(node=db_node, force=True, verbose=False)
+        logger.debug("Node `{0}` purged".format(node_name))
+
+
 class BackupResource(object):
+
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
@@ -130,17 +177,17 @@ class PostgresResource(BackupResource):
 
     @classmethod
     def restore(cls, zip_archive):
-        fd, src = tempfile.mkstemp()
+        fd, path = tempfile.mkstemp()
         try:
             uid = pwd.getpwnam("postgres").pw_uid
             os.fchown(fd, uid, -1)
             with os.fdopen(fd, 'w') as tmp:
                 shutil.copyfileobj(zip_archive.open('postgresql.backup'), tmp)
                 tmp.seek(0)
-                pg_restore(src)
+                pg_restore(path)
         finally:
-            os.remove(src)
-        return src
+            os.remove(path)
+        return path
 
 
 class EtcdResource(BackupResource):
@@ -165,7 +212,7 @@ class EtcdResource(BackupResource):
         src = tempfile.mkdtemp()
         try:
             zip_archive.extractall(src, filter(lambda x: x.startswith('etcd'),
-                                   zip_archive.namelist()))
+                                               zip_archive.namelist()))
 
             pki_src = os.path.join(src, 'etcd_pki')
             for fn in os.listdir(pki_src):
@@ -173,8 +220,8 @@ class EtcdResource(BackupResource):
 
             data_src = os.path.join(src, 'etcd')
             try:
-                shutil.rmtree(os.path.join(ETCD_DATA, 'wal'))
-                shutil.rmtree(os.path.join(ETCD_DATA, 'snap'))
+                rmtree(os.path.join(ETCD_DATA, 'wal'))
+                rmtree(os.path.join(ETCD_DATA, 'snap'))
             except OSError:
                 pass
 
@@ -191,7 +238,7 @@ class EtcdResource(BackupResource):
                 for fn in files:
                     os.chown(os.path.join(root, fn), uid, gid)
         finally:
-            shutil.rmtree(src)
+            rmtree(src)
         return src
 
 
@@ -230,11 +277,11 @@ class SSHKeysResource(BackupResource):
 
     @classmethod
     def restore(cls, zip_archive):
-        with open(SSH_KEY, 'w') as tmp:
-            shutil.copyfileobj(zip_archive.open('id_rsa'), tmp)
-        with open(SSH_KEY + '.pub', 'w') as tmp:
-            shutil.copyfileobj(zip_archive.open('id_rsa.pub'), tmp)
-        return tmp
+        with open(SSH_KEY, 'w') as keyfile:
+            shutil.copyfileobj(zip_archive.open('id_rsa'), keyfile)
+        with open(SSH_KEY + '.pub', 'w') as keyfile:
+            shutil.copyfileobj(zip_archive.open('id_rsa.pub'), keyfile)
+        return SSH_KEY
 
 
 class EtcdCertResource(BackupResource):
@@ -267,8 +314,9 @@ class LicenseResource(BackupResource):
     @classmethod
     def restore(cls, zip_archive):
         if '.license' in zip_archive.namelist():
-            with open(LICENSE, 'w') as tmp:
-                shutil.copyfileobj(zip_archive.open('.license'), tmp)
+            with open(LICENSE, 'w') as licfile:
+                shutil.copyfileobj(zip_archive.open('.license'), licfile)
+                return LICENSE
 
 
 class SharedNginxConfigResource(BackupResource):
@@ -291,13 +339,13 @@ class SharedNginxConfigResource(BackupResource):
         src = tempfile.mkdtemp()
         try:
             zip_archive.extractall(src, filter(lambda x: x.startswith('nginx'),
-                                   zip_archive.namelist()))
+                                               zip_archive.namelist()))
             pki_src = os.path.join(src, 'nginx_config')
             for fn in os.listdir(pki_src):
                 shutil.copy(os.path.join(pki_src, fn), cls.config_src)
         finally:
-            shutil.rmtree(src)
-        return src
+            rmtree(src)
+        return cls.config_src + "*"
 
 
 backup_chain = (PostgresResource, EtcdResource, SSHKeysResource,
@@ -324,16 +372,19 @@ def do_backup(backup_dir, callback, skip_errors, **kwargs):
 
     for res in backup_chain:
         try:
+            logger.debug("Starting backup of {} resource".format(res.__name__))
             subresult = res.backup(backup_dst)
-            logger.info("File collected: {0}".format(subresult))
+            if subresult:
+                logger.info("File collected: {0}".format(subresult))
         except subprocess.CalledProcessError as err:
-            logger.error("%s backuping error: %s" % (res, err))
+            logger.error("%s backup error: %s" % (res, err))
             if not skip_errors:
                 raise
 
     result = os.path.join(backup_dir, timestamp + ".zip")
     with zipfile.ZipFile(result, 'w', zipfile.ZIP_DEFLATED) as zipf:
         zipdir(backup_dst, zipf)
+    rmtree(backup_dst)
 
     logger.info('Backup finished {0}'.format(result))
     if callback:
@@ -342,40 +393,8 @@ def do_backup(backup_dir, callback, skip_errors, **kwargs):
     return result
 
 
-def purge_nodes():
-    """ Delete all remains of nodes. Usefull when restored master
-    have no need in nodes from backup. [AC-4339]
-    """
-    from kubedock.users import User
-    from kubedock.api import create_app
-    from kubedock.kapi.node_utils import get_all_nodes
-    from kubedock.kapi.nodes import delete_node
-    from kubedock.nodes.models import Node
-    from kubedock.pods.models import PersistentDisk
-    from kubedock.kapi.podcollection import PodCollection
-
-    create_app(fake_sessions=True).app_context().push()
-
-    internal_pods = [pod['name'] for pod in PodCollection(
-        User.get_internal()).get(as_json=False)]
-
-    pod_collection = PodCollection()
-    for pod in pod_collection.get(as_json=False):
-        if pod['name'] not in internal_pods:
-            pod_collection.delete(pod['id'])
-            logger.debug("Pod `{0}` deleted".format(pod['name']))
-
-    for node in get_all_nodes():
-        node_name = node['metadata']['name']
-        db_node = Node.get_by_name(node_name)
-        PersistentDisk.get_by_node_id(db_node.id).delete(
-            synchronize_session=False)
-        delete_node(node=db_node, force=True)
-        logger.debug("Node `{0}` deleted".format(node_name))
-
-
 @lock(LOCKFILE)
-def do_restore(backup_file, without_nodes, skip_errors, **kwargs):
+def do_restore(backup_file, no_nodes, skip_errors, **kwargs):
     """ Restore from backup file.
     If skip_error is True it will not interrupt restore due to errors
     raised on some step from restore_chain.
@@ -384,27 +403,33 @@ def do_restore(backup_file, without_nodes, skip_errors, **kwargs):
     """
     logger.info('Restore started {0}'.format(backup_file))
 
+    # Stop the app first, restart DB to make sure it does not have connections.
+    subprocess.check_call(["systemctl", "stop", "emperor.uwsgi"])
+    subprocess.check_call(["systemctl", "stop", "nginx"])
     subprocess.check_call(["systemctl", "restart", "postgresql"])
+
     subprocess.check_call(["systemctl", "stop", "etcd", "kube-apiserver"])
+
     with zipfile.ZipFile(backup_file, 'r') as zip_archive:
         for res in restore_chain:
             try:
                 subresult = res.restore(zip_archive)
-                logger.info("File restored: {0} ({1})".format(subresult, res))
+                if subresult:
+                    logger.info("File restored: {0} ({1})".format(
+                        subresult, res.__name__))
             except subprocess.CalledProcessError as err:
                 logger.error("%s restore error: %s" % (res, err))
                 if not skip_errors:
                     raise
 
-
     subprocess.check_call(["systemctl", "start", "etcd"])
     time.sleep(5)
     subprocess.check_call(["systemctl", "start", "kube-apiserver"])
 
-    subprocess.check_call(["systemctl", "restart", "nginx"])
-    subprocess.check_call(["systemctl", "restart", "emperor.uwsgi"])
+    subprocess.check_call(["systemctl", "start", "nginx"])
+    subprocess.check_call(["systemctl", "start", "emperor.uwsgi"])
 
-    if without_nodes:
+    if no_nodes:
         purge_nodes()
 
     logger.info('Restore finished')
@@ -420,9 +445,12 @@ def parse_args(args):
     group.add_argument('-q', '--quiet', help='Silent mode, only log warnings',
                        action='store_const', const=logging.WARN,
                        dest='loglevel')
-    parser.add_argument("-n", '--without-nodes', action='store_true',
-                        dest='without_nodes',
-                        help="Do not stop if one steps is failed")
+    parser.add_argument("-n", '--no-nodes', action='store_true',
+                        dest='no_nodes',
+                        help="Do not restore nodes from DB dump (choose this "
+                             "if you are going to re-deploy nodes thereafter). "
+                             "Note that this option also implies removing "
+                             "all user pods from the DB dump.")
     parser.add_argument("-s", '--skip', action='store_false',
                         dest='skip_errors',
                         help="Do not stop if one steps is failed")

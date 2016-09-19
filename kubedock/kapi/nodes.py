@@ -182,7 +182,7 @@ def mark_node_as_being_deleted(node_id):
     return node
 
 
-def delete_node(node_id=None, node=None, force=False):
+def delete_node(node_id=None, node=None, force=False, verbose=True):
     """Deletes node."""
 
     # As long as the func is allowed to be called after mark_node_as_being_
@@ -239,7 +239,8 @@ def delete_node(node_id=None, node=None, force=False):
             '\nWarning: Failed to clean Local storage volumes on the node.\n'\
             'You have to clean it manually if needed:\n{}'.format(
                 ls_clean_error)
-        current_app.logger.warning(message)
+        if verbose:
+            current_app.logger.warning(message)
     send_event_to_role('node:deleted', {
         'id': node_id,
         'message': message

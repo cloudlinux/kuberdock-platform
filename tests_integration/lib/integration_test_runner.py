@@ -163,7 +163,7 @@ def discover_integration_tests(paths, mask='test_*.py'):
 
 def format_exception(exc_info):
     # TODO: Probably include the context/source code caused the exception
-    trace = ''.join(traceback.format_exception(*exc_info))
+    trace = u''.join(traceback.format_exception(*exc_info))
     message = highlight_code(trace)
     return message
 

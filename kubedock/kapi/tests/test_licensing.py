@@ -1,11 +1,10 @@
+import datetime
 import json
 import os
 import unittest
-
-import datetime
-import mock
 from tempfile import NamedTemporaryFile
 
+import mock
 import pytz
 
 from .. import licensing
@@ -17,13 +16,13 @@ class TestLicenseValidation(unittest.TestCase):
             u'installationID': u'123456789',
             u'updated': u'2016-04-28T11:49:25.594006+00:00',
             u'data': {
-                    u'license': {
-                            u'status': u'ok', u'pods': 0,
-                            u'sign': '',  # Signature is omitted for now
-                            u'expiration': u'-999999999-01-01T00:00:00+18:00',
-                            u'memory': 0, u'cores': -1, u'type': u'none',
-                            u'containers': 0
-                        }
+                u'license': {
+                    u'status': u'ok', u'pods': 0,
+                    u'sign': '',  # Signature is omitted for now
+                    u'expiration': u'-999999999-01-01T00:00:00+18:00',
+                    u'memory': 0, u'cores': -1, u'type': u'none',
+                    u'containers': 0
+                }
             },
             u'auth_key': u'a6182baebfff481aa450eae9cd718bfc'
         }
@@ -53,7 +52,8 @@ class TestLicenseValidation(unittest.TestCase):
         self.assertFalse(licensing.is_timestamp_ok(self.license))
 
     def _move_license_expiration(self, days_delta):
-        new_exp = datetime.datetime.utcnow() + datetime.timedelta(days=days_delta)
+        new_exp = datetime.datetime.utcnow() + datetime.timedelta(
+            days=days_delta)
         self.license[u'data'][u'license'][u'expiration'] = new_exp.replace(
             tzinfo=pytz.UTC).isoformat()
 

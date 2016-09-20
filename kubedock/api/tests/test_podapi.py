@@ -1,12 +1,12 @@
+import unittest
 from random import randint
 from uuid import uuid4
-import unittest
 
 import mock
 
 from kubedock.kapi.podcollection import PodNotFound
-from kubedock.testutils.testcases import APITestCase
 from kubedock.system_settings.models import SystemSettings
+from kubedock.testutils.testcases import APITestCase
 
 
 def valid_create_pod_params():
@@ -17,7 +17,7 @@ def valid_create_pod_params():
             'image': 'simple-image'
         }],
         'kube_type': 0,
-        'restartPolicy': 'Always'
+        'restartPolicy': 'Always',
     }
 
 
@@ -47,7 +47,8 @@ class TestPodAPI(APITestCase):
             u'restartPolicy': u'required field',
             u'kube_type': u'required field',
             u'name': u'required field',
-            u'containers': u'required field'})
+            u'containers': u'required field'
+        })
 
     @mock.patch('kubedock.validation.V._validate_kube_type_exists')
     # @mock.patch('kubedock.kapi.images.Image._check_availability')
@@ -78,12 +79,17 @@ class TestPodAPI(APITestCase):
         self.user.count_type = 'fixed'
         self.db.session.commit()
         # only admin has permission to remove "unpaid" status
-        set_paid = {'command': 'set', 'commandOptions': {'status': 'stopped'}}
+        set_paid = {
+            'command': 'set', 'commandOptions': {'status': 'stopped'}
+        }
         response = self.admin_open(PodAPIUrl.put(pod.id), 'PUT', set_paid)
         self.assert200(response)
         # only admin has permission to upgrade pod
-        upgrade = {'command': 'redeploy', 'containers': [
-            dict(c, kubes=c['kubes'] + 1) for c in pod_config['containers']]}
+        upgrade = {
+            'command': 'redeploy', 'containers': [
+                dict(c, kubes=c['kubes'] + 1) for c in
+                pod_config['containers']]
+        }
         response = self.admin_open(PodAPIUrl.put(pod.id), 'PUT', upgrade)
         self.assert200(response)
 

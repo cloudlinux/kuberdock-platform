@@ -125,7 +125,7 @@ class V(cerberus.Validator):
     def _validate_kube_type_in_user_package(self, exists, field, value):
         if exists and self.user:
             if self.user == KUBERDOCK_INTERNAL_USER and \
-                    value == Kube.get_internal_service_kube_type():
+                            value == Kube.get_internal_service_kube_type():
                 return
             package = User.get(self.user).package
             if value not in [k.kube_id for k in package.kubes]:
@@ -209,7 +209,8 @@ class V(cerberus.Validator):
 
     def _validate_domain_exists(self, exists, field, value):
         if (exists and
-                BaseDomain.filter(BaseDomain.name == value).first() is None):
+                    BaseDomain.filter(
+                            BaseDomain.name == value).first() is None):
             self._error(field, 'Domain "{0}" doesn\'t exists'.format(value))
 
 
@@ -259,11 +260,13 @@ def check_hostname(hostname):
 def check_change_pod_data(data):
     data = V(allow_unknown=True)._api_validation(data, command_pod_schema)
     # TODO: with cerberus 0.10, just use "purge_unknown" option
-    return {'command': data.get('command'),
-            'edited_config': data.get('edited_config'),
-            'commandOptions': data.get('commandOptions') or {},
-            'containers': [{'name': c.get('name'), 'kubes': c.get('kubes')}
-                           for c in data.get('containers') or []]}
+    return {
+        'command': data.get('command'),
+        'edited_config': data.get('edited_config'),
+        'commandOptions': data.get('commandOptions') or {},
+        'containers': [{'name': c.get('name'), 'kubes': c.get('kubes')}
+                       for c in data.get('containers') or []]
+        }
 
 
 def check_new_pod_data(data, user=None, **kwargs):
@@ -328,7 +331,8 @@ def check_system_settings(data):
             raise APIError(
                 fmt.format(' '.join(name.split('_')).capitalize(), ))
 
-    if name in ['persitent_disk_max_size', 'max_kubes_per_container', 'max_kubes_trial_user']:
+    if name in ['persitent_disk_max_size', 'max_kubes_per_container',
+                'max_kubes_trial_user']:
         if not validator.validate({'value': value},
                                   {'value': positive_non_zero_integer_schema}):
             fmt = 'Incorrect value for "{0}" limit'

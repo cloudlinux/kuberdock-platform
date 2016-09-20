@@ -1,21 +1,20 @@
 #!/usr/bin/env python
 
-import os
-import re
-import yum
-import sys
-import json
 import argparse
 import itertools
+import json
+import os
+import re
 import subprocess
-import requests
-
+import sys
 from datetime import datetime
 from importlib import import_module
-from fabric.api import env, run
-from sqlalchemy import or_
-from flask.ext.migrate import Migrate
 
+import requests
+import yum
+from fabric.api import env, run
+from flask.ext.migrate import Migrate
+from sqlalchemy import or_
 
 if __name__ == '__main__' and __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(
@@ -171,7 +170,7 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
     :param upgrade_node: callable in current upgrade script
     :param downgrade_node: callable in current upgrade script
     :param db_upd: db record of current update script
-    :param with_testing: Boolean, whether testing repo is enabled during upgrade
+    :param with_testing: Boolean whether testing repo is enabled during upgrade
     :return: Boolean, True if all nodes upgraded, False if one or more failed.
     """
     if db_upd.status == UPDATE_STATUSES.post_nodes_failed:
@@ -475,7 +474,8 @@ def get_kuberdocks_toinstall(testing=False):
         sys.exit(1)
 
     # Don't use i.envra right here because sorting will be incorrect
-    sorted_available = sorted([i for i in all_kuberdocks if i > installed_kuberdock])
+    sorted_available = sorted(
+        [i for i in all_kuberdocks if i > installed_kuberdock])
 
     # For each KD version leave only packages with latest release number
     by_version = itertools.groupby(sorted_available, lambda x: x.version)
@@ -689,7 +689,9 @@ if __name__ == '__main__':
             if new_kuberdocks:
                 pkg = new_kuberdocks[0]
                 if not args.reinstall:
-                    print 'Newer kuberdock package is available: {0}'.format(pkg)
+                    print(
+                        'Newer kuberdock package is available: {}'.format(pkg)
+                    )
                 if ask_upgrade():
                     if pre_upgrade():
                         sys.exit(3)

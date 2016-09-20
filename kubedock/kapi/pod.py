@@ -400,6 +400,8 @@ class Pod(object):
                             "kuberdock-volume-annotations": json.dumps(
                                 volume_annotations
                             ),
+                            "kuberdock-volumes-to-prefill":
+                                json.dumps(self._get_volumes_to_prefill())
                         }
                     },
                     "spec": {
@@ -436,6 +438,14 @@ class Pod(object):
         if hasattr(self, 'domain'):
             pod_config['metadata']['labels']['kuberdock-domain'] = self.domain
         return config
+
+    def _get_volumes_to_prefill(self):
+        return [
+            v['name']
+            for c in self.containers
+            for v in c.get('volumeMounts', [])
+            if v.pop('kdCopyFromImage', False)
+        ]
 
     def _update_volume_path(self, name, vid):
         if vid is None:

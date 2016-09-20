@@ -309,6 +309,7 @@ class TestUtilsGetApiUrl(unittest.TestCase):
                                      base_url='/apis/kuberdock.com',
                                      api_version='v2'), expected)
 
+
 # TODO: remove after handle_aws_node
 class TestUtilsComposes(unittest.TestCase):
 

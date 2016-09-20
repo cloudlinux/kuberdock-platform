@@ -393,6 +393,10 @@ edited_pod_config_schema = {
                                 'type': 'string',
                                 'required': True,
                             },
+                            'kdCopyFromImage': {
+                                'type': 'boolean',
+                                'required': False,
+                            },
                         },
                     }
                 },

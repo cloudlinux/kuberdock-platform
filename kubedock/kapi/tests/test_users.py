@@ -67,7 +67,7 @@ class TestUserUpdate(DBTestCase):
         UserCollection().update(self.user.id, {'active': True})
         self.assertFalse(unsuspend_mock.called)
 
-    @mock.patch('kubedock.utils.current_app')
+    @mock.patch('kubedock.kapi.users.current_app')
     def test_unsuspend_error(self, app_mock, unsuspend_mock, suspend_mock,
                              logout_mock):
         """
@@ -88,6 +88,7 @@ class TestUserUpdate(DBTestCase):
         unsuspend_mock.reset_mock()
         unsuspend_mock.side_effect = TypeError('Some internal error')
 
+        app_mock.reset_mock()
         try:
             UserCollection().update(self.user.id, {'suspended': False})
         except APIError as e:

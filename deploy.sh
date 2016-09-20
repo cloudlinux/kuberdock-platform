@@ -221,7 +221,7 @@ while [[ $# > 0 ]];do
         -g|--hostgw-backend)
         CONF_FLANNEL_BACKEND='host-gw'
         ;;
-        --nonfloating-ip)
+        --fixed-ip-pools)
         NONFLOATING_PUBLIC_IPS=true
         ;;
         --vni)

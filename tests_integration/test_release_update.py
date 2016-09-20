@@ -19,19 +19,17 @@ def test_release_update(cluster):
         7. Check health of all pods
     """
     # Step 1, 2, 3, 4
+
+    # TODO After release 1.4 add open_all_ports=True, wait_ports=True,
+    # healthcheck=True
     pod1 = cluster.pods.create("nginx", u"test_nginx_pod_1",
-                               open_all_ports=False,
-                               start=True, wait_ports=True,
-                               healthcheck=True,
+                               open_all_ports=False, start=True,
                                wait_for_status='running')
     pod2 = cluster.pods.create("nginx", u"тест_нжинкс_под_2",
                                open_all_ports=False, start=True,
-                               wait_ports=True,
-                               healthcheck=True, wait_for_status='running')
+                               wait_for_status='running')
     pod3 = cluster.pods.create("nginx", u"測試nginx的莢1",
-                               open_all_ports=False,
-                               start=True, wait_ports=True,
-                               healthcheck=True,
+                               open_all_ports=False, start=True,
                                wait_for_status='running')
     # Step 5
     cluster.upgrade('/tmp/prebuilt_rpms/kuberdock.rpm',

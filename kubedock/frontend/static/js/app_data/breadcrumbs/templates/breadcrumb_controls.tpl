@@ -2,7 +2,11 @@
     <% if (button.suspendedTitle) { %>
         <button id="<%- button.id %>" class="disabled" data-toggle="tooltip" data-placement="left" data-original-title="<%- button.suspendedTitle %>"> <%- button.title %></button>
     <% } else { %>
-        <a id="<%- button.id %>" href="<%- button.href %>"><%- button.title %></a>
+        <% if (button.href) { %>
+            <a id="<%- button.id %>" href="<%- button.href %>"><%- button.title %></a>
+        <% } else { %>
+            <button id="<%- button.id %>"><%- button.title %></button>
+        <% } %>
     <% }%>
 <% } %>
 <% if (search){ %>

@@ -1,81 +1,76 @@
 /* add-node */
-#node-contents{
-    .node-steps{
-        .information{
-            text-align: left;
+#add-node{
+    .information{
+        text-align: left;
+        font-size: 13px;
+        position: relative;
+        margin-bottom: 20px;
+        background-color: #fefef6;
+        border: 1px solid #e5e5e5;
+        padding: 10px 16px 10px 87px;
+        label{
             font-size: 13px;
-            position: relative;
-            margin-bottom: 20px;
-            background-color: #fefef6;
+            margin: 0;
+        }
+        > div {
+            font-size: 13px;
+            i{ border-bottom: 1px solid rgba(51, 51, 51, 0.37); }
+        }
+    }
+    .form-field{
+        margin-bottom: 30px;
+        &.last{
+            margin-bottom: 0;
+            padding-bottom: 49px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        label{
+            display: block;
+            margin-bottom: 16px;
+        }
+        input,
+        .kube_type button{
+            width: 100%;
+            height: 51px;
+            display: block;
+            padding: 0 20px;
+            font-size: 13px;
+            background-color: #fff;
             border: 1px solid #e5e5e5;
-            padding: 10px 16px 10px 87px;
-            &:before{
-                top: 3px;
-                left: 5px;
-                content: '';
-                width: 80px;
-                height: 70px;
+        }
+        input{
+            .placeholder(#b4b4b4);
+            .transition(color 500ms ease);
+            &:focus{
+                border-color: #188eed;
+            }
+            &.error{
+                border-color: red;
+            }
+        }
+        .add{ .mdi('control_point',21px, @defaultIconColor, @hoverIconColor); }
+        .relative{
+            position: relative;
+            margin-bottom: 15px;
+            &:last-child{ margin-bottom: 0; }
+            .remove{
+                top: 13px;
+                right: -30px;
                 position: absolute;
-                background: url('../img/info-ico.png') center no-repeat;
-                .background-size(63%);
-            }
-            label{
-                margin: 0;
-            }
-            > div{
-                i{
-                    border-bottom: 1px solid rgba(51, 51, 51, 0.37);
-                }
+                display: inline-block;
+                .mdi('delete',21px, @defaultIconColor, @hoverIconColor);
             }
         }
-        #node-add-step{
-            .form-field{
-                margin-bottom: 30px;
-                &.last{
-                    margin-bottom: 0;
-                    padding-bottom: 49px;
-                    border-bottom: 1px solid #e5e5e5;
-                }
-                label{
-                    display: block;
-                    margin-bottom: 16px;
-                }
-                input,
-                .kube_type button{
-                    display: block;
-                    width: 100%;
-                    height: 51px;
-                    padding: 0 20px;
-                    font-size: 13px;
-                    background-color: #fff;
-                    border: 1px solid #e5e5e5;
-                }
-                input{
-                    .placeholder(#b4b4b4);
-                    .transition(color 500ms ease);
-                    &:focus{
-                        border-color: #188eed;
-                    }
-                    &.error{
-                        border-color: red;
-                    }
-                }
-            }
-            .well{
-                .box-shadow(none);
-                .border-radius(0);
-                padding: 20px;
-                min-height: 20px;
-                margin-bottom: 20px;
-                border: 1px solid #e5e5e5;
-                p{
-                    font-weight: normal;
-                }
-                + div.buttons{
-                    margin-top: 0;
-                }
-            }
-        }
+    }
+    .well{
+        .box-shadow(none);
+        .border-radius(0);
+        padding: 20px;
+        min-height: 20px;
+        margin-bottom: 20px;
+        border: 1px solid #e5e5e5;
+        p{ font-weight: normal; }
+        + div.buttons{ margin-top: 0;}
     }
 }
 /* end add-node */
@@ -87,9 +82,7 @@
     .spoiler{
         font-size: 13px;
         padding: 10px 0 0 20px;
-        p{
-            margin-bottom: 8px;
-        }
+        p{ margin-bottom: 8px; }
         span{
             color: #3197ee;
             &:hover{
@@ -101,34 +94,9 @@
 }
 /* end general details node */
 
-/* logs details page */
-#logs-page{
-    .node-logs{
-        .box-shadow-materials();
-        color: white;
-        height: 38em;
-        padding: 20px;
-        font-size: 10pt;
-        overflow: hidden;
-        margin: 37px 0 10px;
-        background-color: #000;
-        p{
-            margin: 0;
-            line-height: 21px;
-            word-break: break-all;
-            time{
-                color: #05E9FF;
-            }
-            .ident{
-                color: #4EA3EC;
-            }
-        }
-    }
-}
-/* end logs details page */
-
+// TODO implement
 /* timelines details page */
-#timelines-page{
+ /* #timelines-page{
     padding: 0;
     .cases{
         .item{
@@ -178,11 +146,6 @@
                         background: url('../img/show-arrow.png') 0 0 no-repeat;
                         font-family: @bold;
                         position: absolute;
-                    }
-                }
-                &.control{
-                    &:before{
-
                     }
                 }
                 &.control-hide{
@@ -236,5 +199,5 @@
             }
         }
     }
-}
+} */
 /* end timelines details page */

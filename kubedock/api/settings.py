@@ -1,4 +1,4 @@
-from pytz import common_timezones, timezone
+from pytz import common_timezones
 from flask import Blueprint, request, jsonify, current_app
 from flask.views import MethodView
 
@@ -8,6 +8,7 @@ from ..rbac import check_permission
 from ..utils import KubeUtils, register_api
 from ..users.utils import append_offset_to_timezone
 from ..kapi.notifications import read_role_events
+from ..settings import AWS, ZFS, CEPH
 from ..static_pages.models import MenuItem
 from ..system_settings.models import SystemSettings
 from ..validation import check_system_settings
@@ -53,6 +54,18 @@ def get_notifications():
 @KubeUtils.jsonwrap
 def get_menu():
     return MenuItem.get_menu()
+
+
+@settings.route('/setup-info', methods=['GET'])
+@auth_required
+@check_permission('read', 'system_settings')
+@KubeUtils.jsonwrap
+def get_setup_info():
+    return {
+        'AWS': AWS,
+        'ZFS': ZFS,
+        'CEPH': CEPH,
+    }
 
 
 @settings.route('/timezone', methods=['GET'])

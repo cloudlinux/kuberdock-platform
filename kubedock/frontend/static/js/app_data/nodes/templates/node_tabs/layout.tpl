@@ -1,17 +1,5 @@
 <div id="nav"></div>
-<div class="breadcrumbs-wrapper">
-    <div class="container breadcrumbs" id="breadcrumbs">
-        <ul class="breadcrumb">
-            <li>
-                <div id="nodes-page">Nodes</div>
-            </li>
-            <li class="active"><%= hostname %></li>
-        </ul>
-        <div class="control-group">
-            <button id="delete_node">Delete</button>
-        </div>
-    </div>
-</div>
+<div id="breadcrumbs"></div>
 <div class="container">
     <div class="row">
         <div class="col-sm-3 col-md-2 sidebar">

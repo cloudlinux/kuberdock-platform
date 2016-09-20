@@ -1008,7 +1008,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         }
     });
 
-    data.NodeCollection = Backbone.PageableCollection.extend({
+    data.NodeCollection = data.SortableCollection.extend({
         url: '/api/nodes/',
         model: data.NodeModel,
         parse: unwrapper,
@@ -1227,6 +1227,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
     App.getUserCollection = App.resourcePromiser('userCollection', data.UsersPageableCollection);
     App.getTimezones = App.resourcePromiser('timezoneList', '/api/settings/timezone-list');
+    App.getSetupInfo = App.resourcePromiser('setupInfo', '/api/settings/setup-info');
     App.getRoles = App.resourcePromiser('roles', '/api/users/roles');
 
     data.ActivitiesCollection = Backbone.PageableCollection.extend({

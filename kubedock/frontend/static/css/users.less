@@ -2,16 +2,12 @@
     .clearfix;
     .col-xs-4{
         margin-bottom: 50px;
-            &.info{
-            height: 70px;
-            background: url('../img/info-ico.png') center center no-repeat;
-            .background-size(70px);
+        &.info{
+            &::before{
+                position: initial;
+            }
         }
-        &.user{
-            height: 94px;
-            background: url('../img/user-and-pc-small.png') center center no-repeat;
-            .background-size(80px 94px);
-        }
+        &.user, &.info{ text-align: center; }
     }
 }
 /* create edit user page */

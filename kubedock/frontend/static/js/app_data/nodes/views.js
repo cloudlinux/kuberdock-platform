@@ -1,66 +1,40 @@
 define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
-        'app_data/nodes/templates/node_detailed_layout.tpl',
-        'app_data/nodes/templates/node_general_tab.tpl',
-        'app_data/nodes/templates/node_logs_tab.tpl',
-        'app_data/nodes/templates/node_monitoring_tab.tpl',
-        'app_data/nodes/templates/node_timelines_tab.tpl',
-        'app_data/nodes/templates/node_add_layout.tpl',
-        'app_data/nodes/templates/node_add_step.tpl',
-        'app_data/nodes/templates/node_empty.tpl',
-        'app_data/nodes/templates/node_item.tpl',
-        'app_data/nodes/templates/node_list.tpl',
-        'app_data/nodes/templates/node_paginator.tpl',
-        'app_data/nodes/templates/node_layout.tpl',
-        'app_data/nodes/templates/node_item_graph.tpl',
+
+        /* node tabs */
+        'app_data/nodes/templates/node_tabs/layout.tpl',
+        'app_data/nodes/templates/node_tabs/general.tpl',
+        'app_data/nodes/templates/node_tabs/logs.tpl',
+        'app_data/nodes/templates/node_tabs/monitoring/list.tpl',
+        'app_data/nodes/templates/node_tabs/monitoring/item.tpl',
+        'app_data/nodes/templates/node_tabs/timelines.tpl',
+
+        /* nodelist */
+        'app_data/nodes/templates/node_list/empty.tpl',
+        'app_data/nodes/templates/node_list/item.tpl',
+        'app_data/nodes/templates/node_list/list.tpl',
+
+        'app_data/nodes/templates/add_node.tpl',
+        'app_data/nodes/templates/layout.tpl',
+
         'jqplot', 'jqplot-axis-renderer',
-        'bootstrap-select', 'nicescroll'],
+        'bootstrap-select', 'nicescroll', 'tooltip'],
        function(App, Controller, Marionette, utils,
+
                 nodeDetailedLayoutTpl,
                 nodeGeneralTabTpl,
                 nodeLogsTabTpl,
                 nodeMonitoringTabTpl,
+                nodeItemGraphTpl,
                 nodeTimelinesTabTpl,
-                nodeAddLayoutTpl,
-                nodeAddStepTpl,
+
                 nodeEmptyTpl,
                 nodeItemTpl,
                 nodeListTpl,
-                nodePaginatorTpl,
-                nodeLayoutTpl,
-                nodeItemGraphTpl){
+
+                nodeAddStepTpl,
+                nodeLayoutTpl){
 
     var views = {};
-
-    views.PaginatorView = Backbone.Marionette.ItemView.extend({
-        template: nodePaginatorTpl,
-
-        initialize: function(options) {
-            this.model = new Backbone.Model({
-                v: options.view,
-                c: options.view.collection
-            });
-            this.listenTo(options.view.collection, 'remove', this.render);
-            this.listenTo(options.view.collection, 'reset', this.render);
-        },
-
-        events: {
-            'click li.pseudo-link': 'paginateIt'
-        },
-
-        paginateIt: function(evt){
-            evt.stopPropagation();
-            var tgt = $(evt.target);
-            var coll = this.model.get('c');
-            if (tgt.hasClass('paginatorFirst')) coll.getFirstPage();
-            else if (tgt.hasClass('paginatorPrev') && coll.hasPreviousPage())
-                coll.getPreviousPage();
-            else if (tgt.hasClass('paginatorNext') && coll.hasNextPage())
-                coll.getNextPage();
-            else if (tgt.hasClass('paginatorLast'))
-                coll.getLastPage();
-            this.render();
-        }
-    });
 
     views.NodeEmpty = Backbone.Marionette.ItemView.extend({
         template: nodeEmptyTpl,
@@ -72,12 +46,12 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         tagName: 'tr',
 
         ui: {
-            'deleteNode' : '.deleteNode'
+            'deleteNode' : '.deleteNode',
+            'tooltip'    : '[data-toggle="tooltip"]'
         },
 
         events: {
-            'click @ui.deleteNode' : 'deleteNode',
-            //'click @ui.configurationTab' : 'detailedConfigurationTab',
+            'click @ui.deleteNode' : 'deleteNode'
         },
 
         modelEvents: {
@@ -91,6 +65,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 'kubeType': kubeType ? kubeType.get('name') : '',
             };
         },
+
+        onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
 
         deleteNode: function() {
             var that = this,
@@ -111,11 +87,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     buttonCancel: true
                 }
             });
-        },
-
-        //detailedConfigurationTab: function(){
-        //    App.navigate('/detailed/' + this.model.id + '/configuration/', {trigger: true});
-        //}
+        }
     });
 
     views.NodesListView = Backbone.Marionette.CompositeView.extend({
@@ -123,23 +95,17 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         childView          : views.NodeItem,
         emptyView          : views.NodeEmpty,
         childViewContainer : 'tbody',
+        className          : 'container',
 
         ui: {
-            navSearch   : '.nav-search',
-            addNode     : 'button#add_node',
-            searchNode  : 'input#nav-search-input',
-            th          : 'table th'
+            th : 'table th' //TODO move filter to model
         },
 
         events: {
-            'click @ui.addNode'     : 'addNode',
-            'keyup @ui.searchNode'  : 'filterCollection',
-            'click @ui.navSearch'   : 'showSearch',
-            'blur @ui.searchNode '  : 'closeSearch',
-            'click @ui.th'          : 'toggleSort'
+            'click @ui.th'  : 'toggleSort' //TODO move filter to model
         },
 
-        initialize: function(options){
+        initialize: function(options){ //TODO move filter to model
             this.searchString = options.searchString;
             this.counter = 1;
             this.sortingType = {
@@ -150,27 +116,18 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             };
         },
 
+        search: function(data){
+            this.collection.searchString = data;
+            this.collection.refilter();
+        },
+
         templateHelpers: function(){
             return {
-                sortingType : this.sortingType
+                sortingType : this.sortingType //TODO move filter to model
             };
         },
 
-        filterCollection: function(){
-            var value = this.ui.searchNode.val();
-            if (value.length >= 2){
-                this.trigger('collection:name:filter', value);
-            }
-        },
-
-        onShow: function(){
-            if (this.searchString) {
-                this.showSearch();
-                this.ui.searchNode.val(this.searchString);
-            }
-        },
-
-        toggleSort: function(e) {
+        toggleSort: function(e) { //TODO move filter to model
             var that = this,
                 targetClass = e.target.className;
 
@@ -189,49 +146,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 }
                 this.render();
             }
-        },
-
-        showSearch: function(){
-            this.ui.navSearch.addClass('active');
-            this.ui.searchNode.focus();
-        },
-
-        closeSearch: function(){
-            this.ui.navSearch.removeClass('active');
-        },
-
-        addNode: function(){
-            App.navigate('nodes/add', {trigger: true});
-        },
-    });
-
-    views.NodeAddWizardLayout = Backbone.Marionette.LayoutView.extend({
-        template: nodeAddLayoutTpl,
-
-        regions: {
-            nav           : '#nav',
-            header        : '#node-header',
-            nodeAddStep   : '#node-add-step'
-        },
-
-        ui: {
-            'nodes_page' : 'div#nodes-page',
-        },
-
-        events:{
-            'click @ui.nodes_page' : 'breadcrumbClick'
-        },
-
-        onBeforeShow: function(){
-            utils.preloader.show();
-        },
-
-        onShow: function(){
-            utils.preloader.hide();
-        },
-
-        breadcrumbClick: function(){
-           App.navigate('nodes', {trigger: true});
         }
     });
 
@@ -240,17 +154,28 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         ui: {
             'nodeAddBtn'     : 'button#node-add-btn',
-            'nodeCancelBtn'  : 'button#node-cancel-btn',
             'nodeTypeSelect' : 'select.kube_type',
             'node_name'      : 'input#node_address',
             'selectpicker'   : '.selectpicker',
+            'add_field'      : '.add',
+            'remove_field'   : '.remove',
+            'block_device'   : '.block-device'
         },
 
         events:{
-            'click @ui.nodeCancelBtn'   : 'cancel',
+            'click @ui.add_field'       : 'addField',
+            'click @ui.remove_field'    : 'removeField',
             'click @ui.nodeAddBtn'      : 'complete',
             'focus @ui.node_name'       : 'removeError',
-            'change @ui.nodeTypeSelect' : 'changeKubeType'
+            'change @ui.nodeTypeSelect' : 'changeKubeType',
+            'change @ui.block_device'   : 'changeLsDevices'
+        },
+
+        initialize: function(options){
+            this.setupInfo = options.setupInfo;
+            if (!this.setupInfo.AWS && this.setupInfo.ZFS){
+                this.model.set('lsdevices', ['']);
+            }
         },
 
         changeKubeType: function(evt) {
@@ -259,23 +184,53 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             }
         },
 
+        changeLsDevices: function(evt){
+            var target = $(evt.target),
+                index = target.parent().index() - 1;
+            this.model.get('lsdevices')[index] = target.val().trim();
+        },
+
         templateHelpers: function(){
             return {
                 kubeTypes: App.kubeTypeCollection.filter(function(kube){
                     return kube.id !== -1;  // "Internal service" kube-type
                 }),
+                setupInfo: this.setupInfo
             };
         },
 
         removeError: function(evt){ $(evt.target).removeClass('error'); },
 
+        addField: function(){
+            this.model.get('lsdevices').push('');
+            this.render();
+        },
+
+        removeField: function(evt){
+            var target = $(evt.target),
+                index = target.parents('.relative').index() - 1;
+            this.model.get('lsdevices').splice(index, 1);
+            this.render();
+        },
+
         complete: function () {
-            var that = this,
+            var data = [],
+                lsdevices,
+                that = this,
                 val = this.ui.node_name.val(),
                 pattern =  /^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$/i;  // eslint-disable-line max-len
 
             val = val.replace(/\s+/g, '');
             this.ui.node_name.val(val);
+
+            if (this.setupInfo.ZFS && !this.setupInfo.AWS) {
+                lsdevices = _.without(this.model.get('lsdevices'), '');
+                if (!lsdevices.length){
+                    utils.notifyWindow('Block devices name can\'t be empty.');
+                    that.ui.block_device.addClass('error');
+                    return false;
+                }
+            }
 
             App.getNodeCollection().done(function(nodeCollection){
                 switch (true){
@@ -286,17 +241,28 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     case val && !pattern.test(val):
                         that.ui.node_name.addClass('error');
                         utils.notifyWindow(
-                            'Hostname can\'t contain some special symbols like '
-                            + '"#", "%", "/" or start with "."');
+                            'Hostname can\'t contain some special symbols like ' +
+                            '"#", "%", "/" or start with "."');
                         break;
                     default:
                         utils.preloader.show();
-                        nodeCollection.create({
-                            hostname: val,
-                            status: 'pending',
-                            kube_type: that.model.get('kube_type'),
-                            install_log: ''
-                        }, {
+                        if (that.setupInfo.ZFS && !that.setupInfo.AWS) {
+                            data = {
+                                hostname: val,
+                                status: 'pending',
+                                kube_type: that.model.get('kube_type'),
+                                lsdevices: that.model.get('lsdevices'),
+                                install_log: ''
+                            };
+                        } else {
+                            data = {
+                                hostname: val,
+                                status: 'pending',
+                                kube_type: that.model.get('kube_type'),
+                                install_log: ''
+                            };
+                        }
+                        nodeCollection.create(data, {
                             wait: true,
                             complete: utils.preloader.hide,
                             success:  function(){
@@ -315,10 +281,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             });
         },
 
-        cancel: function () {
-            App.navigate('nodes', {trigger: true});
-        },
-
         onRender: function(){
             this.model.set('kube_type', Number(this.ui.nodeTypeSelect.val()));
             this.ui.selectpicker.selectpicker();
@@ -331,12 +293,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         regions: {
             nav: 'div#nav',
             breadcrumbs: 'div#breadcrumbs',
-            sidebar: 'div#sidebar',
             tabContent: 'div#tab-content'
         },
 
         ui: {
-            'nodes_page' : 'div#nodes-page',
             // 'redeploy'   : 'button#redeploy_node',
             'delete'     : 'button#delete_node',
             'tabItem'    : 'ul.nav-sidebar li'
@@ -344,7 +304,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         events: {
             'click @ui.tabItem'    : 'changeTab',
-            'click @ui.nodes_page' : 'breadcrumbClick',
             // 'click @ui.redeploy'   : 'redeployNode',
             'click @ui.delete'     : 'deleteNode'
         },
@@ -369,7 +328,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         changeTab: function (evt) {
             evt.preventDefault();
             var tgt = $(evt.target);
-            if(tgt.not('li')) tgt = tgt.parent('li');
+            if (tgt.not('li')) tgt = tgt.parent('li');
             if (tgt.hasClass('nodeGeneralTab'))
                 App.navigate('nodes/' + this.nodeId + '/general', {trigger: true});
             else if (tgt.hasClass('nodeLogsTab'))
@@ -422,10 +381,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     }
                 });
             });
-        },
-
-        breadcrumbClick: function(){
-           App.navigate('nodes', {trigger: true});
         },
 
         templateHelpers: function(){
@@ -593,7 +548,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                     indicator: error,
                     axes: {
                         xaxis: {
-                            min: App.currentUser.localizeDatetime(+new Date() - 1000*60*20),
+                            min: App.currentUser.localizeDatetime(+new Date() - 1000 * 60 * 20),
                             max: App.currentUser.localizeDatetime(),
                             tickOptions: {formatString:'%H:%M'},
                             tickInterval: '5 minutes',
@@ -607,8 +562,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 options.seriesColors = this.model.get('seriesColors');
             }
 
-            for (var i=0; i<lines; i++) {
-                if (points.length < i+1) {
+            for (var i = 0; i < lines; i++) {
+                if (points.length < i + 1) {
                     points.push([]);
                 }
             }
@@ -620,10 +575,10 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 this.model.get('points').splice(0);
 
             this.model.get('points').forEach(function(record){
-                for (var i=0; i<lines; i++) {
+                for (var i = 0; i < lines; i++) {
                     points[i].push([
                         App.currentUser.localizeDatetime(record[0]),
-                        record[i+1]
+                        record[i + 1]
                     ]);
                 }
             });
@@ -633,8 +588,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         onDomRefresh: function(){
             try {
                 this.makeGraph();
-            }
-            catch(e){
+            } catch (e){
                 console.log('Cannot display graph' + e);
             }
         },
@@ -647,8 +601,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         childViewOptions: function(){
             return {node: this.model, error: this.error};
         },
-        onBeforeRender: function(){ utils.preloader.show; },
-        onShow: function(){ utils.preloader.hide; },
+        onBeforeRender: function(){ utils.preloader.show(); },
+        onShow: function(){ utils.preloader.hide(); },
         modelEvents: {
             'change': 'render'
         },
@@ -674,24 +628,8 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             pager: 'div#pager'
         },
 
-        initialize: function(){
-            var that = this;
-            this.listenTo(this.main, 'show', function(view){
-                that.listenTo(view, 'collection:name:filter', that.filterNodeByName);
-            });
-        },
-
-        onBeforeShow: function(){
-            utils.preloader.show();
-        },
-
-        onShow: function(){
-            utils.preloader.hide();
-        },
-
-        filterNodeByName: function(value){
-            this.trigger('collection:name:filter', value);
-        }
+        onBeforeShow: function(){ utils.preloader.show(); },
+        onShow: function(){ utils.preloader.hide(); },
     });
 
     return views;

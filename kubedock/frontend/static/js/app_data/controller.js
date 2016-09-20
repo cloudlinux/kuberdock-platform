@@ -906,42 +906,42 @@ define([
                 return;
             var that = this;
             require(['app_data/nodes/views'], function(Views){
-                var layoutView = new Views.NodesLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var view,
+                    layoutView = new Views.NodesLayout(),
+                    navbar = new Menu.NavList({collection: App.menuCollection}),
+                    button = {
+                        id: 'add_node',
+                        title: 'Add node',
+                        href: '#nodes/add'},
+                    breadcrumbsControls = new Breadcrumbs.Controls(
+                        {search: true, button: button}),
+                    breadcrumbsLayout = new Breadcrumbs.Layout(
+                        {points: ['nodes']}
+                    );
+
                 that.listenTo(layoutView, 'show', function(){
                     App.getNodeCollection().done(function(nodeCollection){
                         if (_.has(options, 'deleted')) {
                             nodeCollection.fullCollection.remove(options.deleted);
                         }
                         layoutView.nav.show(navbar);
-                        var nodeCollectionView = new Views.NodesListView({
-                            collection: nodeCollection
+                        layoutView.breadcrumbs.show(breadcrumbsLayout);
+                        breadcrumbsLayout.nodes.show(
+                            new Breadcrumbs.Text({text: 'Nodes'}));
+                        breadcrumbsLayout.controls.show(breadcrumbsControls);
+
+                        var filteredCollection = nodeCollection.getFiltered(function(model){
+                            var searchFilter = !this.searchString ||
+                                this.searchString.length < 3 ||
+                                model.get('hostname').indexOf(this.searchString) !== -1 ||
+                                model.get('ip').indexOf(this.searchString) !== -1;
+                            return searchFilter;
                         });
-                        layoutView.main.show(nodeCollectionView);
-                        layoutView.pager.show(
-                            new Views.PaginatorView({
-                                view: nodeCollectionView
-                            })
-                        );
-                    });
-                });
-                that.listenTo(layoutView, 'collection:name:filter', function(value){
-                    App.getNodeCollection().done(function(nodeCollection){
-                        var filteredCollection = new Model.NodeCollection(
-                            nodeCollection.fullCollection.filter(function(model){
-                                return model.get('hostname').indexOf(value) !== -1;
-                            })
-                        );
-                        var nodeCollectionView = new Views.NodesListView({
-                            collection: filteredCollection,
-                            searchString: value
-                        });
-                        layoutView.main.show(nodeCollectionView);
-                        layoutView.pager.show(
-                            new Views.PaginatorView({
-                                view: nodeCollectionView
-                            })
-                        );
+
+                        view = new Views.NodesListView({ collection: filteredCollection });
+                        layoutView.main.show(view);
+                        layoutView.pager.show( new Pager.PaginatorView({ view: view }));
+                        view.listenTo(breadcrumbsControls, 'search', view.search);
                     });
                 });
                 App.contents.show(layoutView);
@@ -952,16 +952,29 @@ define([
             if (!this.checkPermissions(['Admin']))
                 return;
             var that = this;
+
             require(['app_data/nodes/views'], function(Views){
-                var layoutView = new Views.NodeAddWizardLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
-                that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
-                    layoutView.nodeAddStep.show(new Views.NodeAddStep({
-                        model: new Backbone.Model({isFinished: false})
-                    }));
-                });
-                App.contents.show(layoutView);
+                var view,
+                    layoutView = new Views.NodesLayout(),
+                    navbar = new Menu.NavList({collection: App.menuCollection}),
+                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['nodes', 'create']});
+
+                App.getSetupInfo().done(function(setupInfo){
+                    that.listenTo(layoutView, 'show', function(){
+                        layoutView.nav.show(navbar);
+                        layoutView.breadcrumbs.show(breadcrumbsLayout);
+                        breadcrumbsLayout.nodes.show(
+                            new Breadcrumbs.Link({text: 'Nodes', href:'#nodes'}));
+                        breadcrumbsLayout.create.show(
+                            new Breadcrumbs.Text({text: 'Add node'}));
+                        view = new Views.NodeAddStep({
+                                model: new Backbone.Model(),
+                                setupInfo: setupInfo
+                            })
+                        layoutView.main.show(view);
+                    });
+                    App.contents.show(layoutView);
+                })
             });
         },
 
@@ -971,36 +984,41 @@ define([
             var that = this;
             require(['app_data/nodes/views'], function(Views){
                 App.getNodeCollection().done(function(nodeCollection){
-                    var node = nodeCollection.get(nodeId);
-                        //breadcrumbsModel = new Backbone.Model({hostname: node.get('hostname')});
-                        //sidebarModel = new Backbone.Model({tab: tab, });
+                    var node = nodeCollection.get(nodeId),
+                        button = {
+                            id: 'delete_node',
+                            title: 'Delete node' },
+                        breadcrumbsControls = new Breadcrumbs.Controls(
+                            {button: button}),
+                        layoutView = new Views.NodeDetailedLayout({nodeId: nodeId, tab: tab}),
+                        navbar = new Menu.NavList({collection: App.menuCollection}),
+                        breadcrumbsLayout = new Breadcrumbs.Layout(
+                            {points: ['nodes', 'name', 'tab']}
+                        );
 
                     if (node == null){
                         App.navigate('nodes', {trigger: true});
                         return;
                     }
-
                     that.listenTo(node, 'remove destroy', function(){
                         App.navigate('nodes', {trigger: true});
                     });
 
-                    var layoutView = new Views.NodeDetailedLayout({nodeId: nodeId, tab: tab}),
-                        navbar = new Menu.NavList({collection: App.menuCollection});
-
                     that.listenTo(layoutView, 'show', function(){
-
                         layoutView.nav.show(navbar);
-                        // layoutView.breadcrumbs.show(new Views.Breadcrumbs(
-                        //     {model: breadcrumbsModel}));
+                        layoutView.breadcrumbs.show(breadcrumbsLayout);
+                        breadcrumbsLayout.nodes.show(
+                            new Breadcrumbs.Link({text: 'Nodes', href:'#nodes'}));
+                        breadcrumbsLayout.name.show(
+                            new Breadcrumbs.Text({text: node.get('hostname')}));
+                        breadcrumbsLayout.tab.show(
+                                new Breadcrumbs.Text({text: tab}));
+                        breadcrumbsLayout.controls.show(breadcrumbsControls);
 
                         if (tab === 'logs') {
-                            // layoutView.sidebar.show(new Views.SideBar(
-                            //     {model: sidebarModel, nodeId: nodeId}));
                             layoutView.tabContent.show(
                                 new Views.NodeLogsTabView({model: node}));
                         } else if (tab === 'timelines') {
-                            // layoutView.sidebar.show(new Views.SideBar(
-                            //     {model: sidebarModel, nodeId: nodeId}));
                             layoutView.tabContent.show(
                                 new Views.NodeTimelinesTabView({model: node}));
                         } else if (tab === 'monitoring') {
@@ -1024,8 +1042,6 @@ define([
                                     layoutView.tabContent.show(view);
                                 });
                         } else {
-                            // layoutView.sidebar.show(new Views.SideBar(
-                            //     {model: sidebarModel, nodeId: nodeId}));
                             layoutView.tabContent.show(
                                 new Views.NodeGeneralTabView({model: node}));
                         }

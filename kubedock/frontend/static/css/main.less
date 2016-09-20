@@ -350,6 +350,11 @@ body{
                         position: absolute;
                         background: url('../img/menu-arrow.png') 0 0 no-repeat;
                     }
+                    &.bpoint-tab{
+                        span{
+                            text-transform: capitalize;
+                        }
+                    }
                     span{
                         &.podsList{
                             &:hover{
@@ -587,26 +592,8 @@ body{
                 .nav-search{
                     .transition(width 0.3s ease);
                     float: right;
-                    z-index: 0;
-                    width: 40px;
-                    height: 34px;
                     cursor: pointer;
                     position: relative;
-                    display: inline-block;
-                    &:before{
-                        left: 0;
-                        right: 0;
-                        top: 6px;
-                        width: 25px;
-                        content: '';
-                        height: 25px;
-                        margin: auto;
-                        position: absolute;
-                        background:url('../img/search.png') 0 0 no-repeat;
-                        &:hover{
-                            cursor: pointer;
-                        }
-                    }
                     &.active{
                          .transition(width 0.3s ease);
                         width: 0;
@@ -617,7 +604,7 @@ body{
                         + .nav-search-input{
                             .transition(width 0.3s ease);
                             width: 212px;
-                            padding: 0 0px 0 10px;
+                            padding: 0 0 0 10px;
                         }
                     }
                 }
@@ -665,6 +652,34 @@ body{
                 }
             }
         }
+    }
+
+    /* logs texarea */
+    .node-logs,
+    .container-logs{
+        .box-shadow-materials();
+        clear: both;
+        color: white;
+        height: 38em;
+        padding: 20px;
+        overflow: auto;
+        font-size: 10pt;
+        margin-bottom: 10px;
+        background-color: #000;
+        p{
+            margin: 0;
+            line-height: 21px;
+            word-break: break-all;
+            time{
+                color: #05E9FF;
+            }
+            .ident{
+                color: #4EA3EC;
+            }
+        }
+    }
+    .node-logs{
+        margin-top: 37px;
     }
 
     /* page-404 */

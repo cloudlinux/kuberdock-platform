@@ -8,6 +8,13 @@
 
 @checkedColor: #61c46d;
 
+
+#breadcrumbs{
+    #nav-search{
+        .mdi('search',34px, #fff, #fff);
+    }
+}
+
 .status-line{
     color: @statusLineTextColor;
     font-size: 13px;
@@ -416,6 +423,42 @@ label.custom{
         }
     }
 }
+.control-icons .info,
+#userGeneralTab .info,
+#add-node .information{
+    .mdi('info_outline',70px, @defaultIconColor, @defaultIconColor);
+    &:before{
+        top: 3px;
+        left: 11px;
+        position: absolute;
+    }
+    &:hover{ cursor: default; }
+}
+#userGeneralTab .user{
+    .mdi('person_outline',70px, @defaultIconColor, @defaultIconColor);
+    &:hover{ cursor: default; }
+}
+.control-icons .servers,
+#details_content .servers{
+    .mdi('dns',80px, @defaultIconColor, @defaultIconColor);
+    &:before{
+        top: 0;
+        left: 0;
+        position: absolute;
+    }
+    div{
+        font-size: 13px;
+        span{
+            display: initial;
+            min-height: initial;
+            line-height: initial;
+            vertical-align: initial;
+        }
+    }
+    &:hover{ cursor: default; }
+
+}
+
 /* TODO REFACTORING */
 .control-icons{
     margin-top: 37px;
@@ -434,15 +477,6 @@ label.custom{
     .info{
         padding-left: 94px;
         position: relative;
-        &:before{
-            content: '';
-            position: absolute;
-            width: 80px;
-            height: 70px;
-            left: 0;
-            top: 0;
-            background: url('../img/info-ico.png') 0 0 no-repeat;
-        }
         > div{
             color: #1d1d1d;
             font-size: 13px;
@@ -453,15 +487,6 @@ label.custom{
     .servers{
         position: relative;
         padding-left: 103px;
-        &:before{
-            top: 0;
-            left: 0;
-            width: 80px;
-            content: '';
-            height: 66px;
-            position: absolute;
-            background: url('../img/servers.png') 0 0 no-repeat;
-        }
     }
     @media (max-width: 768px) {
         .servers{

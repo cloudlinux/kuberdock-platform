@@ -1468,7 +1468,7 @@ def finish_redeploy(self, pod_id, data, start=True):
     pod_collection = PodCollection(db_pod.owner)
     pod = pod_collection._get_by_id(pod_id)
     try:
-        pod_collection._stop_pod(pod, block=True)
+        pod_collection._stop_pod(pod, block=True, raise_=False)
     except APIError as e:
         utils.send_event_to_user('notify:error', {'message': e.message},
                                  db_pod.owner_id)

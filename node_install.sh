@@ -154,6 +154,7 @@ clean_node(){
     {
         yum -y remove kubernetes*
         yum -y remove docker
+        yum -y remove docker-selinux
         yum -y remove flannel*
         yum -y remove kuberdock-cadvisor  # obsolete package
     } &> /dev/null
@@ -492,8 +493,8 @@ setup_ntpd
 # 2. install components
 echo "Installing kubernetes..."
 yum_wrapper -y install ${NODE_KUBERNETES}
-yum_wrapper -y install docker-selinux-1.8.2-10.el7
-yum_wrapper -y install docker-1.8.2-10.el7
+yum_wrapper -y install docker-selinux-1.8.2-11.el7
+yum_wrapper -y install docker-1.8.2-11.el7
 yum_wrapper -y install flannel-0.5.3
 # TODO maybe not needed, make as dependency for kuberdock-node package
 yum_wrapper -y install python-requests

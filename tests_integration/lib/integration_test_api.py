@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 import urllib2
+
 from collections import namedtuple
 from contextlib import contextmanager
 from datetime import datetime
@@ -13,10 +14,11 @@ from datetime import datetime
 import paramiko
 import vagrant
 import yaml
+import redis
 from ipaddress import IPv4Network
 
-from exceptions import ServicePodsNotReady, NodeWasNotRemoved, VmCreationError, \
-    VmProvisionError
+from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
+    VmCreationError, VmProvisionError
 from tests_integration.lib.exceptions import StatusWaitException, \
     UnexpectedKubectlResponse, DiskNotFound, PodIsNotRunning, \
     IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
@@ -153,7 +155,7 @@ class KDIntegrationTestAPI(object):
         # inet 192.168.113.245/22 brd 192.168.115.255 scope global ens3
 
         cmd = """
-        MAIN_INTERFACE=$(ip route get 8.8.8.8 | egrep 'dev\s+.+?\s+src' -o | awk '{print $2}');
+        MAIN_INTERFACE=$(ip route get 8.8.8.8 | egrep 'dev\s+.+?\s+src' -o | awk '{print $2}');  # noqa
         ip addr show dev $MAIN_INTERFACE | awk 'NR==3 { print $2 }'
         """
         _, main_ip, _ = self.ssh_exec('master', cmd)
@@ -176,7 +178,7 @@ class KDIntegrationTestAPI(object):
                 retry(self.vagrant.up, tries=3, interval=15,
                       provider=provider, no_provision=True)
                 self.created_at = datetime.utcnow()
-            except subprocess.CalledProcessError as e:
+            except subprocess.CalledProcessError:
                 raise VmCreationError('Failed to create VMs')
 
             try:
@@ -291,9 +293,12 @@ class KDIntegrationTestAPI(object):
 
     # TODO: Process the user argument
     def kcli2(self, cmd, out_as_dict=False, user=None):
-        rc, out, err = self.ssh_exec("master", u"kcli2 -k {}".format(cmd))
+        kcli2_cmd = ['kcli2', '-k', cmd]
+        rc, out, err = self.ssh_exec("master", u' '.join(kcli2_cmd))
+
         if out_as_dict:
             out = json.loads(out)
+
         return rc, out, err
 
     # TODO: Kubectl will be moved out of KCLI so this code duplication won't
@@ -368,8 +373,9 @@ class RESTMixin(object):
     def do_GET(self, scheme="http", path='/'):
         url = '{0}://{1}{2}'.format(scheme, self.public_ip, path)
         LOG.debug("Issuing GET to {0}".format(url))
-        res = urllib2.urlopen(url).read()
-        LOG.debug("Response:\n{0}".format(res))
+        req = urllib2.urlopen(url)
+        res = unicode(req.read(), 'utf-8')
+        LOG.debug(u"Response:\n{0}".format(res))
         return res
 
     def do_POST(self, path='/', headers=None, body=""):
@@ -496,6 +502,11 @@ class PAList(object):
         data = out['data']
         return [pa for pa in data]
 
+    def get_by_name(self, name):
+            return next(
+                (pa for pa in self.get_all() if pa['name'] == name),
+                None)
+
     def delete(self, id_):
         self.cluster.kdctl("predefined-apps delete --id {}".format(id_))
 
@@ -553,6 +564,20 @@ class PodList(object):
             pod.wait_for_ports()
         if healthcheck:
             pod.healthcheck()
+        return pod
+
+    def create_pa(self, template_name, plan_id=1, wait_ports=False,
+                  healthcheck=False, wait_for_status=None,
+                  owner='test_user'):
+        pod = KDPAPod.create(self.cluster, template_name, plan_id, owner)
+
+        if wait_for_status:
+            pod.wait_for_status(wait_for_status)
+        if wait_ports:
+            pod.wait_for_ports()
+        if healthcheck:
+            pod.healthcheck()
+
         return pod
 
     def restore(self, user, file_path=None, pod_dump=None,
@@ -861,8 +886,108 @@ class _NginxPod(KDPod):
         assert_in("Welcome to nginx!", self.do_GET())
 
 
-class KDPredefinedApp(KDPod):
-    pass
+class KDPAPod(KDPod):
+    def __init__(self, cluster, pod_name, plan_id, owner):
+        self.cluster = cluster
+        self.name = pod_name
+        self.plan_id = plan_id
+        self.owner = owner
+        self.open_all_ports = True
+
+    @classmethod
+    def create(cls, cluster, template_name, plan_id, owner, rnd_str=None):
+
+        template_id = cluster.pas.get_by_name(template_name)['id']
+        data = json.dumps({'PD_RAND': rnd_str or 'test_data_random'})
+        _, pod_description, _ = cluster.kcli2(
+            "predefined-apps create-pod {} {} '{}'".format(
+                template_id, plan_id, data),
+            out_as_dict=True)
+
+        data = pod_description['data']
+        pod_name = data['name']
+        this_pod_class = cls._get_pod_class(template_name)
+        pod = this_pod_class(cluster, pod_name, plan_id, owner)
+        pod.kube_type = kube_type_to_str(data['kube_type'])
+        pod.restart_policy = data['restartPolicy']
+        if 'public_ip' in data and data['public_ip']:
+            pod.public_ip = pod.get_spec()['public_ip']
+        else:
+            pod.public_ip = None
+        return pod
+
+    def _generic_healthcheck(self):
+        spec = self.get_spec()
+        assert_eq(spec['kube_type'], kube_type_to_int(self.kube_type))
+        assert_eq(spec['restartPolicy'], self.restart_policy)
+        assert_eq(spec['status'], "running")
+        return spec
+
+
+class _RedisPaPod(KDPAPod):
+    SRC = 'redis.yaml'
+
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        ports = ports or [6379]
+        self._wait_for_ports(ports, timeout)
+
+    def healthcheck(self):
+        spec = self._generic_healthcheck()
+        assert_eq(len(spec['containers']), 1)
+        assert_eq(spec['containers'][0]['image'], 'redis:3')
+        r = redis.StrictRedis(host=self.public_ip, port=6379, db=0)
+        r.set('foo', 'bar')
+        assert_eq(r.get('foo'), 'bar')
+
+
+class _DokuwikiPaPod(KDPAPod):
+    SRC = 'dokuwiki.yaml'
+
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        ports = ports or [80]
+        self._wait_for_ports(ports, timeout)
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        assert_in("Welcome to your new DokuWiki",
+                  self.do_GET(path='/doku.php?id=wiki:welcome'))
+
+
+class _DrupalPaPod(KDPAPod):
+    SRC = 'drupal.yaml'
+
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        ports = ports or [80]
+        self._wait_for_ports(ports, timeout)
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        # Change assertion string after fix AC-4487
+        page = self.do_GET(path='/core/install.php')
+        assert_in("Drupal", page)
+
+
+class _ElasticsearchPaPod(KDPAPod):
+    SRC = 'elasticsearch.yaml'
+
+    def wait_for_ports(self):
+        "Elastic PA isn't listen public ip"
+        pass
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+
+
+class _RedminePaPods(KDPAPod):
+    SRC = 'redmine.yaml'
+
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        ports = ports or [3000]
+        self._wait_for_ports(ports, timeout)
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        assert_in("Redmine", self.do_GET())
 
 
 class VagrantIsAlreadyUpException(Exception):

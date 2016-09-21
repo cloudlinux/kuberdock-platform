@@ -50,7 +50,9 @@ class TestNodeEventListeners(DBTestCase):
         _r.return_value = redis
         _ns.return_value = '["Ready", "Unknown"]'
         listeners.process_nodes_event(self._data, app)
-        self.assertTrue(_t.called, "On node state change delayed task is expected to be called")
+        self.assertTrue(
+            _t.called,
+            "On node state change delayed task is expected to be called")
 
     def test_event_has_non_first_node_down_status(self, _ns, _t, _r, _s):
         app = mock.MagicMock()
@@ -61,7 +63,10 @@ class TestNodeEventListeners(DBTestCase):
         _r.return_value = redis
         _ns.return_value = '["Ready", "Unknown"]'
         listeners.process_nodes_event(self._data, app)
-        self.assertFalse(_t.called, "On repeated node down events delayed task is not expected to be called")
+        self.assertFalse(
+            _t.called,
+            "On repeated node down events delayed task is not expected "
+            "to be called")
 
 
 @mock.patch('kubedock.listeners.PodCollection')
@@ -99,7 +104,8 @@ class TestPodEventK8s(DBTestCase):
 
     def test_pod_already_pined(self, podcollection_mock):
         data = deepcopy(self._data)
-        data['object']['spec']['nodeSelector']['kuberdock-node-hostname'] = self._node_name
+        data['object']['spec']['nodeSelector'][
+            'kuberdock-node-hostname'] = self._node_name
         app = mock.MagicMock()
         listeners.process_pods_event_k8s(data, app)
         self.assertFalse(podcollection_mock.update.called)
@@ -130,7 +136,8 @@ class TestPodEventK8s(DBTestCase):
             'hostname': self._node_name
         })
         get_node_mock.return_value = node
-        pod_mock.query.filter_by.return_value.first.return_value.id = self._pod_id
+        pod_mock.query.filter_by.return_value.first.return_value.id = \
+            self._pod_id
         listeners.process_pods_event_k8s(data, app)
         self.assertTrue(pod_mock.query.filter_by.called)
         self.assertTrue(pod_mock.query.filter_by.return_value.first.called)

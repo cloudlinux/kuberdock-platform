@@ -172,7 +172,8 @@ def check_nodes():
     except (SystemExit, Exception) as e:
         msg.append("Can't get nodes list because of {}".format(e.message))
     pendings = [get_kuberdock_logs_pod_name(node)
-                for node, state in states.items() if NODE_STATUSES.pending in state]
+                for node, state in states.items() if
+                NODE_STATUSES.pending in state]
     if states and len(pendings) != len(states):
         try:
             pod_states = get_internal_pods_state()

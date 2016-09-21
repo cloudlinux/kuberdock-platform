@@ -180,6 +180,19 @@ class WebUIPipeline(Pipeline):
         self.cluster.wait_for_service_pods()
 
 
+class PredefinedApps(Pipeline):
+    NAME = 'predefined_apps'
+    ROUTABLE_IP_COUNT = 2
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch'
+    }
+
+    def post_create_hook(self):
+        super(PredefinedApps, self).post_create_hook()
+        self.cluster.wait_for_service_pods()
+
+
 pipelines = defaultdict(list)
 
 

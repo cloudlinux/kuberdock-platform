@@ -6,11 +6,12 @@ from flask.views import MethodView
 from kubedock.api.utils import use_kwargs
 from kubedock.validation import extbool, V, boolean
 from ..decorators import maintenance_protected
-from ..exceptions import APIError, PredefinedAppExc
+from ..exceptions import APIError, PredefinedAppExc, PermissionDenied
 from ..kapi.apps import PredefinedApp
 from ..login import auth_required
 from ..rbac import check_permission
 from ..utils import KubeUtils, register_api
+from kubedock.predefined_apps.models import PredefinedApp as PredefinedAppModel
 
 predefined_apps = Blueprint('predefined_apps', __name__,
                             url_prefix='/predefined-apps')
@@ -81,19 +82,42 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
 
     @check_permission('get', 'predefined_apps')
     @use_kwargs({'with-plans': {'type': 'boolean', 'coerce': extbool},
-                 'file-only': {'type': 'boolean', 'coerce': extbool}},
+                 'with-entities': {'type': 'boolean', 'coerce': extbool},
+                 'file-only': {'type': 'boolean', 'coerce': extbool},
+                 'searchkey': {'type': 'string', 'required': False}
+                 },
+
                 allow_unknown=True)
     def get(self, app_id=None, version_id=None, **params):
+        get_unavailable = bool(check_permission('get_unavailable',
+                                           'predefined_apps'))
+
         if app_id is None:
+            query_filter = []
+            if not get_unavailable:
+                query_filter.append(
+                    PredefinedAppModel.search_available.is_(True))
+            searchkey = params.get('searchkey')
+            if searchkey:
+                query_filter.append(
+                    PredefinedAppModel.name.ilike('%{}%'.format(searchkey)))
             return jsonify({'status': 'OK',
-                            'data': PredefinedApp.all(as_dict=True)})
+                            'data': PredefinedApp.all(as_dict=True,
+                                                      query_filter=query_filter
+                                                      )})
 
         app = PredefinedApp.get(app_id, version_id)
+        if not get_unavailable and not app.search_available:
+            raise PermissionDenied
+
         if params.get('file-only'):
             return Response(app.template, content_type='application/x-yaml')
         response_dict = {
             'status': 'OK',
-            'data': app.to_dict(with_plans=params.get('with-plans'))
+            'data': app.to_dict(
+                with_plans=params.get('with-plans'),
+                with_entities=params.get('with-entities')
+            )
         }
         if version_id is None:
             response_dict['data']['templates'] = app.templates

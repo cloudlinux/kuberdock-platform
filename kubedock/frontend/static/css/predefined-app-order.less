@@ -280,3 +280,137 @@
         .plans .plan .plan-goodfor span{ font-size: 15px; }
     }
 }
+
+#steps {
+    .settings{
+        margin: 0 auto;
+        max-width: 757px;
+        #app-header,
+        #pre-description{
+            display: block;
+            color: #1d1d1d;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 15px;
+        }
+        #pre-description{
+            font-size: 12px;
+            text-align: left;
+            line-height: 16px;
+            margin-bottom: 18px;
+            font-weight: normal;
+            text-transform: none;
+        }
+        #custom-fields,
+        #recource-fields{
+            .box-shadow-materials();
+            margin-bottom: 23px;
+            background-color: #fff;
+            &:last-child{
+                select, input{
+                    margin-bottom: 0;
+                }
+            }
+            .title{
+                color: #1d1d1d;
+                font-size: 16px;
+                line-height: 18px;
+                background-color: #fff;
+                padding: 23px 40px 22px 45px;
+                border-bottom: 1px solid #dfdfdf;
+            }
+            .body{
+                background-color: #fff;
+                padding: 23px 45px 45px 45px;
+            }
+            label{
+                display: block;
+                color: #1d1d1d;
+                font-size: 13px;
+                font-weight: bold;
+                margin-bottom: 20px;
+            }
+            select, input{
+                outline: 0;
+                height: 49px;
+                padding: 0 20px;
+                min-width: 285px;
+                font-size: 13px;
+                margin-bottom: 30px;
+                border: 1px solid #e5e5e5;
+            }
+            input{
+                &:focus{
+                    .transition(color 500ms ease);
+                    border-color: #188eed;
+                }
+            }
+            select{
+                min-width: 325px;
+                background-color: #ffffff;
+            }
+        }
+        #custom-fields{
+            .custom-field-item{
+                max-width: 50%;
+            }
+        }
+        #recource-fields{
+            .title{
+                position: relative;
+                padding: 23px 40px 22px 83px;
+                &:before{
+                    top: 0;
+                    bottom: 0;
+                    content: '';
+                    left: 45px;
+                    width: 25px;
+                    margin: auto;
+                    height: 24px;
+                    position: absolute;
+                    background: url('../img/gear.png') 0 0 no-repeat;
+                }
+            }
+        }
+        .plan-price,
+        .plan-period{
+            float: right;
+            display: block;
+            color: #121010;
+            font-size: 26px;
+            line-height: 37px;
+            margin-bottom: 23px;
+        }
+        .plan-period{
+            margin-right: 45px;
+        }
+        #resource-list {
+            position: relative;
+            margin-bottom: 23px;
+            background-color: #fcfcfc;
+            border: 1px solid #ebebeb;
+            padding: 20px 17px 20px 114px;
+            &:before{
+                top: 0;
+                bottom: 0;
+                left: 18px;
+                width: 80px;
+                content: '';
+                height: 66px;
+                margin: auto;
+                position: absolute;
+                background: url('../img/servers.png') center no-repeat;
+            }
+            > p, > div{
+                color: #323232;
+                font-size: 13px;
+                margin-bottom: 0;
+                line-height: 19px;
+            }
+        }
+        .buttons{
+            text-align: right;
+        }
+    }
+}

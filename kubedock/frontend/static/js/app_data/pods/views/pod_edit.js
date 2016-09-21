@@ -3,8 +3,6 @@ import Model from 'app_data/model';
 import * as utils from 'app_data/utils';
 
 import layoutWizardTpl from 'app_data/pods/templates/layout_wizard.tpl';
-import wizardImageCollectionItemTpl from 'app_data/pods/templates/wizard_image_collection_item.tpl';
-import wizardGetImageTpl from 'app_data/pods/templates/wizard_get_image.tpl';
 
 import wizardSetContainerPendingBasicSettingsTpl from
     'app_data/pods/templates/wizard_set_container_pending_basic_settings.tpl';
@@ -24,9 +22,17 @@ import wizardContainerCollectionItemTpl from
 import wizardSetContainerCompleteTpl from
     'app_data/pods/templates/wizard_set_container_complete.tpl';
 
-import 'bootstrap-select';
+// search list
+import searchYamlItemTpl from 'app_data/pods/templates/search_lists/yaml/item.tpl';
+import searchYamlListTpl from 'app_data/pods/templates/search_lists/yaml/list.tpl';
+import searchImageItemTpl from 'app_data/pods/templates/search_lists/image/item.tpl';
+import searchImageListTpl from 'app_data/pods/templates/search_lists/image/list.tpl';
+import searchLayoutTpl from 'app_data/pods/templates/search_lists/layout.tpl';
+
 import 'bootstrap-editable';
 import 'tooltip';
+import 'bootstrap-select';
+import BBCodeParser from 'bbcode-parser';
 
 export const PodWizardLayout = Backbone.Marionette.LayoutView.extend({
     template: layoutWizardTpl,
@@ -49,26 +55,75 @@ export const PodWizardLayout = Backbone.Marionette.LayoutView.extend({
 });
 
 export const ImageListItemView = Backbone.Marionette.ItemView.extend({
-    template: wizardImageCollectionItemTpl,
+    template: searchImageItemTpl,
     tagName: 'div',
-    className: 'item',
+    className: 'item clearfix',
     triggers: { 'click .add-item': 'image:selected' }
 });
 
-export const GetImageView = Backbone.Marionette.CompositeView.extend({
-    template: wizardGetImageTpl,
-    childView: ImageListItemView,
-    childViewContainer: '#data-collection',
+export const AppListItemView = Backbone.Marionette.ItemView.extend({
+    template: searchYamlItemTpl,
     tagName: 'div',
+    className: 'item clearfix',
+
+    bbParser: new BBCodeParser(BBCodeParser.defaultTags()),
+
+    triggers: {
+        'click .add-item': 'app:selected'
+    },
+    templateHelpers: function () {
+        var that = this;
+        return {
+            'description': function () {
+                if (this.filled_template && this.filled_template.kuberdock &&
+                    this.filled_template.kuberdock.preDescription) {
+                    var description = this.filled_template.kuberdock.preDescription;
+                    return that.bbParser.parseString(description);
+                }
+            }
+        };
+    }
+});
+
+export const AppSearchView = Backbone.Marionette.CompositeView.extend({
+    template: searchYamlListTpl,
+    childViewContainer: '#yamls-list',
+    childView: AppListItemView,
+    collectionEvents: { 'update reset' : 'render' },
+    templateHelpers: function(){
+        return {
+            colLenght : this.collection.length
+        };
+    }
+});
+
+export const ImageSearchView = Backbone.Marionette.CompositeView.extend({
+    template: searchImageListTpl,
+    childViewContainer: '#images-list',
+    childView: ImageListItemView,
+    collectionEvents: { 'update reset' : 'render' },
+    templateHelpers: function(){
+        return {
+            colLenght : this.collection.length
+        };
+    }
+});
+
+
+export const GetImageView = Backbone.Marionette.LayoutView.extend({
+    template: searchLayoutTpl,
 
     initialize(options){ this.pod = options.pod; },
 
     templateHelpers(){
         return {
-            showPaginator: !!this.collection.length,
+            showPaginator: !!this.options.imageSearchListView.collection.length,
         };
     },
-
+    regions: {
+        appList: "#predefined-app-list",
+        imageList: "#data-collection",
+    },
     ui: {
         username          : '#username',
         cancel            : '.podsList',
@@ -99,7 +154,16 @@ export const GetImageView = Backbone.Marionette.CompositeView.extend({
         'change @ui.imageSource'      : 'imageSourceOnChange',
     },
 
-    childEvents: { 'image:selected' : 'childImageSelected' },
+    childEvents: {
+        'image:selected' : 'childImageSelected',
+        'app:selected' : 'childAppSelected',
+    },
+
+    onDomRefresh: function(){
+        this.appList.show(this.options.appsListView);
+        this.imageList.show(this.options.imageSearchListView);
+    },
+
     onRender(){ this.ui.selectpicker.selectpicker(); },
 
     selectImageByEnterKey(evt){
@@ -207,6 +271,10 @@ export const GetImageView = Backbone.Marionette.CompositeView.extend({
     // image was selected from search results
     childImageSelected(data){
         this.trigger('image:selected', data.model.get('name'));
+    },
+
+    childAppSelected: function(data){
+        this.trigger('app:selected', data.model.get('id'));
     },
 
     loadNextPage(){

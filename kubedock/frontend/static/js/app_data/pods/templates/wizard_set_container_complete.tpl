@@ -12,7 +12,7 @@
             <div class="col-md-6 no-padding left">
                 <div class="row policy">
                     <div class="col-xs-12">
-                        <label>Restart policy</label><!-- <span class="help" data-toggle="tooltip" data-placement="right" title="Defines if a container in the pod should be restarted, after it has been executed"></span> -->
+                        <label>Restart policy</label>
                     </div>
                     <div class="col-xs-<%= containers.length > 1 ? '11' : '12 no-padding-right' %>">
                         <select class="restart-policy selectpicker"<%= containers.length > 1 ? ' disabled' : '' %>>
@@ -34,7 +34,7 @@
                         <select class="kube_type selectpicker" id="extra-options" disabled>
                     <% } else { %>
                     <div class="col-xs-12 no-padding-right">
-                        <label>Kube Type</label><!-- <span class="help" data-toggle="tooltip" data-placement="right" title="A particular set of resources predefined for each containe"></span> -->
+                        <label>Kube Type</label>
                         <select class="kube_type selectpicker" id="extra-options">
                     <% } %>
                             <% kubeTypes.each(function(kubeType){ %>

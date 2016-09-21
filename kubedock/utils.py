@@ -1147,3 +1147,54 @@ def find_remote_host_tunl_addr(ip):
         return None, None
 
     return remote_host_tunl_addr, None
+
+
+class InvalidAPIVersion(APIError):
+    def __init__(self, apiVersion=None,
+                 acceptableVersions=API_VERSIONS.acceptable):
+        if apiVersion is None:
+            apiVersion = g.get('api_version')
+        super(InvalidAPIVersion, self).__init__(details={
+            'apiVersion': apiVersion,
+            'acceptableVersions': acceptableVersions,
+        })
+
+    @property
+    def message(self):
+        apiVersion = self.details.get('apiVersion')
+        acceptableVersions = ', '.join(self.details.get('acceptableVersions'))
+        return (
+            'Invalid api version: {apiVersion}. Acceptable versions are: '
+            '{acceptableVersions}.'.format(
+                apiVersion=apiVersion, acceptableVersions=acceptableVersions))
+
+
+class check_api_version(object):
+    """Check that api version in request is one of `acceptable_versions`.
+
+    Can be used as decorator, callback (use #check method), or coerced to
+    boolean.
+    """
+    def __init__(self, acceptable_versions):
+        self.acceptable_versions = acceptable_versions
+
+    def __call__(self, func):
+        def wrapper(*args, **kwargs):
+            with self:
+                return func(*args, **kwargs)
+        return wraps(func)(wrapper)
+
+    def __enter__(self):
+        self.check()
+        return self
+
+    def __exit__(self, *args, **kwargs):
+        pass
+
+    def __nonzero__(self):
+        return g.api_version in self.acceptable_versions
+
+    def check(self):
+        if not self:
+            raise InvalidAPIVersion(
+                acceptableVersions=self.acceptable_versions)

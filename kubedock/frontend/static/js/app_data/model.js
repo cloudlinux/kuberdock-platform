@@ -1275,7 +1275,41 @@ define([
                     persistentDisks: [],
                 }],
                 info: {},
+                current: false,
             };
+        },
+        startApp: function(predefinedApp, planId, billingType, settings){
+            if (billingType.toLowerCase() !== 'no billing') {
+                this.billingOrderApp(predefinedApp, planId, settings);
+            } else {
+                this.yamlapiCreate(predefinedApp, planId, settings);
+            }
+        },
+
+        billingOrderApp: function(predefinedApp, planId, settings){
+            utils.preloader.show();
+            return $.ajax({
+                authWrap: true,
+                method: 'POST',
+                url: `/api/billing/orderapp/${predefinedApp.id}/${planId}`,
+                data: settings,
+            }).done(function(response){
+                window.location = response.data.redirect;
+            }).always(utils.preloader.hide).fail(utils.notifyWindow);
+
+        },
+
+        yamlapiCreate: function(predefinedApp, planId, settings){
+            utils.preloader.show();
+            return $.ajax({
+                authWrap: true,
+                method: 'POST',
+                url: '/api/yamlapi/create/' + predefinedApp.id + '/' + planId,
+                data: settings,
+            }).done(function(response){
+                window.location = '#pods/' + response.data.id;
+            }).always(utils.preloader.hide).fail(utils.notifyWindow);
+
         },
     });
 
@@ -1319,6 +1353,23 @@ define([
     });
 
     App.getAppCollection = App.resourcePromiser('appCollection', data.AppCollection);
+
+    data.AppSearchItem = Backbone.Model.extend({
+        idAttribute: 'name',
+        parse: function(response){
+            var data = unwrapper(response);
+            return data;
+        },
+        defaults: {
+            description: ''
+        }
+    });
+
+    data.AppSearchCollection = Backbone.Collection.extend({
+        url: '/api/v2/predefined-apps',
+        model: data.AppSearchItem,
+        parse: unwrapper,
+    });
 
     data.CurrentUserModel = Backbone.Model.extend({
         url(){ return '/api/users/self'; },
@@ -1699,6 +1750,15 @@ define([
         parse: function(data){
             return data.status === 'OK' ? _.omit(data, 'status') : {};
         }
+    });
+
+    data.TemplateFieldModel = Backbone.Model.extend({
+        parse: unwrapper,
+    });
+
+    data.TemplateFieldCollection = Backbone.Collection.extend({
+        model: data.TemplateFieldModel,
+        parse: unwrapper,
     });
 
     return data;

@@ -637,49 +637,64 @@
             }
             #search-results-scroll{
                 border-bottom: 1px solid #e5e5e5;
-                #data-collection{
-                    .item {
-                        .clearfix();
-                        .clearfix;
-                        > div{
-                            margin-bottom: 0;
-                        }
-                        &:last-child{
-                            margin-bottom: 0;
-                        }
-                        .item-header-title {
-                            font-size: 15px;
-                            font-weight: bold;
-                            margin-bottom: 5px;
-                        }
-                        .item-body-info{
-                            font-size: 13px;
-                            font-weight: normal;
-                            word-break: break-all;
-                        }
-                        .more{
-                            padding-top: 10px;
-                            a{
-                                &:hover{
-                                    text-decoration: none;
-                                }
+            }
+            #search-results-predefined-app-scroll{
+                #predefined-app-list{
+                    margin-bottom: 0;
+                }
+            }
+
+            #search-results-scroll,
+            #search-results-predefined-app-scroll{
+                .results{
+                    font-size: 13px;
+                    margin-bottom: 30px;
+                }
+                .item {
+                    > div{
+                        margin-bottom: 0;
+                    }
+                    &:last-child{
+                        margin-bottom: 0;
+                    }
+                    .item-header-title {
+                        font-size: 15px;
+                        font-weight: bold;
+                        margin-bottom: 5px;
+                    }
+                    .item-body-info{
+                        font-size: 13px;
+                        font-weight: normal;
+                        word-break: break-all;
+                    }
+                    .more{
+                        padding-top: 10px;
+                        a{
+                            &:hover{
+                                text-decoration: none;
                             }
                         }
-                        .add-item{
-                            .border-radius(2px);
-                            padding: 0;
-                            color: #fff;
-                            width: 100%;
-                            float: right;
-                            height: 37px;
-                            font-size: 15px;
-                            margin-top: 13px;
-                            border: 1px solid;
-                            text-align: center;
-                            border-color: #2490EA;
-                            background-color: #2490EA;
-                            font-family: @regular;
-                        }
+                    }
+                    img{
+                        margin: auto;
+                        padding: 13px;
+                        position: relative;
+                        background-color: #f8f8f8;
+                    }
+                    .add-item{
+                        .border-radius(2px);
+                        padding: 0;
+                        color: #fff;
+                        width: 100%;
+                        float: right;
+                        height: 37px;
+                        font-size: 15px;
+                        margin-top: 13px;
+                        border: 1px solid;
+                        text-align: center;
+                        border-color: #2490EA;
+                        background-color: #2490EA;
+                        font-family: @regular;
                     }
                 }
                 .search-control{

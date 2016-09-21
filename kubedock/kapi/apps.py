@@ -4,12 +4,13 @@ import pytz
 import re
 import yaml
 import random
-from collections import Mapping, Sequence
+from collections import Mapping, Sequence, namedtuple
 from copy import deepcopy
 from datetime import datetime
 from numbers import Number
 from string import digits, lowercase
 from types import NoneType
+
 from kubedock.billing.models import Kube, Package
 from kubedock.core import db
 from kubedock.domains.models import PodDomain
@@ -23,8 +24,9 @@ from kubedock.kd_celery import celery
 from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod, IPPool, PersistentDisk
 from kubedock.settings import KUBE_API_VERSION
-from kubedock.utils import send_event_to_user, atomic
-from kubedock.validation import V, predefined_app_schema
+from kubedock.utils import atomic
+from kubedock.utils import send_event_to_user, API_VERSIONS, check_api_version
+from kubedock.validation import V, predefined_app_schema, SystemSettings
 from kubedock.validation.exceptions import ValidationError
 from kubedock.validation.validators import check_new_pod_data
 from kubedock.rbac import check_permission
@@ -93,11 +95,15 @@ def update_plan_async(*args, **kwargs):
 class PredefinedApp(object):
     """Object that handles all predefined app template related routines"""
 
+    PLAN_FIELDS_ORDER = {'kubeType': 0, 'kube': 1, 'pdSize': 2}
+
     FIELDS = ('id', 'name', 'template', 'origin', 'qualifier', 'created',
               'modified', 'plans', 'activeVersionID', 'icon',
               'search_available')
 
     FIELD_VERSION = ('active', 'switchingPackagesAllowed')
+    FIELDS_FOR_LIST_v2 = ('id', 'name', 'filled_template', 'origin',
+                          'qualifier', 'created', 'modified', 'plans', 'icon')
 
     def __init__(self, **kw):
         required_attrs = set(['name', 'template'])
@@ -116,29 +122,56 @@ class PredefinedApp(object):
         self._filled_templates = {}
 
     @classmethod
-    def all(cls, as_dict=False):
+    def all(cls, as_dict=False, query_filter=None):
         """
         Class method which returns all predefined applications
         :param as_dict bool -> if True returns PA objects as dicts
+        :param query_filter: sqlalchemy filter
         :return: list of PA objects or dicts
         """
         query = PredefinedAppModel.query.order_by(PredefinedAppModel.id) \
             .filter(PredefinedAppModel.is_deleted.isnot(True))
+        if query_filter is not None:
+            if not isinstance(query_filter, (list, tuple)):
+                query_filter = [query_filter]
+            query = query.filter(*query_filter)
         if as_dict:
+            if check_api_version([API_VERSIONS.v2]):
+                return [cls(**dbapp.to_dict()).to_dict_filled() for dbapp in
+                        query.all()]
             return [app.to_dict(exclude=('templates',)) for app in query.all()]
         apps = []
         for dbapp in query.all():
             apps.append(cls(**dbapp.to_dict(exclude=('templates',))))
         return apps
 
-    def to_dict(self, with_plans=False):
+    def to_dict(self, with_plans=False, with_entities=False):
         """Instance method that returns PA object as dict"""
         data = dict((k, v) for k, v in vars(self).items()
                     if k in self.FIELDS + self.FIELD_VERSION)
 
         if with_plans:
             data['plans'] = self.get_plans()
+        if with_entities:
+            for (plan_id, plan) in enumerate(data['plans']):
+                plan['plan_entities'] = self.get_plan_entities(plan_id)
+                sort_key = (lambda field:
+                            self.PLAN_FIELDS_ORDER.get(
+                                plan['plan_entities'].get(field.name)))
+                ent = self.get_used_plan_entities(plan_id)
+                plan['entities'] = [x.to_dict() for x in sorted(ent.values(),
+                                                                key=sort_key)]
+                plan['has_simple'] = bool(
+                    set(ent['name'] for ent in plan['entities']
+                        if not ent['hidden']) - set(plan['plan_entities']))
         return data
+
+    def to_dict_filled(self):
+        """
+        Instance method that returns PA object as dict for API v2 list of
+        objects"""
+        return {k: getattr(self, k) for k in self.FIELDS_FOR_LIST_v2 if
+                hasattr(self, k)}
 
     @classmethod
     @atomic()
@@ -813,6 +846,10 @@ class PredefinedApp(object):
         self._extended_plans = self._expand_plans(deepcopy(filled))
         return self._extended_plans
 
+    @property
+    def filled_template(self):
+        return self._get_filled_template()
+
     def _get_filled_template(self):
         """
         Wrapper method that returns template filled with defaults
@@ -1146,6 +1183,22 @@ class PredefinedApp(object):
                                   plan_pod.get('persistentDisks', []),
                                   'volume', plan_pod['name'])
 
+    def get_plan_entities(self, plan_id):
+        plans = self.get_loaded_plans()
+        plan = plans[plan_id]
+        entities = {}
+        cls = PredefinedApp.TemplateField
+        for pod in plan.get('pods', []):
+            if isinstance(pod.get('kubeType'), cls):
+                entities[pod['kubeType'].name] = 'kubeType'
+            for container in pod.get('containers', []):
+                if isinstance(container.get('kubes'), cls):
+                    entities[container['kubes'].name] = 'kube'
+            for pd in pod.get('persistentDisks', []):
+                if isinstance(pd.get('pdSize'), cls):
+                    entities[pd['pdSize'].name] = 'pdSize'
+        return entities
+
     class TemplateField(object):
         """PA entity representation"""
         uid_length = 32
@@ -1203,6 +1256,14 @@ class PredefinedApp(object):
                     return False
                 return True
             return value
+
+        def to_dict(self):
+            return {
+                'name': self.name,
+                'label': self.label,
+                'default_value': self.default,
+                'hidden': self.hidden
+            }
 
 
 class AppInstance(object):
@@ -1443,3 +1504,15 @@ def process_pod(pod, rc, service, template_id=None):
     if 'volumes' in spec_body:
         new_pod['volumes'] = spec_body['volumes'] or []
     return new_pod
+
+
+def prepare_system_settings(data):
+    """
+    Process system settings and puts'em into data
+    :param data: dict -> data to be fed to template
+    """
+    keys = ('billing_type', 'persitent_disk_max_size')
+    n = namedtuple('N', 'billing maxsize')._make(keys)
+    data.update({k: SystemSettings.get_by_name(k) for k in keys})
+    if not data[n.maxsize]:
+        data[n.maxsize] = 10

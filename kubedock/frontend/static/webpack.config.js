@@ -49,6 +49,7 @@ var webpackConfig = {
             'js-yaml'             : 'js-yaml/dist/js-yaml.min',
             'sinon'               : 'sinon/pkg/sinon',
             'babel-polyfill'      : 'babel-polyfill/dist/polyfill.min.js',
+            'bbcode-parser'       : 'bbcode-parser/bbCodeParser',
         }
     },
     module: {

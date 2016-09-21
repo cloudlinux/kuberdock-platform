@@ -35,6 +35,7 @@ class PredefinedAppsTestCase(APITestCase):
     def _test_get(self, auth):
         self.admin_open(method='POST',
                         json={'name': self.name, 'template': self.template,
+                              'search_available': True,
                               'icon': 'data:image/gif;base64,'
                                       'R0lGODlhAQABAIAAAAUEBAAAACw'
                                       'AAAAAAQABAAACAkQBADs='
@@ -146,6 +147,7 @@ class PredefinedAppsTestCase(APITestCase):
         predefined_app = self.admin_open(
             method='POST', json={'name': self.name,
                                  'template': self.template,
+                                 'search_available': True,
                                  'icon': pa_image
                                  }).json['data']
 
@@ -175,7 +177,7 @@ class PredefinedAppsTestCase(APITestCase):
 
         # get by id
         url = self.item_url(predefined_app['id'])
-        response = self.open(url, auth=self.userauth)
+        response = self.open(url, auth=self.adminauth)
         self.assert200(response)
         updated_predefined_app = response.json['data']
         self.assertEqual(predefined_app['id'], updated_predefined_app['id'])
@@ -202,7 +204,7 @@ class PredefinedAppsTestCase(APITestCase):
 
         # get by id
         url = self.item_url(predefined_app['id'])
-        response = self.open(url, auth=self.userauth)
+        response = self.open(url, auth=self.adminauth)
         self.assert200(response)
         updated_predefined_app = response.json['data']
         self.assertEqual(predefined_app['id'], updated_predefined_app['id'])
@@ -228,7 +230,7 @@ class PredefinedAppsTestCase(APITestCase):
 
         # get by id
         url = self.item_url(predefined_app['id'])
-        response = self.open(url, auth=self.userauth)
+        response = self.open(url, auth=self.adminauth)
         self.assert200(response)
         updated_predefined_app = response.json['data']
         self.assertEqual(predefined_app['id'], updated_predefined_app['id'])

@@ -41,6 +41,9 @@
                 <input type="password" id="password" placeholder="Enter password">
             </div>
         </div>
+        <div id="search-results-predefined-app-scroll" class="clearfix">
+            <div id="predefined-app-list" class="clearfix"></div>
+        </div>
         <div id="search-results-scroll" class="clearfix">
             <div id="data-collection" class="clearfix"></div>
             <div class="search-control">

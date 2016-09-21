@@ -4,12 +4,21 @@ define([
     'app_data/pa/templates/plans_layout.tpl',
     'app_data/pa/templates/plans/list.tpl',
     'app_data/pa/templates/plans/item.tpl',
+
+    'app_data/pa/templates/settings_layout.tpl',
+    'app_data/pa/templates/settings/resource_fields.tpl',
+    'app_data/pa/templates/settings/resource_item.tpl',
 ], function(
     App,
     headerForAnonTpl,
     plansLayoutTpl,
     plansListTpl,
-    plansItemTpl
+    plansItemTpl,
+
+    settingsLayoutTpl,
+    settingsResourceFieldsTpl,
+    settingsResourceItemTpl
+
 ){
     'use strict';
     var views = {};
@@ -25,7 +34,15 @@ define([
             breadcrumbs: '.pa-breadcrumbs',
             plans: '.pa-plans',
         },
-        className: 'plans-change'
+        className: 'plans-change',
+
+        childEvents: {
+            'choosePackage' : 'choosePackage',
+        },
+
+        choosePackage: function(plan){
+            this.trigger('choosePackage', plan.model.collection.indexOf(plan.model), plan.model);
+        },
     });
 
     views.Plan = Marionette.ItemView.extend({
@@ -42,10 +59,16 @@ define([
         },
         events: {
             'click @ui.showMore': 'showMore',
+
+        },
+        triggers: {
             'click @ui.chooseButton': 'choosePackage',
         },
 
-        initialize: function(options){ this.pod = options.pod; },
+        initialize: function(options){
+            this.model.set('current', false);
+            this.pod = options.pod;
+        },
         showMore: function(e){
             var target = $(e.target);
             target.toggleClass('rotate');
@@ -66,6 +89,60 @@ define([
         initialize: function(options){ this.pod = options.pod; },
         childViewOptions: function(){ return {pod: this.pod}; },
     });
+
+    views.AppSettingsLayout = Marionette.LayoutView.extend({
+        template: settingsLayoutTpl,
+        regions: {
+            resource: '#recource-fields',
+        },
+
+        ui: {
+            submitButton: '#submit-button',
+            backButton: '#back-button',
+        },
+        events: {
+            'click @ui.submitButton': 'submitApp',
+            'click @ui.backButton': 'returnToPackage',
+        },
+
+        submitApp: function(){
+            var settings = this.resource.currentView.getValues();
+            this.trigger('submitApp', settings);
+        },
+        returnToPackage: function() {
+            this.trigger('choosePackage');
+        }
+
+
+    });
+
+    views.SettingsResourceFieldsItem = Marionette.ItemView.extend({
+        template: settingsResourceItemTpl,
+        events: {
+            'change input': 'updateValue'
+        },
+        updateValue: function(){
+            this.model.set('value', this.$el.find('input').val());
+        }
+
+    });
+
+    views.SettingsResourceList = Marionette.CompositeView.extend({
+        template: settingsResourceFieldsTpl,
+        childView: views.SettingsResourceFieldsItem,
+        childViewContainer: '.body',
+
+        getValues: function(){
+            var data = {};
+            this.collection.models.forEach(function (item) {
+                data[item.get('name')] = item.get('value') != null
+                    ? item.get('value') : item.get('default_value');
+            });
+            return data;
+        }
+
+    });
+
 
     return views;
 });

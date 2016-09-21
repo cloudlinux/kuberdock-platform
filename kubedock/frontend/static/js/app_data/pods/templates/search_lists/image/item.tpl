@@ -1,5 +1,5 @@
 <div class="col-xs-12 no-padding clearfix">
-    <div class="col-md-2 col-sm-2 hidden-xs container-image"></div>
+    <div class="col-md-2 col-sm-2 hidden-xs container-image empty"></div>
     <div class="col-md-8 col-sm-8 col-xs-8">
         <div class="item-header-title"><%= name || 'nameless' %></div>
         <div class="item-body-info">

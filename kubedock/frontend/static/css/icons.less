@@ -378,10 +378,12 @@ table{
     }
 }
 .container-image{
-    .mdi('wallpaper',100px, #E5E5E5, #E5E5E5);
-    text-align: center;
-    &:hover{
-        cursor: default;
+    &.empty {
+        .mdi('wallpaper',100px, #E5E5E5, #E5E5E5);
+        text-align: center;
+        &:hover{
+            cursor: default;
+        }
     }
 }
 #data-collection .item .more a{

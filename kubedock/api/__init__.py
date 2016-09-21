@@ -4,31 +4,12 @@ from fabric.api import env, run, put, output
 from flask import jsonify, request, g
 
 from kubedock.core import current_app
-from kubedock.utils import KubeUtils, send_event_to_role, API_VERSIONS
+from kubedock.utils import KubeUtils, send_event_to_role, API_VERSIONS, \
+    InvalidAPIVersion
 from kubedock import factory
 from kubedock import sessions
 from kubedock.exceptions import APIError, InternalAPIError, NotFound
 from kubedock.settings import SSH_KEY_FILENAME, SESSION_LIFETIME
-
-
-class InvalidAPIVersion(APIError):
-    def __init__(self, apiVersion=None,
-                 acceptableVersions=API_VERSIONS.acceptable):
-        if apiVersion is None:
-            apiVersion = g.get('api_version')
-        super(InvalidAPIVersion, self).__init__(details={
-            'apiVersion': apiVersion,
-            'acceptableVersions': acceptableVersions,
-        })
-
-    @property
-    def message(self):
-        apiVersion = self.details.get('apiVersion')
-        acceptableVersions = ', '.join(self.details.get('acceptableVersions'))
-        return (
-            'Invalid api version: {apiVersion}. Acceptable versions are: '
-            '{acceptableVersions}.'.format(
-                apiVersion=apiVersion, acceptableVersions=acceptableVersions))
 
 
 def create_app(settings_override=None, fake_sessions=False):

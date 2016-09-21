@@ -59,6 +59,13 @@ define([
 
                                 plansLayout.plans.show(plansListView);
                             });
+                            that.listenTo(plansLayout, 'choosePackage', function(planId){
+                                pod.cmdSwitchPackage(planId)
+                                    .then(() => {
+                                        App.navigate('pods/' + pod.id, {trigger: true});
+                                    });
+                            });
+
                             App.rootLayout.contents.show(plansLayout);
                         });
                 });
@@ -644,30 +651,45 @@ define([
         podWizardStepImage: function(options){
             if (!this.checkPermissions(['User', 'TrialUser']))
                 return;
-            this.podWizardBase(options).done(function(options, Views){
+            this.podWizardBase(options).done((options, Views) => {
                 var pod = options.podModel,
                     state = pod.wizardState;
                 state.registryURL = state.registryURL || 'registry.hub.docker.com';
                 state.imageCollection = state.imageCollection ||
                     new Model.ImageSearchPageableCollection();
+                state.appCollection = state.appCollection ||
+                    new Model.AppSearchCollection();
                 state.selectImageViewModel = state.selectImageViewModel ||
                     new Backbone.Model({query: ''});
 
-                var view = new Views.GetImageView({
-                    pod: pod, model: state.selectImageViewModel,
-                    collection: new Model.ImageSearchCollection(
-                        state.imageCollection.fullCollection.models),
+                var appListView = new Views.AppSearchView({
+                    collection: new Model.AppSearchCollection(
+                        state.appCollection.models
+                    )
                 });
 
-                this.listenTo(view, 'image:searchsubmit', function(){
-                    view.collection.reset();
+                var imageSearchListView = new Views.ImageSearchView({
+                    collection: new Model.ImageSearchCollection(
+                            state.imageCollection.fullCollection.models),
+                });
+
+                var view = new Views.GetImageView({
+                    pod: pod,
+                    model: state.selectImageViewModel,
+                    appsListView: appListView,
+                    imageSearchListView: imageSearchListView
+                });
+
+                this.listenTo(view, 'image:searchsubmit', () => {
+                    imageSearchListView.collection.reset();
+                    appListView.collection.reset();
                     state.imageCollection.fullCollection.reset();
                     state.imageCollection.getFirstPage({
                         wait: true,
                         data: {searchkey: state.selectImageViewModel.get('query'),
                                url: state.registryURL},
                         success: function(collection, response, opts){
-                            view.collection.reset(collection.models);
+                            imageSearchListView.collection.reset(collection.models);
                             if (collection.length === 0) {
                                 utils.notifyWindow(
                                     'We couldn\'t find any results for this search',
@@ -682,14 +704,28 @@ define([
                             view.loadMoreButtonWait();
                         },
                     });
+
+                    state.appCollection.reset();
+
+                    state.appCollection.fetch({
+                        wait: true,
+                        data: {searchkey: state.selectImageViewModel.get('query')},
+                        success: function(collection, response, opts){
+                            appListView.collection.reset(collection.models);
+                        },
+                        error: function(collection, response){
+                            utils.notifyWindow(response);
+                            view.loadMoreButtonWait();
+                        },
+                    });
                 });
-                this.listenTo(view, 'image:getnextpage', function(){
+                this.listenTo(view, 'image:getnextpage', () => {
                     state.imageCollection.getNextPage({
                         wait: true,
                         data: {searchkey: state.selectImageViewModel.get('query'),
                                url: state.registryURL},
                         success: function(collection, response, opts){
-                            view.collection.add(collection.models);
+                            state.imageCollection.add(collection.models);
                             if (!collection.length)
                                 view.loadMoreButtonHide();
                             else
@@ -701,7 +737,7 @@ define([
                         },
                     });
                 });
-                this.listenTo(view, 'image:selected', function(image, auth){
+                this.listenTo(view, 'image:selected', (image, auth) => {
                     utils.preloader.show();
                     new Model.Image().fetch({
                         data: JSON.stringify({image: image, auth: auth}),
@@ -715,10 +751,101 @@ define([
                     }).always(utils.preloader.hide).fail(utils.notifyWindow);
                 });
 
+                this.listenTo(view, 'app:selected', (templateID) => {
+                    var predefinedApp = new Model.AppModel({id: templateID});
+                    predefinedApp.fetch({data: {'with-plans': true,
+                        'with-entities': true}})
+                        .fail(utils.notifyWindow)
+                        .done((response) => {
+                            options.predefinedApp = predefinedApp;
+                            this.podWizardStepPackage(options);
+                        });
+                });
+
                 this.listenTo(view, 'step:complete', this.podWizardStepFinal);
                 options.layout.steps.show(view);
             });
         },
+
+        podWizardStepPackage: function(options){
+            if (!this.checkPermissions(['User', 'TrialUser', 'LimitedUser']))
+                return;
+            this.podWizardBase(options).done((options) => {
+                require(['app_data/pa/views'], (Views) => {
+                    var pod = options.podModel,
+                        predefinedApp = options.predefinedApp;
+
+                    var plans = predefinedApp.get('plans'),
+                        plansLayout = new Views.PlansLayout({
+                            pod: pod, model: predefinedApp,
+                        }),
+                        plansListView = new Views.PlansList({
+                            pod: pod, model: predefinedApp,
+                            collection: plans,
+                        });
+
+                    plansLayout.on('show', function () {
+                        plansLayout.plans.show(plansListView);
+                    });
+                    this.listenTo(plansLayout, 'choosePackage', (planId, plan) => {
+                        options.plan = plan;
+                        options.planId = planId;
+                        App.controller.podWizardStepSettings(options);
+                    });
+
+                    options.layout.steps.show(plansLayout);
+
+                });
+            });
+        },
+
+        podWizardStepSettings: function(options){
+            if (!this.checkPermissions(['User', 'TrialUser', 'LimitedUser']))
+                return;
+            $.when(
+                this.podWizardBase(options),
+                App.getSystemSettingsCollection()
+            ).done((base, appSettings) => {
+                require(['app_data/pa/views'], (Views) => {
+
+                    var pod = options.podModel,
+                        predefinedApp = options.predefinedApp,
+                        settingsModel = predefinedApp.clone(),
+                        billingType = appSettings.byName('billing_type')
+                            .get('value');
+                    settingsModel.set('has_simple',
+                        options.plan.get('has_simple'));
+                    settingsModel.set('plan', options.plan);
+                    settingsModel.set('billing_type', billingType);
+
+                    var settingsLayout = new Views.AppSettingsLayout({
+                            pod: pod, model: settingsModel,
+                        }),
+                        templateFieldCollection = new Model.TemplateFieldCollection(
+                            options.plan.get('entities')),
+                        settingsResourceFieldsList = new Views.SettingsResourceList({
+                            pod: pod, collection: templateFieldCollection
+                        });
+
+                    settingsLayout.on('show', function () {
+                        settingsLayout.resource.show(settingsResourceFieldsList);
+                    });
+                    this.listenTo(settingsLayout, 'choosePackage', (planId, plan) => {
+                        this.podWizardStepPackage(options);
+                    });
+                    this.listenTo(settingsLayout, 'submitApp', (settings) => {
+                        options.plan.startApp(options.predefinedApp, options.planId,
+                            billingType, settings);
+                    });
+
+                    options.layout.steps.show(settingsLayout);
+
+                });
+
+            });
+
+        },
+
 
         addOriginalImage: function(container){
             utils.preloader.show();
@@ -792,12 +919,11 @@ define([
         podWizardStepFinal: function(options){
             if (!this.checkPermissions(['User', 'TrialUser']))
                 return;
-            var that = this;
             $.when(
                 this.podWizardBase(options),
                 App.getPodCollection(),
                 App.getSystemSettingsCollection()
-            ).done(function(base, podCollection, settingsCollection){
+            ).done((base, podCollection, settingsCollection) => {
                 var options = base[0], Views = base[1];
 
                 var model = options.podModel;
@@ -812,7 +938,7 @@ define([
                         hasBilling: billingType.toLowerCase() !== 'no billing',
                         payg: payg,
                     });
-                that.listenTo(view, 'pod:save', function(){
+                this.listenTo(view, 'pod:save', function(){
                     utils.preloader.show();
                     model.save()
                         .always(utils.preloader.hide)
@@ -822,7 +948,7 @@ define([
                             App.navigate('pods').controller.showPods();
                         });
                 });
-                that.listenTo(view, 'pod:pay_and_run', function(){
+                this.listenTo(view, 'pod:pay_and_run', function(){
                     if (billingType.toLowerCase() !== 'no billing' && !payg) {
                         utils.preloader.show();
                         podCollection.fullCollection.create(model, {
@@ -884,9 +1010,9 @@ define([
                         });
                     }
                 });
-                that.listenTo(view, 'step:envconf', that.podWizardStepEnv);
-                that.listenTo(view, 'step:getimage', that.podWizardStepImage);
-                that.listenTo(view, 'step:portconf', that.podWizardStepGeneral);
+                this.listenTo(view, 'step:envconf', this.podWizardStepEnv);
+                this.listenTo(view, 'step:getimage', this.podWizardStepImage);
+                this.listenTo(view, 'step:portconf', this.podWizardStepGeneral);
                 options.layout.steps.show(view);
             });
         },

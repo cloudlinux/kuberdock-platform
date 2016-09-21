@@ -97,9 +97,10 @@ clean_node(){
 
     echo "Remove some packages (k8s, docker, etc.)..."
     {
-        yum -y remove kubernetes*
+        # We should prevent bash pre-processing with quotes
+        yum -y remove 'kubernetes*'
         yum -y remove docker
-        yum -y remove flannel*
+        yum -y remove 'flannel*'
         yum -y remove kuberdock-cadvisor  # obsolete package
     } &> /dev/null
     remove_unneeded python-requests

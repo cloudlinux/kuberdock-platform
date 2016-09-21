@@ -14,7 +14,7 @@ from tests_integration.lib.integration_test_runner import \
     TestResultCollection, discover_integration_tests, format_exception, \
     write_junit_xml
 from tests_integration.lib.integration_test_utils import get_test_full_name, \
-    center_text_message
+    center_text_message, force_unicode
 from tests_integration.lib.pipelines import pipelines as \
     registered_pipelines
 from tests_integration.lib.pipelines_base import Pipeline
@@ -31,9 +31,9 @@ test_results = TestResultCollection()
 debug_messages = []
 
 
-def print_msg(msg='', color=Fore.MAGENTA):
+def print_msg(msg=u'', color=Fore.MAGENTA):
     with print_lock:
-        print(u'{}{}{}'.format(color, msg, Fore.RESET))
+        print(u'{}{}{}'.format(color, force_unicode(msg), Fore.RESET))
         sys.stdout.flush()
 
 
@@ -47,10 +47,12 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
 
     # Helper function to make code less verbose
     def pipe_log(msg, color=Fore.MAGENTA):
+        msg = force_unicode(msg)
         print_msg(u'{} -> {}\n'.format(pipeline_name, msg), color)
 
     def prettify_exception(exc):
-        return u'{}: {}'.format(exc.__class__.__name__, str(exc))
+        msg = force_unicode(str(exc))
+        return u'{}: {}'.format(exc.__class__.__name__, msg)
 
     try:
         pipeline = Pipeline.from_name(pipeline_name)
@@ -125,6 +127,7 @@ def get_pipeline_logs(multilog):
     """
 
     def _format_log(name, log):
+        name, log = force_unicode(name), force_unicode(log)
         return center_text_message(name, color=Fore.MAGENTA) + '\n' + log
 
     entries = (
@@ -135,8 +138,9 @@ def get_pipeline_logs(multilog):
 
     msg = '\n' + u'\n'.join(entries)
 
-    return center_text_message(
+    msg = center_text_message(
         'PIPELINE DETAILED LOGS', fill_char='=', color=Fore.MAGENTA) + msg
+    return msg.encode('utf-8')
 
 
 def _print_logs(handler, live_log):

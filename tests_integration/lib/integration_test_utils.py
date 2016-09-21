@@ -13,12 +13,12 @@ from contextlib import contextmanager
 from functools import wraps
 from itertools import count, islice
 from xmlrpclib import ProtocolError
-from paramiko.sftp import CMD_EXTENDED
 
 import oca
 from colorama import Fore, Style
 from ipaddress import IPv4Address
 from oca import OpenNebulaException
+from paramiko.sftp import CMD_EXTENDED
 
 from tests_integration.lib.exceptions import PublicPortWaitTimeoutException, \
     NonZeroRetCodeException, NotEnoughFreeIPs, OpenNebulaError
@@ -28,7 +28,7 @@ LOG = logging.getLogger(__name__)
 
 
 def _proceed_exec_result(out, err, ret_code, check_retcode):
-    err, out = _force_utf_string(err), _force_utf_string(out)
+    err, out = force_unicode(err), force_unicode(out)
 
     msg_parts = [
         (Fore.GREEN, 'RetCode: ', str(ret_code)),
@@ -97,7 +97,7 @@ KUBE_TYPE_TO_INT = {
 }
 INT_TO_KUBE_TYPE = {
     v: k for k, v in KUBE_TYPE_TO_INT.iteritems()
-}
+    }
 
 
 def kube_type_to_int(kube_type):
@@ -237,8 +237,8 @@ def center_text_message(message, width=120, fill_char='-', color=''):
     :param fill_char: char to use for filling blanks
     :return: formatted message
     """
-    message = ' {} '.format(message)
-    return '{}{{:{}^{}}}{}'.format(
+    message = u' {} '.format(force_unicode(message))
+    return u'{}{{:{}^{}}}{}'.format(
         color, fill_char, width, Fore.RESET).format(message)
 
 
@@ -454,7 +454,7 @@ def http_share(cluster, host, shared_dir):
         cluster.ssh_exec(host, cmd)
 
 
-def _force_utf_string(text):
+def force_unicode(text):
     return text if isinstance(text, unicode) else text.decode('utf-8')
 
 

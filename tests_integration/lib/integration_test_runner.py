@@ -10,7 +10,7 @@ from colorama import Fore
 from junit_xml import TestCase, TestSuite
 from pygments import highlight
 from pygments.formatters.terminal256 import Terminal256Formatter
-from pygments.lexers.python import PythonLexer
+from pygments.lexers.python import PythonTracebackLexer
 
 from tests_integration.lib.integration_test_utils import center_text_message
 
@@ -163,7 +163,7 @@ def discover_integration_tests(paths, mask='test_*.py'):
 
 def format_exception(exc_info):
     # TODO: Probably include the context/source code caused the exception
-    trace = u''.join(traceback.format_exception(*exc_info))
+    trace = ''.join(traceback.format_exception(*exc_info))
     message = highlight_code(trace)
     return message
 
@@ -175,7 +175,8 @@ def highlight_code(code):
     :param code: string containing a source code
     :return: colorized string
     """
-    return highlight(code, PythonLexer(), Terminal256Formatter(style='manni'))
+    return highlight(code, PythonTracebackLexer(),
+                     Terminal256Formatter(style='manni'))
 
 
 def write_junit_xml(fp, results):
@@ -200,6 +201,6 @@ def write_junit_xml(fp, results):
         suites = [
             make_test_suite(pipeline, results)
             for pipeline, results in results.grouped_by_pipeline.items()
-        ]
+            ]
 
         TestSuite.to_file(f, suites)

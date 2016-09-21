@@ -66,7 +66,7 @@
                     <select id="package-select" name="package-select" class="selectpicker">
                     <% packages.each(function(p){ %>
                         <option <%= (typeof package != 'undefined'
-                                     && package === p.name) ? 'selected' : '' %>>
+                                     && package === p.get('name')) ? 'selected' : '' %>>
                             <%= p.get('name') %>
                         </option>
                     <% }) %>

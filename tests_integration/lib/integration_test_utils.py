@@ -329,20 +329,24 @@ class NebulaIPPool(object):
             """
             while ips:
                 ip = ips.pop()
+                LOG.debug("Trying to hold IP: {}".format(ip))
                 try:
                     net.hold(ip)
                     return ip
-                except (OpenNebulaException, ProtocolError):
+                except (OpenNebulaException, ProtocolError) as e:
                     # It's not possible to distinguish if that was an
                     # arbitrary API error or the IP was concurrently
                     # reserved. We'll consider it's always the latter case
-                    pass
+                    LOG.debug("Trouble while holding IP {}:\n{}\nTrying the "
+                              "next available IP.".format(ip, repr(e)))
 
             raise NotEnoughFreeIPs(
                 'The number of free IPs became less than requested during '
                 'reservation')
 
+        LOG.debug("Getting free IP list from OpenNebula")
         ips = self.get_free_ip_list(network_name)
+        LOG.debug("Got the following IPs: {}".format(ips))
         if len(ips) < count:
             raise NotEnoughFreeIPs(
                 '{} net has {} free IPs but {} requested'.format(network_name,
@@ -351,9 +355,13 @@ class NebulaIPPool(object):
 
         net = self.pool.get_by_name(network_name)
 
+        LOG.debug("Starting reservation of {} IP addresses.".format(count))
         for _ in range(count):
             ip = reserve_ip(ips, net)
             self.reserved[network_name].add(ip)
+
+        LOG.debug("Done reservation of {} IP addresses: {}".format(
+            count, self.reserved[network_name]))
 
         return self.reserved[network_name]
 
@@ -361,13 +369,17 @@ class NebulaIPPool(object):
         """
         Tries to release all IPs reserved within this class object instance
         """
+        LOG.debug("Starting release of IP addresses: {}".format(self.reserved))
         for net_name, ip_set in self.reserved.items():
             net = self.pool.get_by_name(net_name)
             for ip in ip_set:
+                LOG.debug("Trying to release IP: {}".format(ip))
                 try:
                     net.release(ip)
-                except OpenNebulaException:
-                    pass
+                except (OpenNebulaException, ProtocolError) as e:
+                    LOG.debug("Trouble while releasing IP {}:\n{}\nTrying the "
+                              "next one".format(ip, repr(e)))
+        LOG.debug("Done release of IP addresses.")
 
     @property
     def reserved_ips(self):

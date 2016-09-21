@@ -257,7 +257,7 @@ class KDIntegrationTestAPI(object):
 
         nodes = node if node is not None else self.node_names
         for node in nodes:
-            retry(self.docker, interval=2,
+            retry(self.docker, interval=5, tries=3,
                   cmd='pull {}'.format(image), node=node)
 
     def wait_for_service_pods(self):
@@ -443,10 +443,17 @@ class NodeList(object):
                                 "seconds".format(node_name, timeout))
 
     def add(self, node_name, kube_type="Standard"):
-        self.cluster.manage(
-            'add-node --hostname {} --kube-type {} --do-deploy -t'
-                .format(node_name, kube_type)
-        )
+        docker_options = \
+            '' \
+            '--insecure-registry=192.168.115.165:5001' \
+            '' \
+            '--registry-mirror=http://192.168.115.165:5001'
+
+        add_cmd = 'add-node --hostname {} --kube-type {} --do-deploy -t ' \
+                  '--docker-options="{}"'.format(node_name, kube_type,
+                                                 docker_options)
+
+        self.cluster.manage(add_cmd)
         self.cluster.manage("wait-for-nodes --nodes {}".format(node_name))
 
     def node_exists(self, hostname):

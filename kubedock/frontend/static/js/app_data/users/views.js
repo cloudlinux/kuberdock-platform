@@ -561,13 +561,67 @@ define(['app_data/app', 'app_data/model', 'app_data/controller', 'app_data/utils
             });
         },
 
+        restoreByEmail: function(email){
+            App.getUserCollection().done(function(users){
+                utils.modalDialog({
+                    title: 'User exists',
+                    body: 'The email you are trying to use is already present'
+                        + ' in your billing system. Looks like there is a deleted'
+                        + ' user with this email. Would you like to restore the user'
+                        + ' and tie him to existing billing user instead?',
+                    small: true,
+                    show: true,
+                    footer: {
+                        buttonOk: function(){
+                            $.ajax({
+                                authWrap: true,
+                                url: '/api/users/undelete',
+                                data: {'email': email},
+                                method: 'POST'
+                            }).done(function(){
+                                users.fetch({
+                                    wait: true,
+                                    success: function(){
+                                        utils.notifyWindow(
+                                            'User "' + email + '" successfully restored',
+                                            'success');
+                                        App.navigate('users')
+                                            .controller.showUsers();
+                                    }
+                                });
+                            })
+                            .fail(function(){
+                                utils.notifyWindow('Could not restore user "' + email + '"');
+                            });
+                        },
+                        buttonCancel: function(){
+                            App.navigate('users')
+                                .controller.showUsers();
+                        },
+                        buttonOkText: 'Yes, restore',
+                        buttonCancelText: 'No, thanks'
+                    }
+                });
+            });
+        },
+
         onSave: function(){
             var that = this;
             $.when(App.getUserCollection(), this.validate(true)).done(function(users){
                 utils.preloader.show();
                 that.model.save(that.getData(), {wait: true})
                     .always(utils.preloader.hide)
-                    .fail(utils.notifyWindow)
+                    .fail(function(resp){
+                        var msg = resp.responseJSON.data || '',
+                            type = resp.responseJSON.type || '',
+                            emailRx = /user[\s\S]*?exist[\s\S]*?email/i;
+                        if (type === 'BillingError' && emailRx.test(msg)) {
+                            that.restoreByEmail(that.getData().email);
+                        }
+                        else {
+                            utils.notifyWindow(resp);
+                        }
+                    })
                     .done(function(){
                         users.add(that.model);
                         App.navigate('users', {trigger: true});

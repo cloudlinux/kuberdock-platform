@@ -82,7 +82,7 @@ def zipdir(path, ziph):
 def rmtree(path):
     # Workaround for https://github.com/hashdist/hashdist/issues/113
     cmd = ["rm", "-rf", path]
-    subprocess.check_call(cmd)
+    subprocess.call(cmd)
 
 
 def pg_dump(src, dst, db_username="postgres"):
@@ -118,7 +118,7 @@ def etcd_restore(src, dst):
     subprocess.check_call(cmd, stdout=subprocess.PIPE)
 
 
-def purge_nodes():
+def delete_nodes(skip_errors=False):
     """ Delete all nodes from restored cluster.
 
     When restoring cluster after a full crush it makes sense to drop nodes
@@ -128,6 +128,7 @@ def purge_nodes():
     """
 
     from kubedock.kapi.node_utils import get_all_nodes
+    from kubedock.exceptions import APIError
     from kubedock.kapi.nodes import delete_node
     from kubedock.nodes.models import Node
     from kubedock.pods.models import PersistentDisk
@@ -138,7 +139,13 @@ def purge_nodes():
     pod_collection = PodCollection()
     for pod in pod_collection.get_owned():
         if not pod.owner.is_internal():
-            pod_collection.delete(pod.id)
+            try:
+                pod_collection.delete(pod.id, force=True)
+            except APIError as e:
+                if not skip_errors:
+                    raise
+                logger.info("Error when dropping pod {}:\n{}".format(
+                    pod.id, repr(e)))
             logger.debug("Pod `{0}` purged".format(pod.name))
 
     for node in get_all_nodes():
@@ -146,7 +153,13 @@ def purge_nodes():
         db_node = Node.get_by_name(node_name)
         PersistentDisk.get_by_node_id(db_node.id).delete(
             synchronize_session=False)
-        delete_node(node=db_node, force=True, verbose=False)
+        try:
+            delete_node(node=db_node, force=True, verbose=False)
+        except APIError as e:
+            if not skip_errors:
+                raise
+            logger.info("Error when dropping the node {}:\n{}".format(
+                node_name, repr(e)))
         logger.debug("Node `{0}` purged".format(node_name))
 
 
@@ -394,7 +407,7 @@ def do_backup(backup_dir, callback, skip_errors, **kwargs):
 
 
 @lock(LOCKFILE)
-def do_restore(backup_file, no_nodes, skip_errors, **kwargs):
+def do_restore(backup_file, drop_nodes, skip_errors, **kwargs):
     """ Restore from backup file.
     If skip_error is True it will not interrupt restore due to errors
     raised on some step from restore_chain.
@@ -408,8 +421,6 @@ def do_restore(backup_file, no_nodes, skip_errors, **kwargs):
     subprocess.check_call(["systemctl", "stop", "nginx"])
     subprocess.check_call(["systemctl", "restart", "postgresql"])
 
-    subprocess.check_call(["systemctl", "stop", "etcd", "kube-apiserver"])
-
     with zipfile.ZipFile(backup_file, 'r') as zip_archive:
         for res in restore_chain:
             try:
@@ -422,15 +433,15 @@ def do_restore(backup_file, no_nodes, skip_errors, **kwargs):
                 if not skip_errors:
                     raise
 
-    subprocess.check_call(["systemctl", "start", "etcd"])
+    subprocess.check_call(["systemctl", "restart", "etcd"])
     time.sleep(5)
-    subprocess.check_call(["systemctl", "start", "kube-apiserver"])
+    subprocess.check_call(["systemctl", "restart", "kube-apiserver"])
 
     subprocess.check_call(["systemctl", "start", "nginx"])
     subprocess.check_call(["systemctl", "start", "emperor.uwsgi"])
 
-    if no_nodes:
-        purge_nodes()
+    if drop_nodes:
+        delete_nodes(skip_errors)
 
     logger.info('Restore finished')
 
@@ -445,15 +456,15 @@ def parse_args(args):
     group.add_argument('-q', '--quiet', help='Silent mode, only log warnings',
                        action='store_const', const=logging.WARN,
                        dest='loglevel')
-    parser.add_argument("-n", '--no-nodes', action='store_true',
-                        dest='no_nodes',
-                        help="Do not restore nodes from DB dump (choose this "
+    parser.add_argument("-d", '--drop-nodes', action='store_true',
+                        dest='drop_nodes',
+                        help="Drop nodes which exist in DB dump (choose this "
                              "if you are going to re-deploy nodes thereafter). "
                              "Note that this option also implies removing "
                              "all user pods from the DB dump.")
-    parser.add_argument("-s", '--skip', action='store_false',
+    parser.add_argument("-s", '--skip-errors', action='store_false',
                         dest='skip_errors',
-                        help="Do not stop if one steps is failed")
+                        help="Do not stop if one of the steps is failed.")
 
     subparsers = parser.add_subparsers()
 

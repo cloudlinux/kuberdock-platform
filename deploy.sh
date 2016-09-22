@@ -185,7 +185,7 @@ fi
 
 CONF_FLANNEL_BACKEND="vxlan"
 VNI="1"
-while [[ $# > 0 ]];do
+while [[ $# -gt 0 ]];do
     key="$1"
     case $key in
         -c|--cleanup)
@@ -457,10 +457,6 @@ setup_ntpd ()
 do_deploy()
 {
 
-# Should be done at the very beginning to ensure yum https works correctly
-install_repos
-setup_ntpd
-
 check_amazon
 
 # Get number of interfaces up
@@ -532,6 +528,9 @@ else
   PD_NAMESPACE="$PD_CUSTOM_NAMESPACE"
 fi
 
+# Should be done at the very beginning to ensure yum https works correctly
+setup_ntpd
+install_repos
 
 if [ "$ISAMAZON" = true ];then
     AVAILABILITY_ZONE=$(curl -s connect-timeout 1 http://169.254.169.254/latest/meta-data/placement/availability-zone)
@@ -601,7 +600,6 @@ if [ $? -ne 0 ];then
     exit 1
 fi
 log_it echo "CLUSTER_NETWORK has been determined as $CLUSTER_NETWORK"
-
 
 log_it rpm -q firewalld && firewall-cmd --state
 if [ $? -ne 0 ];then

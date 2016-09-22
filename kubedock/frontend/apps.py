@@ -24,7 +24,7 @@ def index(app_hash):
         if plan_id is None or not plan_id.isdigit():
             if len(data['plans']) > 1:
                 return render_template('apps/plans.html', **data)
-            data['plan_id'] = 0
+            plan_id = 0
         data.setdefault('plan_id', int(plan_id))
         prepare(app, data)
         return render_template('apps/index.html', **data)

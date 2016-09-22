@@ -22,7 +22,7 @@ from tests_integration.lib.exceptions import StatusWaitException, \
     IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
 from tests_integration.lib.integration_test_utils import \
     ssh_exec, assert_eq, assert_in, kube_type_to_int, wait_net_port, \
-    merge_dicts, retry, kube_type_to_str, escape_command_arg
+    merge_dicts, retry, kube_type_to_str, escape_command_arg, log_dict
 
 OPENNEBULA = "opennebula"
 VIRTUALBOX = "virtualbox"
@@ -169,9 +169,7 @@ class KDIntegrationTestAPI(object):
                 "not pass BUILD_CLUSTER env variable if you want run tests on "
                 "the existing one.")
 
-        settings = '\n'.join('{}: {}'.format(k, v)
-                             for k, v in self.kd_env.items())
-        LOG.debug('Cluster settings: {}'.format(settings))
+        log_dict(self.kd_env, "Cluster settings:", hidden=('KD_ONE_PASSWORD',))
 
         if provider == OPENNEBULA:
             try:

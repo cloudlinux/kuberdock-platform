@@ -157,6 +157,17 @@ def merge_dicts(*dictionaries):
     return result
 
 
+def log_dict(d, prefix="", hidden=tuple()):
+    safe_d = {}
+    for k, v in d.items():
+        if k in hidden:
+            v = "***"
+        safe_d[k] = v
+
+    env_str = '\n'.join('{}: {}'.format(k, v) for k, v in safe_d.items())
+    LOG.debug('{}\n{}'.format(prefix, env_str))
+
+
 def hooks(setup=None, teardown=None):
     """
     Decorator used to link per-test setup & teardown methods to test

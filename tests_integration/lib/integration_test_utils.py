@@ -305,7 +305,9 @@ class NebulaIPPool(object):
             for lease in r.leases:
                 used_ip_list.add(lease.ip)
 
-        return ip_list - used_ip_list
+        free_ips = list(ip_list - used_ip_list)
+        random.shuffle(free_ips)
+        return free_ips
 
     def reserve_ips(self, network_name, count):
         # type: (str, int) -> list[str]

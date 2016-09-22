@@ -4,7 +4,7 @@ from flask import Blueprint
 from flask.views import MethodView
 
 from kubedock.api.utils import use_kwargs
-from ..exceptions import APIError
+from ..exceptions import APIError, PDNotFound
 from ..kapi import pstorage as ps
 from ..login import auth_required
 from ..nodes.models import Node
@@ -12,13 +12,10 @@ from ..pods.models import PersistentDisk
 from ..rbac import check_permission
 from ..utils import KubeUtils, register_api
 from ..validation.schemas import pd_schema, owner_optional_schema
+from kubedock.kapi.pstorage import STORAGE_CLASS
+from kubedock.kapi import podcollection
 
 pstorage = Blueprint('pstorage', __name__, url_prefix='/pstorage')
-
-
-class PDNotFound(APIError):
-    message = 'Persistent disk not found.'
-    status_code = 404
 
 
 class PDIsUsed(APIError):
@@ -37,8 +34,7 @@ class PersistentStorageAPI(KubeUtils, MethodView):
 
     @staticmethod
     def _resolve_storage():
-        storage_cls = ps.get_storage_class()
-        return storage_cls or ps.PersistentStorage
+        return STORAGE_CLASS or ps.PersistentStorage
 
     @use_kwargs(schema_with_owner, allow_unknown=True)
     def get(self, device_id, owner=None, **params):
@@ -91,8 +87,19 @@ class PersistentStorageAPI(KubeUtils, MethodView):
             raise APIError('Couldn\'t save persistent disk.')
         return add_kube_types(data)
 
-    def put(self, device_id):
-        pass
+    @use_kwargs(schema_with_owner_and_data)
+    def put(self, device_id, owner=None, **params):
+        current_user = self.get_current_user()
+        owner = owner or current_user
+
+        check_permission('own', 'persistent_volumes', user=owner).check()
+        if owner == current_user:
+            check_permission('edit', 'persistent_volumes').check()
+        else:
+            check_permission('edit_non_owned', 'persistent_volumes').check()
+
+        size = params['size']
+        return podcollection.change_pv_size(device_id, int(size))
 
     @use_kwargs(schema_with_owner)
     def delete(self, device_id, owner=None):
@@ -136,3 +143,10 @@ def add_kube_types(disks):
 
 register_api(pstorage, PersistentStorageAPI, 'pstorage', '/', 'device_id',
              strict_slashes=False)
+
+
+@pstorage.route('/is_volume_resizable', methods=['GET'], strict_slashes=False)
+@auth_required
+@KubeUtils.jsonwrap
+def is_volume_resizable():
+    return STORAGE_CLASS().is_pv_resizable()

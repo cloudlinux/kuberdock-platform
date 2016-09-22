@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import os
 import sys
 import subprocess
+import re
 
 # Command execution results
 OK = 'OK'
@@ -11,6 +12,9 @@ ERROR = 'ERROR'
 
 # Mount point to logical volume
 LOCAL_STORAGE_MOUNT_POINT = '/var/lib/kuberdock/storage'
+
+# Pattern to get output of du -b -s <path> command
+DU_OUTPUT_PATTERN = re.compile(r'^(\d+)\s+.*')
 
 
 class TimeoutError(Exception):
@@ -22,10 +26,11 @@ def silent_call(commands):
     """Calls subprocess and returns it's exitcode. Hides stdout and stderr of
     called subprocess.
     """
-    p = subprocess.Popen(commands, stdout=sys.stderr)
-    p.communicate()
-    retcode = p.returncode
-    return retcode
+    with open(os.devnull, 'wb') as DEVNULL:
+        p = subprocess.Popen(commands, stdout=DEVNULL, stderr=DEVNULL)
+        p.communicate()
+        retcode = p.returncode
+        return retcode
 
 
 def get_subprocess_result(args):
@@ -64,3 +69,36 @@ def get_path_relative_to_localstorage(full_path):
     :param full_path: full path, that must be converted to relative
     """
     return os.path.relpath(full_path, LOCAL_STORAGE_MOUNT_POINT)
+
+
+def utilized_path_size(path):
+    """Returns current size for given path in bytes.
+    """
+    err_code, output = get_subprocess_result(['du', '-s', '-b', path])
+    if err_code:
+        return -1
+
+    try:
+        size = int(DU_OUTPUT_PATTERN.match(output).group(1))
+    except (AttributeError, ValueError, TypeError) as err:
+        return -1
+    return size
+
+
+def volume_can_be_resized_to(path, new_size):
+    """Checks size of given path is less than specified new size (in bytes).
+    If it is less, then returns tuple of (True, None).
+    If it is not less or failed to get current size for the path, then
+    returns tuple of (False, <error message>).
+    """
+    already_used = utilized_path_size(path)
+    if already_used < 0:
+        return False, 'Failed to get already used size of the volume'
+    GB = 1024 ** 3
+    if already_used >= new_size:
+        return (
+            False,
+            'Volume can not be reduced to {:.2f}G. Already used {:.2f}G.'
+            .format(float(new_size) / GB, float(already_used) / GB)
+        )
+    return True, None

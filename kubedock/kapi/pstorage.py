@@ -13,7 +13,8 @@ from fabric.exceptions import CommandTimeout, NetworkError
 from flask import current_app
 
 from ..core import db, ExclusiveLock, ConnectionPool
-from ..exceptions import APIError
+from ..exceptions import (
+    APIError, PVResizeIsNotSupportedError, PVResizeFailed, PDNotFound)
 from ..nodes.models import Node, NodeFlagNames
 from ..pods.models import PersistentDisk, PersistentDiskStatuses, Pod
 from ..users.models import User
@@ -21,12 +22,11 @@ from ..usage.models import PersistentDiskState
 from ..utils import send_event_to_role, atomic, nested_dict_utils, \
     NODE_STATUSES
 from ..settings import (
-    SSH_KEY_FILENAME, CEPH, AWS, CEPH_POOL_NAME, PD_NS_SEPARATOR,
+    SSH_KEY_FILENAME, CEPH, CEPH_POOL_NAME, PD_NS_SEPARATOR,
     NODE_LOCAL_STORAGE_PREFIX, CEPH_CLIENT_USER, CEPH_KEYRING_PATH,
     NODE_STORAGE_MANAGE_CMD)
 from ..kd_celery import celery, exclusive_task
 from . import node_utils
-from .pd_utils import compose_pdname
 from ..billing.models import Kube
 
 
@@ -43,12 +43,8 @@ def check_namespace_exists(node_ip=None, namespace=None):
     For CEPH namespace is equal to pool name, so it will check pool existence,
     and create it if the one is missed.
     """
-    cls = get_storage_class()
-    if cls:
-        return cls().check_namespace_exists(
-            node_ip=node_ip, namespace=namespace
-        )
-    return False
+    return STORAGE_CLASS().check_namespace_exists(
+        node_ip=node_ip, namespace=namespace)
 
 
 class NodeCommandError(Exception):
@@ -107,8 +103,9 @@ def update_pods_volumes(pd):
     Will change volumes with the same owner and the same public volume name,
     as in the given pd.
     :param pd: object of PersistentDisk model
+    :return: list of pod identifiers which were updated in database
     """
-    storage_cls = get_storage_class()
+    changed_pod_ids = []
     for pod in Pod.query.filter(Pod.owner_id == pd.owner_id):
         if pod.is_deleted:
             continue
@@ -130,11 +127,22 @@ def update_pods_volumes(pd):
                 continue
 
             current_app.logger.debug('Updating volume: %s', item)
-            storage_cls().enrich_volume_info(item, pd)
+            STORAGE_CLASS().enrich_volume_info(item, pd)
             changed = True
             break
+
+        volumes_public = config.get('volumes_public', [])
+        for item in volumes_public:
+            if ((item.get('name') != vol['name']) or
+                    ('persistentDisk' not in item)):
+                continue
+            item['persistentDisk']['pdSize'] = pd.size
+            break
+
         if changed:
             pod.set_dbconfig(config, save=False)
+            changed_pod_ids.append(pod.id)
+    return changed_pod_ids
 
 
 @celery.task()
@@ -182,36 +190,32 @@ def drive_lock(drivename=None, drive_id=None, ttl=None):
 def delete_persistent_drives(pd_ids, mark_only=False):
     if not pd_ids:
         return
-    pd_cls = get_storage_class()
     to_delete = []
-    if pd_cls:
-        for pd_id in pd_ids:
+    for pd_id in pd_ids:
+        try:
+            rv = STORAGE_CLASS().delete_by_id(pd_id)
+        except DriveIsLockedError:
+            # Skip deleting drives that is locked by another client
+            continue
+        if rv != 0:
             try:
-                rv = pd_cls().delete_by_id(pd_id)
-            except DriveIsLockedError:
-                # Skip deleting drives that is locked by another client
-                continue
-            if rv != 0:
-                try:
-                    if pd_cls().is_drive_exist(pd_id):
-                        current_app.logger.warning(
-                            u'Persistent Disk id:"{0}" is busy.'.format(pd_id)
-                        )
-                        continue
-                    # If pd is not exist, then delete it from DB
-                except NodeCommandTimeoutError:
+                if STORAGE_CLASS().is_drive_exist(pd_id):
                     current_app.logger.warning(
-                        u'Persistent Disk id:"{0}" is busy or '
-                        u'does not exist.'.format(pd_id))
+                        u'Persistent Disk id:"{0}" is busy.'.format(pd_id)
+                    )
                     continue
-                except NodeCommandError:
-                    current_app.logger.exception(
-                        u'Persistent Disk id:"{0}" is busy or '
-                        u'does not exist.'.format(pd_id))
-                    continue
-            to_delete.append(pd_id)
-    else:
-        to_delete = pd_ids
+                # If pd is not exist, then delete it from DB
+            except NodeCommandTimeoutError:
+                current_app.logger.warning(
+                    u'Persistent Disk id:"{0}" is busy or '
+                    u'does not exist.'.format(pd_id))
+                continue
+            except NodeCommandError:
+                current_app.logger.exception(
+                    u'Persistent Disk id:"{0}" is busy or '
+                    u'does not exist.'.format(pd_id))
+                continue
+        to_delete.append(pd_id)
 
     if not to_delete:
         return
@@ -574,6 +578,41 @@ class PersistentStorage(object):
         flag = False, Reason is None if allowed flad = True.
         """
         return (True, None)
+
+    @classmethod
+    def is_pv_resizable(cls):
+        """Returns True if current storage supports operation for persistent
+        volumes resize.
+        """
+        return False
+
+    def resize_pv(self, persistent_disk_id, new_size):
+        """Resizes persistent volume for specified size if current storage
+        backend supports such operation.
+        :return: tuple of success flag and list of and list of tuples
+            (pod_id, need_restart) where pod_id - pod identifiers which specs
+            must be updated in kubernetes; need_restart - boolean flag marks
+            that pod must be restarted after update.
+        """
+        if not self.is_pv_resizable():
+            raise PVResizeIsNotSupportedError()
+
+        ok, changed_pods = self.do_pv_resize(persistent_disk_id, new_size)
+        if ok:
+            pd = PersistentDisk.get_all_query().filter(
+                PersistentDisk.id == persistent_disk_id
+            ).first()
+            self.end_stat(pd.name, pd.owner_id)
+            self.start_stat(pd.size, pd.name, pd.owner_id)
+        return ok, changed_pods
+
+    def do_pv_resize(self, persistent_disk_id, new_size):
+        """Method should be implemented in nested class if the storage supports
+        resizing of existing volumes.
+        :return: must return tuple of success flag (bool) and list of pods
+            identifiers which must be updated in kubernetes
+        """
+        raise NotImplementedError()
 
 
 def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False,
@@ -1548,6 +1587,56 @@ class LocalStorage(PersistentStorage):
             )
         )
 
+    @classmethod
+    def is_pv_resizable(cls):
+        """Returns True if current storage supports operation for persistent
+        volumes resize.
+        """
+        return True
+
+    def do_pv_resize(self, persistent_disk_id, new_size):
+        with atomic(nested=False):
+            pd = PersistentDisk.get_all_query().filter(
+                PersistentDisk.id == persistent_disk_id
+            ).first()
+            if not pd:
+                current_app.logger.warning(
+                    u'Unable to resize PV. '
+                    u'Unknown persistent_disk_id: %s',
+                    persistent_disk_id
+                )
+                raise PDNotFound()
+            if pd.size == new_size:
+                # nothing to do, the same size
+                return True, []
+            try:
+                drive_path = self.get_full_drive_path(pd.drive_name)
+                current_app.logger.debug(
+                    u'Resizing local storage: %s, new size = %s',
+                    drive_path, new_size)
+                res = self.run_on_pd_node(
+                    pd,
+                    NODE_STORAGE_MANAGE_CMD +
+                    ' resize-volume --path {} --new-quota {}'.format(
+                        drive_path, new_size),
+                    jsonresult=True
+                )
+                if res['status'] != 'OK':
+                    raise PVResizeFailed(
+                        u'Failed to resize PV: {}'.format(
+                            res['data']['message']
+                        )
+                    )
+            except (NodeCommandWrongExitCode, KeyError):
+                current_app.logger.exception(
+                    u'Failed to resize PV "{}", new size: {}'.format(
+                        drive_path, new_size)
+                )
+                raise PVResizeFailed(u'Unknown error during PV resize')
+            pd.size = new_size
+        changed_pod_ids = update_pods_volumes(pd)
+        return True, [(pod_id, False) for pod_id in changed_pod_ids]
+
 
 def _get_pod_volume_by_pd_name(pod_config, pd_name):
     """Returns entry from volumes_public section of pod configuration
@@ -1580,9 +1669,10 @@ def get_storage_class():
     """
     if CEPH:
         return CephStorage
-    #if AWS:
-        #return LocalStorage
     return LocalStorage
+
+
+STORAGE_CLASS = get_storage_class()
 
 
 ALL_STORAGE_CLASSES = [CephStorage, LocalStorage]
@@ -1610,10 +1700,7 @@ def check_node_is_locked(node_id, cleanup=False):
     Optionally can delete from DB deleted PD's if they are binded to the node
     (cleanup flag).
     """
-    storage_cls = get_storage_class()
-    if not storage_cls:
-        return (False, None)
-    is_locked, reason = storage_cls.check_node_is_locked(node_id)
+    is_locked, reason = STORAGE_CLASS.check_node_is_locked(node_id)
     if is_locked:
         pd_list = '\n'.join('{0}: {1}'.format(name, ', '.join(disks))
                             for name, disks in reason.iteritems())
@@ -1639,7 +1726,4 @@ def clean_deleted_pd_binded_to_node(node_id):
 
 
 def drive_can_be_deleted(pd_id):
-    storage_cls = get_storage_class()
-    if not storage_cls:
-        return (True, None)
-    return storage_cls.drive_can_be_deleted(pd_id)
+    return STORAGE_CLASS.drive_can_be_deleted(pd_id)

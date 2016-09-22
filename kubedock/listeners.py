@@ -21,10 +21,10 @@ from .utils import (get_api_url, unregistered_pod_warning,
                     send_pod_status_update, POD_STATUSES, nested_dict_utils,
                     session_scope, fix_calico)
 from .kapi.usage import update_states
-from .kapi.pstorage import get_storage_class
 from .kapi.podcollection import PodCollection, set_public_address
 from .kapi.lbpoll import LoadBalanceService
-from .kapi.pstorage import get_storage_class_by_volume_info, LocalStorage
+from .kapi.pstorage import (
+    get_storage_class_by_volume_info, LocalStorage, STORAGE_CLASS)
 from .kapi import helpers
 from . import tasks
 
@@ -297,8 +297,7 @@ def process_events_event(data, app):
             if pod is None:
                 unregistered_pod_warning(pod_id)
                 return
-            storage = get_storage_class()
-            storage = storage()
+            storage = STORAGE_CLASS()
             for pd in pod.persistent_disks:
                 storage.unlock_pd(pd)
     elif reason == 'FailedScheduling':

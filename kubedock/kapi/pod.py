@@ -312,10 +312,7 @@ class Pod(object):
             persistent_disk.state = PersistentDiskStatuses.PENDING
         if volume_public['persistentDisk'].get('pdSize') is None:
             volume_public['persistentDisk']['pdSize'] = persistent_disk.size
-        pd_cls = pstorage.get_storage_class()
-        if not pd_cls:
-            return
-        pd_cls().enrich_volume_info(volume, persistent_disk)
+        pstorage.STORAGE_CLASS().enrich_volume_info(volume, persistent_disk)
 
     def _handle_local_storage(self, volume):
         # TODO: cleanup localStorage volumes. It is now used only for pods of

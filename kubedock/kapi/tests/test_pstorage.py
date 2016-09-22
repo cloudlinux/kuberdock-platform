@@ -89,8 +89,8 @@ class TestPstorageFuncs(DBTestCase):
         with self.assertRaises(pstorage.NodeCommandError):
             pstorage._get_mapped_ceph_devices_for_node(node)
 
-    @mock.patch.object(pstorage, 'get_storage_class')
-    def test_delete_persistent_drives(self, getsc_mock):
+    @mock.patch.object(pstorage, 'STORAGE_CLASS')
+    def test_delete_persistent_drives(self, sc_mock):
         """Test for pstorage.delete_persistent_drives function"""
         user, _ = self.fixtures.user_fixtures()
         pd = PersistentDisk(
@@ -99,8 +99,7 @@ class TestPstorageFuncs(DBTestCase):
         db.session.add(pd)
         db.session.commit()
 
-        ps_delete_by_id_mock = getsc_mock.return_value. \
-            return_value.delete_by_id
+        ps_delete_by_id_mock = sc_mock.return_value.delete_by_id
 
         ps_delete_by_id_mock.return_value = 1
 

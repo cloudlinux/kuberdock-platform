@@ -34,10 +34,11 @@ from kubedock.updates.kuberdock_upgrade import get_available_updates
 from kubedock.updates.helpers import get_maintenance
 from kubedock import tasks
 from kubedock.kapi import licensing
-from kubedock.kapi.pstorage import check_namespace_exists
+from kubedock.kapi.pstorage import check_namespace_exists, STORAGE_CLASS
 from kubedock.kapi import ippool
 from kubedock.kapi.node_utils import (
     get_one_node, extend_ls_volume, get_ls_info)
+from kubedock.kapi.podcollection import change_pv_size
 
 from flask.ext.script import Manager, Shell, Command, Option, prompt_pass
 from flask.ext.script.commands import InvalidCommand
@@ -326,8 +327,8 @@ class AuthKey(Command):
             key = licensing.get_auth_key()
         except APIError:
             # Actually this case is never happens because generate_auth_key()
-            # called even earlie, during modules import. But I leave it here too
-            # for extra safety
+            # called even earlier, during modules import. But I leave it here
+            # too for extra safety
             key = licensing.generate_auth_key()
         print key
 
@@ -526,6 +527,37 @@ node_ls_manager.add_command('add-volume', NodeLSAddVolume)
 node_ls_manager.add_command('get-info', NodeLSGetInfo)
 
 
+pv_manager = Manager()
+
+
+class PVResize(Command):
+    """Resize persistent volume"""
+    option_list = [
+        Option('--pv-id', dest='pv_id', required=True,
+               help='Persistent volume indentifier'),
+        Option('--new-size', dest='new_size', required=True, type=int,
+               help='New volume size in GB'),
+    ]
+
+    def run(self, pv_id, new_size):
+        try:
+            result = change_pv_size(pv_id, new_size)
+        except APIError as err:
+            raise InvalidCommand(str(err))
+        print json.dumps(result)
+
+
+class PVIsResizable(Command):
+    """Checks if current storage backend supports persistent volume resizing"""
+    def run(self):
+        storage = STORAGE_CLASS()
+        print storage.is_pv_resizable()
+
+
+pv_manager.add_command('resize', PVResize)
+pv_manager.add_command('is-resizable', PVIsResizable)
+
+
 app = create_app(fake_sessions=True)
 manager = Manager(app, with_default_commands=False)
 directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -555,6 +587,7 @@ manager.add_command('list-ip-pools', ListIPPool())
 manager.add_command('create-user', CreateUser())
 manager.add_command('add-predefined-app', AddPredefinedApp())
 manager.add_command('node-storage', node_ls_manager)
+manager.add_command('persistent-volume', pv_manager)
 
 
 if __name__ == '__main__':

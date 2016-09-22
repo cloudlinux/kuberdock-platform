@@ -1,7 +1,6 @@
 """
 Defines and exports global kuberdock exceptions
 """
-import sys
 from abc import ABCMeta
 
 
@@ -108,6 +107,10 @@ class DomainNotFound(NotFound):
     message_template = 'Domain not found'
 
 
+class PDNotFound(NotFound):
+    message = 'Persistent disk not found.'
+
+
 class NoFreeIPs(APIError):
     message_template = ('There are no free public IP-addresses, contact '
                         'KuberDock administrator')
@@ -182,3 +185,20 @@ class CannotBeDeletedError(APIError):
 
 class ServicePodDumpError(APIError):
     message_template = 'Service pods are not subject to dump'
+
+
+class PVResizeIsNotSupportedError(APIError):
+    """The error will be raised on persistent volume resize operation
+    when current storage backend does not support resizing of existing
+    volumes.
+    """
+    status_code = 400
+    message_template = 'Resize of persistent volumes is not supported'
+
+
+class PVResizeFailed(APIError):
+    """The error will be raised on persistent volume resize operation
+    if the operation failed for some reason. More detailed description
+    must be provided in message.
+    """
+    status_code = 400

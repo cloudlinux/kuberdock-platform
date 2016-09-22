@@ -69,15 +69,16 @@ For full list of args for each command call 'manage.py <command name> -h'
 """
 from __future__ import absolute_import
 
+import os
 import argparse
 import json
 
 from . import aws
-from .common import OK, ERROR, CmdError
+from .common import OK, ERROR, CmdError, volume_can_be_resized_to
 
 from .storage import (
     do_get_info, do_add_volume, do_remove_storage, VOLUME_MANAGE_NAME,
-    do_create_volume, do_remove_volume
+    do_create_volume, do_remove_volume, do_resize_volume
 )
 
 
@@ -103,6 +104,22 @@ def _do_remove_storage(call_args):
                    .format(VOLUME_MANAGE_NAME)
     }
 
+def _do_resize_volume(call_args):
+    """Calls do_resize_volume of current storage.
+    Before calling the method of current storage checks if path exists, and
+    that the volume can be resized (it is forbidden to reduce volume quota
+    less than already used space).
+    If the path does not exist, the method does nothing and returns no errors.
+    """
+    path = call_args.path
+    quota_gb = int(call_args.new_quota)
+    if not os.path.exists(path):
+        return OK, {}
+    ok, error_message = volume_can_be_resized_to(path, quota_gb * (1024 ** 3))
+    if not ok:
+        return ERROR, {'message': error_message}
+    return do_resize_volume(call_args)
+
 
 COMMANDS = {
     'ebs-attach': aws.do_ebs_attach,
@@ -111,6 +128,7 @@ COMMANDS = {
     'remove-storage': _do_remove_storage,
     'create-volume': do_create_volume,
     'remove-volume': do_remove_volume,
+    'resize-volume': _do_resize_volume,
 }
 
 
@@ -191,6 +209,19 @@ def process_args():
     remove_volume.add_argument(
         '--path', dest='path', required=True, help='Path to volume'
     )
+
+    resize_volume = subparsers.add_parser(
+        'resize-volume',
+        help='Resize persistent volume',
+    )
+    resize_volume.add_argument(
+        '--path', dest='path', required=True, help='Path to persistent volume'
+    )
+    resize_volume.add_argument(
+        '--new-quota', dest='new_quota', required=True, type=int,
+        help='New size quota (GB) of the volume'
+    )
+
     return parser.parse_args()
 
 

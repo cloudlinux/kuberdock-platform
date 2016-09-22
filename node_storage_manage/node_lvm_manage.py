@@ -231,9 +231,8 @@ def do_create_volume(call_args):
     :param call_args.quota: FS quota for the volume
     :return: full path to created volume
     """
-    path = call_args.path
+    full_path = call_args.path
     quota_gb = call_args.quota
-    full_path = os.path.join(LOCAL_STORAGE_MOUNT_POINT, path)
 
     err_code, output = get_subprocess_result(['mkdir', '-p', full_path])
     raise_cmd_error(err_code, output)
@@ -250,3 +249,15 @@ def do_create_volume(call_args):
 def do_remove_volume(call_args):
     path = call_args.path
     shutil.rmtree(path, True)
+
+
+def do_resize_volume(call_args):
+    path = call_args.path
+    quota_gb = call_args.new_quota
+    err_code = silent_call(
+        ['/usr/bin/env', 'python2', FSLIMIT_PATH, 'storage',
+         '{0}={1}g'.format(path, quota_gb)]
+    )
+    if err_code:
+        raise_cmd_error(err_code, 'Failed to set XFS quota')
+    return OK, {'path': path}

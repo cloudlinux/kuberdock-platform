@@ -177,6 +177,19 @@ def add_devices_to_localstorage(devices):
     }
 
 
+def full_volume_path_to_zfs_path(path):
+    """Converts volume path in form '/var/lib/kuberdock/storage/123/pvname'
+    to path that may used in zfs commands:
+        'kdstorage00/123/pvname'
+    It is assumed that incoming path is a subdirectory of
+    /var/lib/kuberdock/storage - mountpoint of kuberdock zpool.
+
+    """
+    relative_path = get_path_relative_to_localstorage(path)
+    zfs_path = '{}/{}'.format(KD_ZPOOL_NAME, relative_path)
+    return zfs_path
+
+
 def do_create_volume(call_args):
     """Creates zfs filesystem on specified path and sets size quota to it.
     :param call_args.path: relative (from KD storage dir) path to volume
@@ -185,22 +198,32 @@ def do_create_volume(call_args):
     """
     path = call_args.path
     quota_gb = call_args.quota
-    relative_path = get_path_relative_to_localstorage(path)
-    zfs_path = '{}/{}'.format(KD_ZPOOL_NAME, relative_path)
+    zfs_path = full_volume_path_to_zfs_path(path)
     err_code, output = get_subprocess_result(['zfs', 'create', '-p', zfs_path])
     raise_cmd_error(err_code, output)
     err_code, output = get_subprocess_result(
         ['zfs', 'set', 'quota={}G'.format(quota_gb), zfs_path]
     )
     raise_cmd_error(err_code, output)
-    return OK, {'path': os.path.join(LOCAL_STORAGE_MOUNT_POINT, relative_path)}
+    return OK, {'path': path}
 
 
 def do_remove_volume(call_args):
     path = call_args.path
-    relative_path = get_path_relative_to_localstorage(path)
+    zfs_path = full_volume_path_to_zfs_path(path)
+
     err_code, output = get_subprocess_result([
-        'zfs', 'destroy', '-r', '-f',
-        '{}/{}'.format(KD_ZPOOL_NAME, relative_path)
+        'zfs', 'destroy', '-r', '-f', zfs_path
     ])
     raise_cmd_error(err_code, output)
+
+
+def do_resize_volume(call_args):
+    path = call_args.path
+    quota_gb = call_args.new_quota
+    zfs_path = full_volume_path_to_zfs_path(path)
+    err_code, output = get_subprocess_result(
+        ['zfs', 'set', 'quota={}G'.format(quota_gb), zfs_path]
+    )
+    raise_cmd_error(err_code, output)
+    return OK, {'path': path}

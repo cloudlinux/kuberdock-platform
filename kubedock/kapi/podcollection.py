@@ -273,17 +273,15 @@ class PodCollection(object):
 
     def _preprocess_volumes(self, params):
         params.setdefault('volumes', [])
-        storage_cls = pstorage.get_storage_class()
-        if storage_cls:
-            persistent_volumes = [vol for vol in params['volumes']
-                                  if 'persistentDisk' in vol]
-            is_compatible, pinned_node_name = \
-                storage_cls.are_pod_volumes_compatible(
-                    persistent_volumes, self.owner.id, params)
-            if not is_compatible:
-                raise APIError("Invalid combination of persistent disks")
-            if pinned_node_name is not None:
-                params['node'] = pinned_node_name
+        persistent_volumes = [vol for vol in params['volumes']
+                              if 'persistentDisk' in vol]
+        is_compatible, pinned_node_name = \
+            pstorage.STORAGE_CLASS.are_pod_volumes_compatible(
+                persistent_volumes, self.owner.id, params)
+        if not is_compatible:
+            raise APIError("Invalid combination of persistent disks")
+        if pinned_node_name is not None:
+            params['node'] = pinned_node_name
 
     @utils.atomic(nested=False)
     def edit(self, original_pod, data, skip_check=False):
@@ -499,7 +497,9 @@ class PodCollection(object):
         node = network.node
         if current_app.config['FIXED_IP_POOLS'] and node:
             try:
-                K8SNode(hostname=node.hostname).increment_free_public_ip_count(1)
+                K8SNode(
+                    hostname=node.hostname
+                ).increment_free_public_ip_count(1)
             except NodeException as e:
                 if not force:
                     raise
@@ -1925,3 +1925,38 @@ def del_public_ports_policy(namespace):
         ['networkpolicys', PUBLIC_PORT_POLICY_NAME],
         ns=namespace,
     )
+
+
+def change_pv_size(persistent_disk_id, new_size):
+    storage = pstorage.STORAGE_CLASS()
+    ok, changed_pod_ids = storage.resize_pv(persistent_disk_id, new_size)
+    if not (ok and changed_pod_ids):
+        return ok, changed_pod_ids
+    pc = PodCollection()
+    for pod_id, restart_required in changed_pod_ids:
+        # Check RC for the pod already exists, if it is not, then skip
+        # updating
+        pod = pc._get_by_id(pod_id)
+        rc = KubeQuery().get(
+            ['replicationcontrollers', pod.sid], ns=pod.namespace
+        )
+        failed, _ = podutils.is_failed_k8s_answer(rc)
+        if failed:
+            continue
+        pod = DBPod.query.filter(DBPod.id == pod_id).first()
+        config = pod.get_dbconfig()
+        volumes = config.get('volumes', [])
+        annotations = [vol.pop('annotation') for vol in volumes]
+        pc.patch_running_pod(
+            pod_id,
+            {
+                'metadata': {
+                    'annotations': {
+                        'kuberdock-volume-annotations': json.dumps(annotations)
+                    }
+                },
+            },
+            replace_lists=True,
+            restart=restart_required
+        )
+    return ok, changed_pod_ids

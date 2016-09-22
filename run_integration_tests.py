@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import sys
 import threading
 from contextlib import closing
@@ -7,6 +8,7 @@ from datetime import timedelta
 from threading import Thread
 
 import click
+import requests
 from colorama import Fore
 
 from tests_integration.lib import multilogger
@@ -50,10 +52,6 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         msg = force_unicode(msg)
         print_msg(u'{} -> {}\n'.format(pipeline_name, msg), color)
 
-    def prettify_exception(exc):
-        msg = force_unicode(str(exc))
-        return u'{}: {}'.format(exc.__class__.__name__, msg)
-
     try:
         pipeline = Pipeline.from_name(pipeline_name)
         pipe_log('CREATING CLUSTER', Fore.MAGENTA)
@@ -87,6 +85,11 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         pipeline.destroy()
 
     print_msg(test_results.pipeline_test_summary(pipeline_name))
+
+
+def prettify_exception(exc):
+    msg = force_unicode(str(exc))
+    return u'{}: {}'.format(exc.__class__.__name__, msg)
 
 
 def add_debug_info(pipeline):
@@ -130,17 +133,50 @@ def get_pipeline_logs(multilog):
         name, log = force_unicode(name), force_unicode(log)
         return center_text_message(name, color=Fore.MAGENTA) + '\n' + log
 
-    entries = (
-        _format_log(name, log)
+    entries = {
+        name: _format_log(name, log)
         for name, log in multilog.grouped_by_thread.items()
-        if test_results.has_any_failures(name)
-    )
+        if test_results.has_any_failures(name)}
 
-    msg = '\n' + u'\n'.join(entries)
+    try:
+        url = os.environ['KD_PASTEBIN_URL']
+        user = os.environ['KD_PASTEBIN_USER']
+        password = os.environ['KD_PASTEBIN_PASS']
+
+        with PastebinClient(url, user, password) as c:
+            urls = ('{}: {}'.format(n, c.post(e)) for n, e in
+                    entries.items())
+            msg = '\n' + '\n'.join(urls)
+    except Exception as e:
+        # Fallback if pastebin isn't accessible
+        msg = u'\n!!! Could not upload logs to pastebin. Reason:\n{}\n' \
+              u'Falling back to console\n\n{}'
+        msg = msg.format(prettify_exception(e), u'\n'.join(entries.values()))
 
     msg = center_text_message(
         'PIPELINE DETAILED LOGS', fill_char='=', color=Fore.MAGENTA) + msg
     return msg.encode('utf-8')
+
+
+class PastebinClient(object):
+    def __init__(self, url, username, password):
+        self.ses = requests.Session()
+        self.ses.auth = (username, password)
+        self.base_url = url
+
+    def post(self, log):
+        log = self._prepare_log(log)
+        response = self.ses.post(self.base_url, data=log)
+        return response.json()['uri'] + '/raw'
+
+    def _prepare_log(self, data):
+        return re.sub(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]', '', data)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.ses.close()
 
 
 def _print_logs(handler, live_log):
@@ -212,8 +248,7 @@ def _verify_pipelines(ctx, param, items):
                    'cluster if any of its tests failed.')
 @click.option('--junit-xml', type=click.File(mode='w'))
 @click.option('--test', type=str, help='A name of a test to run')
-def main(
-        paths, pipelines, pipelines_skip, live_log, all_tests, cluster_debug,
+def main(paths, pipelines, pipelines_skip, live_log, all_tests, cluster_debug,
         junit_xml, test):
     if bool(all_tests) == bool(test):
         raise click.BadOptionUsage(

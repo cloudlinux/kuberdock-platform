@@ -645,7 +645,7 @@ class PodCollection(object):
                     'notify:error', {'message': message}, 'Admin')
         # all deleted asynchronously, now delete namespace, that will ensure
         # delete all content
-        self._drop_namespace(pod.namespace, force)
+        self._drop_namespace(pod.namespace, force=force)
         helpers.mark_pod_as_deleted(pod_id)
         PodDomain.query.filter_by(pod_id=pod_id).delete()
 

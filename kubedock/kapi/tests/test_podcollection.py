@@ -122,7 +122,7 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         mock_free_pd.assert_called_once_with(pod.id)
         pod.set_status.assert_called_once_with(
             POD_STATUSES.deleting, send_update=True, force=True)
-        drop_namespace.assert_called_once_with(pod.namespace)
+        drop_namespace.assert_called_once_with(pod.namespace, force=True)
         mark_pod_as_deleted.assert_called_once_with(pod.id)
         delete_type_A_record_mock.assert_called_once_with(pod.domain)
 
@@ -196,8 +196,9 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         self.app.delete(pod.id)
 
         mock_free_pd.assert_called_once_with(pod.id)
-        pc_drop_namespace_mock.assert_called_once_with(pod.namespace)
-        remove_ip_mock.assert_called_once_with(pod_id=pod.id)
+        pc_drop_namespace_mock.assert_called_once_with(pod.namespace,
+                                                       force=False)
+        remove_ip_mock.assert_called_once_with(pod_id=pod.id, force=False)
         mark_.assert_called_once_with(pod.id)
         self.app.k8squery.delete.assert_called_once_with(
             ['services', 'fs'], ns=pod.namespace)

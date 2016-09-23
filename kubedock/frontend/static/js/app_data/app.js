@@ -245,6 +245,12 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
             that.kubeTypeCollection.add(data, {merge: true});
         };
 
+        events['notify:warning'] = function(ev) {
+            that.lastEventId = ev.lastEventId;
+            var data = JSON.parse(ev.data);
+            Utils.notifyWindow(data.message, 'warning');
+        };
+
         events['notify:error'] = function(ev) {
             that.lastEventId = ev.lastEventId;
             var data = JSON.parse(ev.data);

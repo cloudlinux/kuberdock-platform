@@ -1050,9 +1050,9 @@ body{
                     font-weight: 400;
                 }
                 .notify-icon{
-                    top: 0;
+                    top: 15px;
                     left: 18px;
-                    line-height: 52px;
+                    line-height: 20px;
                     position: absolute;
                     .mdi('info_outline',20px, #fff, #fff);
                     &:hover{
@@ -1063,7 +1063,7 @@ body{
                     background-color: #ef5250;
                     &.notify-multi .notify-count { display: block; }
                     .notify-icon{
-                        &::before{ content: 'highlight_off'; }
+                        &::before{ content: 'error'; }
                     }
                     .notify-count {
                         .border-radius(11px);  // 50% of height
@@ -1091,7 +1091,7 @@ body{
                 &.notifyjs-bootstrap-warning{
                     background-color: #f69336;
                     .notify-icon{
-                        &::before{ content: 'error_outline';}
+                        &::before{ content: 'warning';}
                     }
                 }
                 &.notifyjs-bootstrap-info{ background-color: #484848; }

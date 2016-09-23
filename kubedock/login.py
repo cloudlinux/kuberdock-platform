@@ -66,6 +66,8 @@ class LoginManager(object):
         self.token_callback = None
         self.cleaner_callback = None
         self.adder_callback = None
+        self.taker_callback = None
+        self.releaser_callback = None
         if app is not None:
             self.init_app(app)
 
@@ -86,6 +88,14 @@ class LoginManager(object):
 
     def session_adder(self, callback):
         self.adder_callback = callback
+        return callback
+
+    def session_taker(self, callback):
+        self.taker_callback = callback
+        return callback
+
+    def session_releaser(self, callback):
+        self.releaser_callback = callback
         return callback
 
     def _load_user(self):
@@ -127,7 +137,7 @@ def create_identifier():
     return h.hexdigest()
 
 
-def login_user(user, DB=True):
+def login_user(user, DB=True, impersonator=None):
     user_id = getattr(user, ID_ATTRIBUTE)()
     session['user_id'] = user_id
     session['_fresh'] = True
@@ -138,14 +148,19 @@ def login_user(user, DB=True):
     if DB and current_app.login_manager.adder_callback:
         current_app.login_manager.adder_callback(
             session.sid, user_id, user.role_id)
+    if impersonator is not None and current_app.login_manager.taker_callback:
+        current_app.login_manager.taker_callback(
+            session.sid, getattr(impersonator, 'id', None))
     return True
 
 
-def logout_user(DB=True):
+def logout_user(DB=True, release=False):
     for key in ('user_id', '_fresh'):
         session.pop(key, None)
     if DB and current_app.login_manager.cleaner_callback:
         current_app.login_manager.cleaner_callback(session.sid)
+    if release and current_app.login_manager.releaser_callback:
+        current_app.login_manager.releaser_callback(session.sid)
 
 
 def _get_user():

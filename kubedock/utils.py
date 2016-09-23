@@ -154,7 +154,9 @@ def send_event_to_user(event_name, data, user_id, to_file=None,
     """
     Selects all given user sessions and sends list to send_event
     """
-    sessions = [i.id for i in SessionData.query.filter_by(user_id=user_id)]
+    sessions = [i.id for i in SessionData.query.filter(
+        (SessionData.user_id == user_id) |
+        (SessionData.impersonated_id == user_id))]
     send_event(event_name, data, to_file, sessions, prefix)
 
 

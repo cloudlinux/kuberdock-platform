@@ -16,7 +16,7 @@ from PIL import Image
 
 COMMON_PREFIX = '/var/opt/kuberdock/kubedock/frontend'
 INDEX_PATH = os.path.join(COMMON_PREFIX, 'templates/index.html')
-LOGINPAGE_PATH = os.path.join(COMMON_PREFIX, 'templates/auth/login.html')
+LOGINPAGE_PATH = INDEX_PATH
 PREPARED_PATH = os.path.join(COMMON_PREFIX, 'static/js/app_data/prepared.js')
 GZIP_PREPARED_PATH = os.path.join(COMMON_PREFIX,
                                   'static/js/app_data/prepared.js.gz')
@@ -31,38 +31,40 @@ LOGIN_LOGO_SIZE = (227, 67)
 
 def parse_args():
     parser = argparse.ArgumentParser('KD customizer')
-    parser.add_argument('-l', '--logo', help='Logo image to subsitute with (162x48 px)')
-    parser.add_argument('-L', '--login-logo', help='Login logo image to subsitute with (227x67 px)')
+    parser.add_argument('-l', '--logo',
+                        help='Logo image to subsitute with (162x48 px)')
+    parser.add_argument('-L', '--login-logo',
+                        help='Login logo image to subsitute with (227x67 px)')
     parser.add_argument('-s', '--styles', help='Styles file to customize')
-    parser.add_argument('-S', '--login-styles', help='Styles file to customize login page')
     return parser.parse_args()
 
 
-def add_style(styles, login=False):
+def add_style(styles):
     fmt = ("""{0}<link rel="stylesheet" type="text/css" """
            """href="{{{{ url_for('static', filename='css/{1}') }}}}">\n""")
     contents = []
-    target = LOGINPAGE_PATH if login else INDEX_PATH
+    target = INDEX_PATH
     with open(target) as f:
         for l in f:
             if '</head>' in l:
                 pos = l.find('<')
-                s = fmt.format(' ' * (pos+4), styles)
+                s = fmt.format(' ' * (pos + 4), styles)
                 contents.append(s)
             contents.append(l)
     return contents
 
 
 def change_login_logo(logo):
-    fmt = ("""{0}<style type="text/css">.login-page .container .logo{{"""
-           """background: url({{{{ url_for('static', filename='img/{1}') }}}})"""
-           """center center no-repeat !important;}}</style>\n""")
+    fmt = (
+        """{0}<style type="text/css">.login-page .container .logo{{"""
+        """background: url({{{{ url_for('static', filename='img/{1}') }}}})"""
+        """center center no-repeat !important;}}</style>\n""")
     contents = []
     with open(LOGINPAGE_PATH) as f:
         for l in f:
             if '</head>' in l:
                 pos = l.find('<')
-                s = fmt.format(' ' * (pos+4), logo)
+                s = fmt.format(' ' * (pos + 4), logo)
                 contents.append(s)
             contents.append(l)
     return contents
@@ -75,7 +77,7 @@ def change_logo(logo, target, gz=False):
     op = gzip.open if gz else open
     with op(target) as f:
         for l in f:
-            contents.append(l.replace('/logo.png', '/'+logo))
+            contents.append(l.replace('/logo.png', '/' + logo))
     return contents
 
 
@@ -84,7 +86,8 @@ def process_logo(logo, user):
     Copies provided logo file to a img folder, chowns it and modifies contens
     to use supplied file
     @param logo: string -> file path
-    @param user: namedtuple object -> (user.uid, user.gid) of the web-server user
+    @param user: namedtuple object -> (user.uid, user.gid) of the web-server
+        user
     """
     if logo is None:
         return
@@ -107,7 +110,8 @@ def process_login_logo(logo, user):
     Copies provided logo file to a img folder, chowns it and modifies contens
     to use supplied file
     @param logo: string -> file path
-    @param user: namedtuple object -> (user.uid, user.gid) of the web-server user
+    @param user: namedtuple object -> (user.uid, user.gid) of the web-server
+        user
     """
     if logo is None:
         return
@@ -122,20 +126,21 @@ def process_login_logo(logo, user):
         os.chown(path, user.uid, user.gid)
 
 
-def process_styles(styles, user, login=False):
+def process_styles(styles, user):
     """
-    Copies provided styles file to a styles folder, chowns it and modifies contens
-    to use supplied file
+    Copies provided styles file to a styles folder, chowns it and modifies
+    contens to use supplied file
     @param styles: string -> file path
-    @param user: namedtuple object -> (user.uid, user.gid) of the web-server user
+    @param user: namedtuple object -> (user.uid, user.gid) of the web-server
+        user
     """
     if styles is None:
         return
     check_filepath(styles)
     fullpath = os.path.join(STYLES_PATH, os.path.basename(styles))
     shutil.copyfile(styles, fullpath)
-    target = LOGINPAGE_PATH if login else INDEX_PATH
-    save(add_style(os.path.basename(styles), login), target)
+    target = INDEX_PATH
+    save(add_style(os.path.basename(styles)), target)
     for path in fullpath, target:
         os.chown(path, user.uid, user.gid)
 
@@ -149,7 +154,7 @@ def save(contents, target, gz=False):
             f.write(l)
     if gz:
         path0 = path
-        path  = path+'.gz'
+        path = path + '.gz'
         with open(path0, 'rb') as i, gzip.open(path, 'wb') as o:
             shutil.copyfileobj(i, o)
         os.unlink(path0)
@@ -187,11 +192,10 @@ if __name__ == '__main__':
     check_euid()
     user = get_server_user()
     args = parse_args()
-    if not any(attrgetter('logo', 'login_logo', 'styles', 'login_styles')(args)):
-        print "At least one argument is expected. Use --help to learn about options"
+    if not any(attrgetter('logo', 'login_logo', 'styles')(args)):
+        print("At least one argument is expected. Use --help to learn about "
+              "options")
         sys.exit(0)
     process_logo(args.logo, user)
     process_login_logo(args.login_logo, user)
     process_styles(args.styles, user)
-    process_styles(args.login_styles, user, login=True)
-

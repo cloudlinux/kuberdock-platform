@@ -1,4 +1,5 @@
 import sys
+import re
 
 from copy import deepcopy
 from flask import current_app
@@ -231,7 +232,9 @@ class UserCollection(object):
             ([pd.id for pd in user.persistent_disks],),
             countdown=10
         )
-
+        prefix = '__' + generate()
+        user.username += prefix
+        user.email += prefix
         user.deleted = True
         try:
             db.session.commit()
@@ -248,6 +251,24 @@ class UserCollection(object):
         :raises APIError: if user was not found
         """
         user = self._convert_user(user)
+        user.deleted = False
+
+    @atomic(APIError("Couldn't undelete user.", 500, 'UserUndeleteError'),
+            nested=False)
+    def undelete_by_email(self, user_email):
+        """Undelete user by email.
+
+        :param user_email: user email -> str
+        :raises APIError: if user was not found
+        """
+        user = User.query.filter(User.email.like(user_email+'%')).first()
+        if user is None:
+            raise UserNotFound('User email "{0}" does not exists'.format(
+                user_email))
+        user.email = re.sub(r'^([^@]+@[\w\.\-]+?)(?:__[A-Za-z0-9]{8})?$',
+                            r'\1', user.email)
+        user.username = re.sub(r'^(.+?)(?:__[A-Za-z0-9]{8})?$', r'\1',
+                               user.username)
         user.deleted = False
 
     def get_activities(self, user, date_from=None, date_to=None, to_dict=None):

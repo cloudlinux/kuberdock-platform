@@ -169,9 +169,17 @@ def edit_self():
     return UserCollection(doer).update_profile(uid, data)
 
 
-@users.route('/undelete/<uid>', methods=['POST'])
+@users.route('/undelete', methods=['POST'], defaults={'uid': None},
+             strict_slashes=False)
+@users.route('/undelete/<uid>', methods=['POST'], strict_slashes=False)
 @auth_required
 @check_permission('create', 'users')
 @KubeUtils.jsonwrap
-def undelete_item(uid):
-    return UserCollection(KubeUtils.get_current_user()).undelete(uid)
+def undelete_item(uid=None):
+    user_collection = UserCollection(KubeUtils.get_current_user())
+    if uid is not None:
+        return user_collection.undelete(uid)
+    email = KubeUtils._get_params().get('email', None)
+    if email is None:
+        return
+    return user_collection.undelete_by_email(email)

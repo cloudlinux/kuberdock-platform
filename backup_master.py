@@ -118,7 +118,7 @@ def etcd_restore(src, dst):
     subprocess.check_call(cmd, stdout=subprocess.PIPE)
 
 
-def delete_nodes(skip_errors=False):
+def delete_nodes():
     """ Delete all nodes from restored cluster.
 
     When restoring cluster after a full crush it makes sense to drop nodes
@@ -135,18 +135,20 @@ def delete_nodes(skip_errors=False):
     from kubedock.api import create_app
     from kubedock.kapi.podcollection import PodCollection
 
+    # Run temp KD app
     create_app(fake_sessions=True).app_context().push()
+
     pod_collection = PodCollection()
     for pod in pod_collection.get_owned():
-        if not pod.owner.is_internal():
-            try:
-                pod_collection.delete(pod.id, force=True)
-                logger.debug("Pod `{0}` purged".format(pod.name))
-            except APIError as e:
-                if not skip_errors:
-                    raise
-                logger.info("Error when dropping pod {}:\n{}".format(
-                    pod.id, repr(e)))
+        if pod.owner.is_internal():
+            continue
+        try:
+            pod_collection.delete(pod.id, force=True)
+            logger.debug("Pod `{0}` purged".format(pod.name))
+        except APIError as e:
+            logger.info("Trouble when dropping the pod {}: {}\n"
+                        "Please try to remove the pod manually later.".format(
+                            pod.id, repr(e)))
 
     for node in get_all_nodes():
         node_name = node['metadata']['name']
@@ -157,10 +159,9 @@ def delete_nodes(skip_errors=False):
             delete_node(node=db_node, force=True, verbose=False)
             logger.debug("Node `{0}` purged".format(node_name))
         except APIError as e:
-            if not skip_errors:
-                raise
-            logger.info("Error when dropping the node {}:\n{}".format(
-                node_name, repr(e)))
+            logger.info("Trouble when dropping the the node {}: {}\n"
+                        "Please try to remove the node manually later.".format(
+                            node_name, repr(e)))
 
 
 class BackupResource(object):
@@ -399,7 +400,7 @@ def do_backup(backup_dir, callback, skip_errors, **kwargs):
         zipdir(backup_dst, zipf)
     rmtree(backup_dst)
 
-    logger.info('Backup finished {0}'.format(result))
+    logger.info('Backup finished successfully: {0}'.format(result))
     if callback:
         subprocess.Popen("{0} {1}".format(callback, result),
                          shell=True)
@@ -435,7 +436,7 @@ def do_restore(backup_file, drop_nodes, skip_errors, **kwargs):
 
     if drop_nodes:
         # NOTE this requires working k8s/etcd/ otherwise will fail
-        delete_nodes(skip_errors)
+        delete_nodes()
 
     subprocess.check_call(["systemctl", "restart", "etcd"])
     time.sleep(5)
@@ -443,7 +444,7 @@ def do_restore(backup_file, drop_nodes, skip_errors, **kwargs):
     subprocess.check_call(["systemctl", "start", "nginx"])
     subprocess.check_call(["systemctl", "start", "emperor.uwsgi"])
 
-    logger.info('Restore finished')
+    logger.info('Restore finished successfully.')
 
 
 def parse_args(args):
@@ -462,7 +463,7 @@ def parse_args(args):
                              "if you are going to re-deploy nodes thereafter). "
                              "Note that this option also implies removing "
                              "all user pods from the DB dump.")
-    parser.add_argument("-s", '--skip-errors', action='store_false',
+    parser.add_argument("-s", '--skip-errors', action='store_true',
                         dest='skip_errors',
                         help="Do not stop if one of the steps is failed.")
 

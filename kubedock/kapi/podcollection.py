@@ -20,6 +20,7 @@ from kubedock.exceptions import (
     NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError, ServicePodDumpError)
 from lbpoll import LoadBalanceService
 from node import Node as K8SNode
+from node import NodeException
 from pod import Pod
 from .. import billing
 from .. import dns_management
@@ -452,7 +453,7 @@ class PodCollection(object):
 
     @staticmethod
     @utils.atomic()
-    def _remove_public_ip(pod_id=None, ip=None):
+    def _remove_public_ip(pod_id=None, ip=None, force=False):
         """Free ip (remove PodIP from database and change pod config).
 
         Needed for suspend user feature. When user is suspended all his pods
@@ -490,8 +491,13 @@ class PodCollection(object):
         network = IPPool.query.filter_by(network=ip.network).first()
         node = network.node
         if current_app.config['NONFLOATING_PUBLIC_IPS'] and node:
-            K8SNode(hostname=node.hostname).increment_free_public_ip_count(1)
-
+            try:
+                K8SNode(hostname=node.hostname).increment_free_public_ip_count(1)
+            except NodeException as e:
+                if not force:
+                    raise
+                current_app.logger.debug(
+                    "Cannot increment pubic IP count: {}".format(repr(e)))
         IpState.end(pod_id, ip.ip_address)
         db.session.delete(ip)
 
@@ -624,10 +630,11 @@ class PodCollection(object):
             rv = self.k8squery.delete(
                 ['services', service_name], ns=pod.namespace
             )
-            podutils.raise_if_failure(rv, "Could not remove a service")
+            if not force:
+                podutils.raise_if_failure(rv, "Could not remove a service")
 
         if hasattr(pod, 'public_ip'):
-            self._remove_public_ip(pod_id=pod_id)
+            self._remove_public_ip(pod_id=pod_id, force=force)
         if hasattr(pod, 'domain'):
             ok, message = dns_management.delete_type_A_record(pod.domain)
             if not ok:
@@ -638,7 +645,7 @@ class PodCollection(object):
                     'notify:error', {'message': message}, 'Admin')
         # all deleted asynchronously, now delete namespace, that will ensure
         # delete all content
-        self._drop_namespace(pod.namespace)
+        self._drop_namespace(pod.namespace, force)
         helpers.mark_pod_as_deleted(pod_id)
         PodDomain.query.filter_by(pod_id=pod_id).delete()
 
@@ -714,10 +721,12 @@ class PodCollection(object):
         user_namespaces = get_user_namespaces(self.owner)
         return [ns for ns in namespaces if ns in user_namespaces]
 
-    def _drop_namespace(self, namespace):
+    def _drop_namespace(self, namespace, force=False):
         rv = self.k8squery.delete(['namespaces', namespace], ns=False)
-        podutils.raise_if_failure(rv, "Cannot delete namespace '{}'".format(
-            namespace))
+        if not force:
+            podutils.raise_if_failure(
+                rv, "Cannot delete namespace '{}'".format(namespace)
+            )
         return rv
 
     def _get_replicas(self, name=None):

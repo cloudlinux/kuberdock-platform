@@ -947,18 +947,16 @@ def send_pod_status_update(pod_status, db_pod, event_type):
     redis = ConnectionPool.get_connection()
     prev_state = redis.get(key_)
     user_id = db_pod.owner_id
-    if not prev_state:
-        redis.set(key_, pod_status)
-    else:
-        current = pod_status
-        deleted = event_type == 'DELETED'
-        if prev_state != current or deleted:
-            redis.set(key_, 'DELETED' if deleted else current)
-            event = ('pod:delete'
-                     if db_pod.status in ('deleting', 'deleted') else
-                     'pod:change')
-            send_event_to_role(event, {'id': db_pod.id}, 'Admin')
-            send_event_to_user(event, {'id': db_pod.id}, user_id)
+    current = pod_status
+    deleted = event_type == 'DELETED'
+    if prev_state != current or deleted:
+        redis.set(key_, 'DELETED' if deleted else current)
+        event = (
+            'pod:delete' if db_pod.status in ('deleting', 'deleted') else
+            'pod:change'
+        )
+        send_event_to_role(event, {'id': db_pod.id}, 'Admin')
+        send_event_to_user(event, {'id': db_pod.id}, user_id)
 
 
 class NestedDictUtils(object):
@@ -1056,8 +1054,8 @@ def session_scope(session):
     """
     Provide a transactional scope around a series of operations.
     (Taken from http://docs.sqlalchemy.org/en/latest/orm/session_basics.html)
-    WARNING: this implementation doesn't create new session, but reuses existing
-    like:
+    WARNING: this implementation doesn't create new session, but reuses
+    existing like:
         with session_scope(db.session):
             ...
     """

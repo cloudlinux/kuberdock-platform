@@ -992,7 +992,7 @@ class PodCollection(object):
         if command_options.get('applyEdit'):
             pod, db_config = self._apply_edit(pod, db_pod, db_config)
 
-        pod.set_status(POD_STATUSES.preparing)
+        pod.set_status(POD_STATUSES.preparing, send_update=True)
 
         if not current_app.config['NONFLOATING_PUBLIC_IPS']:
             pod_public_ip = getattr(pod, 'public_ip', None)
@@ -1263,7 +1263,9 @@ class PodCollection(object):
                     .filter(DBPod.id != original_pod.id)
             user_kubes = sum([pod.kubes for pod in pods_collection
                               if not pod.is_deleted])
-            max_kubes_trial_user = int(SystemSettings.get_by_name('max_kubes_trial_user') or 0)
+            max_kubes_trial_user = int(
+                SystemSettings.get_by_name('max_kubes_trial_user') or 0
+            )
             kubes_left = max_kubes_trial_user - user_kubes
             pod_kubes = sum(c['kubes'] for c in containers)
             if pod_kubes > kubes_left:
@@ -1522,7 +1524,7 @@ def prepare_and_run_pod(pod):
                     'notify:error',
                     {
                         'message': u'Failed to run pod with domain "{}": {}'
-                            .format(pod.domain, message)
+                        .format(pod.domain, message)
                     },
                     'Admin'
                 )
@@ -1798,7 +1800,6 @@ def _process_persistent_volumes(pod, volumes):
         except:
             # free already taken drives in case of exception
             free_on_exit = True
-            pod.set_status(POD_STATUSES.stopped)
             raise
     finally:
         if free_on_exit and now_taken:

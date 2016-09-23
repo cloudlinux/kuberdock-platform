@@ -87,14 +87,12 @@ class Pipeline(object):
         :param test: a callable which represents a test and accepts one a
             KDIntegrationAPI object as a first argument
         """
-        test_name = get_test_full_name(test)
-        logger.debug(center_text_message('{} START'.format(test_name)))
-        self.set_up()
-        try:
-            test(self.cluster)
-        finally:
-            self.tear_down()
-            logger.debug(center_text_message('{} END'.format(test_name)))
+        with _wrap_test_log(test):
+            self.set_up()
+            try:
+                test(self.cluster)
+            finally:
+                self.tear_down()
 
     def post_create_hook(self):
         """
@@ -239,6 +237,19 @@ class Pipeline(object):
                     'END {} VAGRANT LOGS'.format(self.name)),
             )
         )
+
+
+@contextmanager
+def _wrap_test_log(test):
+    """
+    Wraps test log output with START/END markers
+    """
+    test_name = get_test_full_name(test)
+    try:
+        logger.debug(center_text_message('{} START'.format(test_name)))
+        yield
+    finally:
+        logger.debug(center_text_message('{} END'.format(test_name)))
 
 
 class UpgradedPipelineMixin(object):

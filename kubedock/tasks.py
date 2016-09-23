@@ -35,6 +35,7 @@ from .system_settings.models import SystemSettings
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
     NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH,
+    CEPH_POOL_NAME, CEPH_CLIENT_USER,
     KUBERDOCK_INTERNAL_USER, NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT,
     NODE_STORAGE_MANAGE_DIR, ZFS)
 from .kapi.collect import collect, send
@@ -330,7 +331,18 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
             NodeFlag.save_flag(
                 node_id, NodeFlagNames.CEPH_INSTALLED, "true"
             )
-            check_namespace_exists(node_ip=host)
+            if not check_namespace_exists(node_ip=host):
+                err_message = (
+                    u'ERROR: '
+                    u'CEPH pool "{0}" does not exists and can not be created. '
+                    u'Create it manually, give rwx rights to user "{1}" '
+                    u'and try again.\n'
+                    u'If the pool already exists, then check the user {1} has '
+                    u'rwx rights to it.'
+                    .format(CEPH_POOL_NAME, CEPH_CLIENT_USER)
+                )
+                send_logs(node_id, err_message, log_file, channels)
+                raise NodeInstallException(err_message)
         else:
             send_logs(node_id, 'Setup persistent storage...', log_file,
                       channels)

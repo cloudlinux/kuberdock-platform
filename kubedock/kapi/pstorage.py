@@ -45,7 +45,10 @@ def check_namespace_exists(node_ip=None, namespace=None):
     """
     cls = get_storage_class()
     if cls:
-        cls().check_namespace_exists(node_ip=node_ip, namespace=namespace)
+        return cls().check_namespace_exists(
+            node_ip=node_ip, namespace=namespace
+        )
+    return False
 
 
 class NodeCommandError(Exception):
@@ -434,7 +437,8 @@ class PersistentStorage(object):
         try:
             with drive_lock(pd.drive_name):
                 return self._makefs(pd.drive_name, fs)
-        except (DriveIsLockedError, NodeCommandTimeoutError, NoNodesError) as e:
+        except (DriveIsLockedError, NodeCommandTimeoutError,
+                NoNodesError) as e:
             current_app.logger.warning(admin_msg)
             notify_msg = "{}, reason: {}".format(admin_msg, e.message)
             send_event_to_role(
@@ -785,7 +789,25 @@ class CephStorage(PersistentStorage):
                 jsonresult=True
             )
         except:
+            # We can have no rights to run 'ceph osd', so, in case of error,
+            # try to ls the pool. If it exists and we can read it, then
+            # ok, return True.
+            # If rbd ls return some error, then the pool
+            # does not exists, or we have no rights to read it. Both cases are
+            # the same for us - return False.
+            try:
+                cmd = 'rbd {} ls {}'.format(
+                    get_ceph_credentials(),
+                    namespace
+                )
+                run_remote_command(node_ip, cmd)
+                return True
+            except NodeCommandError:
+                current_app.logger.exception(
+                    'Failed to run "{}" on node {}'.format(cmd, node_ip)
+                )
             return False
+
         for item in pools:
             if item.get('poolname') == namespace:
                 return True
@@ -1410,11 +1432,15 @@ class LocalStorage(PersistentStorage):
         # be used by node_network_plugin to create local storage on node
         # and set fs limits for it. Also annotation with localStorage key means
         # that volume is a persistent disk with local storage backend.
-        nested_dict_utils.set(volume, 'annotation.localStorage', {
+        nested_dict_utils.set(
+            volume,
+            'annotation.localStorage',
+            {
                 'size': pd.size,
                 'path': full_path,
                 'name': pd.name,
-            })
+            }
+        )
         return volume
 
     def extract_volume_info(self, volume):

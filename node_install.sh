@@ -38,6 +38,8 @@ export LANG=en_US.UTF-8
 echo "Using MASTER_IP=${MASTER_IP}"
 if [ "$ZFS" = yes ]; then
     echo "Using ZFS as storage backend"
+elif [ ! -z "$CEPH_CONF" ]; then
+    echo "Using CEPH as storage backend"
 else
     echo "Using LVM as storage backend"
 fi

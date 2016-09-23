@@ -141,12 +141,12 @@ def delete_nodes(skip_errors=False):
         if not pod.owner.is_internal():
             try:
                 pod_collection.delete(pod.id, force=True)
+                logger.debug("Pod `{0}` purged".format(pod.name))
             except APIError as e:
                 if not skip_errors:
                     raise
                 logger.info("Error when dropping pod {}:\n{}".format(
                     pod.id, repr(e)))
-            logger.debug("Pod `{0}` purged".format(pod.name))
 
     for node in get_all_nodes():
         node_name = node['metadata']['name']
@@ -155,12 +155,12 @@ def delete_nodes(skip_errors=False):
             synchronize_session=False)
         try:
             delete_node(node=db_node, force=True, verbose=False)
+            logger.debug("Node `{0}` purged".format(node_name))
         except APIError as e:
             if not skip_errors:
                 raise
             logger.info("Error when dropping the node {}:\n{}".format(
                 node_name, repr(e)))
-        logger.debug("Node `{0}` purged".format(node_name))
 
 
 class BackupResource(object):
@@ -433,15 +433,15 @@ def do_restore(backup_file, drop_nodes, skip_errors, **kwargs):
                 if not skip_errors:
                     raise
 
+    if drop_nodes:
+        # NOTE this requires working k8s/etcd/ otherwise will fail
+        delete_nodes(skip_errors)
+
     subprocess.check_call(["systemctl", "restart", "etcd"])
     time.sleep(5)
     subprocess.check_call(["systemctl", "restart", "kube-apiserver"])
-
     subprocess.check_call(["systemctl", "start", "nginx"])
     subprocess.check_call(["systemctl", "start", "emperor.uwsgi"])
-
-    if drop_nodes:
-        delete_nodes(skip_errors)
 
     logger.info('Restore finished')
 

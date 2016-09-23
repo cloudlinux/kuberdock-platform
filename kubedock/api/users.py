@@ -37,7 +37,7 @@ def auth_another(uid=None):
     session['auth_by_another'] = session.get('auth_by_another',
                                              original_user.id)
     user_logged_in_by_another.send((original_user.id, user.id))
-    login_user(user, DB=False)
+    login_user(user, DB=False, impersonator=original_user)
 
 
 @users.route('/logoutA', methods=['GET'])
@@ -50,7 +50,7 @@ def logout_another():
         current_app.logger.warning('Could not find impersonated user info')
         return
     user_id = current_user.id
-    logout_user(DB=False)
+    logout_user(DB=False, release=True)
     user = User.query.get(admin_user_id)
     if user is None:
         current_app.logger.warning(

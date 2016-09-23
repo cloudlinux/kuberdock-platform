@@ -53,6 +53,31 @@ def add_session(sid, uid, rid):
         db.session.rollback()
 
 
+@login_manager.session_taker
+def take_session(sid, iid):
+    if sid is None or iid is None:
+        return
+    session = SessionData.query.get(sid)
+    if session is None:
+        return
+    try:
+        session.impersonated_id = iid
+        db.session.commit()
+    except (ResourceClosedError, IntegrityError):
+        db.session.rollback()
+
+
+@login_manager.session_releaser
+def release_session(sid):
+    if sid is None:
+        return
+    session = SessionData.query.get(sid)
+    if session is None:
+        return
+    session.impersonated_id = None
+    db.session.commit()
+
+
 class User(BaseModelMixin, UserMixin, db.Model):
     __tablename__ = 'users'
 
@@ -397,6 +422,7 @@ class SessionData(db.Model):
     time_stamp = db.Column(db.DateTime, nullable=False)
     user_id = db.Column(db.Integer, nullable=False)
     role_id = db.Column(db.Integer, nullable=False)
+    impersonated_id = db.Column(db.Integer, nullable=True)
 
     def __init__(self, id, user_id, role_id):
         self.id = id

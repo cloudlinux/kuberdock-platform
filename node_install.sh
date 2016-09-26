@@ -28,6 +28,15 @@ KD_SSH_GC_CRON="@hourly  $KD_SSH_GC_CMD >/dev/null 2>&1"
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
 echo "Using MASTER_IP=${MASTER_IP}"
+
+if [ "$ZFS" = yes ]; then
+    echo "Using ZFS as storage backend"
+elif [ ! -z "$CEPH_CONF" ]; then
+    echo "Using CEPH as storage backend"
+else
+    echo "Using LVM as storage backend"
+fi
+
 echo "Set time zone to $TZ"
 timedatectl set-timezone "$TZ"
 echo "Deploy started: $(date)"

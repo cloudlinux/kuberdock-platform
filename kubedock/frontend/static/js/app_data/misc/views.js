@@ -41,9 +41,15 @@ define(['app_data/app', 'marionette',
             this.ui.toggler.toggleClass('move');
             this.ui.messageBody.toggleClass('visible');
             this.ui.messageBody.parent().toggleClass('visible');
+        },
+
+        onShow: function(){
+            if (this.collection.where({type: 'warning'}).length > 0 ) {
+                this.ui.toggler.click();
+            }
         }
     });
-    
+
     views.PageLayout = Marionette.LayoutView.extend({
         template: pageLayoutTpl,
         regions: {
@@ -51,10 +57,10 @@ define(['app_data/app', 'marionette',
             main: '#main'
         }
     });
-    
+
     views.PageNotFound = Marionette.ItemView.extend({
         template: pageNotFoundTpl
     });
-    
+
     return views;
 });

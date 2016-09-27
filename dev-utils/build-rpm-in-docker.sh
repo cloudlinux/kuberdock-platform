@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
-IMG=lobur/rpm-build:v1
+IMG=quay.io/sergey_gruntovsky/rpm-build:v3
 
 if [ ! -d "dev-utils" ]
 then

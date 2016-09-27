@@ -9,9 +9,7 @@ URL: http://www.cloudlinux.com
 Source0: %{name}-%{version}.tar.bz2
 
 BuildRequires: python
-BuildRequires: nodejs
-BuildRequires: nodejs-less
-BuildRequires: nodejs-clean-css
+BuildRequires: nodejs >= 6.4.0
 
 Requires: nginx
 Requires: influxdb == 0:0.13.0
@@ -82,11 +80,12 @@ Kuberdock
 %setup -n %{name}-%{version}
 
 %build
-# TODO change here when merge all apps to patch only one require config
-start='urlArgs: "bust="'
-replace='(new Date()).getTime()'
-replace_with=$(date +"%s")
-sed -i "/$start/ {s/$replace/$replace_with/}" kubedock/frontend/static/js/*/require_main.js
+# Build frontend stuff
+cd kubedock/frontend/static/
+npm install --no-optional
+PROD_ENV=true npm run build
+rm -rf node_modules
+cd ../../../
 # Exclude dev-utils and tests
 rm -rf dev-utils
 rm -rf builds
@@ -96,7 +95,6 @@ rm -rf kubedock/vcrpy_test_cassettes
 
 %install
 rm -rf %{buildroot}
-python minimize.py
 %{__install} -d %{buildroot}%{_defaultdocdir}/%{name}-%{version}/
 mkdir -p %{buildroot}/var/opt/kuberdock
 mkdir -p %{buildroot}%{_sysconfdir}/uwsgi/vassals

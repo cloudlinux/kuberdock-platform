@@ -1,8 +1,9 @@
 FROM centos:7
 
 RUN yum -y install epel-release && \
+    curl --silent --location https://rpm.nodesource.com/setup_6.x | bash - && \
     yum -y update && \
-    yum -y install rsync rpm-build gcc nodejs nodejs-less nodejs-clean-css && \
+    yum -y install rsync rpm-build gcc nodejs-6.4.0 && \
     yum clean all
 
 # Rebuild & push with:

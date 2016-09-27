@@ -421,9 +421,9 @@ define([
                     originalModelCopy = new Model.Pod(podConfig);
                 if (!originalModelCopy.get('edited_config')){
                     // copy original config to edited_config (if latter is empty)
-                    originalModelCopy.set('edited_config',
+                    originalModelCopy.set('edited_config', utils.deepClone(
                         _.partial(_.pick, podConfig).apply(
-                            _, originalModelCopy.persistentAttributes));
+                            _, originalModelCopy.persistentAttributes)));
                 }
                 var model = originalModelCopy.get('edited_config');
                 model.persistentDrives = persistentDrives;

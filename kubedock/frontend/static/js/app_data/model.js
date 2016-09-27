@@ -761,7 +761,11 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     }).fail(utils.notifyWindow, deferred.reject);
                     return deferred.promise();
                 }
-                new Backbone.Model().save({pod: model}, {url: '/api/billing/orderPodEdit'})
+                new Backbone.Model().save({
+                    pod: model,
+                    referer: window.location.href.replace(
+                        /#.*$/, '#pods/' + model.id),
+                }, {url: '/api/billing/orderPodEdit'})
                     .fail(utils.notifyWindow, _.bind(deferred.reject, deferred))
                     .done(function(response){
                         if (response.data.status === 'Paid') {

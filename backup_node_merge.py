@@ -6,7 +6,6 @@ import sys
 import logging
 import argparse
 import datetime
-import glob
 
 from distutils import dir_util
 from itertools import tee
@@ -37,6 +36,14 @@ def get_timestamp(item):
 
 
 def group_by_timestamp(data, precision, skip_errors=False):
+    """
+    Grouping timestamps by precision.
+
+    List of timestamps `data` should contain strings.
+    Integer `precision` represents time gap in seconds.
+    If any item has formatting issues it raises MergeError. This
+    behaviour can be disabled with skip_errors flag.
+    """
 
     # Sanitize group
     timestamps = []
@@ -60,6 +67,7 @@ def group_by_timestamp(data, precision, skip_errors=False):
         else:
             yield group
             group = [item]
+            t0 = timestamp
     yield group
 
 

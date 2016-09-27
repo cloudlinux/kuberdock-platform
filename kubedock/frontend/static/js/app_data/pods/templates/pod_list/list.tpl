@@ -1,9 +1,9 @@
 <div class="col-md-12 no-padding">
-    <div class="podlist-control">
+    <!-- <div class="podlist-control">
         <span class="button deleted <%- showDeleted ? 'active' : '' %>">
             <span><%- showDeleted ? 'Hide' : 'Show' %> deleted pods</span>
         </span>
-    </div>
+    </div> -->
     <div class="podsControl" style="display:<%- checked.length ? 'block' : 'none' %>">
         <span class="count"><span><%- checked.length %><%- (checked.length > 1) ? ' Items' : ' Item' %></span></span>
         <% if (_.any(_.invoke(checked, 'ableTo', 'start'))) { %>

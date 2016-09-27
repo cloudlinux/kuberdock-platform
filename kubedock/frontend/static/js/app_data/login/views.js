@@ -1,5 +1,5 @@
 define(['app_data/app', 'app_data/model', 'app_data/utils', 'marionette',
-        'tpl!app_data/login/templates/login.tpl'],
+        'app_data/login/templates/login.tpl'],
     function(App, Model, utils, Marionette, loginTpl){
         'use strict';
         var views = {};

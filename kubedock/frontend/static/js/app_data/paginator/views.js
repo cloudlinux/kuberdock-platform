@@ -1,4 +1,4 @@
-define(['app_data/app', 'tpl!app_data/paginator/paginator.tpl'], function(App, paginatorTpl){
+define(['app_data/app', 'app_data/paginator/paginator.tpl'], function(App, paginatorTpl){
 
     var paginator = {};
 

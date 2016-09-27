@@ -1,4 +1,4 @@
-FROM quay.io/sergey_gruntovsky/eslint-test-base:v2
+FROM quay.io/sergey_gruntovsky/eslint-test-base:v3
 
 COPY . /kd-front
 WORKDIR /kd-front

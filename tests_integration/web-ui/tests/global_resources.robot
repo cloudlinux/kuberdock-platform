@@ -12,7 +12,7 @@ ${SERVER}                   192.168.33.114
 ${BROWSER}                  Chrome
 ${ADMIN PASSWORD}           admin
 ${TIMEOUT}                  8 s
-${MAIN URL}                 https://${SERVER}/
+${MAIN URL}                 http://${SERVER}/
 
 *** Keywords ***
 Open Browser To Kuberdock Page

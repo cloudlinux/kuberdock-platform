@@ -17,9 +17,8 @@ from PIL import Image
 COMMON_PREFIX = '/var/opt/kuberdock/kubedock/frontend'
 INDEX_PATH = os.path.join(COMMON_PREFIX, 'templates/index.html')
 LOGINPAGE_PATH = INDEX_PATH
-PREPARED_PATH = os.path.join(COMMON_PREFIX, 'static/js/app_data/prepared.js')
-GZIP_PREPARED_PATH = os.path.join(COMMON_PREFIX,
-                                  'static/js/app_data/prepared.js.gz')
+PREPARED_PATH = os.path.join(COMMON_PREFIX, 'static/prepared.js')
+GZIP_PREPARED_PATH = os.path.join(COMMON_PREFIX, 'static/prepared.js.gz')
 LOGO_FILE_PATH = os.path.join(COMMON_PREFIX,
                               'static/js/app_data/menu/templates/nav_list.tpl')
 STYLES_PATH = os.path.join(COMMON_PREFIX, 'static/css')

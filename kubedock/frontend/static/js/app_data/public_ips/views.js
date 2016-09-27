@@ -1,14 +1,13 @@
 define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
-        'tpl!app_data/public_ips/templates/public_ips_list.tpl',
-        'tpl!app_data/public_ips/templates/public_ips_empty.tpl',
-        'tpl!app_data/public_ips/templates/public_ips_item.tpl',
-        'tpl!app_data/public_ips/templates/public_ips_layout.tpl',
-        'bootstrap', 'jquery-ui', 'selectpicker', 'bootstrap3-typeahead', 'mask'],
-       function(App, Controller, Marionette, utils,
-                publicIPsListTpl,
-                publicIPsEmptyTpl,
-                publicIPsItemTpl,
-                publicIPsLayoutTpl){
+        'app_data/public_ips/templates/public_ips_list.tpl',
+        'app_data/public_ips/templates/public_ips_empty.tpl',
+        'app_data/public_ips/templates/public_ips_item.tpl',
+        'app_data/public_ips/templates/public_ips_layout.tpl',
+], function(App, Controller, Marionette, utils,
+            publicIPsListTpl,
+            publicIPsEmptyTpl,
+            publicIPsItemTpl,
+            publicIPsLayoutTpl){
 
     var views = {};
 

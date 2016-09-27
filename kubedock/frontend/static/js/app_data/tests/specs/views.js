@@ -1,7 +1,6 @@
 /* eslint-env mocha */
-define(['chai', 'sinon', 'squire'],
-       function(chai, sinon, Squire){
-
+define(['chai', 'sinon', 'rewire-webpack'],
+       function(chai, sinon, rewire){
     'use strict';
 
     describe('KuberDock Tests', function(){

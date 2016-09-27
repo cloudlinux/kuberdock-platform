@@ -1,5 +1,5 @@
 define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
-        'backbone-paginator', 'backbone-associations', 'notify'],
+        'backbone.paginator', 'backbone-associations'],
        function(Backbone, numeral, App, utils){
     'use strict';
 

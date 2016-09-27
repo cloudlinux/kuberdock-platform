@@ -1,14 +1,15 @@
 define([
     'app_data/app', 'app_data/model', 'app_data/utils',
-    'tpl!app_data/pods/templates/messages/layout.tpl',
-    'tpl!app_data/pods/templates/messages/pod_has_changes.tpl',
-    'tpl!app_data/pods/templates/messages/post_description.tpl',
-    'tooltip'
+    'app_data/pods/templates/messages/layout.tpl',
+    'app_data/pods/templates/messages/pod_has_changes.tpl',
+    'app_data/pods/templates/messages/post_description.tpl',
+    'bbcode-parser', 'tooltip'
 ], function(
     App, Model, utils,
     layoutTpl,
     podHasChangesTpl,
-    postDescriptionTpl
+    postDescriptionTpl,
+    BBCodeParser
 ){
 
     var views = {};

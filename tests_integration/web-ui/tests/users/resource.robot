@@ -30,6 +30,10 @@ Select "${value}" in "${field_name}" field
     Click    jquery=${field_locator} > button
     Click    jquery=${field_locator} .dropdown-menu a:contains("${value}")    1 s
 
+Select "${value}" in status
+    ${field_locator}=    Set Variable    div.form-group.clearfix > div.btn-group.bootstrap-select
+    Click    jquery=${field_locator} > button
+    Click    jquery=${field_locator} .dropdown-menu a:contains("${value}")    1 s
 
 Fill user create form and Submit
     [Documentation]    All arguments are optional.
@@ -60,9 +64,8 @@ Fill user create form and Submit
     Run Keyword If    $timezone is not None           Select "${timezone}" in "Timezone" field
     Run Keyword If    $role is not None               Select "${role}" in "Role" field
     Run Keyword If    $package is not None            Select "${package}" in "Package" field
-    Run Keyword If    $status is not None             Select "${status}" in "Status" field
-    Run Keyword If    $suspended
-    ...  Select Checkbox    xpath=//input[@id=(//label[text()="Suspended"]/@for)]
+    Run Keyword If    $status is not None             Select "${status}" in status
+    Run Keyword If    $suspended                      Click    jquery=label:contains("Suspended")
 
     Click Element    jquery=button:contains(Create)
 

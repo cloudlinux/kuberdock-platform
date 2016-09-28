@@ -15,6 +15,7 @@ import paramiko
 import vagrant
 import yaml
 import redis
+import memcache
 from ipaddress import IPv4Network
 
 from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
@@ -1030,6 +1031,23 @@ class _JoomlaPaPod(KDPAPod):
         self._generic_healthcheck()
         page = self.do_GET(path='/installation/index.php')
         assert_in(u"Joomla! - Open Source Content Management", page)
+
+
+class _MemcachedPaPod(KDPAPod):
+    SRC = 'memcached.yaml'
+
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        ports = ports or [11211]
+        self._wait_for_ports(ports, timeout)
+
+    def healthcheck(self):
+        spec = self._generic_healthcheck()
+        assert_eq(len(spec['containers']), 1)
+        assert_eq(spec['containers'][0]['image'], 'memcached:1')
+        mc = memcache.Client(['{host}:11211'.format(host=self.public_ip)],
+                             debug=0)
+        mc.set("foo", "bar")
+        assert_eq(mc.get("foo"), "bar")
 
 
 class VagrantIsAlreadyUpException(Exception):

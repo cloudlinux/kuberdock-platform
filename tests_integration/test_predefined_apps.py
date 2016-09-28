@@ -37,3 +37,8 @@ def test_redmine_pa(cluster):
 @pipeline('predefined_apps')
 def test_joomla_pa(cluster):
     check_pa(cluster, 'joomla.yaml')
+
+
+@pipeline('predefined_apps')
+def test_memcached_pa(cluster):
+    check_pa(cluster, 'memcached.yaml')

@@ -432,6 +432,11 @@ def get_rnd_string(length=10, prefix=""):
         string.ascii_uppercase + string.digits) for _ in range(length))
 
 
+def get_rnd_low_string(length=10, prefix=""):
+    return prefix + ''.join(random.SystemRandom().choice(
+        string.ascii_lowercase + string.digits) for _ in range(length))
+
+
 @contextmanager
 def suppress(exc=Exception):
     """

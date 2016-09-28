@@ -24,7 +24,8 @@ from tests_integration.lib.exceptions import StatusWaitException, \
     IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
 from tests_integration.lib.integration_test_utils import \
     ssh_exec, assert_eq, assert_in, kube_type_to_int, wait_net_port, \
-    merge_dicts, retry, kube_type_to_str, escape_command_arg, log_dict
+    merge_dicts, retry, kube_type_to_str, escape_command_arg, log_dict, \
+    get_rnd_low_string
 
 OPENNEBULA = "opennebula"
 VIRTUALBOX = "virtualbox"
@@ -291,15 +292,19 @@ class KDIntegrationTestAPI(object):
         kcli_cmd.extend(['kuberdock', cmd])
         return self.ssh_exec('master', ' '.join(kcli_cmd))
 
-    # TODO: Process the user argument
-    def kcli2(self, cmd, out_as_dict=False, user=None):
+    # TODO: rid of the login in favour of "kcli2 -c /config/file"
+    def kcli2(self, cmd, out_as_dict=False, user=None, password=None):
+        if user:
+            self.login_to_kcli2(user, password)
         kcli2_cmd = ['kcli2', '-k', cmd]
         rc, out, err = self.ssh_exec("master", u' '.join(kcli2_cmd))
-
         if out_as_dict:
             out = json.loads(out)
 
         return rc, out, err
+
+    def login_to_kcli2(self, user, password=None):
+        self.kcli2(u"login -u {} -p {}".format(user, password or user))
 
     # TODO: Kubectl will be moved out of KCLI so this code duplication won't
     #  hurt that much
@@ -550,12 +555,13 @@ class PodList(object):
     def create(self, image, name, kube_type="Standard", kubes=1,
                open_all_ports=False, restart_policy="Always", pvs=None,
                start=True, wait_ports=False, healthcheck=False,
-               wait_for_status=None, owner='test_user'):
+               wait_for_status=None, owner='test_user', password=None):
         assert_in(kube_type, ("Tiny", "Standard", "High memory"))
         assert_in(restart_policy, ("Always", "Never", "OnFailure"))
 
         pod = KDPod.create(self.cluster, image, name, kube_type, kubes,
-                           open_all_ports, restart_policy, pvs, owner)
+                           open_all_ports, restart_policy, pvs, owner,
+                           password=(owner or password))
         if start:
             pod.start()
         if wait_for_status:
@@ -633,7 +639,7 @@ class KDPod(RESTMixin):
 
     @classmethod
     def create(cls, cluster, image, name, kube_type, kubes,
-               open_all_ports, restart_policy, pvs, owner):
+               open_all_ports, restart_policy, pvs, owner, password):
         """
         Create new pod in kuberdock
         :param open_all_ports: if true, open all ports of image (does not mean
@@ -649,26 +655,42 @@ class KDPod(RESTMixin):
                 cls.Port(int(port['number']), port['protocol'])
                 for port in out['ports']]
 
-        ports = retry(_get_image_ports, img=image)
-        escaped_name = pipes.quote(name)
-        pv_cmd = ""
-        if pvs is not None:
-            # TODO: when kcli allows using multiple PVs for single POD
-            # (AC-3722), update the way of pc_cmd creation
-            pv_cmd = "-s {} -p {} --mount-path {}".format(
-                pvs[0].size, pvs[0].name, pvs[0].mount_path)
+        def _ports_to_dict(ports):
+            """
+            :return: list of dictionaries with ports, necessary for
+            creation of general pod via kcli2
+            """
+            ports_list = []
+            for port in ports:
+                ports_list.append(dict(containerPort=port.port,
+                                       hostPort=port.port,
+                                       isPublic=open_all_ports,
+                                       protocol=port.proto))
+            return ports_list
 
-        ports_arg = ''
-        if open_all_ports:
-            pub_ports = ",".join(
-                ["+{}::{}".format(p.port, p.proto) for p in ports])
-            ports_arg = "--container-port {0}".format(pub_ports)
-        cluster.kcli(
-            u"create -C {image} --kube-type {kube_type} --kubes {kubes} "
-            "--restart-policy {restart_policy} {ports_arg} {pv_cmd} "
-            "{escaped_name}".format(**locals()), user=owner)
-        cluster.kcli(
-            u"save {0}".format(escaped_name), user=owner)
+        escaped_name = pipes.quote(name)
+        kube_types = {
+            "Tiny": 0,
+            "Standard": 1,
+            "High memory": 2
+        }
+        pod_spec = dict(kube_type=kube_types[kube_type],
+                        restartPolicy=restart_policy,
+                        name=escaped_name)
+        container = dict(kubes=kubes, image=image,
+                         name=get_rnd_low_string(length=11))
+        ports = retry(_get_image_ports, img=image)
+        container.update(ports=_ports_to_dict(ports))
+        if pvs is not None:
+            container.update(volumeMounts=[pv.volume_mount_dict for pv in pvs])
+            pod_spec.update(volumes=[pv.volume_dict for pv in pvs])
+        pod_spec.update(containers=[container])
+        pod_spec = json.dumps(pod_spec, ensure_ascii=False)
+
+        _, out, _ = cluster.kcli2(u"pods create '{}'".format(pod_spec),
+                                  out_as_dict=True,
+                                  user=owner,
+                                  password=(password or owner))
         this_pod_class = cls._get_pod_class(image)
         return this_pod_class(cluster, image, name, kube_type, kubes,
                               open_all_ports, restart_policy, pvs, owner)
@@ -748,20 +770,27 @@ class KDPod(RESTMixin):
         pod_classes = {c.SRC: c for c in cls.__subclasses__()}
         return pod_classes.get(image, cls)
 
+    def command(self, command):
+        data = dict(command=command)
+        return self.cluster.kcli2(
+            u"pods update --name {} '{}'".format(self.name, json.dumps(data)),
+            user=self.owner,
+            out_as_dict=True)
+
     def start(self):
-        rc, out, err = self.cluster.kcli(
-            u"start {0}".format(self.escaped_name),
-            user=self.owner)
-        # TODO: Handle exclamation mark in a response correctly
-        self.public_ip = yaml.load(out).get('public_ip')
+        _, out, _ = self.command("start")
+        try:
+            self.public_ip = out['data']['public_ip']
+        except KeyError:
+            pass
 
     def stop(self):
-        self.cluster.kcli(
-            u"stop {0}".format(self.escaped_name), user=self.owner)
+        self.command("stop")
 
     def delete(self):
-        self.cluster.kcli(
-            u"delete {0}".format(self.escaped_name), user=self.owner)
+        self.cluster.kcli2(
+            u"pods delete --name {}".format(self.escaped_name),
+            user=self.owner)
 
     def redeploy(self):
         data = {
@@ -1013,6 +1042,7 @@ class PV(object):
         self.name = name
         self.owner = owner
         self.mount_path = mount_path
+        self.volume_name = get_rnd_low_string(length=11)
         inits = {
             "new": self._create_new,
             "existing": self._load_existing,
@@ -1072,3 +1102,20 @@ class PV(object):
 
     def exists(self):
         return self._get_by_name(self.name) is not None
+
+    @property
+    def volume_dict(self):
+        """
+        :return: dictionary contain description of volume, necessary for
+        creation of general pod via kcli2
+        """
+        persistent_disk = dict(pdName=self.name, pdSize=self.size)
+        return dict(name=self.volume_name, persistentDisk=persistent_disk)
+
+    @property
+    def volume_mount_dict(self):
+        """
+        :return: dictionary contain description of volume mount, necessary for
+        creation of general pod via kcli2
+        """
+        return dict(mountPath=self.mount_path, name=self.volume_name)

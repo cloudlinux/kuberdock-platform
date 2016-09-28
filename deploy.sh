@@ -1,4 +1,4 @@
-# --fail!/bin/bash
+#!/bin/bash
 
 KUBERDOCK_DIR=/var/opt/kuberdock
 KUBERDOCK_LIB_DIR=/var/lib/kuberdock

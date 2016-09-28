@@ -1,9 +1,12 @@
 ---
+- name: Add npm repos
+  shell: curl --silent --location https://rpm.nodesource.com/setup_6.x | bash -
+
 - name: Install additional rpm build packages
   yum: name={{ item }} state=latest
   with_items:
     - rpm-build
-    - nodejs
+    - nodejs-6.4.0
     - nodejs-less
     - nodejs-clean-css
     - gcc

@@ -27,12 +27,14 @@
     "bootstrap": "3.2.0",
     "bootstrap-3-typeahead": "4.0.1",
     "bootstrap-select": "1.11.0",
+    "jquery": "2.2.0",
     "jquery-mask-plugin": "1.14.0",
     "jquery-ui": "1.12.0",
     "js-yaml": "3.6.1",
     "moment-timezone": "0.5.5",
     "notifyjs-browser": "0.4.2",
     "numeral": "1.5.3",
+    "underscore": "1.8.3",
     "x-editable": "1.5.1"
   },
   "devDependencies": {

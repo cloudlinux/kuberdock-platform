@@ -14,7 +14,7 @@
         </div>
         <div class="col-sm-10 col-xs-12 page-404_text">
             <h1>Ooops...</h1>
-            <p>We couldnt find the page you are looking for</p>
+            <p>We couldn`t find the page you are looking for</p>
             <div class="buttons">
                 <a href="/" class="blue">BACK TO THE MAIN PAGE</a>
             </div>

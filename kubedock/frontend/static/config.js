@@ -5,7 +5,7 @@ var process = require('process');
 // default config
 var conf = {
     VERSION: '1.2.1-4',
-    PROD: true,
+    PROD: false,
     TEST: false,
     LOCAL_PORT: 3000,
 };

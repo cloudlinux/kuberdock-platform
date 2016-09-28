@@ -2,10 +2,7 @@
 mocha.allowUncaught();
 
 const chai = require('chai');
-// const sinon = require('sinon');
-const rewire = require('rewire');
-
-const utils = rewire('app_data/utils');
+const utils = require('app_data/utils');
 
 describe('Utils Tests', function(){
 
@@ -81,7 +78,7 @@ describe('Utils Tests', function(){
                 }
             };
         };
-        utils.__with__('moment', momentMock)(function(){
+        utils.__with__({moment: momentMock})(function(){
             utils.dateYYYYMMDD(testDate);
         });
     });

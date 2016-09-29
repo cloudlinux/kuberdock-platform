@@ -577,6 +577,9 @@ class Pod(object):
                            type='NotAllowedToChangeUnpaidStatus')
 
         db_pod = DBPod.query.get(self.id)
+        if not db_pod:
+            raise APIError('Pod {} does not exist in KuberDock '
+                           'database'.format(self.id))
         # We shouldn't change pod's deleted status.
         if db_pod.status == POD_STATUSES.deleted:
             raise APIError('Not allowed to change "deleted" status.',

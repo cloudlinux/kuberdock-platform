@@ -127,41 +127,35 @@ def delete_nodes():
     (or restored from pod backups)
     """
 
-    from kubedock.kapi.node_utils import get_all_nodes
-    from kubedock.exceptions import APIError
-    from kubedock.kapi.nodes import delete_node
-    from kubedock.nodes.models import Node
-    from kubedock.pods.models import PersistentDisk
+    from kubedock.core import db
     from kubedock.api import create_app
-    from kubedock.kapi.podcollection import PodCollection
+    from kubedock.pods.models import PersistentDisk, Pod, PodIP
+    from kubedock.usage.models import IpState, ContainerState, PodState
+    from kubedock.domains.models import PodDomain
+    from kubedock.nodes.models import Node
+    from kubedock.kapi.nodes import delete_node_from_db
 
-    # Run temp KD app
     create_app(fake_sessions=True).app_context().push()
+    IpState.query.delete()
+    PodIP.query.delete()
+    ContainerState.query.delete()
+    PodDomain.query.delete()
+    PersistentDisk.get_all_query().delete(synchronize_session=False)
+    PodState.query.delete()
+    Pod.query.delete()
+    logger.info("All pod data purged.")
+    db.session.commit()
 
-    pod_collection = PodCollection()
-    for pod in pod_collection.get_owned():
-        if pod.owner.is_internal():
-            continue
-        try:
-            pod_collection.delete(pod.id, force=True)
-            logger.debug("Pod `{0}` purged".format(pod.name))
-        except APIError as e:
-            logger.info("Trouble when dropping the pod {}: {}\n"
-                        "Please try to remove the pod manually later.".format(
-                            pod.id, repr(e)))
+    devnull = open(os.devnull, 'w')
+    subprocess.call(['kubectl', 'delete', '--all', 'namespaces'],
+                    stderr=devnull, stdout=devnull)
+    subprocess.call(['kubectl', 'delete', '--all', 'nodes'],
+                    stderr=devnull, stdout=devnull)
+    logger.info("Etcd data purged.")
 
-    for node in get_all_nodes():
-        node_name = node['metadata']['name']
-        db_node = Node.get_by_name(node_name)
-        PersistentDisk.get_by_node_id(db_node.id).delete(
-            synchronize_session=False)
-        try:
-            delete_node(node=db_node, force=True, verbose=False)
-            logger.debug("Node `{0}` purged".format(node_name))
-        except APIError as e:
-            logger.info("Trouble when dropping the the node {}: {}\n"
-                        "Please try to remove the node manually later.".format(
-                            node_name, repr(e)))
+    for node in Node.get_all():
+        delete_node_from_db(node)
+        logger.info("Node `{0}` purged.".format(node.hostname))
 
 
 class BackupResource(object):
@@ -173,7 +167,7 @@ class BackupResource(object):
         pass
 
     @abc.abstractmethod
-    def restore(cls, zip_archive):
+    def restore(cls, zip_archive, **kwargs):
         pass
 
 
@@ -190,7 +184,7 @@ class PostgresResource(BackupResource):
         return result
 
     @classmethod
-    def restore(cls, zip_archive):
+    def restore(cls, zip_archive, **kwargs):
         fd, path = tempfile.mkstemp()
         try:
             uid = pwd.getpwnam("postgres").pw_uid
@@ -204,7 +198,34 @@ class PostgresResource(BackupResource):
         return path
 
 
-class EtcdResource(BackupResource):
+class EtcdCertResource(BackupResource):
+
+    @classmethod
+    def backup(cls, dst):
+        pki_src = '/etc/pki/etcd/'
+        etcd_tmp = tempfile.mkdtemp(prefix="etcd-pki-", dir=dst,
+                                    suffix="-inprogress")
+        for fn in os.listdir(pki_src):
+            shutil.copy(os.path.join(pki_src, fn), etcd_tmp)
+
+        result = os.path.join(dst, "etcd_pki")
+        os.rename(etcd_tmp, result)
+        return result
+
+    @classmethod
+    def restore(cls, zip_archive, **kwargs):
+        src = tempfile.mkdtemp()
+        zip_archive.extractall(src, zip_archive.namelist())
+        pki_src = os.path.join(src, 'etcd_pki')
+        try:
+            for fn in os.listdir(pki_src):
+                shutil.copy(os.path.join(pki_src, fn), ETCD_PKI)
+        finally:
+            rmtree(src)
+        return ETCD_PKI
+
+
+class EtcdDataResource(BackupResource):
 
     @classmethod
     def backup(cls, dst):
@@ -222,16 +243,10 @@ class EtcdResource(BackupResource):
         return result
 
     @classmethod
-    def restore(cls, zip_archive):
+    def restore(cls, zip_archive, **kwargs):
         src = tempfile.mkdtemp()
         try:
-            zip_archive.extractall(src, filter(lambda x: x.startswith('etcd'),
-                                               zip_archive.namelist()))
-
-            pki_src = os.path.join(src, 'etcd_pki')
-            for fn in os.listdir(pki_src):
-                shutil.copy(os.path.join(pki_src, fn), ETCD_PKI)
-
+            zip_archive.extractall(src, zip_archive.namelist())
             data_src = os.path.join(src, 'etcd')
             try:
                 rmtree(os.path.join(ETCD_DATA, 'wal'))
@@ -266,7 +281,7 @@ class KubeTokenResource(BackupResource):
         return os.path.join(dst, 'known_tokens.csv')
 
     @classmethod
-    def restore(cls, zip_archive):
+    def restore(cls, zip_archive, **kwargs):
         with open(KNOWN_TOKENS, 'w') as tmp:
             shutil.copyfileobj(zip_archive.open('known_tokens.csv'), tmp)
 
@@ -290,31 +305,12 @@ class SSHKeysResource(BackupResource):
         return result
 
     @classmethod
-    def restore(cls, zip_archive):
+    def restore(cls, zip_archive, **kwargs):
         with open(SSH_KEY, 'w') as keyfile:
             shutil.copyfileobj(zip_archive.open('id_rsa'), keyfile)
         with open(SSH_KEY + '.pub', 'w') as keyfile:
             shutil.copyfileobj(zip_archive.open('id_rsa.pub'), keyfile)
         return SSH_KEY
-
-
-class EtcdCertResource(BackupResource):
-
-    @classmethod
-    def backup(cls, dst):
-        pki_src = '/etc/pki/etcd/'
-        etcd_tmp = tempfile.mkdtemp(prefix="etcd-", dir=dst,
-                                    suffix="-inprogress")
-        for fn in os.listdir(pki_src):
-            shutil.copy(os.path.join(pki_src, fn), etcd_tmp)
-
-        result = os.path.join(dst, "etcd_pki")
-        os.rename(etcd_tmp, result)
-        return result
-
-    @classmethod
-    def restore(cls, zip_archive):
-        pass
 
 
 class LicenseResource(BackupResource):
@@ -326,7 +322,7 @@ class LicenseResource(BackupResource):
             return os.path.join(dst, '.license')
 
     @classmethod
-    def restore(cls, zip_archive):
+    def restore(cls, zip_archive, **kwargs):
         if '.license' in zip_archive.namelist():
             with open(LICENSE, 'w') as licfile:
                 shutil.copyfileobj(zip_archive.open('.license'), licfile)
@@ -349,7 +345,7 @@ class SharedNginxConfigResource(BackupResource):
         return result
 
     @classmethod
-    def restore(cls, zip_archive):
+    def restore(cls, zip_archive, **kwargs):
         src = tempfile.mkdtemp()
         try:
             zip_archive.extractall(src, filter(lambda x: x.startswith('nginx'),
@@ -362,13 +358,13 @@ class SharedNginxConfigResource(BackupResource):
         return cls.config_src + "*"
 
 
-backup_chain = (PostgresResource, EtcdResource, SSHKeysResource,
+backup_chain = [PostgresResource, EtcdDataResource, SSHKeysResource,
                 EtcdCertResource, KubeTokenResource, LicenseResource,
-                SharedNginxConfigResource)
+                SharedNginxConfigResource]
 
-restore_chain = (PostgresResource, EtcdResource, SSHKeysResource,
+restore_chain = [PostgresResource, EtcdDataResource, SSHKeysResource,
                  EtcdCertResource, KubeTokenResource, LicenseResource,
-                 SharedNginxConfigResource)
+                 SharedNginxConfigResource]
 
 
 @lock(LOCKFILE)
@@ -422,6 +418,9 @@ def do_restore(backup_file, drop_nodes, skip_errors, **kwargs):
     subprocess.check_call(["systemctl", "stop", "nginx"])
     subprocess.check_call(["systemctl", "restart", "postgresql"])
 
+    if drop_nodes:
+        restore_chain.remove(EtcdDataResource)
+
     with zipfile.ZipFile(backup_file, 'r') as zip_archive:
         for res in restore_chain:
             try:
@@ -435,7 +434,7 @@ def do_restore(backup_file, drop_nodes, skip_errors, **kwargs):
                     raise
 
     if drop_nodes:
-        # NOTE this requires working k8s/etcd/ otherwise will fail
+        # etcd & k8s must be alive here
         delete_nodes()
 
     subprocess.check_call(["systemctl", "restart", "etcd"])

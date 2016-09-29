@@ -4,7 +4,6 @@ var webpack = require('webpack');
 var CompressionPlugin = require("compression-webpack-plugin");
 var LessPluginCleanCSS = require('less-plugin-clean-css');
 var ExtractTextPlugin = require('extract-text-webpack-plugin');
-var RewirePlugin = require("rewire-webpack");
 var conf = require('./config');
 
 var webpackConfig = {

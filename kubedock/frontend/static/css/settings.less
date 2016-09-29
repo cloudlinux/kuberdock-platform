@@ -191,11 +191,22 @@
 }
 #item-controls{
     &.licenseTab{
+        .info{
+            span{
+                padding-left: 0;
+                min-height: initial;
+                line-height: initial;
+                vertical-align: initial;
+            }
+        }
         .servers{
             &:before{
+                bottom: 0;
                 left: 40px;
                 width: 43px;
+                content: '';
                 height: 43px;
+                margin: auto;
                 background: url('../img/kuberdock-gray-ico.png') 0 0 no-repeat;
             }
         }

@@ -1,15 +1,28 @@
 ---
 
+#- include: routes.yml
+
 - name: Create deploy directory on remote host (rhost)
   file: path="{{ rhost_deploy_path }}" state=directory
 
 - name: Copy kcli-deploy.sh to deploy directory on remote host (rhost)
   copy: src="{{ host_proj_root }}/kuberdock-cli/kcli-deploy.sh" dest="{{ rhost_deploy_path }}"
 
+- name: Add repository
+  yum_repository:
+    name: epel
+    description: EPEL YUM repo
+    gpgcheck: false
+    baseurl: http://download.fedoraproject.org/pub/epel/$releasever/$basearch/
+
+#- name: Remount tmp without noexec
+  #command: mount /tmp -o remount,exec
+
 - name: Deploy kcli on rhost
-  shell: KD_PASSWORD=admin KD_USER=admin bash {{ rhost_deploy_path }}/kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" {{ add_testing_repo }}
+  shell: KD_PASSWORD=admin KD_USER=admin bash kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" {{ add_testing_repo }} chdir="{{ rhost_deploy_path }}"
   register: rhost_deploy_result
   ignore_errors: True
+  register: rhost_deploy_result
   tags:
       - rhost-deploy
 

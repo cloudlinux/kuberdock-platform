@@ -12,6 +12,8 @@
   until: token_raw.status == 200
   retries: 5
   delay: 30
+  tags:
+    - billing
 
 - name: Set prices for IP and PD
   uri:
@@ -19,6 +21,8 @@
     method: PUT
     body: "price_ip=0.59&price_pstorage=0.99"
     validate_certs: false
+  tags:
+    - billing
 
 - name: Set prices for kubes
   uri:
@@ -30,4 +34,6 @@
     - { kube: '0', price: '0.04' }
     - { kube: '1', price: '0.39' }
     - { kube: '2', price: '1.25' }
+  tags:
+    - billing
 

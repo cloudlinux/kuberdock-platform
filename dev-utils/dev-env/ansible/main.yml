@@ -1,4 +1,5 @@
-#---
+---
+
 - name: Setup common tasks
   hosts: all
   become: yes
@@ -27,6 +28,7 @@
   roles:
       - rhost
       - { role: plesk, when: install_plesk }
+      - { role: whmcs, when: install_whmcs }
 
 - hosts: master
   tasks:
@@ -44,10 +46,3 @@
     - set_fact: kd_url="{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}"
     - debug: msg="https://{{ kd_url }} [user:admin, password:admin]"
       run_once: true
-
-    - set_fact: kd_url="{{ hostvars[groups['rhost'][0]].ansible_default_ipv4.address }}"
-      when: install_plesk
-
-    - debug: msg="Plesk url{{':'}} https://{{ kd_url }}:8443/smb/ [user:admin, password:qwerty]"
-      run_once: true
-      when: install_plesk

@@ -74,6 +74,10 @@ def config_ansible(ansible, nodesCount, rhostsCount)
         "plesk_license" => ENV['KD_PLESK_LICENSE'],
 
         "use_zfs" => ENV['KD_USE_ZFS'],
+
+        "install_whmcs" => ENV['KD_INSTALL_WHMCS'],
+        "whmcs_license" => ENV['KD_WHMCS_LICENSE'],
+        "whmcs_domain_name" => ENV['KD_WHMCS_DOMAIN_NAME'],
         "add_timestamps" => ENV['KD_ADD_TIMESTAMPS'],
     }
 

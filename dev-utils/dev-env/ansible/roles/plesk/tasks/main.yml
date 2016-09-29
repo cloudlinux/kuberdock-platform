@@ -42,3 +42,7 @@
 
 - name: create a domain for customer
   command: plesk bin domain --create "{{ domain }}" -owner "{{ customer_user }}" -ip 192.0.2.78 -status enabled -hosting true -login "{{ domain_login }}" -passwd {{ domain_password }} -notify false -service-plan "Default Domain"
+
+- set_fact: kd_url="{{ hostvars[groups['rhost'][0]].ansible_default_ipv4.address }}"
+- debug: msg="Plesk url{{':'}} https://{{ kd_url }}:8443/smb/ [user:admin, password:qwerty]"
+

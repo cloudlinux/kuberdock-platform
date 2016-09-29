@@ -1,0 +1,37 @@
+---
+
+- name: Get master
+  set_fact:
+      master_ip: "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}"
+  tags:
+    - billing
+
+- name: Get token
+  uri:
+    url: "https://{{ master_ip }}/api/auth/token"
+    method: GET
+    user: admin
+    password: "{{ admin_password }}"
+    validate_certs: false
+    force_basic_auth: true
+  register: token_raw
+  until: token_raw.status == 200
+  retries: 5
+  delay: 30
+  tags:
+    - billing
+
+- name: Set whmcs billing
+  uri:
+    url: "https://{{ master_ip }}/api/settings/sysapi/{{item.id}}/?token={{ token_raw.json.token }}"
+    method: PUT
+    body: ' {"id":{{ item.id }},"name":"{{ item.name }}","setting_group":"billing","value":"{{ item.value }}"}'
+    body_format: json
+    validate_certs: false
+  with_items:
+      - {id: 1, name: "billing_type", value: "WHMCS"}
+      - {id: 2, name: "billing_url", value: "http://{{ whmcs_domain_name }}"}
+      - {id: 3, name: "billing_username", value: "admin"}
+      - {id: 4, name: "billing_password", value: "{{ whmcs_pass}}"}
+  tags:
+    - billing

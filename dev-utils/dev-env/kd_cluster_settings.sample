@@ -132,3 +132,15 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # Use ZFS
 # default: nothing
 #export USE_ZFS=1
+
+# Install whmcs to rhost
+# default: False
+#export KD_INSTALL_WHMCS=1
+
+# WHMCS's license.
+# default: 0
+#export KD_WHMCS_LICENSE=Dev-ACB123
+
+# WHMCS's domain name.
+# default: example.com
+#export KD_WHMCS_DOMAIN_NAME=some.host.name.com

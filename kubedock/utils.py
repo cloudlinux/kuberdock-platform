@@ -1050,6 +1050,20 @@ def get_node_token():
         return None
 
 
+# TODO possibly not needed anymore
+def get_ip_address(ifname):
+    # http://stackoverflow.com/a/24196955
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        return socket.inet_ntoa(fcntl.ioctl(
+            s.fileno(),
+            0x8915,  # SIOCGIFADDR
+            struct.pack('256s', ifname[:15])
+        )[20:24])
+    except IOError:
+        return None
+
+
 class Etcd(object):
 
     RequestException = requests.RequestException

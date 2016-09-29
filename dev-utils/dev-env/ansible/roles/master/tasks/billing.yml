@@ -8,7 +8,7 @@
       - "^(.*)remove next line to uncomment (end of block)$"
       - "^([ ]+)#}$"
   tags:
-  - ui_patch
+    - ui_patch
 
 - name: Patching a UI on host
   become: False
@@ -22,14 +22,14 @@
       - "^([ ]+)#}$"
   delegate_to: localhost
   tags:
-  - ui_patch
+    - ui_patch
 
 - name: Hide modified UI file from git
   become: False
   command: git update-index --assume-unchanged "{{ host_proj_root }}/kubedock/frontend/templates/apps/index.html"
   delegate_to: localhost
   tags:
-  - ui_patch
+    - ui_patch
 
 
 

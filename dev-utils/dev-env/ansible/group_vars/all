@@ -23,7 +23,9 @@ admin_password: admin
 
 rhost_deploy_path: /rhost_deploy
 install_plesk: false
-use_zfs: false
 
+use_zfs: false
 zfs_node_params: ""
 zfs_params: ""
+
+install_whmcs: false

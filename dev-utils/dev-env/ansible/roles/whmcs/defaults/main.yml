@@ -1,0 +1,5 @@
+whmcs_domain_name: example.com
+whmcs_user: whmcs
+whmcs_pass: some_password
+whmcs_license: 0
+

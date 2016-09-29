@@ -5,6 +5,10 @@ def config_rhost(config, index)
     rhostCpus = Integer(ENV['KD_RHOST_CPUS'] || '1')
     rhostTemplateId = Integer(ENV['KD_NEBULA_RHOST_TEMPLATE_ID'] || '0')
 
+    if ENV['KD_INSTALL_WHMCS']
+        rhostTemplateId = 457
+    end
+
     config.vm.hostname = "rhost#{index}"
     config.vm.network "private_network", ip: "192.168.77.#{10+index}"
     config.vm.provider "virtualbox" do |vb, override|

@@ -1,0 +1,13 @@
+whmcs_installed_url: http://192.168.33.94/share/whmcs/whmcs_installed.zip
+whmcs_installed_dst: /tmp/whmcs_installed.zip
+deploy_script_url: http://192.168.33.94/share/whmcs/deploy.php
+deploy_script_dst: /home/whmcs/public_html/
+config_path: /home/whmcs/public_html/configuration.php
+whmcs_dump: http://192.168.33.94/share/whmcs/whmcs.sql.gz
+whmcs_dump_dst: /tmp/dump.sql.gz
+cpanel_config_file: /opt/cpanel/ea-php56/root/etc/php.ini
+whmcs_static_files: /home/whmcs/public_html
+httpd_conf_file: /etc/apache2/conf/httpd.conf
+kd_php_file: /home/whmcs/public_html/modules/addons/KuberDock/KuberDock.php
+kd_addon_activate_file: /home/whmcs/public_html/kdactivate.php
+kd_addon_module_permissions: 'a:1:{i:1;a:1:{s:9:\"KuberDock\";s:15:\"KuberDock addon\";}}'

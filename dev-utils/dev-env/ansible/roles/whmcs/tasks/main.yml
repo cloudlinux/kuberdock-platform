@@ -1,0 +1,144 @@
+---
+
+- name: Update cPanel license
+  command: /usr/local/cpanel/cpkeyclt
+
+- easy_install: name=passlib
+- name: cPanel requires root's password to login the admin panel
+  user:
+      name: root
+      password: "{{ item  }}"
+  with_password: 'credentials/password.txt encrypt=sha256_crypt'
+
+- name: Add server ip to new user config
+  lineinfile:
+      dest: /etc/wwwacct.conf
+      regexp: "^ADDR "
+      line: "ADDR {{ ansible_default_ipv4.interface }}"
+
+- name: Sanitize config
+  lineinfile:
+      dest: /etc/wwwacct.conf
+      regexp: "^$"
+      state: absent
+
+- name: Purge whcms user if exist
+  shell: echo yes | /usr/local/cpanel/scripts/removeacct "{{ whmcs_user }}"
+  ignore_errors: true
+
+- name: Create whmcs user in cPanel
+  shell: yes | /usr/local/cpanel/scripts/createacct "{{ whmcs_domain_name }}" "{{ whmcs_user }}" "{{ whmcs_pass }}"
+
+- easy_install: name=mysql-python
+
+- name: Create db
+  mysql_db: name=whmcs_db state=present
+
+- name: Create db user
+  mysql_user: name=whmcs_user host=localhost password=qwerty priv=*.*:ALL state=present
+  # mysql -e "FLUSH PRIVILEGES;";
+
+- name: Install ioncube
+  yum: name=ea-php56-php-ioncube5
+
+- name: Download database dump
+  get_url:
+      url: "{{ whmcs_dump }}"
+      dest: "{{ whmcs_dump_dst }}"
+
+- name: backup whmcs db from dump
+  mysql_db: name=whmcs_db state=import target="{{ whmcs_dump_dst }}"
+
+- name: Download whmcs files
+  get_url:
+      url: "{{ whmcs_installed_url }}"
+      dest: "{{ whmcs_installed_dst }}"
+
+- name: Unzip whmcs files
+  command: unzip {{ whmcs_installed_dst }} -d /home/whmcs
+
+- name: Set domainname in whmcs config
+  command: mysql --database whmcs_db -e "update tblconfiguration set value='http://{{ whmcs_domain_name }}' where setting='SystemURL'"
+
+- name: Set whmcs license
+  lineinfile:
+      dest: "{{ config_path }}"
+      regexp: "^[$]license = '.*';$"
+      line: "$license = '{{ whmcs_license }}';"
+
+- name: Download deploy script
+  get_url:
+    url: "{{ deploy_script_url }}"
+    dest: "{{ deploy_script_dst }}/deploy.php"
+
+- name: Install kuberdock plugin
+  command: php deploy.php --kd_ip="{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" --kd_login=admin --kd_password="{{ admin_password }}"
+  args:
+      chdir: "{{ deploy_script_dst }}"
+      creates: "{{ deploy_script_dst }}/kdorder.php"
+
+- find: paths="/home/whmcs/public_html/" patterns="kd*"
+  register: kd_files
+
+- name: kdpage.php and kdorder.php have to be 644
+  file: path="{{ item.path }}" mode=644
+  with_items: "{{ kd_files.files }}"
+
+- name: Clean allowed hosts
+  lineinfile:
+    dest: /home/whmcs/public_html/.htaccess
+    line: "{{ item }}"
+    state: absent
+  with_items:
+    - allow from 192.168.35.
+
+
+
+
+
+
+
+
+- name: Update allowed hosts
+  lineinfile:
+    dest: /home/whmcs/public_html/.htaccess
+    line: "{{ item }}"
+    state: present
+  with_items:
+    - allow from 192.168.33.
+    - "allow from {{ ansible_env['SSH_CLIENT'].split() | first }}"
+
+- name: Fix addr in wwwacct
+  lineinfile:
+    dest: /etc/wwwacct.conf
+    regexp: "^ADDR eth0"
+    line: "ADDR {{ ansible_default_ipv4.address }}"
+
+- name: Possibly virtualbox error, when cpanel uses local host eth0 instead of server's eth0
+  lineinfile:
+    regexp: '[<]VirtualHost [0-9.]+:80[>]'
+    line: '<VirtualHost 192.168.33.28:80>'
+    dest: "{{ httpd_conf_file }}"
+
+- name: whmcs client side needs more memory
+  lineinfile:
+    regexp: '[;]?memory_limit = [0-9]+M'
+    line: 'memory_limit = 128M'
+    dest: "{{ cpanel_config_file }}"
+
+- name: Restart httpd
+  service: name=httpd state=restarted
+
+#Api will not work with wrong rights and with owner root
+- name: Static file rights
+  command: chmod -R g-w "{{ whmcs_static_files }}"
+- name: Static file owner
+  command: chown -R whmcs:whmcs "{{ whmcs_static_files }}"
+
+- include: billing.yml
+
+- include: plugin.yml
+
+- debug: msg="WHMCS url{{':'}} http://{{ whmcs_domain_name }}/admin [user{{':'}} admin, password{{':'}}{{ whmcs_pass }}]"
+- debug: msg="cPanel admin panel url{{':'}} https://{{ ansible_default_ipv4.address }}{{':'}}2087 [user{{':'}} root, password{{':'}}{{ lookup('password', 'credentials/password.txt')}}]"
+- debug: msg="WHMCS user in cPanel url{{':'}} https://{{ ansible_default_ipv4.address }}{{':'}}2083 [user{{':'}} {{ whmcs_user }}, password{{':'}}{{ whmcs_pass }}]"

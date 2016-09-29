@@ -1,0 +1,30 @@
+---
+
+- name: Create file to activate plugin
+  copy:
+    src: files/activate_plugin.php
+    dest: /home/whmcs/public_html/kdactivate.php
+  tags:
+    - whmcs_plugin
+
+- name: Run this file
+  command: php /home/whmcs/public_html/kdactivate.php
+  tags:
+    - whmcs_plugin
+
+- name: Get KuberDock plugin version
+  shell: cat "{{ kd_php_file }}" | grep version | cut -d"'" -f4
+  register: kd_plugin_version
+  tags:
+    - whmcs_plugin
+
+- name: Assure whmcs, that addon is activated
+  command: mysql --database whmcs_db -e "{{ item }}"
+  with_items:
+    - INSERT INTO tbladdonmodules VALUES ('KuberDock', 'version', '{{  kd_plugin_version.stdout }}'), ('KuberDock', 'access', 1);
+    - INSERT INTO tblconfiguration(setting, value) VALUES('ActiveAddonModules', 'KuberDock') ON DUPLICATE KEY UPDATE value='KuberDock';
+    - INSERT INTO tblconfiguration(setting, value) VALUES('AddonModulesPerms', '{{ kd_addon_module_permissions }}') ON DUPLICATE KEY UPDATE value='{{ kd_addon_module_permissions }}';
+    - INSERT INTO `tblpaymentgateways` VALUES ('mailin','name','Mail In Payment',1),('mailin','type','Invoices',0),('mailin','visible','on',0),('mailin','instructions','Bank Name:\r\nPayee Name:\r\nSort Code:\r\nAccount Number:',0),('mailin','convertto','',0);
+
+  tags:
+    - whmcs_plugin

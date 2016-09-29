@@ -165,9 +165,9 @@ define([
                         navbar = new Menu.NavList({collection: App.menuCollection}),
                         messagesLayout = new PodMessages.Layout(),
                         breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'podName']}),
-                        fixedPrice = App.userPackage.get('count_type') === 'fixed'
-                            && settings.byName('billing_type')
-                                .get('value').toLowerCase() !== 'no billing';
+                        fixedPrice = App.userPackage.get('count_type') === 'fixed' &&
+                            settings.byName('billing_type')
+                            .get('value').toLowerCase() !== 'no billing';
 
                     that.listenTo(itemLayout, 'show', function(){
                         itemLayout.nav.show(navbar);
@@ -276,8 +276,8 @@ define([
                             modelOrig: pageData.model,
                             model: newModel,
                             containerName: containerName,
-                            fixedPrice: billingType.toLowerCase() !== 'no billing'
-                                && App.userPackage.get('count_type') === 'fixed',
+                            fixedPrice: billingType.toLowerCase() !== 'no billing' &&
+                                App.userPackage.get('count_type') === 'fixed',
                             collection: newModel.get('containers'),
                         }));
                     });
@@ -540,8 +540,8 @@ define([
                             addContainerFlow: true,
                         };
                     }
-                    pod.originalImages = pod.originalImages
-                        || new Backbone.Collection([], {model: Model.Image});
+                    pod.originalImages = pod.originalImages ||
+                        new Backbone.Collection([], {model: Model.Image});
 
                     if (!options.layout){
                         options.layout = new Views.PodWizardLayout();
@@ -658,10 +658,10 @@ define([
                 var pod = options.podModel,
                     state = pod.wizardState;
                 state.registryURL = state.registryURL || 'registry.hub.docker.com';
-                state.imageCollection = state.imageCollection
-                    || new Model.ImageSearchPageableCollection();
-                state.selectImageViewModel = state.selectImageViewModel
-                    || new Backbone.Model({query: ''});
+                state.imageCollection = state.imageCollection ||
+                    new Model.ImageSearchPageableCollection();
+                state.selectImageViewModel = state.selectImageViewModel ||
+                    new Backbone.Model({query: ''});
 
                 var view = new Views.GetImageView({
                     pod: pod, model: state.selectImageViewModel,
@@ -866,10 +866,10 @@ define([
                                     } else {
                                         utils.modalDialog({
                                             title: 'Insufficient funds',
-                                            body: 'Your account funds seem to be'
-                                                + ' insufficient for the action.'
-                                                + ' Would you like to go to billing'
-                                                + ' system to make the payment?',
+                                            body: 'Your account funds seem to be' +
+                                                  ' insufficient for the action.' +
+                                                  ' Would you like to go to billing' +
+                                                  ' system to make the payment?',
                                             small: true,
                                             show: true,
                                             footer: {
@@ -1205,129 +1205,111 @@ define([
             });
         },
 
+        showPredefinedAppUploadForm: function(id){
+            if (!this.checkPermissions(['Admin']))
+                return;
+            var that = this;
+            require(['app_data/papps/views'], function(Views){
+                App.getAppCollection().done(function(appCollection){
+                    var mainLayout = new Views.MainLayout(),
+                        navbar = new Menu.NavList({collection: App.menuCollection}),
+                        breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pa', 'tabName']}),
+                        successModelSaving = function(context) {
+                            if (context.isNew){
+                                context.appCollection.add(context.model);
+                            }
+                            App.navigate('#predefined-apps', {trigger: true});
+                            utils.notifyWindow(
+                                'Predefined application "' + context.model.get('name') +
+                                    '" is ' + (context.isNew ? 'added' : 'updated'),
+                                'success'
+                            );
+                        },
+                        errorModelSaving = function(context, response) {
+                            if (response && !(response.responseJSON &&
+                                    response.responseJSON.data &&
+                                    response.responseJSON.type === 'ValidationError')){
+                                utils.notifyWindow(response);
+                                return;
+                            }
+                            mainLayout.main.currentView.errorData = response.responseJSON.data;
+                            mainLayout.main.currentView.render();
+                        };
+
+                    that.listenTo(mainLayout, 'show', function(){
+                            var appModel = id !== null
+                                    ? appCollection.fullCollection.get(id)
+                                    : new Model.AppModel(),
+                                breadcrumbLink = new Breadcrumbs.Link({
+                                    text: 'Predefined Apps',
+                                    href:'#predefined-apps'}),
+                                breadcrumbText = new Breadcrumbs.Text({
+                                    text: id !== null
+                                        ? "Edit application"
+                                        : "Add new application" }),
+                                view = new Views.AppLoader({model: appModel});
+
+                            mainLayout.nav.show(navbar);
+                            mainLayout.breadcrumbs.show(breadcrumbsLayout);
+                            breadcrumbsLayout.pa.show(breadcrumbLink);
+                            breadcrumbsLayout.tabName.show(breadcrumbText);
+                            mainLayout.main.show(view);
+                    });
+
+                    /* triggers */
+                    that.listenTo(mainLayout, 'app:saveAnyway', function(model){
+                        var context = {
+                            appCollection: appCollection,
+                            model: model,
+                            isNew: model.isNew()
+                        };
+                        model.save(null, {wait: true})
+                            .done(function(){ successModelSaving(context); })
+                            .fail(utils.notifyWindow);
+                    });
+                    that.listenTo(mainLayout, 'app:save', function(model){
+                        var context = {
+                                appCollection : appCollection,
+                                model : model,
+                                isNew: model.isNew()
+                            },
+                            url = model.url() + '?' + $.param({validate: true});
+
+                        model.save(null, {wait: true, url: url})
+                            .done(function(){ successModelSaving(context); })
+                            .fail(function(xhr){ errorModelSaving(context, xhr); });
+                    });
+                    App.contents.show(mainLayout);
+                });
+            });
+        },
+
         listPredefinedApps: function(){
             if (!this.checkPermissions(['Admin']))
                 return;
             var that = this;
             require(['app_data/papps/views'], function(Views){
-                var appCollection = new Model.AppCollection(),
-                    mainLayout = new Views.MainLayout(),
+                var mainLayout = new Views.MainLayout(),
                     navbar = new Menu.NavList({collection: App.menuCollection}),
-                    breadcrumbsData = {buttonID: 'add_pod', buttonLink: '/#newapp',
-                                       buttonTitle: 'Add new application', showControls: true};
-                appCollection.fetch({wait: true})
-                    .done(function(){ App.contents.show(mainLayout); })
-                    .fail(utils.notifyWindow);
-
-                that.listenTo(mainLayout, 'app:showloadcontrol', function(id){
-                    var breadcrumbsModel = new Backbone.Model(_.extend(
-                            _.clone(breadcrumbsData),
-                            {breadcrumbs: [{name: 'Predefined Apps'},
-                                           {name: id === undefined ?
-                                                  'Add new application' :
-                                                  'Edit application'}]},
-                            {showControls: false})),
-                        breadcrumbsView = new Views.Breadcrumbs({model: breadcrumbsModel}),
-                        appModel = (id !== undefined) ?
-                            appCollection.fullCollection.get(id) :
-                            new Model.AppModel();
-                    mainLayout.breadcrumbs.show(breadcrumbsView);
-                    mainLayout.main.show(new Views.AppLoader({model: appModel}));
-                    mainLayout.pager.empty();
-                });
-
-                var successModelSaving = function(context) {
-                    var breadcrumbsModel = new Backbone.Model(_.extend(
-                            _.clone(context.breadcrumbsData),
-                                    {breadcrumbs: [{name: 'Predefined Apps'}]})),
-                        breadcrumbsView = new Views.Breadcrumbs({model: breadcrumbsModel});
-
-                    utils.notifyWindow(
-                        'Predefined application "' + context.model.attributes.name +
-                            '" is ' + (context.isNew ? 'added' : 'updated'),
-                        'success'
+                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pa']}),
+                    button = {id: 'add_pod', href: '#predefined-apps/newapp',
+                             title: 'Add new application'},
+                    breadcrumbsControls = new Breadcrumbs.Controls(
+                        {button: button}
                     );
-                    context.mainLayout.breadcrumbs.show(breadcrumbsView);
-                    if (context.isNew) {
-                        context.appCollection.add(context.model);
-                    }
-                    var view = new Views.AppList(
-                        {collection: appCollection.filterByOrigin()});
-                    mainLayout.main.show(view);
-                    mainLayout.pager.show(new Pager.PaginatorView({view: view}));
-                };
-
-                var errorModelSaving = function(context, response) {
-                    if (response && !(response.responseJSON &&
-                            response.responseJSON.data &&
-                            response.responseJSON.type === 'ValidationError')){
-                        utils.notifyWindow(response);
-                        return;
-                    }
-                    // TODO: move it in views in AC-3434
-                    require([
-                        'app_data/papps/templates/validation_error.tpl',
-                        'js-yaml'
-                    ], function(validationErrorTpl, jsyaml){
-                        utils.modalDialog({
-                            title: 'Invalid template',
-                            body: validationErrorTpl(
-                                {data: response.responseJSON.data, jsyaml: jsyaml}),
-                            show: true,
-                            small: true,
-                            type: 'saveAnyway',
-                            footer: {
-                                buttonOk: function(){
-                                    context.model.save(null, {wait: true})
-                                        .done(function(){ successModelSaving(context); })
-                                        .fail(utils.notifyWindow);
-                                },
-                                buttonCancel: true
-                            }
-                        });
-                    });
-                };
-
-                that.listenTo(mainLayout, 'app:save', function(model){
-                    var context = {
-                        mainLayout: mainLayout,
-                        appCollection: appCollection,
-                        isNew: model.isNew(),
-                        breadcrumbsData: breadcrumbsData,
-                        model: model
-                    };
-                    // First try to save with validation turned on.
-                    // If there will be a validation error, then the user will
-                    // be asked about saving template with errors. If user
-                    // have confirm, then the model will be saved without
-                    // validation flag.
-                    var url = model.url() + '?' + $.param({validate: true});
-
-                    model.save(null, {wait: true, url: url})
-                        .done(function(){ successModelSaving(context); })
-                        .fail(function(xhr){ errorModelSaving(context, xhr); });
-                });
-
-                that.listenTo(mainLayout, 'app:cancel', function(){
-                    that.listPredefinedApps();
-                });
 
                 that.listenTo(mainLayout, 'show', function(){
-                    var breadcrumbsModel = new Backbone.Model(_.extend(
-                            _.clone(breadcrumbsData), {breadcrumbs: [{name: 'Predefined Apps'}]})),
-                        breadcrumbsView = new Views.Breadcrumbs({model: breadcrumbsModel});
                     mainLayout.nav.show(navbar);
-                    mainLayout.breadcrumbs.show(breadcrumbsView);
-                    appCollection.fetch({
-                        wait: true,
-                        success: function(){
-                            var view = new Views.AppList(
-                                {collection: appCollection.filterByOrigin()});
-                            mainLayout.main.show(view);
-                            mainLayout.pager.show(new Pager.PaginatorView({view: view}));
-                        },
+                    mainLayout.breadcrumbs.show(breadcrumbsLayout);
+                    breadcrumbsLayout.pa.show(
+                       new Breadcrumbs.Text({text: 'Predefined Apps'}));
+                    breadcrumbsLayout.controls.show(breadcrumbsControls);
+                    App.getAppCollection().done(function(appCollection){
+                        var view = new Views.AppList(
+                            {collection: appCollection.filterByOrigin()});
+                        mainLayout.main.show(view);
+                        mainLayout.pager.show(new Pager.PaginatorView({view: view}));
                     });
-
                 });
                 App.contents.show(mainLayout);
             });
@@ -1388,9 +1370,9 @@ define([
             });
         },
 
-        showGeneralSettings: function(){ this.showSettingsGroup('general') },
-        showDomainSettings: function(){ this.showSettingsGroup('domain') },
-        showBillingSettings: function(){ this.showSettingsGroup('billing') },
+        showGeneralSettings: function(){ this.showSettingsGroup('general'); },
+        showDomainSettings: function(){ this.showSettingsGroup('domain'); },
+        showBillingSettings: function(){ this.showSettingsGroup('billing'); },
 
         showLicense: function(){
             if (!this.checkPermissions(['Admin']))
@@ -1436,7 +1418,9 @@ define([
                                 item = ippoolCollection.at(0);
                                 view = new Views.SubnetIpsListView({
                                     model: item,
-                                    collection: item.getIPs().getFiltered(function(m){return true;})
+                                    collection: item.getIPs().getFiltered(function(m){
+                                        return true;
+                                    })
                                 });
                             } else {
                                 button = {id: 'create_network',

@@ -1,5 +1,145 @@
 /* predefined-app-main */
 .create-app{
+    .app-wrapper{
+        &.error{
+            .box-shadow(0 0 0 1px #ee6860);
+            .yaml-textarea-wrapper{
+                textarea{
+                    &#app-contents{
+                        border-top: 0;
+                        border-left: 0;
+                        border-right: 0;
+                        border-bottom: 0;
+                        &:focus{
+                            + .yaml-textarea-line-numbers{
+                                border-top-color:#f1f1f1;
+                                border-left-color: #f1f1f1;
+                                border-bottom-color: #f1f1f1;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        .accordion{
+            .accordion-group{
+                .accordion-heading{
+                    color: #fff;
+                    padding: 7px;
+                    font-size: 13px;
+                    position: relative;
+                    background-color: #ee6860;
+                    .accordion-toggle{
+                        &.collapsed{
+                            .title{
+                                &:before{ content: 'keyboard_arrow_down'; }
+                                &:after{ content: 'Show details'; }
+                            }
+                        }
+                        .title{
+                            .mdi('keyboard_arrow_up',21px, #fff, #fff);
+                            top: 0;
+                            bottom: 0;
+                            right: 20px;
+                            margin: auto;
+                            font-size: 0;
+                            line-height: 32px;
+                            position: absolute;
+                            &:after{
+                                color: #fff;
+                                font-size: 13px;
+                                display: inline-block;
+                                vertical-align: middle;
+                                content: 'Hide details';
+                            }
+                        }
+                    }
+                }
+                .accordion-body{
+                    padding: 20px 0 20px 64px;
+                    background-color: #fffada;
+                    .accordion-inner{
+                        color: #484848;
+                        font-size: 13px;
+                    }
+                }
+            }
+        }
+    }
+    .yaml-textarea-wrapper{
+        position: relative;
+        textarea{
+            &#app-contents{
+                display: block;
+                resize: vertical;
+                margin-bottom: 0;
+                border-color: #f1f1f1;
+                padding: 20px 0 20px 64px !important;
+                &.error{
+                    border-color: red;
+                    + .yaml-textarea-line-numbers{
+                        .transition(color 500ms ease);
+                        border-top-color: red;
+                        border-left-color: red;
+                        border-bottom-color: red;
+                    }
+                }
+                &:focus{
+                    border-color: #188eed;
+                    + .yaml-textarea-line-numbers{
+                        .transition(color 500ms ease);
+                        border-top-color: #188eed;
+                        border-left-color: #188eed;
+                        border-bottom-color: #188eed;
+                    }
+                }
+            }
+            &::-webkit-scrollbar {
+                width: 12px;
+                height: 12px;
+            }
+            &::-webkit-scrollbar-button {
+                width: 0;
+                height: 0;
+            }
+            &::-webkit-scrollbar-thumb {
+                .border-radius(0);
+                background: #74b7e3;
+                border: 0 none transparent;
+            }
+            &::-webkit-scrollbar-thumb:hover { background: #74b7e3; }
+            &::-webkit-scrollbar-thumb:active { background: #74b7e3; }
+            &::-webkit-scrollbar-track {
+                background: #eaf6ff;
+                border: 0px none #ffffff;
+                border-radius: 0px;
+            }
+            &::-webkit-resizer{ background: #74b7e3; }
+            &::-webkit-scrollbar-track:hover { background: #eaf6ff; }
+            &::-webkit-scrollbar-track:active { background: #eaf6ff;}
+            &::-webkit-scrollbar-corner { background: transparent; }
+        }
+        .yaml-textarea-line-numbers{
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            color: #4e5665;
+            min-width: 44px;
+            overflow: hidden;
+            padding-top: 20px;
+            position: absolute;
+            padding-bottom: 20px;
+            width: 44px !important;
+            background-color: #f1f1f1;
+            padding-left: 0px !important;
+            border: 1px solid transparent;
+            .yaml-textarea-number{
+                line-height: 23px;
+                text-align: center;
+            }
+        }
+    }
     label{
         display: block;
         font-size: 13px;
@@ -7,8 +147,7 @@
         margin-bottom: 20px;
         font-family: @regular;
     }
-    #app-name,
-    #app-contents{
+    #app-name{
         &.error{
             border-color: red;
         }
@@ -80,6 +219,7 @@
         }
     }
     .more-info{
+        margin-top: 20px;
         position: relative;
         padding-left: 78px;
         margin-bottom: 62px;

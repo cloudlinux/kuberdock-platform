@@ -76,7 +76,11 @@ var webpackConfig = {
             loader: 'url', query: {limit: 16384, name: '[path][name].[ext]', emitFile: false},
         }, {
             test: /\.js$/, include: /\/js\/app_data\//, loader: 'babel',
-            query: {cacheDirectory: !conf.PROD},  // do not use cache in prod
+            query: {cacheDirectory: !conf.PROD,  // do not use cache in prod
+                    plugins: [
+                        'transform-decorators',
+                        ...(conf.TEST ? ['rewire'] : []),
+                    ]},
         }, {
             test: /\.json$/, loader: 'json',
         }, {
@@ -145,8 +149,6 @@ if (conf.PROD){
         }),
         new CompressionPlugin()
     );
-} else if (conf.TEST) {
-    webpackConfig.plugins.push(new RewirePlugin());  // tests-only plugins
 }
 
 module.exports = webpackConfig;

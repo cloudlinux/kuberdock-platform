@@ -3,6 +3,7 @@
 var process = require('process');
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";  // allow requests to KD with self-signed cert
 
+var chalk = require('chalk');
 var express = require('express');
 var logger = require('morgan');
 var request = require('request');
@@ -11,6 +12,13 @@ var webpackDevMiddleware = require("webpack-dev-middleware");
 var ProgressPlugin = require('webpack/lib/ProgressPlugin');
 var conf = require('./config');
 var webpackConfig = require('./webpack.config.js');
+
+
+if (!conf.API_HOST)
+    throw chalk.bold.red`
+        You need to specify API_HOST either in local-config.js
+        or through environment variable, like
+        API_HOST=1.2.3.4 npm run dev`;
 
 
 var compiler = webpack(webpackConfig);

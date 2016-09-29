@@ -1,6 +1,6 @@
 {
-    "presets": ["es2016"],
-    "plugins": ["transform-object-rest-spread", "transform-decorators"],
+    "presets": ["es2016", "es2015"],
+    "plugins": ["transform-decorators"],
     "ignore": [
         "**/lib/"
     ]

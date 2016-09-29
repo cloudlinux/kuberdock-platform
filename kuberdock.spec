@@ -82,7 +82,11 @@ Kuberdock
 %build
 # Build frontend stuff
 cd kubedock/frontend/static/
-npm install --no-optional
+if command -v npm-cache; then
+    npm-cache install --cacheDirectory ~/.npm npm --no-optional
+else
+    npm install --no-optional
+fi
 PROD_ENV=true npm run build
 rm -rf node_modules
 cd ../../../

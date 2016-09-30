@@ -25,6 +25,7 @@ spec:
         volumeMounts:
         - mountPath: /redis-master-data
           name: data
+          kdCopyFromImage: true
       volumes:
         - name: data
 """

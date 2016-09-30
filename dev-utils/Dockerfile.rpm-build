@@ -1,10 +1,13 @@
 FROM centos:7
 
+COPY ./kubedock/frontend/static/package.json ./
 RUN yum -y install epel-release && \
     curl --silent --location https://rpm.nodesource.com/setup_6.x | bash - && \
     yum -y update && \
     yum -y install rsync rpm-build gcc nodejs-6.4.0 && \
-    yum clean all
+    yum clean all && \
+    npm install -g npm-cache && \
+    npm-cache install --cacheDirectory ~/.npm npm --no-optional && rm -r node_modules
 
 # Rebuild & push with:
 # docker build -t lobur/rpm-build:vX -f dev-utils/Dockerfile.rpm-build --rm=true --no-cache=true --pull .

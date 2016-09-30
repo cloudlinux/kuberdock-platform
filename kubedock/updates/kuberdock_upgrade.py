@@ -205,7 +205,7 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
         db_upd.print_log('Upgrading {0} ...'.format(node.hostname))
         try:
             run('yum --enablerepo=kube,kube-testing clean metadata')
-            upgrade_node(db_upd, with_testing, env)
+            upgrade_node(db_upd, with_testing, env, node_ip=node.ip)
         except Exception as e:
             successful = False
             node.upgrade_status = UPDATE_STATUSES.failed

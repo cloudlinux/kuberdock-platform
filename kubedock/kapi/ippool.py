@@ -1,17 +1,16 @@
-import json
 import operator
+import json
 
 import ipaddress
 from flask import current_app
-
-from .lbpoll import LoadBalanceService
+from ..kapi.helpers import KubeQuery
+from ..kapi import podutils
 from .podcollection import PodCollection
 from .. import utils
 from .. import validation
 from ..exceptions import APIError, NoFreeIPs
-from ..kapi import podutils
-from ..kapi.helpers import KubeQuery
 from ..kapi.node import Node as K8SNode, NodeException, NodeNotFound
+from ..kapi.lbpoll import LoadBalanceService, get_service_provider
 from ..nodes.models import Node
 from ..pods.models import IPPool, PodIP, ip_network, Pod
 from ..settings import AWS, KUBERDOCK_INTERNAL_USER
@@ -268,7 +267,6 @@ class IpAddrPool(object):
         pods = kq.get(['pods'],
                       {'labelSelector':
                        'kuberdock-pod-uid={}'.format(pod_id)})
-
         for p in pods.get('items', tuple()):
             namespace = p['metadata']['namespace']
             name = p['metadata']['name']
@@ -277,7 +275,10 @@ class IpAddrPool(object):
                                 {'kuberdock-public-ip': assigned_ip}}})
             rv = kq.patch(['pods', name], data=data, ns=namespace)
             podutils.raise_if_failure(rv, 'Error while try to patch')
-
+        svc = get_service_provider()
+        services = svc.get_by_pods(pod_id)
+        if services.get(pod_id, None):
+            svc.update_publicIP(services[pod_id], assigned_ip)
         pc.update(pod_id,
                   {'command': 'change_config',
                    'node': node_hostname,

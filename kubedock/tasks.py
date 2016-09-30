@@ -37,7 +37,7 @@ from .settings import (
     NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH,
     CEPH_POOL_NAME, CEPH_CLIENT_USER,
     KUBERDOCK_INTERNAL_USER, NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT,
-    NODE_STORAGE_MANAGE_DIR, ZFS)
+    CALICO, NODE_STORAGE_MANAGE_DIR, ZFS, NODE_TOBIND_EXTERNAL_IPS)
 from .kapi.collect import collect, send
 from .kapi.pstorage import (
     delete_persistent_drives, remove_drives_marked_for_deletion,
@@ -149,7 +149,7 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
 
 
 @celery.task(bind=True, base=AddNodeTask)
-def add_new_node(self, node_id, with_testing=False, redeploy=False,
+def add_new_node(self, node_id, log_pod_ip, with_testing=False, redeploy=False,
                  ls_devices=None, ebs_volume=None, deploy_options=None):
     db_node = Node.get_by_id(node_id)
     admin_rid = Role.query.filter_by(rolename="Admin").one().id
@@ -213,8 +213,9 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
         sftp.put('fslimit.py', '/fslimit.py')
         sftp.put('make_elastic_config.py', '/make_elastic_config.py')
         sftp.put('node_install.sh', '/node_install.sh')
-        sftp.put('node_network_plugin.sh', '/node_network_plugin.sh')
-        sftp.put('node_network_plugin.py', '/node_network_plugin.py')
+        if not CALICO:
+            sftp.put('node_network_plugin.sh', '/node_network_plugin.sh')
+            sftp.put('node_network_plugin.py', '/node_network_plugin.py')
         # TODO refactor to copy all folder ones, or make kdnode package
         sftp.put('node_scripts/kd-ssh-user.sh', '/kd-ssh-user.sh')
         sftp.put('node_scripts/kd-docker-exec.sh', '/kd-docker-exec.sh')
@@ -268,16 +269,21 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
 
         sftp.close()
 
-        deploy_cmd = 'AWS={0} NODE_KUBERNETES={1} MASTER_IP={2} '\
-                     'FLANNEL_IFACE={3} TZ={4} NODENAME={5} '\
+        deploy_cmd = 'AWS={0} NODE_KUBERNETES={1} MASTER_IP={2} ' \
+                     'FLANNEL_IFACE={3} TZ={4} NODENAME={5} ' \
                      'CPU_MULTIPLIER={6} MEMORY_MULTIPLIER={7} ' \
-                     'FIXED_IP_POOLS={8} TOKEN="{9}" '\
+                     'FIXED_IP_POOLS={8} TOKEN="{9}" ' \
+                     'LOG_POD_IP={10} NETWORK_INTERFACE={11} ' \
                      'bash /node_install.sh'
         if CEPH:
             deploy_cmd = 'CEPH_CONF={} '.format(
                 TEMP_CEPH_CONF_PATH) + deploy_cmd
         elif ZFS:
             deploy_cmd = 'ZFS=yes ' + deploy_cmd
+
+        if CALICO:
+            deploy_cmd = 'CALICO={0} NODE_IP={1} {2}'.format(
+                CALICO, db_node.ip, deploy_cmd)
 
         if with_testing:
             deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
@@ -293,9 +299,9 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
         cmd = deploy_cmd.format(AWS, node_kubernetes_rpm,
                                 MASTER_IP, node_interface, timezone,
                                 host, cpu_multiplier, memory_multiplier,
-                                current_app.config[
-                                    'FIXED_IP_POOLS'], token)
-
+                                current_app.config['FIXED_IP_POOLS'],
+                                token,
+                                log_pod_ip, NODE_TOBIND_EXTERNAL_IPS)
         i, o, e = ssh.exec_command(cmd,
                                    timeout=NODE_INSTALL_TIMEOUT_SEC,
                                    get_pty=True)
@@ -361,8 +367,7 @@ def add_new_node(self, node_id, with_testing=False, redeploy=False,
         err = add_node_to_k8s(host, kube_type, CEPH)
         if err:
             raise NodeInstallException(
-                'ERROR adding node.', log_file, channels
-            )
+                'ERROR adding node.', log_file, channels)
 
         send_logs(node_id, 'Adding Node completed successful.',
                   log_file, channels)

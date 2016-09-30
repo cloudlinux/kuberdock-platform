@@ -141,7 +141,7 @@ clean_node(){
     echo "ALL PACKAGES, CONFIGS AND DATA RELATED TO KUBERDOCK AND PODS WILL BE DELETED"
 
     echo "Stop and disable services..."
-    for i in kubelet docker kube-proxy flanneld kuberdock-watcher ntpd; do
+    for i in kubelet docker kube-proxy kuberdock-watcher ntpd; do
         systemctl disable $i &> /dev/null
         systemctl stop $i &> /dev/null
     done
@@ -158,7 +158,6 @@ clean_node(){
         yum -y remove 'kubernetes*'
         yum -y remove docker
         yum -y remove docker-selinux
-        yum -y remove 'flannel*'
         yum -y remove kuberdock-cadvisor  # obsolete package
     } &> /dev/null
     remove_unneeded python-requests
@@ -201,10 +200,6 @@ clean_node(){
     del_existed $PLUGIN_DIR_BASE
     del_existed $KD_WATCHER_SERVICE
 
-    del_existed /etc/sysconfig/flanneld*
-    del_existed /etc/systemd/system/flanneld.service
-    del_existed /run/flannel
-
     del_existed $KD_KERNEL_VARS
 
     del_existed /etc/sysconfig/docker*
@@ -225,6 +220,12 @@ clean_node(){
     systemctl restart rsyslog &> /dev/null
 
     del_existed /etc/ntpd.conf*
+
+    del_existed /opt/bin/calicoctl
+    del_existed /etc/cni
+    del_existed /opt/cni
+    del_existed /var/log/calico
+    del_existed /var/run/calico
 
     systemctl daemon-reload
 
@@ -498,11 +499,9 @@ echo "Installing kubernetes..."
 yum_wrapper -y install ${NODE_KUBERNETES}
 yum_wrapper -y install docker-selinux-1.8.2-11.el7
 yum_wrapper -y install docker-1.8.2-11.el7
-yum_wrapper -y install flannel-0.5.3
 # TODO maybe not needed, make as dependency for kuberdock-node package
 yum_wrapper -y install python-requests
 yum_wrapper -y install python-ipaddress
-yum_wrapper -y install ipset
 # tuned - daemon to set proper performance profile.
 # It is installed by default, but ensure it is here
 # TODO why installed here but used very later in script?
@@ -593,52 +592,22 @@ setup_cron
 mv /${NODE_STORAGE_MANAGE_DIR} /var/lib/kuberdock/scripts/
 
 
-# 4.2 kuberdock kubelet plugin stuff
-echo "Setup network plugin..."
-PLUGIN_DIR="$PLUGIN_DIR_BASE/kubelet-plugins/net/exec/kuberdock"
-mkdir -p "$PLUGIN_DIR/data"
-mv "/node_network_plugin.sh" "$PLUGIN_DIR/kuberdock"
-mv "/node_network_plugin.py" "$PLUGIN_DIR/kuberdock.py"
-chmod +x "$PLUGIN_DIR/kuberdock"
-check_status
-
-cat > $KD_WATCHER_SERVICE << EOF
-[Unit]
-Description=KuberDock Network Plugin watcher
-After=flanneld.service
-Requires=flanneld.service
-
-[Service]
-ExecStart=/usr/bin/env python2 $PLUGIN_DIR/kuberdock.py watch
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
 if [ "$FIXED_IP_POOLS" = True ]; then
     fixed_ip_pools="yes"
 else
     fixed_ip_pools="no"
 fi
-cat <<EOF > "$PLUGIN_DIR/kuberdock.json"
+cat <<EOF > "/var/lib/kuberdock/kuberdock.json"
 {"fixed_ip_pools": "$fixed_ip_pools",
 "master": "$MASTER_IP",
 "node": "$NODENAME",
+"network_interface": "$NETWORK_INTERFACE",
 "token": "$TOKEN"}
 EOF
-
-systemctl daemon-reload
-systemctl reenable kuberdock-watcher
-check_status
-
-
 
 # 5. configure Node config
 echo "Configuring kubernetes..."
 sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/config
-sed -i "/^KUBELET_ADDRESS/ {s|127.0.0.1|0.0.0.0|}" $KUBERNETES_CONF_DIR/kubelet
 sed -i '/^KUBELET_HOSTNAME/s/^/#/' $KUBERNETES_CONF_DIR/kubelet
 sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/kubelet
 if [ "$AWS" = True ];then
@@ -646,68 +615,47 @@ if [ "$AWS" = True ];then
 else
     sed -i '/^KUBELET_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}'"|}' $KUBERNETES_CONF_DIR/kubelet
 fi
-sed -i '/^KUBE_PROXY_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --proxy-mode userspace"|}' $KUBERNETES_CONF_DIR/proxy
+sed -i '/^KUBE_PROXY_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --proxy-mode iptables"|}' $KUBERNETES_CONF_DIR/proxy
 check_status
 
 
 
-# 6. configure Flannel
-cat > /etc/sysconfig/flanneld << EOF
-# Flanneld configuration options
+# 6a. configure Calico CNI plugin
+echo "Enabling Calico CNI plugin ..."
+curl https://github.com/projectcalico/calico-cni/releases/download/v1.3.1/calico --create-dirs --location --output /opt/cni/bin/calico --silent --show-error
+chmod +x /opt/cni/bin/calico
 
-# etcd url location.  Point this to the server where etcd runs
-FLANNEL_ETCD="https://${MASTER_IP}:2379"
+echo >> $KUBERNETES_CONF_DIR/config
+echo "# Calico etcd authority" >> $KUBERNETES_CONF_DIR/config
+echo ETCD_AUTHORITY="$MASTER_IP:2379" >> $KUBERNETES_CONF_DIR/config
+echo ETCD_SCHEME="https" >> $KUBERNETES_CONF_DIR/config
+echo ETCD_CA_CERT_FILE="/etc/pki/etcd/ca.crt" >> $KUBERNETES_CONF_DIR/config
+echo ETCD_CERT_FILE="/etc/pki/etcd/etcd-client.crt" >> $KUBERNETES_CONF_DIR/config
+echo ETCD_KEY_FILE="/etc/pki/etcd/etcd-client.key" >> $KUBERNETES_CONF_DIR/config
 
-# etcd config key.  This is the configuration key that flannel queries
-# For address range assignment
-FLANNEL_ETCD_KEY="/kuberdock/network/"
+TOKEN=$(grep token /etc/kubernetes/configfile | grep -oP '[a-zA-Z0-9]+$')
 
-# Any additional options that you want to pass
-FLANNEL_OPTIONS="--iface=${FLANNEL_IFACE}"
-ETCD_CAFILE="/etc/pki/etcd/ca.crt"
-ETCD_CERTFILE="/etc/pki/etcd/etcd-client.crt"
-ETCD_KEYFILE="/etc/pki/etcd/etcd-client.key"
+mkdir -p /etc/cni/net.d
+cat > /etc/cni/net.d/10-calico.conf << EOF
+{
+    "name": "calico-k8s-network",
+    "type": "calico",
+    "log_level": "info",
+    "ipam": {
+        "type": "calico-ipam"
+    },
+    "policy": {
+        "type": "k8s",
+        "k8s_api_root": "https://$MASTER_IP:6443/api/v1/",
+        "k8s_auth_token": "$TOKEN"
+    }
+}
 EOF
 
-cat > /etc/systemd/system/flanneld.service << EOF
-[Unit]
-Description=Flanneld overlay address etcd agent
-After=network.target
-Before=docker.service
-
-[Service]
-Type=notify
-Restart=always
-RestartSec=10
-EnvironmentFile=/etc/sysconfig/flanneld
-EnvironmentFile=-/etc/sysconfig/docker-network
-ExecStart=/usr/bin/flanneld \
-    -etcd-endpoints=\${FLANNEL_ETCD} \
-    -etcd-prefix=\${FLANNEL_ETCD_KEY} \
-    -etcd-cafile=\${ETCD_CAFILE} \
-    -etcd-certfile=\${ETCD_CERTFILE} \
-    -etcd-keyfile=\${ETCD_KEYFILE} \
-    \${FLANNEL_OPTIONS}
-ExecStartPost=/usr/libexec/flannel/mk-docker-opts.sh -k DOCKER_NETWORK_OPTIONS -d /run/flannel/docker
-
-[Install]
-WantedBy=multi-user.target
-EOF
-
-mkdir -p /etc/systemd/system/docker.service.d
-
-cat > /etc/systemd/system/docker.service.d/flannel.conf << EOF
-[Service]
-EnvironmentFile=/run/flannel/docker
-EOF
-
-
-echo "Enabling Flanneld ..."
-rm -f /run/flannel/docker 2>/dev/null
-systemctl reenable flanneld
-check_status
-
-
+pushd /var/lib/kuberdock/scripts
+python kubelet_args.py --network-plugin=
+python kubelet_args.py --network-plugin=cni --network-plugin-dir=/etc/cni/net.d
+popd
 
 # 7. Setting kernel parameters
 modprobe bridge
@@ -730,7 +678,7 @@ echo "Reconfiguring rsyslog..."
 cat > $KD_RSYSLOG_CONF << EOF
 \$LocalHostName $NODENAME
 \$template LongTagForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg%"
-*.* @127.0.0.1:5140;LongTagForwardFormat
+*.* @${LOG_POD_IP}:5140;LongTagForwardFormat
 EOF
 
 
@@ -897,7 +845,17 @@ else
     tuned-adm profile virtual-guest
 fi
 
-# 16. Reboot will be executed in python function
+
+# 16. Run Docker and Calico node
+echo "Starting Calico node..."
+systemctl restart docker
+curl https://github.com/projectcalico/calico-containers/releases/download/v0.22.0/calicoctl --create-dirs --location --output /opt/bin/calicoctl --silent --show-error
+chmod +x /opt/bin/calicoctl
+check_status
+ETCD_AUTHORITY="$MASTER_IP:2379" ETCD_SCHEME=https ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key /opt/bin/calicoctl node --ip="$NODE_IP" --node-image=kuberdock/calico-node:0.20.0.confd
+check_status
+
+# 17. Reboot will be executed in python function
 echo "Node deploy script finished: $(date)"
 
 exit 0

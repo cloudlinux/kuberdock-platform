@@ -8,29 +8,41 @@ server {
     keepalive_timeout 300;
     keepalive_requests 500;
 
-    location / {
-        return 403;
+    error_page 418 = @418;
+
+    location @418 {
+        return 404 '{"errorCode":100,"message":"NginxKeyNotFound","cause":"$uri","index":0}\n';
     }
 
-    location /v2 {
-        return 403;
+    location / {
+        return 418;
     }
-    
-    location /v2/keys {
-        return 403;
-    }
-    location /v2/keys/kuberdock {
-        
+
+    location ~ ^/(v2/(keys/(calico|kuberdock)|members)|version) {
+
         if ($request_method = DELETE) {
-            return 403;
+            set $denied 1;
         }
-        
+
+        if ($uri ~ ^/v2/keys/calico/v1/policy) {
+            set $denied 1;
+        }
+
+        if ($remote_addr = @MASTER_IP@) {
+           set $denied 0;
+        }
+
+        if ($denied = 1) {
+            return 418;
+        }
+
         proxy_pass      http://127.0.0.1:4001;
         proxy_http_version 1.1;
         proxy_buffering off;
         proxy_redirect off;
         proxy_set_header Connection "";
         proxy_max_temp_file_size 0;
+        proxy_intercept_errors on;
 
         proxy_connect_timeout      90;
         proxy_send_timeout         90;
@@ -41,5 +53,7 @@ server {
         proxy_busy_buffers_size    64k;
         proxy_temp_file_write_size 64k;
         add_header Cache-Control no-cache;
+        allow @MASTER_IP@;
+        deny all;
     }
 }

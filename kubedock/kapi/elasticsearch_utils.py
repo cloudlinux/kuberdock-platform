@@ -1,8 +1,16 @@
 import elasticsearch as elastic
 from requests import RequestException
 
+from flask import current_app
+
 from ..nodes.models import Node
-from ..settings import ELASTICSEARCH_REST_PORT
+from ..pods.models import Pod
+from ..users.models import User
+from .nodes import get_kuberdock_logs_pod_name
+from ..settings import (
+    ELASTICSEARCH_REST_PORT, KUBE_API_PORT, KUBE_API_HOST, KUBE_API_VERSION)
+
+K8S_PROXY_PREFIX = 'api/{version}/proxy'.format(version=KUBE_API_VERSION)
 
 
 class LogsError(Exception):
@@ -34,13 +42,56 @@ def execute_es_query(index, query, size, sort, host=None):
 
     """
     if host is None:
-        hosts = [ip for ip, in Node.query.values(Node.ip)]
+        hosts = [item.hostname for item in Node.query.all()]
     else:
-        hosts = [host]
+        node = Node.query.filter(Node.ip == host).first()
+        if node:
+            hosts = [node.hostname]
+        else:
+            hosts = []
 
-    es = elastic.Elasticsearch(
-        [{'host': n, 'port': ELASTICSEARCH_REST_PORT} for n in hosts]
-    )
+    internal_user = User.get_internal()
+    log_pods = Pod.query.filter(
+        Pod.status != 'deleted',
+        Pod.name.in_(get_kuberdock_logs_pod_name(item) for item in hosts),
+        Pod.owner_id == internal_user.id
+    ).all()
+
+    # current_app.logger.debug('ES query. Hosts: {}'.format(hosts))
+    # current_app.logger.debug(
+    #     'ES query. log pods: {}'.format([pod.name for pod in log_pods])
+    # )
+
+    es_service_hosts = []
+    # Access to logs service via k8s proxy.
+    # The final url will be like:
+    # 'http://localhost:8080/api/v1/proxy/namespaces/
+    #       008d1a30-1a79-473d-964a-5418f3f6d238/services/service-h0qc4:9200/'
+    # It may be tested via curl from master host (with actual namespace and
+    # service name).
+    # It makes unnecessary to install and configure kube-proxy service on
+    # master host to access k8s services.
+    for pod in log_pods:
+        config = pod.get_dbconfig()
+        try:
+            service = config['service']
+            namespace = config['namespace']
+        except KeyError:
+            current_app.logger.exception('Invalid log pod: {}'.format(pod.id))
+            continue
+        k8s_service_proxy = \
+            K8S_PROXY_PREFIX +\
+            '/namespaces/{ns}/services/{service}:{port}/'.format(
+                ns=namespace, service=service, port=ELASTICSEARCH_REST_PORT
+            )
+        es_service_hosts.append({
+            'host': KUBE_API_HOST,
+            'port': KUBE_API_PORT,
+            'url_prefix': k8s_service_proxy
+        })
+
+    # current_app.logger.debug('ES init hosts: {}'.format(es_service_hosts))
+    es = elastic.Elasticsearch(es_service_hosts)
     body = {'size': size}
     if sort:
         body['sort'] = sort

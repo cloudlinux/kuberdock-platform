@@ -1,4 +1,5 @@
 import base64
+import copy
 import json
 import random
 import string
@@ -7,6 +8,7 @@ import requests
 
 from .. import settings
 from .. import utils
+from kubedock.kapi.podutils import raise_if_failure
 from ..core import db
 from ..exceptions import APIError
 from ..pods.models import Pod
@@ -120,8 +122,10 @@ class KubeQuery(object):
 
 
 KUBERDOCK_POD_UID = 'kuberdock-pod-uid'
-LABEL_SELECTOR_TYPE = 'kuberdock-type={}'
+KUBERDOCK_TYPE = 'kuberdock-type'
+LABEL_SELECTOR_TYPE = KUBERDOCK_TYPE + '={}'
 LABEL_SELECTOR_PODS = KUBERDOCK_POD_UID + ' in ({})'
+SERVICES = 'services'
 
 
 class Services(object):
@@ -133,9 +137,47 @@ class Services(object):
 
     """
 
+    template = {
+        'kind': 'Service',
+        'apiVersion': settings.KUBE_API_VERSION,
+        'metadata': {
+            'generateName': 'service-',
+            'labels': {'kuberdock-pod-uid': None},
+        },
+        'spec': {
+            'selector': {'kuberdock-pod-uid': None},
+            'ports': None,
+            'type': 'ClusterIP',
+            'sessionAffinity': 'None'
+        }
+    }
+
     def __init__(self, svc_type=None):
         self.kq = KubeQuery()
         self.svc_type = svc_type
+
+    def post(self, service, namespace):
+        json_data = json.dumps(service)
+        return self.kq.post([SERVICES], json_data, rest=True, ns=namespace)
+
+    def patch(self, name, namespace, data, replace_lists=True):
+        json_data = json.dumps(data)
+        return self.kq.patch([SERVICES, name], json_data,
+                             ns=namespace, replace_lists=replace_lists)
+
+    def delete(self, name, namespace):
+        return self.kq.delete([SERVICES, name], ns=namespace)
+
+    def get_template(self, pod_id, ports):
+        if not all((pod_id, ports)):
+            raise ValueError('Pod id and ports must be specified')
+        template = copy.deepcopy(self.template)
+        template['metadata']['labels']['kuberdock-pod-uid'] = pod_id
+        if self.svc_type:
+            template['metadata']['labels'][KUBERDOCK_TYPE] = self.svc_type
+        template['spec']['selector']['kuberdock-pod-uid'] = pod_id
+        template['spec']['ports'] = ports
+        return template
 
     @staticmethod
     def _get_label_selector(conditions):
@@ -145,14 +187,38 @@ class Services(object):
         if conditions is None:
             conditions = []
         label_selector = self._get_label_selector(conditions)
-        svc = self.kq.get(['services'], {'labelSelector': label_selector})
+        svc = self.kq.get([SERVICES], {'labelSelector': label_selector})
         return svc['items']
+
+    def update_ports(self, service, ports):
+        """Update ports in service or remove service if ports emtpy
+        :param service: service to update
+        :param ports: new ports for service
+        :return: updated service
+        """
+        name = service['metadata']['name']
+        namespace = service['metadata']['namespace']
+        if ports:
+            data = {'spec': {'ports': ports}}
+            rv = self.patch(name, namespace, data)
+            raise_if_failure(rv, "Couldn't patch service ports")
+            return rv
+        else:
+            rv = self.delete(name, namespace)
+            raise_if_failure(rv, "Couldn't delete service")
+            return None
+
+    def update_ports_by_pod(self, pod_id, ports):
+        svc = self.get_by_pods(pod_id)
+        for s in svc:
+            self.update_ports(s, ports)
 
     def get_by_type(self, conditions=None):
         """Return all services filtered by LabelSelector
         Args:
             conditions (str, tuple, list): conditions that goes to
                 LabelSelector(example: 'kuberdock-pod-uid=123')
+
         """
         if conditions is None:
             conditions = []
@@ -190,6 +256,50 @@ class Services(object):
         user = User.get(user_id)
         pods = [pod['id'] for pod in user.pods_to_dict()]
         return self.get_by_pods(pods)
+
+
+LOCAL_SVC_TYPE = 'local'
+
+class LocalService(Services):
+
+    def __init__(self):
+        super(LocalService, self).__init__(LOCAL_SVC_TYPE)
+
+    def get_template(self, pod_id, ports):
+        template = super(LocalService, self).get_template(pod_id, ports)
+        template['metadata']['labels']['name'] = pod_id[:54] + '-service'
+        return template
+
+    def get_clusterIP(self, service):
+        try:
+            return service['spec']['clusterIP']
+        except (KeyError, IndexError):
+            return None
+
+    def set_clusterIP(self, service, clusterIP):
+        if clusterIP:
+            service['spec']['clusterIP'] = clusterIP
+        return service
+
+    def get_pods_clusterIP(self, services):
+        svc = {}
+        for pod, s in services.iteritems():
+            clusterIP = self.get_clusterIP(s)
+            if clusterIP:
+                svc[pod] = clusterIP
+        return svc
+
+    def get_clusterIP_all(self):
+        svc = self.get_all()
+        return [self.get_clusterIP(s) for s  in svc]
+
+    def get_clusterIP_by_pods(self, pods):
+        svc = self.get_by_pods(pods)
+        return self.get_pods_clusterIP(svc)
+
+    def get_clusterIP_by_user(self, user_id):
+        svc = self.get_by_user(user_id)
+        return self.get_pods_clusterIP(svc)
 
 
 def get_pod_config(pod_id, param=None, default=None):

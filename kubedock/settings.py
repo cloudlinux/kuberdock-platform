@@ -154,7 +154,13 @@ CELERY_RESULT_BACKEND = 'redis://{0}:6379'.format(REDIS_HOST)
 # Also used in yaml api version check
 KUBE_BASE_URL = 'api'
 KUBE_API_VERSION = 'v1'
-KUBE_MASTER_URL = 'http://localhost:8080/'
+KUBE_API_PORT = 8080
+KUBE_API_HOST = 'localhost'
+KUBE_MASTER_URL = 'http://{}:{}/'.format(KUBE_API_HOST, KUBE_API_PORT)
+
+# network policy
+KUBE_NP_API_VERSION = 'net.alpha.kubernetes.io/v1alpha1'
+KUBE_NP_BASE_URL = 'apis'
 
 # If None, defaults will be used
 SSH_KEY_FILENAME = '/var/lib/nginx/.ssh/id_rsa'
@@ -168,6 +174,8 @@ INFLUXDB_DATABASE = 'k8s'
 
 # Port to access elasticsearch via rest api
 ELASTICSEARCH_REST_PORT = 9200
+# Port elasticsearch uses to create a cluster
+ELASTICSEARCH_PUBLISH_PORT = 9300
 
 # separator for persisnet drive name - username after separator (LEGACY)
 PD_SEPARATOR_USERNAME = '__SEP__'
@@ -188,6 +196,7 @@ SSE_POLL_INTERVAL = 0.5
 
 ID_PATH = '/var/lib/kuberdock/installation-id'
 STAT_URL = 'https://cln.cloudlinux.com/api/kd/validate.json'
+
 
 CELERYBEAT_SCHEDULE = {
     'process-node-actions': {
@@ -230,7 +239,8 @@ UPDATES_RELOAD_LOCK_FILE = '/var/lib/kuberdock/updates-reload.lock'
 UPDATES_PATH = '/var/opt/kuberdock/kubedock/updates/scripts'
 KUBERDOCK_SERVICE = 'emperor.uwsgi'
 KUBERDOCK_SETTINGS_FILE = '/etc/sysconfig/kuberdock/kuberdock.conf'
-NODE_SCRIPT_DIR = '/var/lib/kuberdock/scripts'
+NODE_DATA_DIR = '/var/lib/kuberdock'
+NODE_SCRIPT_DIR = os.path.join(NODE_DATA_DIR, 'scripts')
 NODE_STORAGE_MANAGE_DIR = 'node_storage_manage'
 NODE_STORAGE_MANAGE_MODULE = 'manage'
 NODE_STORAGE_MANAGE_CMD = 'PYTHONPATH={} python2 -m {}.{}'.format(
@@ -246,13 +256,32 @@ MASTER_TOBIND_FLANNEL = 'enp0s5'
 NODE_TOBIND_EXTERNAL_IPS = 'enp0s5'
 NODE_TOBIND_FLANNEL = 'enp0s5'
 NODE_INSTALL_TIMEOUT_SEC = 30 * 60    # 30 min
-NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT = 30
+NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT = 30 * 60
 PD_NAMESPACE = ''
 
 NODE_CEPH_AWARE_KUBERDOCK_LABEL = 'kuberdock-ceph-enabled'
 
-ETCD_REGISTERED_HOSTS = 'http://127.0.0.1:4001/' \
-                        'v2/keys/kuberdock/network/plugin/registered_hosts'
+ETCD_BASE_URL = 'http://127.0.0.1:4001/v2/keys'
+
+ETCD_REGISTERED_HOSTS = \
+    ETCD_BASE_URL + '/kuberdock/network/plugin/registered_hosts'
+# Some calico config paths, see
+# 'https://github.com/projectcalico/libcalico/blob/master/calico_containers/
+#   pycalico/datastore.py'
+ETCD_CALICO_V_PATH = ETCD_BASE_URL + '/calico/v1'
+ETCD_NETWORK_POLICY_SERVICE = \
+    ETCD_CALICO_V_PATH + '/policy/tier/kuberdock-service/policy'
+ETCD_NETWORK_POLICY_HOSTS = \
+    ETCD_CALICO_V_PATH + '/policy/tier/kuberdock-hosts/policy'
+ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE = \
+    ETCD_CALICO_V_PATH + '/host/{hostname}/config/{key}'
+
+ETCD_PKI = '/etc/pki/etcd/'
+ETCD_CACERT = os.path.join(ETCD_PKI, 'ca.crt')
+DNS_SERVICE_IP = '10.254.0.10'
+DNS_URL = 'https://{}:2379/v2/keys/skydns/kuberdock/svc/'.format(DNS_SERVICE_IP)
+DNS_CLIENT_CRT = os.path.join(ETCD_PKI, 'etcd-client.crt')
+DNS_CLIENT_KEY = os.path.join(ETCD_PKI, 'etcd-client.key')
 FIXED_IP_POOLS = False
 WITH_TESTING = False
 
@@ -320,3 +349,5 @@ except ImportError:
 
 if not CEPH:
     CELERYBEAT_SCHEDULE.pop('unmap-temp-mapped-drives', None)
+
+CALICO = True

@@ -14,19 +14,29 @@ from .. import tasks
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
 from ..core import db
-from ..exceptions import APIError
+from ..exceptions import APIError, SubsystemtIsNotReadyError
 from ..nodes.models import Node, NodeFlag, NodeFlagNames
 from ..pods.models import Pod
 from ..settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, KUBERDOCK_INTERNAL_USER,
     ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE, NODE_INSTALL_TASK_ID,
-    ZFS, AWS)
+    ETCD_NETWORK_POLICY_SERVICE, ELASTICSEARCH_PUBLISH_PORT, CALICO,
+    ZFS, AWS, ETCD_CACERT, DNS_CLIENT_CRT, DNS_CLIENT_KEY, DNS_SERVICE_IP)
 from ..users.models import User
-from ..utils import send_event_to_role, run_ssh_command, retry, NODE_STATUSES
+from ..utils import (
+    Etcd,
+    send_event_to_role,
+    run_ssh_command,
+    retry,
+    NODE_STATUSES,
+    get_node_token,
+    get_calico_ip_tunnel_address
+)
 from ..validation import check_internal_pod_data
 from ..kd_celery import celery
 
 KUBERDOCK_DNS_POD_NAME = 'kuberdock-dns'
+KUBERDOCK_POLICY_POD_NAME = 'kuberdock-policy-agent'
 KUBERDOCK_LOGS_MEMORY_LIMIT = 256 * 1024 * 1024
 
 
@@ -75,6 +85,9 @@ def create_node(ip, hostname, kube_id,
         raise APIError('Looks like you are trying to add MASTER as NODE, '
                        'this kind of setup is not supported at this '
                        'moment')
+    token = get_node_token()
+    if token is None:
+        raise APIError('Error reading Kubernetes Node auth token')
     _check_node_hostname(ip, hostname)
     node = Node(
         ip=ip, hostname=hostname, kube_id=kube_id, state=NODE_STATUSES.pending
@@ -87,13 +100,16 @@ def create_node(ip, hostname, kube_id,
         pass
 
     node = add_node_to_db(node)
-    _deploy_node(node, do_deploy, with_testing,
-                 ls_devices=ls_devices, ebs_volume=ebs_volume, options=options)
 
-    ku = User.query.filter(User.username == KUBERDOCK_INTERNAL_USER).first()
+    ku = User.get_internal()
 
-    create_logs_pod(hostname, ku)
+    log_pod = create_logs_pod(hostname, ku)
+    current_app.logger.debug('Created log pod: {}'.format(log_pod))
     create_dns_pod(hostname, ku)
+    create_policy_pod(hostname, ku, token)
+
+    _deploy_node(node, log_pod['podIP'], do_deploy, with_testing,
+                 ls_devices=ls_devices, ebs_volume=ebs_volume, options=options)
 
     node.kube.send_event('change')
     return node
@@ -102,8 +118,10 @@ def create_node(ip, hostname, kube_id,
 def create_logs_pod(hostname, owner):
     def _create_pod():
         pod_name = get_kuberdock_logs_pod_name(hostname)
-        if db.session.query(Pod).filter_by(name=pod_name, owner=owner).first():
-            return True
+        dbpod = db.session.query(Pod).filter(Pod.name == pod_name,
+                                             Pod.owner_id == owner.id).first()
+        if dbpod:
+            return PodCollection(owner).get(dbpod.id, as_json=False)
 
         try:
             logs_kubes = 1
@@ -136,8 +154,17 @@ def create_logs_pod(hostname, owner):
             )
             check_internal_pod_data(logs_config, owner)
             logs_pod = PodCollection(owner).add(logs_config, skip_check=True)
-            PodCollection(owner).update(logs_pod['id'], {'command': 'start'})
-            return True
+            pod_id = logs_pod['id']
+            PodCollection(owner).update(
+                pod_id, {'command': 'synchronous_start'}
+            )
+            if CALICO:
+                logs_policy = get_logs_policy_config(
+                    owner.id, pod_id, pod_name)
+                Etcd(ETCD_NETWORK_POLICY_SERVICE).put(
+                    pod_name, value=logs_policy)
+            return PodCollection(owner).get(pod_id, as_json=False)
+
         except (IntegrityError, APIError):
             # Either pod already exists or an error occurred during it's
             # creation - log and retry
@@ -160,6 +187,11 @@ def create_dns_pod(hostname, owner):
             check_internal_pod_data(dns_config, owner)
             dns_pod = PodCollection(owner).add(dns_config, skip_check=True)
             PodCollection(owner).update(dns_pod['id'], {'command': 'start'})
+            if CALICO:
+                dns_policy = get_dns_policy_config(owner.id, dns_pod['id'])
+                Etcd(ETCD_NETWORK_POLICY_SERVICE).put(
+                    KUBERDOCK_DNS_POD_NAME, value=dns_policy
+                )
             return True
         except (IntegrityError, APIError):
             # Either pod already exists or an error occurred during it's
@@ -170,6 +202,29 @@ def create_dns_pod(hostname, owner):
 
     return retry(_create_pod, 1, 5, exc=APIError('Could not create DNS '
                                                  'service POD'))
+
+
+def create_policy_pod(hostname, owner, token):
+    def _create_pod():
+        if db.session.query(Pod).filter_by(
+                name=KUBERDOCK_POLICY_POD_NAME, owner=owner).first():
+            return True
+
+        try:
+            policy_conf = get_policy_agent_config(MASTER_IP, token)
+            check_internal_pod_data(policy_conf, owner)
+            policy_pod = PodCollection(owner).add(policy_conf, skip_check=True)
+            PodCollection(owner).update(policy_pod['id'], {'command': 'start'})
+            return True
+        except (IntegrityError, APIError):
+            # Either pod already exists or an error occurred during it's
+            # creation - log and retry
+            current_app.logger.exception(
+                'During "{}" node creation tried to create a Network Policy '
+                'service pod but got an error.'.format(hostname))
+
+    return retry(_create_pod, 1, 5, exc=APIError('Could not create Network '
+                                                 'Policy service POD'))
 
 
 def mark_node_as_being_deleted(node_id):
@@ -319,11 +374,11 @@ def _check_node_hostname(ip, hostname):
             hostname, uname_hostname))
 
 
-def _deploy_node(dbnode, do_deploy, with_testing,
+def _deploy_node(dbnode, log_pod_ip, do_deploy, with_testing,
                  ls_devices=None, ebs_volume=None, options=None):
     if do_deploy:
         tasks.add_new_node.apply_async(
-            [dbnode.id],
+            [dbnode.id, log_pod_ip],
             dict(
                 with_testing=with_testing,
                 ls_devices=ls_devices,
@@ -438,8 +493,8 @@ def get_kuberdock_logs_config(node, name, kube_type,
                     {
                         "isPublic": False,
                         "protocol": "TCP",
-                        "containerPort": 9300,
-                        "hostPort": 9300
+                        "containerPort": ELASTICSEARCH_PUBLISH_PORT,
+                        "hostPort": ELASTICSEARCH_PUBLISH_PORT
                     }
                 ],
                 "volumeMounts": [
@@ -455,7 +510,7 @@ def get_kuberdock_logs_config(node, name, kube_type,
     }
 
 
-def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
+def get_dns_pod_config(domain='kuberdock', ip=DNS_SERVICE_IP):
     """Returns config of k8s DNS service pod."""
     # Based on
     # https://github.com/kubernetes/kubernetes/blob/release-1.2/
@@ -496,7 +551,7 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
                     "-initial-cluster-token",
                     "skydns-etcd",
                     "--ca-file",
-                    "/etc/pki/etcd/ca.crt",
+                    ETCD_CACERT,
                     "--cert-file",
                     "/etc/pki/etcd/etcd-dns.crt",
                     "--key-file",
@@ -604,7 +659,7 @@ def get_dns_pod_config(domain='kuberdock', ip='10.254.0.10'):
     }
 
 
-def get_dns_pod_config_pre_k8s_1_2(domain='kuberdock', ip='10.254.0.10'):
+def get_dns_pod_config_pre_k8s_1_2(domain='kuberdock', ip=DNS_SERVICE_IP):
     """Returns config of k8s DNS service pod."""
     # Old DNS pod config used before k8s 1.2 series. Left for
     # backward migrations only.
@@ -641,7 +696,7 @@ def get_dns_pod_config_pre_k8s_1_2(domain='kuberdock', ip='10.254.0.10'):
                     "-initial-cluster-token",
                     "skydns-etcd",
                     "--ca-file",
-                    "/etc/pki/etcd/ca.crt",
+                    ETCD_CACERT,
                     "--cert-file",
                     "/etc/pki/etcd/etcd-dns.crt",
                     "--key-file",
@@ -711,4 +766,129 @@ def get_dns_pod_config_pre_k8s_1_2(domain='kuberdock', ip='10.254.0.10'):
                 "terminationMessagePath": None
             }
         ]
+    }
+
+
+def get_policy_agent_config(master, token):
+    return {
+        "name": "kuberdock-policy-agent",
+        "replicas": 1,
+        "kube_type": Kube.get_internal_service_kube_type(),
+        "node": None,
+        "restartPolicy": "Always",
+        "hostNetwork": True,
+        "volumes": [
+            {
+                "name": "etcd-pki",
+                # path is allowed only for kuberdock-internal
+                "localStorage": {"path": "/etc/pki/etcd"}
+            }
+        ],
+        "containers": [
+            {
+                "command": [],
+                "kubes": 1,
+                "image": "calico/k8s-policy-agent:v0.1.4",
+                "name": "policy-agent",
+                "env": [
+                    {
+                        "name": "ETCD_AUTHORITY",
+                        "value": "{0}:2379".format(master)
+                    },
+                    {
+                        "name": "ETCD_SCHEME",
+                        "value": "https"
+                    },
+                    {
+                        "name": "ETCD_CA_CERT_FILE",
+                        "value": ETCD_CACERT
+                    },
+                    {
+                        "name": "ETCD_CERT_FILE",
+                        "value": DNS_CLIENT_CRT
+                    },
+                    {
+                        "name": "ETCD_KEY_FILE",
+                        "value": DNS_CLIENT_KEY
+                    },
+                    {
+                        "name": "K8S_API",
+                        "value": "https://{0}:6443".format(master)
+                    },
+                    {
+                        "name": "K8S_AUTH_TOKEN",
+                        "value": token
+                    }
+                ],
+                "ports": [],
+                "volumeMounts": [
+                    {
+                        "name": "etcd-pki",
+                        "mountPath": "/etc/pki/etcd"
+                    }
+                ],
+                "workingDir": "",
+                "terminationMessagePath": None
+            },
+        ]
+    }
+
+
+def get_dns_policy_config(user_id, namespace):
+    return {
+        "id": "kuberdock-dns",
+        "order": 10,
+        "inbound_rules": [{
+            "action": "allow"
+        }],
+        "outbound_rules": [{
+            "action": "allow"
+        }],
+        "selector": ("kuberdock-user-uid == '{0}' && calico/k8s_ns == '{1}'"
+                     .format(user_id, namespace))
+    }
+
+
+def get_logs_policy_config(user_id, namespace, logs_pod_name):
+    calico_ip_tunnel_address = get_calico_ip_tunnel_address()
+    if not calico_ip_tunnel_address:
+        raise SubsystemtIsNotReadyError(
+            'Can not get calico IPIP tunnel address')
+    return {
+        "id": logs_pod_name + '-master-access',
+        "order": 10,
+        "inbound_rules": [
+            # First two rules are for access to elasticsearch from master
+            # Actually works the second rule (with master ip tunnel address)
+            {
+                "protocol": "tcp",
+                "dst_ports": [ELASTICSEARCH_REST_PORT],
+                "src_net": MASTER_IP + '/32',
+                "action": "allow",
+            },
+            {
+                "protocol": "tcp",
+                "dst_ports": [ELASTICSEARCH_REST_PORT],
+                "src_net": u'{}/32'.format(calico_ip_tunnel_address),
+                "action": "allow",
+            },
+            # This rule should allow interaction of different elasticsearch
+            # pods. It must work without this rule (by k8s policies), but it
+            # looks like this policy overlaps k8s policies.
+            # So just allow access to elasticsearch from service pods.
+            # TODO: looks like workaround, may be there is a better solution.
+            {
+                'protocol': 'tcp',
+                'dst_ports': [
+                    ELASTICSEARCH_REST_PORT, ELASTICSEARCH_PUBLISH_PORT
+                ],
+                "src_selector": "kuberdock-user-uid == '{}'".format(user_id),
+                'action': 'allow',
+            },
+        ],
+        "outbound_rules": [{
+            "action": "allow"
+        }],
+        "selector": ("kuberdock-user-uid == '{0}' && calico/k8s_ns == '{1}'"
+                     .format(user_id, namespace))
     }

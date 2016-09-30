@@ -84,7 +84,8 @@ class InternalAPIError(APIError):
 
 
 class SubsystemtIsNotReadyError(InternalAPIError):
-    """Raise this exception if some subsystemt did not properly configured."""
+    """Raise this exception if some subsystem did not properly configured.
+    """
     pass
 
 

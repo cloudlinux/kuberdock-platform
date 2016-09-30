@@ -14,15 +14,15 @@ import node_utils
 import pod_domains
 import podutils
 import pstorage
-from helpers import KubeQuery, K8sSecretsClient, K8sSecretsBuilder
+from helpers import KubeQuery, K8sSecretsClient, K8sSecretsBuilder, LocalService
 from images import Image
 from kubedock.exceptions import (
     NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError, ServicePodDumpError)
-from lbpoll import LoadBalanceService
 from node import Node as K8SNode
 from node import NodeException
 from pod import Pod
 from .. import billing
+from kubedock.kapi.lbpoll import get_service_provider
 from .. import dns_management
 from .. import settings
 from .. import utils
@@ -78,6 +78,14 @@ def get_user_namespaces(user):
 class PodNotFound(APIError):
     message = 'Pod not found'
     status_code = 404
+
+
+def _get_network_policy_api():
+    """Returns KubeQuery object configured to send requests to k8s network
+    policy API.
+    """
+    return KubeQuery(api_version=settings.KUBE_NP_API_VERSION,
+                     base_url=settings.KUBE_NP_BASE_URL)
 
 
 class PodCollection(object):
@@ -383,7 +391,7 @@ class PodCollection(object):
     @staticmethod
     def needs_public_ip(conf):
         """
-        Return true of pod needs public ip
+        Return true if pod needs public ip
         """
         for c in conf.get('containers', []):
             for port in c.get('ports', []):
@@ -405,9 +413,7 @@ class PodCollection(object):
             if settings.AWS:
                 conf.setdefault('public_aws', UNKNOWN_ADDRESS)
             else:
-                ip_address = IPPool.get_free_host(as_int=True)
-                if ip_address is None:
-                    raise NoFreeIPs()
+                IPPool.get_free_host(as_int=True)
                 # 'true' indicates that this Pod needs Public IP to be assigned
                 conf['public_ip'] = pod.public_ip = 'true'
         else:
@@ -480,13 +486,12 @@ class PodCollection(object):
         pod_config['public_ip_before_freed'] = pod_config.pop('public_ip',
                                                               None)
         for container in pod_config['containers']:
-            for port in container['ports']:
+            for port in container.get('ports', tuple()):
                 port['isPublic_before_freed'] = port.pop('isPublic', None)
         pod.set_dbconfig(pod_config, save=False)
 
         network = IPPool.query.filter_by(network=ip.network).first()
         node = network.node
-
         if current_app.config['FIXED_IP_POOLS'] and node:
             try:
                 K8SNode(hostname=node.hostname).increment_free_public_ip_count(1)
@@ -495,7 +500,6 @@ class PodCollection(object):
                     raise
                 current_app.logger.debug(
                     "Cannot increment pubic IP count: {}".format(repr(e)))
-
         IpState.end(pod_id, ip.ip_address)
         db.session.delete(ip)
 
@@ -589,6 +593,7 @@ class PodCollection(object):
             return
         dispatcher = {
             'start': self._start_pod,
+            'synchronous_start': self._sync_start_pod,
             'stop': self._stop_pod,
             'redeploy': self._redeploy,
             'resize': self._resize_replicas,
@@ -641,6 +646,8 @@ class PodCollection(object):
                     .format(pod.id, message))
                 utils.send_event_to_role(
                     'notify:error', {'message': message}, 'Admin')
+
+        self._drop_network_policies(pod.namespace, force=force)
         # all deleted asynchronously, now delete namespace, that will ensure
         # delete all content
         self._drop_namespace(pod.namespace, force=force)
@@ -684,14 +691,49 @@ class PodCollection(object):
     def _make_namespace(self, namespace):
         data = self._get_namespace(namespace)
         if data is None:
+            owner_repr = str(self.owner.id)
             config = {
                 "kind": "Namespace",
                 "apiVersion": settings.KUBE_API_VERSION,
-                "metadata": {"name": namespace}}
+                "metadata": {
+                    "annotations": {
+                        "net.alpha.kubernetes.io/network-isolation": "yes"
+                    },
+                    "labels": {
+                        "kuberdock-user-uid": owner_repr
+                    },
+                    "name": namespace
+                }
+            }
             self.k8squery.post(
                 ['namespaces'], json.dumps(config), rest=True, ns=False)
             # TODO where raise ?
             # current_app.logger.debug(rv)
+
+            # Add main ns policy
+            policy = {
+                "kind": "NetworkPolicy",
+                "apiVersion": settings.KUBE_NP_API_VERSION,
+                "metadata": {
+                    "name": owner_repr
+                },
+                "spec": {
+                    "podSelector": {
+                        "kuberdock-user-uid": owner_repr
+                    },
+                    "ingress": [{
+                        "from": [{
+                            "namespaces": {"kuberdock-user-uid": owner_repr}
+                        }]
+                    }]
+                }
+            }
+            _get_network_policy_api().post(
+                ['networkpolicys'],
+                json.dumps(policy),
+                rest=True,
+                ns=namespace,
+            )
 
     @staticmethod
     def get_secrets(pod):
@@ -726,6 +768,19 @@ class PodCollection(object):
                 rv, "Cannot delete namespace '{}'".format(namespace)
             )
         return rv
+
+    @staticmethod
+    def _drop_network_policies(namespace, force=False):
+        """
+        This should drop all network policies in provided namespace
+        including special "public" policy
+        """
+        rv = _get_network_policy_api().delete(
+            ['networkpolicys'], ns=namespace)
+        if not force:
+            podutils.raise_if_failure(
+                rv, "Cannot delete NetworkPolicy for namespace: '{}'"
+                    .format(namespace))
 
     def _get_replicas(self, name=None):
         # TODO: apply namespaces here
@@ -802,7 +857,7 @@ class PodCollection(object):
         """
         if settings.AWS:
             if getattr(pod, 'public_aws', UNKNOWN_ADDRESS) == UNKNOWN_ADDRESS:
-                dns = LoadBalanceService().get_dns_by_pods(pod.id)
+                dns = get_service_provider().get_dns_by_pods(pod.id)
                 if pod.id in dns:
                     set_public_address(dns[pod.id], pod.id)
 
@@ -1105,7 +1160,6 @@ class PodCollection(object):
         )
         podutils.raise_if_failure(rv, "Could not change '{0}' pod".format(
             pod.name.encode('ascii', 'replace')))
-
         return pod.as_dict()
 
     def patch_running_pod(self, pod_id, data,
@@ -1531,6 +1585,11 @@ def fix_relative_mount_paths(containers):
                 path.join('/', mount['mountPath']))
 
 
+@celery.task(ignore_results=True)
+def prepare_and_run_pod_task(pod):
+    return prepare_and_run_pod(pod)
+
+
 def prepare_and_run_pod(pod):
     db_pod = DBPod.query.get(pod.id)
     db_config = db_pod.get_dbconfig()
@@ -1540,7 +1599,7 @@ def prepare_and_run_pod(pod):
         local_svc, _ = run_service(pod)
         if local_svc:
             db_config['service'] = pod.service = local_svc['metadata']['name']
-            db_config['podIP'] = local_svc['spec']['clusterIP']
+            db_config['podIP'] = LocalService().get_clusterIP(local_svc)
 
         helpers.replace_pod_config(pod, db_config)
 
@@ -1561,6 +1620,23 @@ def prepare_and_run_pod(pod):
         for container in pod.containers:
             # TODO: create CONTAINER_STATUSES
             container['state'] = POD_STATUSES.pending
+
+        hosts = getattr(pod, 'kuberdock_resolve', [])
+        if hosts:
+            url = '{}/{}'.format(settings.DNS_URL, pod.namespace)
+            verify = settings.ETCD_CACERT
+            cert = (settings.DNS_CLIENT_CRT, settings.DNS_CLIENT_KEY)
+            etcd = utils.Etcd(url, verify=verify, cert=cert)
+            value = {"host": "127.0.0.1", "priority": 10,
+                     "weight": 10, "ttl": 30, "targetstrip": 0}
+            try:
+                for host in hosts:
+                    etcd.put(host, value)
+            except IOError:
+                # TODO: We are not interrupt running pod here, maybe it can
+                # work without resolve? Maybe need to change this behavior
+                current_app.logger.exception(
+                    'Failed to add resolve records for pod: %s', pod)
 
         if hasattr(pod, 'domain'):
             ok, message = dns_management.create_or_update_type_A_record(
@@ -1594,11 +1670,6 @@ def prepare_and_run_pod(pod):
     return pod.as_dict()
 
 
-@celery.task(ignore_results=True)
-def prepare_and_run_pod_task(pod):
-    return prepare_and_run_pod(pod)
-
-
 def update_service(pod):
     """Update pod services to new port configuration in pod.
     Patch services if ports changed, delete services if ports deleted.
@@ -1607,47 +1678,34 @@ def update_service(pod):
 
     """
     ports, public_ports = get_ports(pod)
-    service = getattr(pod, 'service', None)
-    if service:
-        local_svc = update_local_ports(service, pod.namespace, ports)
-        if local_svc is None:
-            pod.service = None
-    public_svc = update_public_ports(pod.id, pod.namespace, public_ports)
+    local_svc = update_local_ports(pod.id, ports)
+    if local_svc is None:
+        pod.service = None
+    public_svc = update_public_ports(pod.id, pod.namespace,
+                                     public_ports, pod.owner)
     if public_svc is None:
         pod.public_aws = None
 
 
-def update_public_ports(pod_id, namespace, ports):
-    k8squery = KubeQuery()
-    if settings.AWS:
-        services = LoadBalanceService().get_by_pods(pod_id)
-        if pod_id in services:
-            # TODO: can have several services
-            service = services[pod_id]['metadata']['name']
-            if ports:
-                data = json.dumps({'spec': {'ports': ports}})
-                rv = k8squery.patch(
-                    ['services', service], data, ns=namespace)
-                podutils.raise_if_failure(rv, 'Could not path service')
-                return rv
-            else:
-                rv = k8squery.delete(
-                    ['services', service], ns=namespace)
-                podutils.raise_if_failure(rv, 'Could not path service')
-                return None
+def update_public_ports(pod_id, namespace, ports, owner):
+    svc_provider = get_service_provider()
+    services = svc_provider.get_by_pods(pod_id)
+    if services and services[pod_id]:
+        svc = services[pod_id]
+        public_svc = svc_provider.update_ports(svc, ports)
+        if public_svc is None:
+            del_public_ports_policy(namespace)
+        else:
+            set_public_ports_policy(namespace, ports, owner)
+        return public_svc
 
 
-def update_local_ports(service, namespace, ports):
-    k8squery = KubeQuery()
-    if ports:
-        data = json.dumps({'spec': {'ports': ports}})
-        rv = k8squery.patch(['services', service], data, ns=namespace)
-        podutils.raise_if_failure(rv, 'Could not path service')
-        return rv
-    else:
-        rv = k8squery.delete(['services', service], ns=namespace)
-        podutils.raise_if_failure(rv, 'Could not path service')
-        return None
+def update_local_ports(pod_id, ports):
+    local_provider = LocalService()
+    services = local_provider.get_by_pods(pod_id)
+    if services and services[pod_id]:
+        svc = services[pod_id]
+        return local_provider.update_ports(svc, ports)
 
 
 def get_ports(pod):
@@ -1688,7 +1746,11 @@ def run_service(pod):
 
     """
     ports, public_ports = get_ports(pod)
-    public_svc = ingress_public_ports(pod.id, pod.namespace, public_ports)
+    publicIP = getattr(pod, 'public_ip', None)
+    if publicIP == 'true':
+        publicIP = None
+    public_svc = ingress_public_ports(pod.id, pod.namespace,
+                                      public_ports, pod.owner, publicIP)
     cluster_ip = getattr(pod, 'podIP', None)
     local_svc = ingress_local_ports(pod.id, pod.namespace, ports, cluster_ip)
     return local_svc, public_svc
@@ -1696,68 +1758,41 @@ def run_service(pod):
 
 def ingress_local_ports(pod_id, namespace, ports, cluster_ip=None):
     """Ingress local ports to service
-    Args:
-        pod_id (str): pod id
-        namespace (str): pod namespace
-        ports (list): list of ports to ingress, see get_ports
-        cluster_ip (str): cluster_ip to use in service. Optional.
+    :param: pod_id: pod id
+    :param: namespace: pod namespace
+    :param: ports: list of ports to ingress, see get_ports
+    :param: cluster_ip: cluster_ip to use in service. Optional.
 
     """
-    db_pod = DBPod.query.get(pod_id)
-    db_config = db_pod.get_dbconfig()
-    if not db_config.get('service') and ports:
-        conf = {
-            'kind': 'Service',
-            'apiVersion': settings.KUBE_API_VERSION,
-            'metadata': {
-                'generateName': 'service-',
-                'labels': {'name': pod_id[:54] + '-service'},
-            },
-            'spec': {
-                'selector': {'kuberdock-pod-uid': pod_id},
-                'ports': ports,
-                'type': 'ClusterIP',
-                'sessionAffinity': 'None'  # may be ClientIP is better
-            }
-        }
-        if cluster_ip:
-            conf['spec']['clusterIP'] = cluster_ip
-        data = json.dumps(conf)
-        rv = KubeQuery().post(['services'], data, rest=True, ns=namespace)
+    local_svc = LocalService()
+    services = local_svc.get_by_pods(pod_id)
+    if not services and ports:
+        service = local_svc.get_template(pod_id, ports)
+        service = local_svc.set_clusterIP(service, cluster_ip)
+        rv = local_svc.post(service, namespace)
         podutils.raise_if_failure(rv, "Could not ingress local ports")
         return rv
 
 
-def ingress_public_ports(pod_id, namespace, ports):
+def ingress_public_ports(pod_id, namespace, ports, owner, publicIP=None):
     """Ingress public ports with cloudprovider specific methods
-    Args:
-        pod_id (str): pod id
-        namespace (str): pod namespace
-        ports (list): list of ports to ingress, see get_ports
+    :param pod_id: pod id
+    :param namespace: pod namespace
+    :param ports: list of ports to ingress, see get_ports
+    :param owner: pod owner
+    :param publicIP: publicIP to ingress. Optional.
 
     """
-    if settings.AWS:
-        services = LoadBalanceService().get_by_pods(pod_id)
-        if not services and ports:
-            conf = {
-                'kind': 'Service',
-                'apiVersion': settings.KUBE_API_VERSION,
-                'metadata': {
-                    'generateName': 'lbservice-',
-                    'labels': {'kuberdock-type': 'public',
-                               'kuberdock-pod-uid': pod_id},
-                },
-                'spec': {
-                    'selector': {'kuberdock-pod-uid': pod_id},
-                    'ports': ports,
-                    'type': 'LoadBalancer',
-                    'sessionAffinity': 'None'
-                }
-            }
-            data = json.dumps(conf)
-            rv = KubeQuery().post(['services'], data, rest=True, ns=namespace)
-            podutils.raise_if_failure(rv, "Could not ingress public ports")
-            return rv
+    svc = get_service_provider()
+    services = svc.get_by_pods(pod_id)
+    if not services and ports:
+        service = svc.get_template(pod_id, ports)
+        if not settings.AWS:
+            service = svc.set_publicIP(service, publicIP)
+        rv = svc.post(service, namespace)
+        podutils.raise_if_failure(rv, "Could not ingress public ports")
+        set_public_ports_policy(namespace, ports, owner)
+        return rv
 
 
 def set_public_address(hostname, pod_id, send=False):
@@ -1875,3 +1910,57 @@ def get_replicationcontroller(namespace, name):
     rc = KubeQuery().get(['replicationcontrollers', name], ns=namespace)
     podutils.raise_if_failure(rc, "Couldn't find Replication Controller")
     return rc
+
+
+def set_public_ports_policy(namespace, ports, owner):
+    """
+    Add/Update Network Policy for Public Ports
+    :param namespace: pod namespace
+    :param ports: list of public ports
+    :param owner: pod owner
+    """
+    owner_repr = str(owner.id)
+    ingress_ports = []
+    for port in ports:
+        public_port = {'port': port['port'], 'protocol': port['protocol']}
+        origin_port = {'port': port['targetPort'], 'protocol': port['protocol']}
+        ingress_ports.append(public_port)
+        # TODO we can try to limit access even more if we set rule that
+        # origin_ports are accessible only from node ip (kube-proxy) but this
+        # is tricky and require low-level policy. Also this has little to none
+        # benefit for us because this port is public anyway. We should revice
+        # it later and take into account AWS case.
+        ingress_ports.append(origin_port)
+    policy = {
+        "kind": "NetworkPolicy",
+        "metadata": {
+            "name": 'public'
+        },
+        "spec": {
+            # TODO do we really need this selector here?
+            "podSelector": {
+                "kuberdock-user-uid": owner_repr
+            },
+            "ingress": [{
+                "ports": ingress_ports
+            }]
+        }
+    }
+    del_public_ports_policy(namespace)
+    _get_network_policy_api().post(
+        ['networkpolicys'],
+        json.dumps(policy),
+        rest=True,
+        ns=namespace,
+    )
+
+
+def del_public_ports_policy(namespace):
+    """
+    Remove Network Policy for Public Ports
+    :param namespace: pod namespace
+    """
+    _get_network_policy_api().delete(
+        ['networkpolicys', 'public'],
+        ns=namespace,
+    )

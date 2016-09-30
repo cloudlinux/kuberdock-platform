@@ -11,6 +11,8 @@ import mock
 
 from kubedock.testutils import create_app
 from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
+from kubedock.kapi import helpers
+from kubedock.kapi.lbpoll import PUBLIC_SVC_TYPE
 from .. import pod as kapi_pod
 from .. import podcollection
 from ..images import Image
@@ -126,6 +128,7 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         mark_pod_as_deleted.assert_called_once_with(pod.id)
         delete_type_A_record_mock.assert_called_once_with(pod.domain)
 
+    @mock.patch.object(podcollection.PodCollection, '_drop_network_policies')
     @mock.patch.object(podcollection.dns_management, 'delete_type_A_record')
     @mock.patch.object(podcollection.PodCollection, '_drop_namespace')
     @mock.patch.object(podcollection.podutils, 'raise_if_failure')
@@ -140,7 +143,8 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
             mark_pod_as_deleted,
             raise_if_failure,
             drop_namespace,
-            delete_type_A_record_mock):
+            delete_type_A_record_mock,
+            drop_net_policy_mock):
         """
         Makes sure _del not called on sid-less pods (i.e pure kubernetes pods)
         """
@@ -163,6 +167,7 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
 
     @mock.patch.object(podcollection.podutils, 'raise_if_failure')
     @mock.patch.object(podcollection.dns_management, 'delete_type_A_record')
+    @mock.patch.object(podcollection.PodCollection, '_drop_network_policies')
     @mock.patch.object(podcollection.PodCollection, '_remove_public_ip')
     @mock.patch.object(podcollection.PodCollection, '_get_by_id')
     @mock.patch.object(podcollection.PodCollection, '_drop_namespace')
@@ -172,7 +177,7 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
     @mock.patch('kubedock.kapi.podcollection.current_app')
     def test_pod_delete(self, ca_, mark_, mock_free_pd,
                         get_pod_config_mock, pc_drop_namespace_mock,
-                        pc_get_by_id_mock, remove_ip_mock,
+                        pc_get_by_id_mock, remove_ip_mock, del_net_policy_mock,
                         delete_type_A_record_mock,
                         *args, **kwargs):
         """
@@ -195,6 +200,7 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         # Making actual call
         self.app.delete(pod.id)
 
+        del_net_policy_mock.assert_called_once_with(pod.namespace, force=False)
         mock_free_pd.assert_called_once_with(pod.id)
         pc_drop_namespace_mock.assert_called_once_with(pod.namespace,
                                                        force=False)
@@ -220,13 +226,13 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
                           '_get_pods', '_merge')
         self.pod_collection = podcollection.PodCollection(U())
 
+    @mock.patch.object(helpers.KubeQuery, 'delete')
+    @mock.patch.object(helpers.KubeQuery, 'get')
     @mock.patch.object(podcollection.podutils, 'raise_if_failure')
     @mock.patch.object(podcollection, 'DBPod')
-    #  @mock.patch.object(podcollection, 'ingress_local_ports')
-    @mock.patch.object(podcollection, 'ingress_public_ports')
-    @mock.patch.object(podcollection.KubeQuery, 'post')
+    @mock.patch.object(helpers.KubeQuery, 'post')
     def test_pod_run_service(
-            self, post_, mock_ingress, dbpod_mock, raise_if_failure_mock):
+            self, post_, dbpod_mock, raise_if_failure_mock, mock_get, mock_del):
         """
         Test that _run_service generates expected service config
         :type post_: mock.Mock
@@ -234,8 +240,11 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
         # Fake Pod instance
         pod_name = 'bla bla pod'
         pod_id = str(uuid4())
+        pod_owner = mock.Mock()
+        pod_owner.id = 123
         pod = fake_pod(use_parents=(Pod,), sid='s', name=pod_name, id=pod_id,
                        public_ip='127.0.0.1')
+        pod.owner = pod_owner
 
         pod.containers = [{
             'ports': [{'hostPort': 1000, 'containerPort': 80,
@@ -246,37 +255,67 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
         dbpod_mock.query.get.return_value = dbpod
         dbpod.get_dbconfig.return_value = {'volumes': []}
 
+        mock_get.return_value = {'items': []}
         # Making actual call
         podcollection.run_service(pod)
+        ports, public_ports = podcollection.get_ports(pod)
 
-        expected_service_conf = (
-            '{"kind": "Service", "spec": {"sessionAffinity": "None", "type": '
-            '"ClusterIP", "ports": [{"targetPort": 80, "protocol": "TCP", '
-            '"name": "c0-p0", "port": 1000}, {"targetPort": 80, '
-            '"protocol": "TCP", "name": "c0-p1", "port": 80}], "selector": '
-            '{"kuberdock-pod-uid": "%(id)s"}}, '
-            '"apiVersion": "v1", "metadata": '
-            '{"generateName": "service-", "labels": {"name": '
-            '"%(id)s-service"}}}') % {'id': pod_id}
-        self.assertEqual(post_.call_count, 1)
-        call = post_.call_args
-        call_args, call_kwargs = call
-        self.assertEqual(call_args[0], ['services'])
-        self.assertEqual(json.loads(call_args[1]),
-                         json.loads(expected_service_conf))
-        self.assertEqual(call_kwargs['ns'], 'n')
-        self.assertEqual(call_kwargs['rest'], True)
+        calls = post_.mock_calls
+        self.assertEqual(len(calls), 3)
+        for call in calls:
+            name, call_args, call_kwargs = call
+            if call_args[0] == ['networkpolicys']:
+                self.assertEqual(call_kwargs['ns'], 'n')
+                self.assertEqual(call_kwargs['rest'], True)
+                policy = json.loads(call_args[1])
+                self.assertEqual(
+                    policy['spec']['podSelector']['kuberdock-user-uid'],
+                    repr(pod_owner.id))
+                continue
+            self.assertEqual(call_args[0], ['services'])
+            self.assertEqual(call_kwargs['ns'], 'n')
+            self.assertEqual(call_kwargs['rest'], True)
+            service = json.loads(call_args[1])
+            self.assertEqual(
+                service['spec']['selector']['kuberdock-pod-uid'], pod_id)
+            self.assertEqual(
+                service['metadata']['labels']['kuberdock-pod-uid'], pod_id)
+            service_type = service['metadata']['labels']['kuberdock-type']
+            self.assertTrue(
+                service_type in (helpers.LOCAL_SVC_TYPE, PUBLIC_SVC_TYPE))
+            if service_type == PUBLIC_SVC_TYPE:
+                self.assertEqual(service['spec']['ports'], public_ports)
+            elif service_type == helpers.LOCAL_SVC_TYPE:
+                self.assertEqual(service['spec']['ports'], ports)
+            print service
+
+
+
+
+class TestPodcollectionUtils(unittest.TestCase, TestCaseMixin):
+
+    @mock.patch.object(podcollection, 'KubeQuery')
+    def test_get_network_policy_api(self, kube_query_mock):
+        test_result = 123412341
+        kube_query_mock.return_value = test_result
+        res = podcollection._get_network_policy_api()
+        self.assertEqual(res, test_result)
+        kube_query_mock.assert_called_once_with(
+            api_version='net.alpha.kubernetes.io/v1alpha1',
+            base_url='apis'
+        )
 
 
 class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
 
     def setUp(self):
-        U = type('User', (), {'username': 'bliss'})
+        U = type('User', (), {'id': 1, 'username': 'bliss'})
 
+        self.user = U()
         self.mock_methods(podcollection.PodCollection, '_get_namespaces',
                           '_get_pods', '_merge')
 
-        self.pod_collection = podcollection.PodCollection(U())
+        self.pod_collection = podcollection.PodCollection(self.user)
         self.test_ns = "user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094"
 
     @mock.patch.object(podcollection.KubeQuery, 'post')
@@ -294,8 +333,9 @@ class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
             self.test_ns)
         self.assertEquals(post_.called, False)
 
+    @mock.patch.object(podcollection, '_get_network_policy_api')
     @mock.patch.object(podcollection.KubeQuery, 'post')
-    def test_pod_make_namespace_new_created(self, post_):
+    def test_pod_make_namespace_new_created(self, post_, np_api_mock):
         """
         Test that _make_namespace create new ns
         :type post_: mock.Mock
@@ -305,19 +345,49 @@ class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
         # Actual call
         self.pod_collection._make_namespace(self.test_ns)
 
-        ns_conf = '{"kind": "Namespace", "apiVersion": "v1", ' \
-                  '"metadata": {"name": ' \
-                  '"%s"}}' % self.test_ns
+        ns_conf = {
+            "kind": "Namespace",
+            "apiVersion": "v1",
+            "metadata": {
+                "annotations": {
+                    "net.alpha.kubernetes.io/network-isolation": "yes"
+                },
+                "labels": {"kuberdock-user-uid": "1"},
+                "name": self.test_ns
+            }
+        }
+        user_repr = str(self.user.id)
+        np_conf = {
+            "kind": "NetworkPolicy",
+            "spec": {
+                "ingress": [{
+                    "from": [{
+                        "namespaces": {"kuberdock-user-uid": user_repr}
+                    }]
+                }],
+                "podSelector": {"kuberdock-user-uid": user_repr}
+            },
+            "apiVersion": "net.alpha.kubernetes.io/v1alpha1",
+            "metadata": {"name": user_repr}
+        }
+
         self.pod_collection._get_namespace.assert_called_once_with(
             self.test_ns)
-        self.assertEqual(post_.call_count, 1)
-        call = post_.call_args
-        call_args, call_kwargs = call
-        self.assertEqual(call_args[0], ['namespaces'])
-        self.assertEqual(json.loads(call_args[1]),
-                         json.loads(ns_conf))
-        self.assertEqual(call_kwargs['ns'], False)
-        self.assertEqual(call_kwargs['rest'], True)
+
+        post_.assert_called_once_with(
+            ['namespaces'],
+            json.dumps(ns_conf),
+            ns=False,
+            rest=True
+        )
+
+        np_api_mock.assert_called_once_with()
+        np_api_mock.return_value.post.assert_called_once_with(
+            ['networkpolicys'],
+            json.dumps(np_conf),
+            ns=self.test_ns,
+            rest=True
+        )
 
 
 class TestPodCollectionGetNamespaces(TestCase, TestCaseMixin):
@@ -386,7 +456,10 @@ class TestPodCollectionGetNamespaces(TestCase, TestCaseMixin):
         # Actual call
         self.pod_collection._drop_namespace(test_ns)
 
-        del_.assert_called_once_with(['namespaces', test_ns], ns=False)
+        del_.assert_called_once_with(
+            ['namespaces', test_ns],
+            ns=False,
+        )
 
 
 class TestPodCollection(DBTestCase, TestCaseMixin):
@@ -489,6 +562,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         """
         create_ingress_mock.return_value = (True, None)
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
+        self.test_pod.kuberdock_resolve = []
         dbpod = mock.Mock()
         dbpod_mock.query.get.return_value = dbpod
         dbpod.get_dbconfig.return_value = {'volumes': []}
@@ -676,6 +750,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         dbpod_mock.query.get().get_dbconfig.return_value = {
             'volumes': [], 'service': self.test_service_name}
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
+        self.test_pod.kuberdock_resolve = []
 
         dbpod = mock.Mock()
         dbpod_mock.query.get.return_value = dbpod

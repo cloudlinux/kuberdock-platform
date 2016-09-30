@@ -36,13 +36,12 @@ MESSAGES = {
     NODE_STATUSES.pending: "\tThe node is under installation. Please wait for its completion to upgrade"
 }
 
-master_services = ['etcd', 'influxdb', 'kube-apiserver',
+master_services = ['etcd', 'influxdb', 'kube-apiserver', 'docker',
                    'kube-controller-manager', 'kube-scheduler', 'nginx',
                    'kuberdock-k8s2etcd', 'ntpd', 'postgresql', 'redis',
                    'emperor.uwsgi', 'heapster']
 
-node_services = ['flanneld', 'ntpd', 'docker', 'kube-proxy',
-                 'kubelet', 'kuberdock-watcher']
+node_services = ['ntpd', 'docker', 'kube-proxy', 'kubelet']
 
 
 def get_service_state(service):

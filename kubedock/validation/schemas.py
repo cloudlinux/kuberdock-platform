@@ -447,6 +447,10 @@ new_pod_schema.update({
         'type': 'string', 'required': False,
         'allowed': ['ClusterFirst', 'Default']
     },
+    'hostNetwork': {
+        'type': 'boolean', 'required': False,
+        'internal_only': True,
+    },
     'status': {
         'type': 'string', 'required': False,
         'allowed': ['stopped', 'unpaid']

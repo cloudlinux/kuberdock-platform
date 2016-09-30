@@ -22,12 +22,14 @@ fi
 
 
 show_help() {
-    echo "-U|--upgrade   : Upgrade kuberdock packages"
-    echo "-u|--user      : Specify kuberdock admin username (if not specified 'admin' is used)"
-    echo "-t|--testing   : Use testing repositories"
-    echo "-k|--kuberdock : Specify KuberDock master hostname or IP address (if not specified '127.0.0.1' is used)"
-    echo "-i|--interface : Network interface to use"
-    echo "-h|--help      : Show this help"
+    echo "-U|--upgrade          : Upgrade kuberdock packages"
+    echo "-u|--user             : Specify kuberdock admin username (if not specified 'admin' is used)"
+    echo "-t|--testing          : Use testing repositories"
+    echo "-k|--kuberdock        : Specify KuberDock master hostname or IP address (if not specified '127.0.0.1' is used)"
+    echo "-i|--interface        : Network interface to use"
+    echo "-c|--calico           : Use Calico Networking"
+    echo "-C|--switch-to-calico : Switch Networking to Calico"
+    echo "-h|--help             : Show this help"
     exit 0
 }
 
@@ -71,7 +73,56 @@ upgrade() {
 }
 
 
-TEMP=$(getopt -o k:u:i:th,U -l kuberdock:,user:,interface:,testing,help,upgrade -n 'kcli-deploy.sh' -- "$@")
+remove_flannel() {
+    if [ "$VER" == "7" ];then
+        do_and_log systemctl stop flanneld
+        do_and_log systemctl disable flanneld
+    else
+        do_and_log service flanneld stop
+        do_and_log chkconfig flanneld off
+    fi
+
+    yum_wrapper -y remove flannel
+
+    rm -f "$FLANNEL_CONFIG"
+}
+
+
+install_calico() {
+    yum_wrapper -y install docker
+
+    if [ "$VER" == "7" ];then
+        do_and_log systemctl enable docker
+        do_and_log systemctl start docker
+    else
+        do_and_log chkconfig docker on
+        do_and_log service docker start
+    fi
+
+    echo "Downloading calicoctl..."
+    do_and_log curl https://github.com/projectcalico/calico-containers/releases/download/v0.22.0/calicoctl --create-dirs --location --output /opt/bin/calicoctl --silent --show-error
+    do_and_log chmod +x /opt/bin/calicoctl
+    echo "Starting Calico Node..."
+    ETCD_AUTHORITY="$KD_HOST:8123" do_and_log /opt/bin/calicoctl node --node-image=kuberdock/calico-node:0.20.0.confd
+    # wait for calico routes to bring up
+    sleep 20
+    # register again with Calico network running
+    do_and_log kcli kubectl register
+}
+
+
+switch_to_calico() {
+    if [ -z "$KD_HOST" ];then
+        KD_HOST=$(grep url /etc/kubecli.conf | cut -d= -f2 | xargs echo | sed 's/^https\?:\/\///')
+    fi
+    remove_flannel
+    install_calico
+}
+
+
+VER=$(cat /etc/redhat-release|sed -e 's/[^0-9]//g'|cut -c 1)
+
+TEMP=$(getopt -o k:u:i:tcCh,U -l kuberdock:,user:,interface:,testing,calico,switch-to-calico,help,upgrade -n 'kcli-deploy.sh' -- "$@")
 eval set -- "$TEMP"
 
 
@@ -88,6 +139,13 @@ while true;do
         ;;
         -i|--interface)
             IFACE=$2;shift 2;
+        ;;
+        -c|--calico)
+            CALICO=true;shift;
+        ;;
+        -C|--switch-to-calico)
+            switch_to_calico
+            break
         ;;
         -h|--help)
             show_help;break
@@ -187,30 +245,39 @@ else
     echo "Done"
 fi
 
-yum_wrapper -y install flannel kubernetes-proxy at
+yum_wrapper -y install kubernetes-proxy at
 
-sed -i "s/^FLANNEL_ETCD=.*$/FLANNEL_ETCD=\"http:\/\/$KD_HOST:8123\"/" $FLANNEL_CONFIG
-sed -i "s/^FLANNEL_ETCD_KEY=.*$/FLANNEL_ETCD_KEY=\"\/kuberdock\/network\"/" $FLANNEL_CONFIG
+if [ -z "$CALICO" ]; then
+    yum_wrapper -y install flannel
 
-sed -i "s/^KUBE_MASTER=.*$/KUBE_MASTER=\"--master=http:\/\/$KD_HOST:8118\"/" $PROXY_CONFIG
+    sed -i "s/^FLANNEL_ETCD=.*$/FLANNEL_ETCD=\"http:\/\/$KD_HOST:8123\"/" $FLANNEL_CONFIG
+    sed -i "s/^FLANNEL_ETCD_KEY=.*$/FLANNEL_ETCD_KEY=\"\/kuberdock\/network\"/" $FLANNEL_CONFIG
 
-if [ -n "$IFACE" ];then
-   sed -i "s/^#\?FLANNEL_OPTIONS=.*$/FLANNEL_OPTIONS=\"--iface=$IFACE\"/" $FLANNEL_CONFIG
+    if [ -n "$IFACE" ];then
+       sed -i "s/^#\?FLANNEL_OPTIONS=.*$/FLANNEL_OPTIONS=\"--iface=$IFACE\"/" $FLANNEL_CONFIG
+    fi
+
+    if [ "$VER" == "7" ];then
+        do_and_log systemctl enable flanneld
+        do_and_log systemctl start flanneld
+    else
+        do_and_log chkconfig flanneld on
+        do_and_log service flanneld start
+    fi
+else
+    install_calico
 fi
 
 sed -i "s/^#\?KUBE_PROXY_ARGS=.*$/KUBE_PROXY_ARGS=\"--proxy-mode userspace\"/" $PROXY_CONFIG_ARGS
 
-VER=$(cat /etc/redhat-release|sed -e 's/[^0-9]//g'|cut -c 1)
+sed -i "s/^KUBE_MASTER=.*$/KUBE_MASTER=\"--master=http:\/\/$KD_HOST:8118\"/" $PROXY_CONFIG
+
 if [ "$VER" == "7" ];then
-    do_and_log systemctl enable flanneld
-    do_and_log systemctl start flanneld
     do_and_log systemctl enable kube-proxy
     do_and_log systemctl start kube-proxy
     do_and_log systemctl enable atd
     do_and_log systemctl start atd
 else
-    do_and_log chkconfig flanneld on
-    do_and_log service flanneld start
     do_and_log chkconfig kube-proxy on
     do_and_log service kube-proxy start
     do_and_log chkconfig atd on

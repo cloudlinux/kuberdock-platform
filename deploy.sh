@@ -8,6 +8,7 @@ KNOWN_TOKENS_FILE="$KUBERNETES_CONF_DIR/known_tokens.csv"
 WEBAPP_USER=nginx
 DEPLOY_LOG_FILE=/var/log/kuberdock_master_deploy.log
 EXIT_MESSAGE="Installation error. Install log saved to $DEPLOY_LOG_FILE"
+NGINX_SHARED_ETCD="/etc/nginx/conf.d/shared-etcd.conf"
 
 # Back up old logs
 if [ -f $DEPLOY_LOG_FILE ]; then
@@ -127,7 +128,22 @@ catchExit(){
    fi
 }
 
+waitAndCatchFailure() {
+    local COUNT="$1"
+    shift 1
+    local DELAY="$1"
+    shift 1
+    until [ "$COUNT" -lt 0 ]; do
+        "$@" && return
+        sleep "$DELAY"
+        let COUNT-=1
+    done
+    sentryWrapper
+}
 
+etcdctl_wpr() {
+    etcdctl --timeout 30s --total-timeout 30s "$@"
+}
 
 #####################
 
@@ -183,7 +199,6 @@ fi
 # Parse args
 
 
-CONF_FLANNEL_BACKEND="vxlan"
 VNI="1"
 while [[ $# -gt 0 ]];do
     key="$1"
@@ -217,12 +232,6 @@ while [[ $# -gt 0 ]];do
         shift
         ;;
         # ======== End of CEPH options ==============
-        -u|--udp-backend)
-        CONF_FLANNEL_BACKEND='udp'
-        ;;
-        -g|--hostgw-backend)
-        CONF_FLANNEL_BACKEND='host-gw'
-        ;;
         --fixed-ip-pools)
         FIXED_IP_POOLS=true
         ;;
@@ -378,24 +387,24 @@ function get_route_table_id {
 }
 
 function create_k8s_certs {
-    local -r primary_cn="${1}"
-    local -r certs_dir="${2}"
+  local -r primary_cn="${1}"
+  local -r certs_dir="${2}"
 
-    K8S_TEMP="/tmp/k8s/"
-    rm -rf ${K8S_TEMP}
-    mkdir ${K8S_TEMP}
+  K8S_TEMP="/tmp/k8s/"
+  rm -rf ${K8S_TEMP}
+  mkdir ${K8S_TEMP}
 
-    sans="IP:${primary_cn},IP:10.254.0.1,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:$(hostname)"
+  sans="IP:${primary_cn},IP:10.254.0.1,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:$(hostname)"
 
-    local -r cert_create_debug_output=$(mktemp "${K8S_TEMP}/cert_create_debug_output.XXX")
-    (set -x
-        cd "${K8S_TEMP}"
-        curl -L -O --connect-timeout 20 --retry 6 --retry-delay 2 https://storage.googleapis.com/kubernetes-release/easy-rsa/easy-rsa.tar.gz
-        tar xzf easy-rsa.tar.gz
-        cd easy-rsa-master/easyrsa3
-        ./easyrsa --keysize="$KEY_BITS" init-pki
-        ./easyrsa --keysize="$KEY_BITS" --batch "--req-cn=${primary_cn}@$(date +%s)" build-ca nopass
-        ./easyrsa --keysize="$KEY_BITS" --subject-alt-name="${sans}" build-server-full "$(hostname)" nopass
+  local -r cert_create_debug_output=$(mktemp "${K8S_TEMP}/cert_create_debug_output.XXX")
+  (set -x
+    cd "${K8S_TEMP}"
+    catchFailure curl -L -O --connect-timeout 20 --retry 6 --retry-delay 2 https://storage.googleapis.com/kubernetes-release/easy-rsa/easy-rsa.tar.gz
+    tar xzf easy-rsa.tar.gz
+    cd easy-rsa-master/easyrsa3
+    ./easyrsa --keysize="$KEY_BITS" init-pki
+    ./easyrsa --keysize="$KEY_BITS" --batch "--req-cn=${primary_cn}@$(date +%s)" build-ca nopass
+    ./easyrsa --keysize="$KEY_BITS" --subject-alt-name="${sans}" build-server-full "$(hostname)" nopass
     ) &>${cert_create_debug_output} || {
         cat "${cert_create_debug_output}" >&2
         echo "=== Failed to generate certificates: Aborting ===" >&2
@@ -493,14 +502,7 @@ else
     fi
 fi
 
-# if entered ip not found or invalid
-if [ -z "$MASTER_TOBIND_FLANNEL" ]; then
-    log_it echo "No IP addresses obtained. Exit"
-    exit 1
-fi
-
 echo "MASTER_IP has been set to $MASTER_IP" >> $DEPLOY_LOG_FILE
-echo "MASTER_TOBIND_FLANNEL was set to $MASTER_TOBIND_FLANNEL" >> $DEPLOY_LOG_FILE
 
 # We question here for a node interface to bind external IPs to
 if [ "$ISAMAZON" = true ];then
@@ -655,12 +657,14 @@ fi
 #4.3 nginx config fix
 cp $KUBERDOCK_DIR/conf/nginx.conf /etc/nginx/nginx.conf
 
+#4.4 populate nginx configs from templates
+sed "s/@MASTER_IP@/$MASTER_IP/g" "$KUBERDOCK_DIR/conf/shared-etcd.conf.template" > "$NGINX_SHARED_ETCD"
+chown "$WEBAPP_USER" "$NGINX_SHARED_ETCD"
 
 #5 Write settings that hoster enter above (only after yum kuberdock.rpm)
 echo "MASTER_IP = $MASTER_IP" >> $KUBERDOCK_MAIN_CONFIG
 echo "MASTER_TOBIND_FLANNEL = $MASTER_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
 echo "NODE_TOBIND_EXTERNAL_IPS = $NODE_TOBIND_EXTERNAL_IPS" >> $KUBERDOCK_MAIN_CONFIG
-echo "NODE_TOBIND_FLANNEL = $NODE_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
 echo "PD_NAMESPACE = $PD_NAMESPACE" >> $KUBERDOCK_MAIN_CONFIG
 if [ "$ZFS" = yes ]; then
     echo "ZFS = yes" >> $KUBERDOCK_MAIN_CONFIG
@@ -680,7 +684,8 @@ do_and_log rm -f ca.key.insecure
 
 # first instance of etcd cluster
 etcd1=$(uname -n)
-etcd-ca --depot-path /root/.etcd-ca new-cert --ip "127.0.0.1,$MASTER_IP" --passphrase "" --key-bits "$KEY_BITS" $etcd1
+etcd-ca --depot-path /root/.etcd-ca new-cert --ip "$MASTER_IP,127.0.0.1" --passphrase "" --key-bits "$KEY_BITS" $etcd1
+#                                        this order ^^^^^^^^^^^^^^ is matter for calico, because calico see only first IP
 etcd-ca --depot-path /root/.etcd-ca sign --passphrase "" $etcd1
 etcd-ca --depot-path /root/.etcd-ca export $etcd1 --insecure --passphrase "" | tar -xf -
 do_and_log mv $etcd1.crt /etc/pki/etcd/
@@ -711,6 +716,7 @@ Type=notify
 WorkingDirectory=/var/lib/etcd/
 EnvironmentFile=-/etc/etcd/etcd.conf
 User=etcd
+BlockIOWeight=1000
 ExecStart=/usr/bin/etcd \
     --name \${ETCD_NAME} \
     --data-dir \${ETCD_DATA_DIR} \
@@ -731,7 +737,15 @@ ETCD_NAME=default
 ETCD_DATA_DIR="/var/lib/etcd/default.etcd"
 #ETCD_SNAPSHOT_COUNTER="10000"
 #ETCD_HEARTBEAT_INTERVAL="100"
-#ETCD_ELECTION_TIMEOUT="1000"
+# AC-4634 we have to be sure that etcd will process requests even under heavy
+# IO during deploy, so we increase election timeout from default 1000ms to much
+# higher value. Max value is 50s https://coreos.com/etcd/docs/latest/tuning.html
+# There is no downside for us with big values while etcd cluster consists from
+# only one local node. When we want to join more etcd instances we have to set
+# correct value AFTER deploy and during new etcd instances provision.
+# Also, we set higher disk IO priority to etcd via systemd unit and use
+# increased request timeouts for etcdctl with a special wrapper
+ETCD_ELECTION_TIMEOUT="20000"
 #ETCD_LISTEN_PEER_URLS="http://localhost:2380,http://localhost:7001"
 ETCD_LISTEN_CLIENT_URLS="https://0.0.0.0:2379,http://127.0.0.1:4001"
 #ETCD_MAX_SNAPSHOTS="5"
@@ -744,7 +758,9 @@ ETCD_LISTEN_CLIENT_URLS="https://0.0.0.0:2379,http://127.0.0.1:4001"
 #ETCD_INITIAL_CLUSTER="default=http://localhost:2380,default=http://localhost:7001"
 #ETCD_INITIAL_CLUSTER_STATE="new"
 #ETCD_INITIAL_CLUSTER_TOKEN="etcd-cluster"
-ETCD_ADVERTISE_CLIENT_URLS="https://0.0.0.0:2379,http://127.0.0.1:4001"
+# Our nginx will proxy 8123 to 127.0.0.1:4001 for authorized hosts
+# see "shared-etcd.conf" file
+ETCD_ADVERTISE_CLIENT_URLS="https://$MASTER_IP:2379,http://127.0.0.1:4001"
 #ETCD_DISCOVERY=""
 #ETCD_DISCOVERY_SRV=""
 #ETCD_DISCOVERY_FALLBACK="proxy"
@@ -763,10 +779,12 @@ ETCD_KEY_FILE="/etc/pki/etcd/$etcd1.key"
 EOF
 
 
-#7 Start as early as possible, because Flannel need it
+#7 Start as early as possible, because Flannel/Calico need it
+systemctl daemon-reload
 log_it echo 'Starting etcd...'
 do_and_log systemctl reenable etcd
-do_and_log systemctl restart etcd
+log_it systemctl restart etcd
+waitAndCatchFailure 3 10 etcdctl cluster-health > /dev/null
 
 
 # KuberDock k8s to etcd middleware
@@ -849,6 +867,8 @@ sed -i "/^KUBE_API_ARGS/ {s|\"\"|\"--token-auth-file=$KNOWN_TOKENS_FILE --bind-a
 sed -i "/^KUBE_CONTROLLER_MANAGER_ARGS/ {s|\"\"|\"--service-account-private-key-file=$K8S_TLS_PRIVATE_KEY --root-ca-file=$K8S_CA_CERT $CLOUD_PROVIDER_OPT \"|}" $KUBERNETES_CONF_DIR/controller-manager
 sed -i "/^KUBE_ADMISSION_CONTROL/ {s|--admission-control=NamespaceLifecycle,NamespaceExists,LimitRanger,SecurityContextDeny,ServiceAccount,ResourceQuota|--admission-control=NamespaceLifecycle,NamespaceExists,ServiceAccount|}" $KUBERNETES_CONF_DIR/apiserver
 
+# enable third-party extensions for k8s
+sed -i "/^KUBE_API_ARGS/ {s|\"$| --runtime-config=extensions/v1beta1=true,extensions/v1beta1/thirdpartyresources=true\"|}" $KUBERNETES_CONF_DIR/apiserver
 
 #10. Create and populate DB
 log_it echo 'Create and populate DB'
@@ -879,97 +899,32 @@ do_and_log systemctl restart redis
 
 
 
-#12 Flannel
-log_it echo "Setuping flannel config to etcd..."
+log_it echo "Setuping Calico..."
+do_and_log curl https://github.com/projectcalico/calico-containers/releases/download/v0.22.0/calicoctl --create-dirs --location --output /opt/bin/calicoctl --silent --show-error
+do_and_log chmod +x /opt/bin/calicoctl
+do_and_log curl https://github.com/projectcalico/k8s-policy/releases/download/v0.1.4/policy --create-dirs --location --output /opt/bin/policy --silent --show-error
+do_and_log chmod +x /opt/bin/policy
+ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl pool add 10.1.0.0/16 --ipip --nat-outgoing
 
-# This must be same as cluster network (ex. Portal_net):
-CONF_FLANNEL_NET=10.254.0.0/16
-CONF_FLANNEL_SUBNET_LEN=24
+do_and_log systemctl disable docker-storage-setup
+do_and_log systemctl mask docker-storage-setup
+mkdir /etc/systemd/system/docker.service.d/
+echo -e "[Service]\nTimeoutStartSec=10min" > /etc/systemd/system/docker.service.d/10-increase_start_timeout.conf
+sed -i 's/^DOCKER_STORAGE_OPTIONS=/DOCKER_STORAGE_OPTIONS="--storage-driver=overlay"/' /etc/sysconfig/docker-storage
+systemctl daemon-reload
+do_and_log systemctl reenable docker
+log_it systemctl restart docker
+do_and_log systemctl reenable kube-proxy
+log_it systemctl restart kube-proxy
+waitAndCatchFailure 3 10 docker info > /dev/null
 
-if [ "$ISAMAZON" = true ];then
-    # host-gw don't work on AWS so we use aws-vpc or other specified by user
-    if [ -z "$ROUTE_TABLE_ID" ];then
-        if [ "$CONF_FLANNEL_BACKEND" == 'vxlan' ];then
-            log_it echo "WARNING: Flanneld vxlan backend with VNI=$VNI will be used on amazon instead of recommended aws-vpc..."
-            etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"vxlan\", \"VNI\": $VNI}}" 2> /dev/null
-        else    # just udp backend left for amazon
-            log_it echo "WARNING: Flanneld UDP backend will be used on amazon instead of recommended aws-vpc..."
-            etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"udp\"}}" 2> /dev/null
-        fi
-    else
-        etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"aws-vpc\", \"RouteTableID\": \"$ROUTE_TABLE_ID\"}}" 2> /dev/null
-    fi
-else
-    if [ "$CONF_FLANNEL_BACKEND" == 'vxlan' ];then
-        etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"vxlan\", \"VNI\": $VNI}}" 2> /dev/null
-    else    # host-gw or udp backends case
-        etcdctl mk /kuberdock/network/config "{\"Network\":\"$CONF_FLANNEL_NET\", \"SubnetLen\": $CONF_FLANNEL_SUBNET_LEN, \"Backend\": {\"Type\": \"$CONF_FLANNEL_BACKEND\"}}" 2> /dev/null
-    fi
-fi
-do_and_log etcdctl get /kuberdock/network/config
+# Could be a workaround if failed on etcd access(AC-4634) or Docker access (AC-4679)
+# under heavy IO during deploy process
+time sync
+sleep 10
 
-
-
-#13 Setuping Flannel on master ==========================================
-log_it echo "Configuring Flannel..."
-# Only on master flannel can use non https connection
-cat > /etc/sysconfig/flanneld << EOF
-# Flanneld configuration options
-
-# etcd url location.  Point this to the server where etcd runs
-FLANNEL_ETCD="http://127.0.0.1:4001"
-
-# etcd config key.  This is the configuration key that flannel queries
-# For address range assignment
-FLANNEL_ETCD_KEY="/kuberdock/network/"
-
-# Any additional options that you want to pass
-FLANNEL_OPTIONS="--iface=$MASTER_TOBIND_FLANNEL"
-EOF
-
-cp /usr/lib/systemd/system/flanneld.service /etc/systemd/system/flanneld.service
-sed -i "/^\[Service\]/a Restart=always\nRestartSec=10" /etc/systemd/system/flanneld.service
-
-
-log_it echo "Starting flannel..."
-do_and_log systemctl reenable flanneld
-do_and_log systemctl restart flanneld
-
-log_it echo "Adding bridge to flannel network..."
-do_and_log source /run/flannel/subnet.env
-
-# with host-gw backend we don't have to change MTU (bridge.mtu)
-# If we have working NetworkManager we can just
-#nmcli -n c delete kuberdock-flannel-br0 &> /dev/null
-#nmcli -n connection add type bridge ifname br0 con-name kuberdock-flannel-br0 ip4 $FLANNEL_SUBNET
-
-
-cat > /etc/sysconfig/network-scripts/ifcfg-kuberdock-flannel-br0 << EOF
-DEVICE=br0
-STP=yes
-BRIDGING_OPTS=priority=32768
-TYPE=Bridge
-BOOTPROTO=none
-IPADDR=$(echo "$FLANNEL_SUBNET" | cut -f 1 -d /)
-PREFIX=$(echo "$FLANNEL_SUBNET" | cut -f 2 -d /)
-MTU=$FLANNEL_MTU
-DEFROUTE=yes
-IPV4_FAILURE_FATAL=no
-IPV6INIT=yes
-IPV6_AUTOCONF=yes
-IPV6_DEFROUTE=yes
-IPV6_PEERDNS=yes
-IPV6_PEERROUTES=yes
-IPV6_FAILURE_FATAL=no
-NAME=kuberdock-flannel-br0
-ONBOOT=yes
-EOF
-
-log_it echo "Starting bridge..."
-do_and_log ifdown br0
-do_and_log ifup br0
-#========================================================================
-
+log_it echo "Starting Calico node..."
+ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl node --ip="$MASTER_IP" --node-image=kuberdock/calico-node:0.20.0.confd
 
 
 #14 Create k8s database
@@ -1037,7 +992,7 @@ WantedBy=multi-user.target
 EOF
 systemctl daemon-reload
 
-if [ "$FiXED_IP_POOLS" = true ]; then
+if [ "$FIXED_IP_POOLS" = true ]; then
     sed -i 's/^KUBE_SCHEDULER_ARGS.*/KUBE_SCHEDULER_ARGS="--enable-fixed-ip-pools=true"/' $KUBERNETES_CONF_DIR/scheduler
     echo "FIXED_IP_POOLS=yes" >> $KUBERDOCK_MAIN_CONFIG
 else
@@ -1050,6 +1005,33 @@ for i in kube-apiserver kube-controller-manager kube-scheduler heapster;
 for i in kube-apiserver kube-controller-manager kube-scheduler heapster;
     do do_and_log systemctl restart $i;done
 
+#15a. Enable Network Policy
+log_it echo "Creating Network Policy..."
+cat << EOF | do_and_log kubectl create -f -
+kind: ThirdPartyResource
+apiVersion: extensions/v1beta1
+metadata:
+  name: network-policy.net.alpha.kubernetes.io
+description: "Specification for a network isolation policy"
+versions:
+- name: v1alpha1
+EOF
+
+RULE_NEXT_TIER='{"id": "next-tier", "order": 9999, "inbound_rules": [{"action": "next-tier"}], "outbound_rules": [{"action": "next-tier"}], "selector": "all()"}'
+echo "$RULE_NEXT_TIER" | python -m json.tool   # for self-validation and debug
+if [[ $? -ne 0 ]];then
+    log_it echo "Invalid json in rule"
+    exit 42
+fi
+
+# etcdctl is not tolerant to etcd temporary unavailibility so we use wrapper
+# with increased timeouts from 2s to 30s
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-service/metadata '{"order": 10}'
+do_and_log etcdctl_wpr mkdir /calico/v1/policy/tier/kuberdock-service/policy
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-service/policy/next-tier "$RULE_NEXT_TIER"
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-hosts/metadata '{"order": 20}'
+do_and_log etcdctl_wpr mkdir /calico/v1/policy/tier/kuberdock-hosts/policy
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-hosts/policy/next-tier "$RULE_NEXT_TIER"
 
 
 #16. Adding amazon and ceph config data
@@ -1151,8 +1133,8 @@ do_cleanup()
     log_it echo "Cleaning up..."
 
     log_it echo "Stop and disable services..."
-    for i in nginx emperor.uwsgi flanneld redis postgresql influxdb kuberdock-k8s2etcd etcd \
-             kube-apiserver kube-controller-manager kube-scheduler heapster;do
+    for i in nginx emperor.uwsgi redis postgresql influxdb kuberdock-k8s2etcd etcd \
+             kube-apiserver kube-controller-manager kube-scheduler heapster docker;do
         log_it systemctl disable $i
     done
     for i in nginx emperor.uwsgi kube-apiserver kube-controller-manager kuberdock-k8s2etcd kube-scheduler \
@@ -1167,11 +1149,12 @@ do_cleanup()
     log_it echo "Cleaning up etcd..."
     log_it etcdctl rm --recursive /registry
     log_it etcdctl rm --recursive /kuberdock
+    log_it etcdctl rm --recursive /calico
     log_it echo "Cleaning up redis..."
     log_it redis-cli flushall
     log_it echo "Cleaning up influxdb..."
     influx -execute "drop database k8s"
-    for i in flanneld redis influxdb etcd;do
+    for i in redis influxdb etcd docker;do
         log_it systemctl stop $i
     done
 
@@ -1226,7 +1209,7 @@ do_cleanup()
     fi
 
     log_it echo "Remove packages..."
-    log_it yum -y remove kuberdock ntp etcd-ca bridge-utils
+    log_it yum -y remove kuberdock ntp etcd-ca bridge-utils docker
     log_it yum -y autoremove
 
     log_it echo "Remove old repos..."
@@ -1234,9 +1217,11 @@ do_cleanup()
                  /etc/yum.repos.d/kube-cloudlinux-testing.repo
 
     log_it echo "Remove dirs..."
-    for i in /var/run/kubernetes /etc/kubernetes /etc/pki/kube-apiserver/ /var/run/flannel /root/.etcd-ca \
+    for i in /var/run/kubernetes /etc/kubernetes /etc/pki/kube-apiserver/ /root/.etcd-ca \
              /var/opt/kuberdock /var/lib/kuberdock /etc/sysconfig/kuberdock /etc/pki/etcd \
-             /etc/etcd/etcd.conf /var/lib/etcd; do
+             /etc/etcd/etcd.conf /var/lib/etcd /var/lib/docker \
+             /var/log/calico /var/run/calico /opt/bin/calicoctl /opt/bin/policy \
+             "$NGINX_SHARED_ETCD"; do
         rm -rf $i
     done
 

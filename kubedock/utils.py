@@ -1,10 +1,12 @@
 import datetime
+import fcntl
 import json
 import os
 import random
 import re
 import socket
 import string
+import struct
 import subprocess
 import sys
 import time
@@ -19,19 +21,32 @@ import bitmath
 import boto.ec2
 import boto.ec2.elb
 import ipaddress
-import nginx
+import requests
+import yaml
 from flask import (current_app, request, jsonify, g, has_app_context, Response,
                    session, has_request_context)
 from sqlalchemy.exc import SQLAlchemyError, InvalidRequestError
+from werkzeug.wrappers import Response as ResponseBase
 
 from .core import ssh_connect, db, ConnectionPool
 from .exceptions import APIError, PermissionDenied, NoFreeIPs, NoSuitableNode
 from .login import current_user
 from .pods import Pod
 from .rbac.models import Role
-from .settings import KUBE_MASTER_URL, KUBE_BASE_URL, KUBE_API_VERSION
-from .settings import NODE_TOBIND_EXTERNAL_IPS
+from .settings import (
+    KUBE_MASTER_URL, KUBE_BASE_URL, KUBE_API_VERSION, NODE_TOBIND_EXTERNAL_IPS,
+    ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE)
 from .users.models import SessionData
+
+
+HOSTNAME_ENV = "HOSTNAME"
+
+# Key in etcd to retrieve calico IP-in-IP tunnel address
+# See:
+#  https://github.com/projectcalico/calico-containers/blob/master/calicoctl/
+#   calico_ctl/node.py
+#  ->client.get_per_host_config(host_to_remove, "IpInIpTunnelAddr")
+ETCD_KEY_CALICO_HOST_IP_TUNNEL_ADDRESS = 'IpInIpTunnelAddr'
 
 
 class API_VERSIONS:
@@ -698,7 +713,7 @@ class KubeUtils(object):
         @wraps(func)
         def wrapper(*args, **kwargs):
             rv = func(*args, **kwargs)
-            if isinstance(rv, Response):
+            if isinstance(rv, (Response, ResponseBase)):
                 return rv
             response = {'status': 'OK'}
             if rv is not None:
@@ -827,32 +842,6 @@ def get_timezone(default_tz=None):
     if default_tz:
         return default_tz
     raise OSError('Time zone cannot be determined')
-
-
-files = ['/etc/nginx/conf.d/shared-kubernetes.conf',
-         '/etc/nginx/conf.d/shared-etcd.conf']
-deny_all = nginx.Key('deny', 'all')
-
-
-def update_allowed(accept_ips, conf):
-    for server in conf.filter('Server'):
-        for location in server.filter('Location'):
-            if not any([key.name == 'return' and key.value == '403'
-                        for key in location.keys]):
-                for key in location.keys:
-                    if key.name in ('allow', 'deny'):
-                        location.remove(key)
-                for ip in accept_ips:
-                    location.add(nginx.Key('allow', ip))
-                location.add(deny_all)
-
-
-def update_nginx_proxy_restriction(accept_ips):
-    for filename in files:
-        conf = nginx.loadf(filename)
-        update_allowed(accept_ips, conf)
-        nginx.dumpf(conf, filename)
-    subprocess.call('sudo /var/opt/kuberdock/nginx_reload.sh', shell=True)
 
 
 def from_siunit(value):
@@ -1047,6 +1036,115 @@ def domainize(input_str):
     # remove any symbols except ASCII digits and lowercase letters
     str_ = re.sub('[^0-9a-z]', '', str_)
     return str_
+
+
+def get_node_token():
+    try:
+        with open('/etc/kubernetes/configfile_for_nodes') as node_configfile:
+            node_configfile_raw = node_configfile.read()
+        token = yaml.load(node_configfile_raw)['users'][0]['user']['token']
+        return token
+    except (IOError, yaml.YAMLError, KeyError, IndexError):
+        return None
+
+
+def get_ip_address(ifname):
+    # http://stackoverflow.com/a/24196955
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        return socket.inet_ntoa(fcntl.ioctl(
+            s.fileno(),
+            0x8915,  # SIOCGIFADDR
+            struct.pack('256s', ifname[:15])
+        )[20:24])
+    except IOError:
+        return None
+
+
+class Etcd(object):
+
+    RequestException = requests.RequestException
+
+    def __init__(self, url, verify=None, cert=None):
+        self.verify = verify
+        self.cert = cert
+        self.url = url
+
+    def _url(self, key):
+        if key is not None:
+            url = '/'.join([self.url, key])
+        else:
+            url = self.url
+        return url
+
+    def _make_request(self, method, key, *args, **kwargs):
+        url = self._url(key)
+        if self.verify is not None:
+            kwargs['verify'] = self.verify
+        if self.cert:
+            kwargs['cert'] = self.cert
+        response = method(url, *args, **kwargs)
+        response.raise_for_status()
+        return response.json()
+
+    def exists(self, key):
+        try:
+            self._make_request(requests.get, key)
+        except requests.exceptions.HTTPError:
+            return False
+        return True
+
+    def delete(self, key):
+        return self._make_request(requests.delete, key)
+
+    def put(self, key, value=None):
+        data = None if value is None else {'value': json.dumps(value)}
+        return self._make_request(requests.put, key, data=data)
+
+    def get(self, key=None, recursive=False):
+        response = self._make_request(requests.get, key,
+                                      params={'recursive': recursive})
+        return response
+
+
+def get_hostname():
+    """
+    Taken from
+    https://github.com/projectcalico/libcalico/blob/master/
+        calico_containers/pycalico/util.py
+    This will be the hostname returned by socket.gethostname,
+    but can be overridden by passing in the $HOSTNAME environment variable.
+    Though most shells appear to have $HOSTNAME set, it is actually not
+    passed into subshells, so calicoctl will not see a set $HOSTNAME unless
+    the user has explicitly set it in their environment, thus defaulting
+    this function to return socket.gethostname.
+    :return: String representation of the hostname.
+    """
+    try:
+        return os.environ[HOSTNAME_ENV]
+    except KeyError:
+        # The user does not have a set $HOSTNAME. Since this is a common
+        # scenario, return socket.gethostname instead of just erroring.
+        return socket.gethostname()
+
+
+def get_calico_ip_tunnel_address(hostname=None):
+    """Returns current address of ipip tunnel of calico node.
+    :param hostname: name of host, if not defined, then will be used current
+        host name.
+    :return: string with IP address. If address retrieving will fail, then
+        return None
+    """
+    if not hostname:
+        hostname = get_hostname()
+    url = ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE.format(
+        hostname=hostname, key=ETCD_KEY_CALICO_HOST_IP_TUNNEL_ADDRESS
+    )
+    try:
+        result = Etcd(url).get()
+    except requests.exceptions.HTTPError:
+        return None
+    return result[u'node'][u'value']
 
 
 @contextmanager

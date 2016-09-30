@@ -14,6 +14,7 @@ from kubedock.core import db
 from kubedock.exceptions import APIError
 from kubedock.kapi import nodes
 from kubedock.nodes.models import Node
+from kubedock.users.models import User
 from kubedock.pods.models import IPPool
 from kubedock.testutils.testcases import DBTestCase
 from kubedock.utils import NODE_STATUSES
@@ -50,13 +51,19 @@ class TestNodes(DBTestCase):
         shutil.rmtree(self.tempdir)
         settings.NODE_INSTALL_LOG_FILE = self.original_install_log_dir
 
+    @mock.patch.object(nodes, 'create_logs_pod')
+    @mock.patch.object(nodes, 'Etcd')
+    @mock.patch.object(nodes, 'get_node_token')
     @mock.patch.object(nodes, '_check_node_hostname')
     @mock.patch.object(nodes, '_deploy_node')
     @mock.patch.object(nodes, 'PodCollection')
     @mock.patch.object(nodes.socket, 'gethostbyname')
     def test_create_node(self, gethostbyname_mock, podcollection_mock,
                          deploy_node_mock,
-                         check_node_hostname_mock):
+                         check_node_hostname_mock,
+                         get_node_token_mock,
+                         etcd_mock,
+                         create_logs_pod_mock):
         """Test for kapi.nodes.create_node function."""
         ip = '192.168.1.2'
         hostname = 'testhost1'
@@ -64,14 +71,19 @@ class TestNodes(DBTestCase):
         kube_id = default_kube_type
 
         gethostbyname_mock.return_value = ip
-        podcollection_mock.add.return_value = {'id': 1}
+        podcollection_mock.return_value.add.return_value = {'id': 1}
+        get_node_token_mock.return_value = 'some-token'
+        log_pod_ip = '123.123.123.123'
+        create_logs_pod_mock.return_value = {'podIP': log_pod_ip}
 
+        nodes.CALICO = True
         res = nodes.create_node(None, hostname, kube_id)
         self.assertEqual(res.ip, ip)
         self.assertEqual(res.hostname, hostname)
 
         deploy_node_mock.assert_called_once_with(
-            res, True, False, ebs_volume=None, ls_devices=None, options=None
+            res, log_pod_ip, True, False, ebs_volume=None, ls_devices=None,
+            options=None
         )
         gethostbyname_mock.assert_called_once_with(hostname)
         node = Node.get_by_name(hostname)
@@ -79,6 +91,9 @@ class TestNodes(DBTestCase):
         self.assertEqual(node.ip, ip)
         self.assertEqual(node.kube_id, default_kube_type)
         check_node_hostname_mock.assert_called_once_with(node.ip, hostname)
+        get_node_token_mock.assert_called_once_with()
+        # one call for dns pod
+        self.assertEqual(etcd_mock.call_count, 1)
 
         # add a node with the same IP
         with self.assertRaises(APIError):
@@ -89,6 +104,27 @@ class TestNodes(DBTestCase):
         gethostbyname_mock.return_value = ip
         with self.assertRaises(APIError):
             nodes.create_node(None, 'anotherhost', kube_id)
+
+    @mock.patch.object(nodes, 'get_calico_ip_tunnel_address')
+    @mock.patch.object(nodes, 'Etcd')
+    @mock.patch.object(nodes, 'PodCollection')
+    def test_create_logs_pod(self, podcollection_mock, etcd_mock,
+                             get_calico_ip_mock):
+        hostname = 'qwerty'
+        test_result = 3131313
+        pod_id = '424242'
+        podcollection_mock.return_value.add.return_value = {'id': pod_id}
+        podcollection_mock.return_value.get.return_value = test_result
+        get_calico_ip_mock.return_value = '12.12.12.12'
+        nodes.CALICO = True
+        owner = User.get_internal()
+        res = nodes.create_logs_pod(hostname, owner)
+        self.assertEqual(res, test_result)
+        self.assertEqual(etcd_mock.call_count, 1)
+        get_calico_ip_mock.assert_called_once_with()
+        podcollection_mock.return_value.update.assert_called_once_with(
+            pod_id, {'command': 'synchronous_start'}
+        )
 
     @mock.patch.object(nodes, 'remove_ls_storage')
     @mock.patch.object(nodes.tasks, 'remove_node_by_host')
@@ -193,9 +229,10 @@ class TestNodes(DBTestCase):
         node1, node2 = self.add_two_nodes()
         with_testing = True
         do_deploy = True
-        nodes._deploy_node(node1, do_deploy, with_testing)
+        logpod_ip = '123.123.123.123'
+        nodes._deploy_node(node1, logpod_ip, do_deploy, with_testing)
         add_node_mock.apply_async.assert_called_once_with(
-            [node1.id],
+            [node1.id, logpod_ip],
             dict(
                 with_testing=with_testing,
                 ebs_volume=None, ls_devices=None,
@@ -215,7 +252,7 @@ class TestNodes(DBTestCase):
         do_deploy = False
         is_ceph_mock.return_value = False
         add_node_to_k8s_mock.return_value = None
-        nodes._deploy_node(node1, do_deploy, with_testing)
+        nodes._deploy_node(node1, logpod_ip, do_deploy, with_testing)
         is_ceph_mock.assert_called_once_with(node1.hostname)
         add_node_to_k8s_mock.assert_called_once_with(
             node1.hostname, node1.kube_id, False)

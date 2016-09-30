@@ -131,6 +131,7 @@ class Pod(object):
         pod.restartPolicy = spec.get('restartPolicy')
         pod.dnsPolicy = spec.get('dnsPolicy')
         pod.serviceAccount = spec.get('serviceAccount', False)
+        pod.hostNetwork = spec.get('hostNetwork')
 
         if pod.status in (POD_STATUSES.running, POD_STATUSES.succeeded,
                           POD_STATUSES.failed):
@@ -347,7 +348,6 @@ class Pod(object):
         kube_type = getattr(self, 'kube_type', Kube.get_default_kube_type())
         volumes = getattr(self, 'volumes', [])
         secrets = getattr(self, 'secrets', [])
-        kuberdock_resolve = ''.join(getattr(self, 'kuberdock_resolve', []))
         volume_annotations = self.extract_volume_annotations(volumes)
         service_account = getattr(self, 'serviceAccount', False)
         service = getattr(self, 'service', '')
@@ -394,7 +394,6 @@ class Pod(object):
                             "kuberdock-user-uid": str(self.owner.id),
                         },
                         "annotations": {
-                            "kuberdock_resolve": kuberdock_resolve,
                             "kuberdock-pod-ports": self._dump_ports(),
                             "kuberdock-container-kubes": self._dump_kubes(),
                             "kuberdock-volume-annotations": json.dumps(
@@ -412,6 +411,7 @@ class Pod(object):
                                                  'Always'),
                         "dnsPolicy": getattr(self, 'dnsPolicy',
                                              'ClusterFirst'),
+                        "hostNetwork": getattr(self, 'hostNetwork', False),
                         "imagePullSecrets": [{"name": secret}
                                              for secret in secrets]
                     }

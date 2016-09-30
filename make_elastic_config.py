@@ -12,7 +12,6 @@ The script uses following environment variables:
 
 IMPORTANT: This script is for Python 3
 """
-
 from __future__ import print_function
 
 import os

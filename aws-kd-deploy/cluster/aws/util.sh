@@ -1224,6 +1224,8 @@ function start-master() {
   add-tag $master_id Name $MASTER_NAME
   add-tag $master_id Role $MASTER_TAG
   add-tag $master_id KubernetesCluster ${CLUSTER_ID}
+  $AWS_CMD modify-instance-attribute --instance-id $master_id --source-dest-check '{"Value": false}'
+
 
   echo "Waiting for master to be ready"
   local attempt=0
@@ -1358,6 +1360,10 @@ function wait-minions {
     echo -e " ${color_yellow}${#NODE_IDS[@]} minions started; waiting${color_norm}"
     attempt=$(($attempt+1))
     sleep 10
+  done
+
+  for node_id in "${NODE_IDS[@]}"; do
+    $AWS_CMD modify-instance-attribute --instance-id $node_id --source-dest-check '{"Value": false}'
   done
 }
 

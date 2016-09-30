@@ -852,7 +852,7 @@ systemctl restart docker
 curl https://github.com/projectcalico/calico-containers/releases/download/v0.22.0/calicoctl --create-dirs --location --output /opt/bin/calicoctl --silent --show-error
 chmod +x /opt/bin/calicoctl
 check_status
-ETCD_AUTHORITY="$MASTER_IP:2379" ETCD_SCHEME=https ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key /opt/bin/calicoctl node --ip="$NODE_IP" --node-image=kuberdock/calico-node:0.20.0.confd
+ETCD_AUTHORITY="$MASTER_IP:2379" ETCD_SCHEME=https ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key HOSTNAME="$NODENAME" /opt/bin/calicoctl node --ip="$NODE_IP" --node-image=kuberdock/calico-node:0.20.0.confd
 check_status
 
 # 17. Reboot will be executed in python function

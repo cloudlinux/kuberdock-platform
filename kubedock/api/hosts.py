@@ -1,6 +1,5 @@
 from flask import Blueprint, redirect, request
 
-import subprocess
 from datetime import datetime
 from urlparse import urlparse, urlunparse
 
@@ -10,8 +9,8 @@ from kubedock.login import auth_required
 from kubedock.core import db
 from kubedock.kapi.nginx_utils import update_nginx_proxy_restriction
 from kubedock.nodes.models import RegisteredHost
-from kubedock.utils import Etcd, KubeUtils, atomic, get_ip_address
-from kubedock.settings import (CALICO, ETCD_BASE_URL, ETCD_REGISTERED_HOSTS,
+from kubedock.utils import Etcd, KubeUtils, atomic, fix_calico, get_ip_address
+from kubedock.settings import (CALICO, ETCD_REGISTERED_HOSTS,
                                ETCD_NETWORK_POLICY_HOSTS)
 
 hosts = Blueprint('hosts', __name__, url_prefix='/hosts')
@@ -87,41 +86,3 @@ def get_host_policy(ip):
         }],
         "selector": ""
     }
-
-
-def _find_calico_host(nodes, ip):
-    for node in nodes:
-        for sub_node in node['nodes']:
-            if sub_node.get('value') == ip:
-                return node['key'].split('/')[-1]
-
-
-def fix_calico(ip):
-    """
-    Fix issue when Calico network is unreachable from extra host --
-      ping probe from master "discovers" the network
-    :param ip: extra host IP
-    """
-    etcd = Etcd(ETCD_BASE_URL)
-
-    # get hostname by ip
-    try:
-        nodes = etcd.get('/calico/bgp/v1/host', recursive=True)['node']['nodes']
-    except (KeyError, Etcd.RequestException):
-        raise APIError("Can't get Calico nodes")
-
-    host = _find_calico_host(nodes, ip)
-    if host is None:
-        APIError("Can't find node {0} in Calico".format(ip))
-
-    # get ip in calico network by hostname
-    try:
-        key = '/calico/ipam/v2/host/{0}/ipv4/block'.format(host)
-        block = etcd.get(key)['node']['nodes'][0]['key']
-    except (KeyError, IndexError, Etcd.RequestException):
-        raise APIError("Can't find Calico ipam block for {0}".format(host))
-
-    calico_ip = block.split('/')[-1].split('-')[0]
-
-    # ping probe
-    subprocess.call(['ping', '-c', '1', calico_ip])

@@ -148,6 +148,22 @@
     -moz-hyphens: auto;
     hyphens: auto;
 }
+.ellipsis-text{
+    display: block;
+    overflow: hidden;
+    position: relative;
+    white-space: nowrap;
+    padding-right: 30px;
+    text-overflow: ellipsis;
+    a{
+        cursor: pointer;
+    }
+    + .copy-link{
+        top: 0;
+        right: 0;
+        position: absolute;
+    }
+}
 .margin-bottom-2(){
     margin-bottom: 20px;
 }
@@ -167,7 +183,7 @@
         max-width: @iconSize + 2px;
         font: normal normal normal @iconSize/1 @materials;
     }
-    span{
+    > span{
         min-height: @iconSize;
         font-size: @textsize;
         display: inline-block;
@@ -181,6 +197,9 @@
             color: @hoverColor;
         }
     }
+}
+.relative{
+    position: relative;
 }
 /* animation */
 

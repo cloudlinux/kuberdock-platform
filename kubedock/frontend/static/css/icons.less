@@ -224,6 +224,11 @@
         }
     }
 }
+.copy-link,
+.copy-ssh-link{
+    display: inline-block;
+    .mdi('insert_link',21px, @defaultIconColor, @hoverIconColor);
+}
 // table icons
 table{
     span{ .statuses(); }
@@ -286,11 +291,6 @@ table{
     .edit-item{
         display: inline-block;
         .mdi('create',21px, @defaultIconColor, @hoverIconColor);
-    }
-    .copy-link,
-    .copy-ssh-link{
-        display: inline-block;
-        .mdi('insert_link',21px, @defaultIconColor, @hoverIconColor);
     }
     .copy-ssh-password{
         display: inline-block;

@@ -193,6 +193,8 @@ define(['app_data/app', 'app_data/model',
 
         ui: {
             resetSsh : '.resetSsh',
+            copyLink : '.copy-link',
+            tooltip  : '[data-toggle="tooltip"]'
         },
         events: {
             'click .start-btn'         : 'startItem',
@@ -200,12 +202,12 @@ define(['app_data/app', 'app_data/model',
             'click .restart-btn'       : 'restartItem',
             'click .stop-btn'          : 'stopItem',
             'click .terminate-btn'     : 'terminateItem',
-            'click @ui.resetSsh'       : 'resetSshAccess'
+            'click @ui.resetSsh'       : 'resetSshAccess',
+            'click @ui.copyLink'       : 'copyLink',
         },
 
-        modelEvents: {
-            'change' : 'render'
-        },
+        modelEvents: { 'change': 'render' },
+        onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
 
         initialize: function(options){
             this.graphs = !!options.graphs;
@@ -244,6 +246,11 @@ define(['app_data/app', 'app_data/model',
                 ableTo          : _.bind(this.model.ableTo, this.model),
                 currentUser     : App.currentUser
             };
+        },
+
+        copyLink: function(e){
+            let value = $(e.target).parent().find('a').text();
+            utils.copyLink(value, 'link copyed to clipboard');
         },
 
         resetSshAccess : function() { this.model.resetSshAccess(); },

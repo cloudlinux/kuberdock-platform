@@ -40,13 +40,23 @@
 <div class="control-icons col-md-10 col-md-offset-2 col-sm-12 clearfix">
     <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 info">
         <% if (publicIP && publicIP !== 'true') { %>
-            <div>Public IP: <a href="http://<%- publicIP %>/" rel="noopener" target="_blank"><%- publicIP %></a></div>
+            <div class="ellipsis-text">Public IP: <a href="http://<%- publicIP %>/" rel="noopener" target="_blank"><%- publicIP %></a></div>
         <% } else if (publicIP && publicIP === 'true') {%>
             <div>Public IP: Public IP is not assigned yet</div>
         <% } else if (typeof domain != 'undefined' && domain) {%>
-            <div>Public DNS name: <a href="http://<%- domain %>/" rel="noopener" target="_blank"><%- domain %></a></div>
+            <div class="relative">
+                <span class="ellipsis-text">
+                    Public DNS name: <a href="http://<%- domain %>/" rel="noopener" target="_blank"><%- domain %></a>
+                </span>
+                <i data-toggle="tooltip" data-placement="left" title="Copy link to clipboard" class="copy-link"></i>
+            </div>
         <% } else if (publicName) { %>
-            <div>Public DNS name: <a href="http://<%- publicName %>/" rel="noopener" target="_blank"><%- publicName %></a></div>
+            <div class="relative">
+                <span class="ellipsis-text">
+                    Public DNS name: <a href="http://<%- publicName %>/" rel="noopener" target="_blank"><%- publicName %></a>
+                </span>
+                <i data-toggle="tooltip" data-placement="left" title="Copy link to clipboard" class="copy-link"></i>
+            </div>
         <% } %>
         <% if (hasPorts) { %>
             <div>Pod IP: <%- (typeof(podIP) !== 'undefined') ? podIP : 'Internal IP is not assigned yet'%></div>
@@ -55,9 +65,6 @@
         <div>Kube Type: <%- kubeType.get('name') %></div>
         <div>Number of Kubes:  <%- kubes %> <!-- ( <%- replicas ? replicas : '0' %> ) --></div>
         <div>Price: <%- totalPrice %> / <%- period %></div>
-        <!--
-        <div class="edit">Edit pod</div>
-        -->
     </div>
     <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 servers">
         <div>CPU: <%- limits.cpu %></div>

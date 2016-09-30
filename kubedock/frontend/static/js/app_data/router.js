@@ -39,7 +39,7 @@ define(['marionette'], function(Marionette){
             'ippool'                          : 'showNetworks',
             'ippool/create'                   : 'showCreateNetwork',
             'ippool/:id'                      : 'showSubnetIps',
-            'persistent_volumes'              : 'showPersistentVolumes',
+            'persistent-volumes'              : 'showPersistentVolumes',
             'publicIPs'                       : 'showIPs',
             'domains'                         : 'showDomains',
             'domains/add'                     : 'showAddDomain',

@@ -3,6 +3,7 @@
 
 import argparse
 import gzip
+import json
 import os
 import pwd
 import shutil
@@ -26,6 +27,9 @@ IMG_PATH = os.path.join(COMMON_PREFIX, 'static/img')
 WEB_SERVER_USER = 'nginx'
 LOGO_SIZE = (162, 48)
 LOGIN_LOGO_SIZE = (227, 67)
+ASSETS_PATH = '/var/lib/kuberdock/custom-assets'
+ASSETS_MAP = os.path.join(ASSETS_PATH, 'assets.json')
+ASSETS_TYPES = 'logo', 'login_logo', 'styles'
 
 
 def parse_args():
@@ -35,6 +39,8 @@ def parse_args():
     parser.add_argument('-L', '--login-logo',
                         help='Login logo image to subsitute with (227x67 px)')
     parser.add_argument('-s', '--styles', help='Styles file to customize')
+    parser.add_argument('-r', '--reapply', help='Reapply last customizations',
+                        action='store_true')
     return parser.parse_args()
 
 
@@ -76,16 +82,16 @@ def change_logo(logo, target, gz=False):
     op = gzip.open if gz else open
     with op(target) as f:
         for l in f:
-            contents.append(l.replace('/logo.png', '/' + logo))
+            contents.append(l.replace('/logo.png', '/{0}'.format(logo)))
     return contents
 
 
-def process_logo(logo, user):
+def process_logo(logo, user, reapply=False):
     """
     Copies provided logo file to a img folder, chowns it and modifies contens
     to use supplied file
-    @param logo: string -> file path
-    @param user: namedtuple object -> (user.uid, user.gid) of the web-server
+    :param logo: string -> file path
+    :param user: namedtuple object -> (user.uid, user.gid) of the web-server
         user
     """
     if logo is None:
@@ -102,14 +108,16 @@ def process_logo(logo, user):
 
     for path in fullpath, PREPARED_PATH, LOGO_FILE_PATH, GZIP_PREPARED_PATH:
         os.chown(path, user.uid, user.gid)
+    if not reapply:
+        save_assets(logo, 'logo')
 
 
-def process_login_logo(logo, user):
+def process_login_logo(logo, user, reapply=False):
     """
     Copies provided logo file to a img folder, chowns it and modifies contens
     to use supplied file
-    @param logo: string -> file path
-    @param user: namedtuple object -> (user.uid, user.gid) of the web-server
+    :param logo: string -> file path
+    :param user: namedtuple object -> (user.uid, user.gid) of the web-server
         user
     """
     if logo is None:
@@ -123,9 +131,11 @@ def process_login_logo(logo, user):
 
     for path in fullpath, LOGINPAGE_PATH:
         os.chown(path, user.uid, user.gid)
+    if not reapply:
+        save_assets(logo, 'login_logo')
 
 
-def process_styles(styles, user):
+def process_styles(styles, user, reapply=False):
     """
     Copies provided styles file to a styles folder, chowns it and modifies
     contens to use supplied file
@@ -142,6 +152,8 @@ def process_styles(styles, user):
     save(add_style(os.path.basename(styles)), target)
     for path in fullpath, target:
         os.chown(path, user.uid, user.gid)
+    if not reapply:
+        save_assets(styles, 'styles')
 
 
 def save(contents, target, gz=False):
@@ -187,14 +199,73 @@ def get_server_user():
         raise SystemExit('No such user: {0}'.format(WEB_SERVER_USER,))
 
 
+def save_assets(asset_path, asset_type):
+    """
+    Saving a customized asset for posible reapply
+    :param asset_path: str -> asset file path
+    :param asset_type: str -> one of the supported asset types
+    """
+    if asset_type not in ASSETS_TYPES:
+        return
+    shutil.copy(asset_path, ASSETS_PATH)
+    asset_basename = os.path.basename(asset_path)
+    assets_map = get_assets_map()
+    assets_map[asset_type] = asset_basename
+    save_accets_map(assets_map)
+
+
+def save_accets_map(data):
+    """
+    Saves info about customized assets
+    :param data: dict -> map of files and its destination
+    """
+    with open(ASSETS_MAP, 'w') as f:
+        json.dump(data, f)
+
+
+def get_assets_map():
+    """
+    Gets info about customized assets. If no map found returns empty dict
+    :return: dict -> map of files and its destination
+    """
+    try:
+        with open(ASSETS_MAP) as f:
+            return json.load(f)
+    except (IOError, ValueError):
+        return dict()
+
+
+def reapply(user):
+    """
+    Reapplies customized assets from saved copies
+    :param user: namedtuple object -> (user.uid, user.gid) of the web-server
+    user
+    """
+    assets = get_assets_map()
+    for asset in assets:
+        if not isinstance(assets[asset], basestring):
+            continue
+        if asset not in ASSETS_TYPES:
+            continue
+        asset_path = os.path.join(ASSETS_PATH, assets[asset])
+        if not os.path.exists(asset_path):
+            continue
+        globals()['process_'+asset](asset_path, user, reapply=True)
+
+
 if __name__ == '__main__':
     check_euid()
+    if not os.path.exists(ASSETS_PATH):
+        os.mkdir(ASSETS_PATH)
     user = get_server_user()
     args = parse_args()
-    if not any(attrgetter('logo', 'login_logo', 'styles')(args)):
+    if not any(attrgetter('logo', 'login_logo', 'styles', 'reapply')(args)):
         print("At least one argument is expected. Use --help to learn about "
               "options")
         sys.exit(0)
-    process_logo(args.logo, user)
-    process_login_logo(args.login_logo, user)
-    process_styles(args.styles, user)
+    if args.reapply:
+        reapply(user)
+    else:
+        process_logo(args.logo, user)
+        process_login_logo(args.login_logo, user)
+        process_styles(args.styles, user)

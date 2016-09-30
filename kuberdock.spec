@@ -181,6 +181,11 @@ if [ "$SESTATUS" != disabled ];then
     fi
 fi
 
+# 2 for upgrade, 1 for install
+if [ "$1" = "2" ]; then
+   test -e %{_bindir}/kdcustomize && %{_bindir}/kdcustomize --reapply
+fi
+
 %postun
 # When 1 - it's upgrade, 0 it's remove
 if [ "$1" = "0" ]; then

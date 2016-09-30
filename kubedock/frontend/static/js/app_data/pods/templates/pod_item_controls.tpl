@@ -40,7 +40,7 @@
 <div class="control-icons col-md-10 col-md-offset-2 col-sm-12 clearfix">
     <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 info">
         <% if (publicIP && publicIP !== 'true') { %>
-            <div class="ellipsis-text">Public IP: <a href="http://<%- publicIP %>/" rel="noopener" target="_blank"><%- publicIP %></a></div>
+            <div>Public IP: <a href="http://<%- publicIP %>/" rel="noopener" target="_blank"><%- publicIP %></a></div>
         <% } else if (publicIP && publicIP === 'true') {%>
             <div>Public IP: Public IP is not assigned yet</div>
         <% } else if (typeof domain != 'undefined' && domain) {%>

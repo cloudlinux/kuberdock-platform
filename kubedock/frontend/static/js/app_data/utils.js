@@ -1,17 +1,12 @@
-'use strict';
+import moment from 'moment-timezone';
+import numeral from 'numeral';
+import 'notifyjs-browser';
 
-const moment = require('moment-timezone');
-const numeral = require('numeral');
-require('notifyjs-browser');
-
-
-const utils = {};
-
-utils.KEY_CODES = {
+export const KEY_CODES = {
     enter: 13,
 };
 
-utils.modalDialog = function(options){
+export const modalDialog = function(options){
     var modal = $('.modal'),
         modalDialog = modal.find('.modal-dialog');
     if ($('.modal-backdrop').is(':visible')) {
@@ -56,18 +51,21 @@ utils.modalDialog = function(options){
     return modal;
 };
 
-utils.modalDialogDelete = function(options){
+export const modalDialogDelete = function(options){
     options.type = 'delete';
     return this.modalDialog(options);
 };
 
-utils.toHHMMSS = function(seconds){
+export const toHHMMSS = function(seconds){
     return numeral(seconds).format('00:00:00');
 };
 
-utils.dateYYYYMMDD = function(date, sep){
+export const dateYYYYMMDD = function(date, sep){
     return moment(date).format(['YYYY', 'MM', 'DD'].join(sep || '-'));
 };
+
+
+let notifyList = {};  // Notify messages counter
 
 /**
  * Notify. Can be safely used as $.ajax handler.
@@ -76,7 +74,7 @@ utils.dateYYYYMMDD = function(date, sep){
  * @param {string} type - Optional message type in case if data is a string,
  * or if you want to change default behaviour for jqXHR object.
  */
-utils.notifyWindow = function(data, type){
+export const notifyWindow = function(data, type){
     var msg;
     if (typeof data == "string") {
         msg = data;
@@ -106,16 +104,16 @@ utils.notifyWindow = function(data, type){
     if (type === 'error') {
         // do not hide error messages automatically
         // also, group identical messages
-        var notifyElement = utils.notifyList[msg];
+        var notifyElement = notifyList[msg];
         if (!notifyElement){  // new message
             $.notify({message: msg, count: 1}, {autoHide: false,
                                                 clickToHide: false,
                                                 className: type});
             // $.notify lib doesn't return the element, but it's always
             // the first one (prepend).
-            utils.notifyList[msg] = $('.notifyjs-bootstrap-error')[0];
-            utils.notifyList[msg].count = 1;
-            utils.notifyList[msg].msg = msg;
+            notifyList[msg] = $('.notifyjs-bootstrap-error')[0];
+            notifyList[msg].count = 1;
+            notifyList[msg].msg = msg;
         } else {  // old message, again (show and increase counter)
             $(notifyElement).find('.notify-count').text(++notifyElement.count);
             $(notifyElement).addClass('notify-multi');
@@ -125,7 +123,6 @@ utils.notifyWindow = function(data, type){
     }
 };
 
-utils.notifyList = {};  // Notify messages counter
 $.notify.defaults({
     autoHide: true,
     autoHideDelay: 5000,
@@ -144,32 +141,32 @@ $.notify.addStyle("metro", {
     html: "<div>\n<div class='text-wrapper'>\n<span data-notify-text></span>\n</div>\n</div>",
 });
 
-utils.notifyWindowClose = function(){
+export const notifyWindowClose = function(){
     $('.notifyjs-bootstrap-error').trigger('notify-hide');
-    utils.notifyList = {};
+    notifyList = {};
 };
 
 // close errors only if there is no selected text (let user copy error message)
 $(document).on('click', '.notifyjs-bootstrap-error', function(event) {
     event.stopPropagation();
     if (!document.getSelection().toString().length){
-        utils.notifyList[this.msg] = undefined;
+        notifyList[this.msg] = undefined;
         $(this).trigger('notify-hide');
     }
 });
 
-utils.preloader = {
+export const preloader = {
     show: function(){ $('#page-preloader').addClass('show'); },
     hide: function(){ $('#page-preloader').removeClass('show'); }
 };
 
-utils.hasScroll = function() {
+export const hasScroll = function() {
     var hContent = $('body').height(),
         hWindow = $(window).height();
     return hContent > hWindow;
 };
 
-utils.scrollTo = function(a){
+export const scrollTo = function(a){
     var el = a.offset().top;
     $('html, body').animate({
         scrollTop: el - 50
@@ -177,7 +174,7 @@ utils.scrollTo = function(a){
 };
 
 /* inline eroror hint */
-utils.notifyInline = function (message, el){
+export const notifyInline = function (message, el){
     var item = $(el);
     item.notify(message, {
         arrow : false,
@@ -195,7 +192,7 @@ utils.notifyInline = function (message, el){
     item.addClass('error');
 };
 // Just a shortcut to remove error from input (or group of inputs)
-utils.removeError = function(el){
+export const removeError = function(el){
     if (el.hasClass('error'))
         el.parents('td, .form-group').find('.notifyjs-metro-error').trigger('notify-hide');
 };
@@ -220,7 +217,7 @@ $(document).on('click', '.notifyjs-metro-error', function(event) {
  * @param formatString - optional, 'YYYY-MM-DD HH:mm:ss' by default
  * @returns {String} formatted localized datetime
  */
-utils.localizeDatetime = function(options) {
+export const localizeDatetime = function(options) {
     if (arguments.length !== 1 || !options ||
             (!options.dt && !options.tz && !options.formatString)){
         // called as localizeDatetime(dt, tz, formatString)
@@ -238,7 +235,7 @@ utils.localizeDatetime = function(options) {
     return moment(dt).format(formatString);
 };
 
-utils.removeURLParameter = function (url, parameter) {
+export const removeURLParameter = function (url, parameter) {
     var urlParts = url.split('?');
     if (urlParts.length < 2) { return url; }
     var prefix = encodeURIComponent(parameter) + '=',
@@ -257,28 +254,26 @@ utils.removeURLParameter = function (url, parameter) {
     return result;
 };
 
-utils.deepClone = function(obj) {
+export const deepClone = function(obj) {
     /* eslint-disable no-nested-ternary */
     return (!obj || (typeof obj !== 'object')) ? obj
         : _.isString(obj) ? String.prototype.slice.call(obj)
         : _.isDate(obj) ? new Date(obj.valueOf())
         : _.isFunction(obj.clone) ? obj.clone()
-        : _.isArray(obj) ? _.map(obj, function(t){ return utils.deepClone(t); })
-        : _.mapObject(obj, function(val) { return utils.deepClone(val); });
+        : _.isArray(obj) ? _.map(obj, function(t){ return deepClone(t); })
+        : _.mapObject(obj, function(val) { return deepClone(val); });
     /* eslint-enable no-nested-ternary */
 };
 
-utils.copyLink = function(text, successMessage, messageState){
+export const copyLink = function(text, successMessage, messageState){
     var link = text,
         $txa = $('<textarea />', {val: link, css: {position: 'fixed'}})
             .appendTo("body").select();
     if (document.execCommand('copy')){ // CH, FF, Edge, IE
-        utils.notifyWindow(successMessage, messageState ? messageState : 'success');
+        notifyWindow(successMessage, messageState ? messageState : 'success');
     } else {
         prompt(  // eslint-disable-line no-alert
             'Copy to clipboard:\nSelect, Cmd+C, Enter', link);
     }
     $txa.remove();
 };
-
-module.exports = utils;

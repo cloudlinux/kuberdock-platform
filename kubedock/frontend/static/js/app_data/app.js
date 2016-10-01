@@ -65,9 +65,9 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                 url = ResourceClass;
                 ResourceClass = null;
             }
-            return _.bind(function(){
+            return _.bind(function({updateCache} = {}){
                 var deferred = $.Deferred();
-                if (cache[name] != null) {
+                if (!updateCache && cache[name] != null) {
                     if (ResourceClass != null && !(cache[name] instanceof ResourceClass))
                         cache[name] = new ResourceClass(cache[name]);
                     deferred.resolveWith(this, [cache[name]]);

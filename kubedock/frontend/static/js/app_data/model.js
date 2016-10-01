@@ -1203,6 +1203,16 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             if (!/\D/g.test(username))
                 return 'Username cannot consist of digits only.';
         },
+        restoreByEmail: function(email){
+            let deferred = $.Deferred();
+            new Backbone.Model().save({email}, {url: '/api/v1/users/undelete'})
+                .fail(deferred.reject)
+                .done(() => {
+                    App.getUserCollection({updateCache: true})
+                        .then(deferred.resolve, deferred.reject);
+                });
+            return deferred.promise();
+        },
     });
 
     data.UsersCollection = Backbone.Collection.extend({

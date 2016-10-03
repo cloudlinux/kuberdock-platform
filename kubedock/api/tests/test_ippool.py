@@ -1,18 +1,23 @@
-import json
-
 import ipaddress
 import responses
+import mock
 
+from kubedock import api
 from kubedock.kapi.ippool import IpAddrPool, PodIP, IPPool
 from kubedock.testutils.fixtures import K8SAPIStubs
 from kubedock.testutils.testcases import APITestCase
-
 
 class TestIPPool(APITestCase):
     url = '/ippool'
     maxDiff = None
 
     def setUp(self):
+        patcher = mock.patch.object(api.check_api_version, '__nonzero__',
+        mock.Mock(
+            return_value=False))
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
         network = u'192.168.1.0/30'
         self.node = self.fixtures.node()
         IpAddrPool().create(

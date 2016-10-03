@@ -99,6 +99,15 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         },
 
         /**
+         * Remove resource from cache
+         *
+         */
+        resourceRemoveCache: function(name) {
+            var cache = this._cache;
+            cache[name] = null;
+        },
+
+        /**
          * Check that billing is enabled and count type of user's
          * package is "fixed"
          *

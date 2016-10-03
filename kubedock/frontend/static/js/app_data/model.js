@@ -116,12 +116,14 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         },
         getFiltered: function(condition){
             var original = this,
-                filtered = new this.constructor();
+                filtered = new this.constructor(null, this.blocks);
             filtered.refilter = function(){
+                if (_.has(this, 'fullCollection')) {
+                    this.fullCollection.reset(
+                        original.fullCollection.filter(condition, this));
+                }
                 var page = this.state.currentPage;
-                this.fullCollection.reset(
-                    original.fullCollection.filter(condition, this));
-                this.getPage(Math.min(page, this.state.lastPage));
+                this.getPage(Math.min(page, this.state.lastPage || 1));
             };
             filtered.listenTo(original, 'update reset change', filtered.refilter);
             filtered.refilter();
@@ -1364,21 +1366,14 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         'systemSettingsCollection', data.SettingsCollection);
 
     data.NetworkModel = Backbone.Model.extend({
-        urlRoot: '/api/ippool/',
+        urlRoot: '/api/v2/ippool/',
         parse: unwrapper,
         getIPs: function(){
             var subnet = this,
-                getRawIPs = function(){
-                    var allocation = subnet.get('allocation'),
-                        names = allocation.length === 3
-                            ? ['ip', 'podName', 'status']
-                            : ['ip', 'podName', 'status', 'userName'];
-                    return _.map(allocation, _.partial(_.object, names));
-                },
-                IPsCollection = new data.IPsCollection(getRawIPs());
+                blocks = subnet.get('blocks'),
+                IPsCollection = new data.IPsCollection(null, blocks);
             IPsCollection.listenTo(this, 'change:allocation', function(){
                 var page = IPsCollection.state.currentPage;
-                IPsCollection.fullCollection.reset(getRawIPs());
                 IPsCollection.getPage(page);
             });
             return IPsCollection;
@@ -1386,7 +1381,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
 
     data.NetworkCollection = Backbone.PageableCollection.extend({
-        url: '/api/ippool/',
+        url: '/api/v2/ippool/',
         model: data.NetworkModel,
         parse: unwrapper,
         mode: 'client',
@@ -1403,7 +1398,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     });
     data.IPsCollection = data.SortableCollection.extend({
         model: data.IPModel,
-        parse: unwrapper,
+        parse: function(response){
+            return unwrapper(response);
+        },
         mode: 'client',
         state: {
             pageSize: 8
@@ -1414,6 +1411,100 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 return model.get('ip').replace(/\b\d{1}\b/g, '00$&').replace(/\b\d{2}\b/g, '0$&');
             return model.get(key);
         },
+        constructor: function (dataArray, blocks) {
+            this.blocks = blocks;
+            data.SortableCollection.apply(this, arguments);
+            this.switchMode('server');
+        },
+        fetch: function(options){
+            var itemStart = (options.to - 1) * this.state.pageSize || 0;
+            var dataArray = this.getRange(itemStart,
+                itemStart + this.state.pageSize);
+            this.state.totalRecords = this.itemCount();
+            this.state.lastPage = Math.ceil(this.state.totalRecords / this.state.pageSize);
+            this.state.totalPages = this.state.lastPage;
+            this.reset(dataArray);
+            return $.Deferred().resolveWith(this, [dataArray]).promise();
+        },
+
+
+        blockIterator: function* (blockList, showExcluded, startId){
+            let blockId = 0,
+                itemId = 0;
+            let eof = () => blockId >= blockList.length;
+            let intToIP = int => [24, 16, 8, 0].map(i => (int >> i) & 255).join('.');
+            findStart(startId);
+            while (!eof()) {
+                if (!showExcluded) {
+                    while (blockId < blockList.length &&
+                    blockList[blockId][2] === 'blocked') {
+                        blockId++;
+                        itemId = 0;
+                    }
+                }
+                if (eof()) return;
+
+                var curBlock = blockList[blockId];
+                var ip = curBlock[0] + itemId;
+                // for AWS (items has host instead ip address)
+                if (ip >= curBlock[1] || !Number.isInteger(curBlock[0])) {
+                    blockId++;
+                    itemId = 0;
+                } else {
+                    itemId++;
+                }
+                yield {
+                    ip: Number.isInteger(ip) ? intToIP(ip) : ip,
+                    status: curBlock[2],
+                    podName: curBlock[3],
+                    userName: curBlock[4],
+                };
+            }
+
+            function findStart(startId) {
+                var currentPos = 0;
+                for (var findBlockId = 0; findBlockId < blockList.length; findBlockId++) {
+                    var blockItem = blockList[findBlockId];
+                    if (showExcluded || blockItem[2] !== 'blocked') {
+                        var blockLen = blockItem[1] - blockItem[0] + 1;
+                        if (currentPos + blockLen > startId) {
+                            blockId = findBlockId;
+                            break;
+                        } else {
+                            currentPos += blockLen;
+                        }
+                    }
+                }
+                itemId = startId - currentPos;
+            }
+        },
+        itemCount: function () {
+            return _.reduce(_(this.blocks).map(item => {
+                if (this.showExcluded || item[2] !== 'blocked'){
+                    // for AWS (item with host instead ip address)
+                    if (!Number.isInteger(item[0])){
+                        return 1;
+                    }
+                    return item[1] - item[0] + 1;
+                } else {
+                    return 0;
+                }
+
+            }), function (acc, val) {
+                return acc + val;
+            });
+        },
+
+        getRange: function(start, end){
+            var result = [],
+                iter = this.blockIterator(this.blocks, this.showExcluded, start);
+            for (var i = start; i < end; i++){
+                var row = iter.next();
+                if (row.done) break;
+                result.push(row.value);
+            }
+            return result;
+        }
     });
 
     data.DomainModel = Backbone.Model.extend({

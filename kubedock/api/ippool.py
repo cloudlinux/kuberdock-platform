@@ -1,7 +1,8 @@
 from flask import Blueprint
 
+from kubedock.api import check_api_version
 from ..login import auth_required
-from ..utils import KubeUtils
+from ..utils import KubeUtils, API_VERSIONS
 from ..kapi.ippool import IpAddrPool
 from ..rbac import check_permission
 
@@ -18,6 +19,11 @@ def get_ippool(network=None):
     params = KubeUtils._get_params()
     if 'free-only' in params:
         return IpAddrPool.get_free()
+    if check_api_version(API_VERSIONS.v2):
+        if network:
+            return IpAddrPool.get_network_ips(network)
+        else:
+            return IpAddrPool.get_networks_list()
     page = int(params.get('page', 1))
     return IpAddrPool.get(network, page)
 

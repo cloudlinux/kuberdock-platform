@@ -5,6 +5,9 @@ import ipaddress
 from flask import current_app
 from ..kapi.helpers import KubeQuery
 from ..kapi import podutils
+
+from kubedock.api import check_api_version
+from kubedock.utils import API_VERSIONS
 from .podcollection import PodCollection
 from .. import utils
 from .. import validation
@@ -100,6 +103,9 @@ class IpAddrPool(object):
                         'Node isn\'t deployed yet. Please try later.')
 
         pool.save()
+        if check_api_version(API_VERSIONS.v2):
+            return IpAddrPool.get_network_ips(data['network'])
+
         return pool.to_dict(page=1)
 
     @classmethod
@@ -128,6 +134,9 @@ class IpAddrPool(object):
             cls._update_free_public_ip_counter(net.node.hostname, block_ip,
                                                unblock_ip,
                                                unbind_ip)
+        if check_api_version(API_VERSIONS.v2):
+            return IpAddrPool.get_network_ips(network)
+
         return net.to_dict()
 
     @staticmethod
@@ -292,3 +301,113 @@ class IpAddrPool(object):
         if current_app.config['FIXED_IP_POOLS']:
             return 'fixed'
         return 'floating'
+
+    @staticmethod
+    def get_networks_list():
+        """Returns list of networks.
+        :return: list of networks with available ips count
+        """
+        if AWS:
+            return [{
+                'id': None,
+                'network': None,
+                'ipv6': False,
+                'node': None,
+                'free_host_count': 0,
+            }]
+        return [p.main_info_dict() for p in IPPool.all()]
+
+    @staticmethod
+    def ip_list_by_blocks(ip_list):
+        if not ip_list:
+            return []
+        ip_list = sorted(ip_list)
+        start_end_ip = [ip_list[0]]
+        for num in xrange(1, len(ip_list)):
+            ip = ip_list[num]
+            prev_in_list = ip_list[num - 1]
+            prev_ip = ip - 1
+            if prev_ip != prev_in_list:
+                start_end_ip.append(prev_in_list)
+                start_end_ip.append(ip)
+        start_end_ip.append(ip_list[-1])
+        return zip(*[iter(start_end_ip)] * 2)
+
+    @staticmethod
+    def get_missed_intervals(ip_blocks, start_ip, end_ip):
+        missed_blocks = []
+        next_ip = int(start_ip)
+        for block in ip_blocks:
+            if block[0] > next_ip:
+                missed_blocks.append((next_ip, block[0] - 1))
+            next_ip = block[1] + 1
+        if int(end_ip) > next_ip:
+            missed_blocks.append((next_ip, int(end_ip)))
+        return missed_blocks
+
+    @classmethod
+    def get_network_ips(cls, net):
+        """Return list of subnets
+        :param net: network ('x.x.x.x/x')
+        """
+        if AWS:
+            info = {
+                'id': 'aws',
+                'network': None,
+                'ipv6': False,
+                'node': None,
+                'free_host_count': 0,
+            }
+
+            all_pods = Pod.query.filter(Pod.status != 'deleted').all()
+            pods_data = [(i.id, i.name, i.owner.username) for i in all_pods
+                         if i.owner.username != KUBERDOCK_INTERNAL_USER]
+            lbs = LoadBalanceService()
+            names = lbs.get_dns_by_pods([i[0] for i in pods_data])
+            blocks = [(names[i[0]], names[i[0]], 'busy', i[1], i[2]) for i in
+                      pods_data
+                      if i[0] in names]
+
+            info.update({
+                'blocks': blocks,
+            })
+
+            return info
+
+        ipPool = IPPool.filter_by(network=net).first()
+        if ipPool is not None:
+            info = ipPool.main_info_dict()
+            blocks = []
+
+            blocked_ips = ipPool.get_blocked_set(as_int=True)
+
+            allocated_ips = {pod.ip_address: pod.get_pod()
+                             for pod in PodIP.filter_by(network=net)}
+            for ip_address, pod in allocated_ips.iteritems():
+                state = 'busy'
+                if ip_address in blocked_ips:
+                    state = 'blocked'
+                    blocked_ips.discard(ip_address)
+                blocks.append((ip_address, ip_address, state, pod))
+
+            busy_ips = allocated_ips.keys()
+            network = ip_network(net)
+
+            blocked_blocks = cls.ip_list_by_blocks(sorted(blocked_ips))
+            busy_blocks = cls.ip_list_by_blocks(sorted(busy_ips))
+            non_free_blocks = sorted(set(blocked_blocks) | set(busy_blocks))
+            free_blocks = cls.get_missed_intervals(non_free_blocks,
+                                                   network.network_address,
+                                                   network.broadcast_address)
+
+            # merge blocks
+            for item in blocked_blocks:
+                blocks.append(item + ('blocked',))
+            for item in free_blocks:
+                blocks.append(item + ('free',))
+            sorted_blocks = sorted(blocks)
+
+            info.update({
+                'blocks': sorted_blocks,
+            })
+            return info

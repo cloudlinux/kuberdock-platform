@@ -346,6 +346,19 @@ class IPPool(BaseModelMixin, db.Model):
         _hosts = self.hosts(as_int=as_int, exclude=ip_list, page=page)
         return _hosts
 
+    def busy_and_block(self):
+        ip_list = [pod.ip_address
+                   for pod in PodIP.filter_by(network=self.network)]
+        return list(set(ip_list) | self.get_blocked_set(as_int=True))
+
+    def host_count(self):
+        network = self.network
+        if not self.ipv6 and network.find('/') < 0:
+            network = u'{0}/32'.format(network)
+        network = ip_network(unicode(network))
+        suf_len = network.max_prefixlen - network.prefixlen
+        return 2 ** suf_len
+
     def free_hosts_and_busy(self, as_int=None, page=None):
         pods = PodIP.filter_by(network=self.network)
         allocated_ips = {int(pod): pod.get_pod() for pod in pods}
@@ -391,6 +404,16 @@ class IPPool(BaseModelMixin, db.Model):
                 if ip_address in hosts:
                     return net
         return None
+
+    def main_info_dict(self):
+        data = {
+            'id': self.network,
+            'network': self.network,
+            'ipv6': self.ipv6,
+            'node': None if self.node is None else self.node.hostname,
+            'free_host_count': self.host_count() - len(self.busy_and_block()),
+        }
+        return data
 
     def to_dict(self, include=None, exclude=None, page=None):
         free_hosts_and_busy = self.free_hosts_and_busy(page=page)

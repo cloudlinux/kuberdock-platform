@@ -4,7 +4,7 @@
 <% if (!isFloating) { %>
     <td><%- node ? node : 'none'%></td>
 <% } %>
-<td><%- free_hosts ? free_hosts.length : '0'%></td>
+<td><%- free_host_count || '0'%></td>
 <td class="actions">
     <% if (forbidDeletionMsg){ %>
         <span id="deleteNetwork" class="disabled" data-toggle="tooltip" data-placement="top"

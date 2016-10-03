@@ -187,7 +187,9 @@ class check_api_version(object):
         pass
 
     def __nonzero__(self):
-        return g.api_version in self.acceptable_versions
+        version = g.api_version if hasattr(g, 'api_version') else \
+            API_VERSIONS.v1
+        return version in self.acceptable_versions
 
     def check(self):
         if not self:

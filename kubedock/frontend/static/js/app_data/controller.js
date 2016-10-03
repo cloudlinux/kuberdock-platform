@@ -1428,21 +1428,28 @@ define([
                     layoutView.breadcrumb.show(breadcrumbsLayout);
                     $.when(App.getIppoolMode(), App.getIPPoolCollection())
                         .done(function(ipPoolMode, ippoolCollection){
-                            var view, item, button, breadcrumbsControls;
+                            var view, button, breadcrumbsControls;
                             ippoolCollection.ipPoolMode = ipPoolMode;
                             if (ipPoolMode === 'aws') {
                                 breadcrumbsControls = new Breadcrumbs.Controls(
-                                    {button: {}});
+                                    {button: false});
                                 layoutView.breadcrumb.show(breadcrumbsLayout);
                                 breadcrumbsLayout.subnets.show(
                                     new Breadcrumbs.Text({text: 'DNS names'}));
                                 breadcrumbsLayout.controls.show(breadcrumbsControls);
-                                item = ippoolCollection.at(0);
-                                view = new Views.SubnetIpsListView({
-                                    model: item,
-                                    collection: item.getIPs().getFiltered(function(m){
-                                        return true;
-                                    })
+                                var networkModel = new Model.NetworkModel({id: 'aws'});
+                                networkModel.fetch().fail(utils.notifyWindow)
+                                    .done(function () {
+                                        var collection = networkModel.getIPs().getFiltered(function (m) {
+                                            return true;
+                                        });
+                                    view = new Views.SubnetIpsListView({
+                                        ipPoolMode:ipPoolMode,
+                                        model: networkModel,
+                                        collection: collection
+                                    });
+                                layoutView.main.show(view);
+                                layoutView.pager.show(new Pager.PaginatorView({view: view}));
                                 });
                             } else {
                                 button = {id: 'create_network',
@@ -1456,9 +1463,9 @@ define([
                                 breadcrumbsLayout.controls.show(breadcrumbsControls);
                                 view = new Views.SubnetsListView(
                                     {collection: ippoolCollection});
+                                layoutView.main.show(view);
+                                layoutView.pager.show(new Pager.PaginatorView({view: view}));
                             }
-                            layoutView.main.show(view);
-                            layoutView.pager.show(new Pager.PaginatorView({view: view}));
                         });
                 });
                 App.contents.show(layoutView);
@@ -1499,28 +1506,40 @@ define([
                 return;
             var that = this;
             require(['app_data/ippool/views'], function(Views){
-                var layoutView = new Views.IppoolLayoutView(),
-                    navbar = new Menu.NavList({collection: App.menuCollection}),
-                    breadcrumbsLayout = new Breadcrumbs.Layout(
-                        {points: ['subnets', 'subnetName']});
-                that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
-                    layoutView.breadcrumb.show(breadcrumbsLayout);
-                    breadcrumbsLayout.subnets.show(
-                        new Breadcrumbs.Link({text: 'IP Pool', href:'#ippool'}));
-                    breadcrumbsLayout.subnetName.show(new Breadcrumbs.Text({text: id}));
-                    App.getIPPoolCollection().done(function(ippoolCollection){
-                        var item = ippoolCollection.get(id),
-                            filteredIPs = item.getIPs().getFiltered(function(model){
-                                return this.showExcluded || model.get('status') === 'free';
-                            }),
-                            view = new Views.SubnetIpsListView(
-                                {model: item, collection: filteredIPs});
-                        layoutView.main.show(view);
-                        layoutView.pager.show(new Pager.PaginatorView({view: view}));
-                    });
-                });
-                App.contents.show(layoutView);
+                App.getIppoolMode()
+                    .done(function(ipPoolMode) {
+                        var layoutView = new Views.IppoolLayoutView(),
+                            navbar = new Menu.NavList({collection: App.menuCollection}),
+                            breadcrumbsLayout = new Breadcrumbs.Layout(
+                                {points: ['subnets', 'subnetName']});
+                        that.listenTo(layoutView, 'show', function () {
+                            layoutView.nav.show(navbar);
+                            layoutView.breadcrumb.show(breadcrumbsLayout);
+                            breadcrumbsLayout.subnets.show(
+                                new Breadcrumbs.Link({
+                                    text: 'IP Pool',
+                                    href: '#ippool'
+                                }));
+                            breadcrumbsLayout.subnetName.show(new Breadcrumbs.Text({text: id}));
+                            var networkModel = new Model.NetworkModel({id: id});
+                            networkModel.fetch().fail(utils.notifyWindow)
+                                .done(function (response) {
+                                    var filteredIPs = networkModel.getIPs().getFiltered(function (model) {
+                                            return this.showExcluded || model.get('status') === 'free';
+                                        }),
+                                        view = new Views.SubnetIpsListView(
+                                            {
+                                                model: networkModel,
+                                                collection: filteredIPs,
+                                                ipPoolMode: ipPoolMode
+                                            });
+                                    layoutView.main.show(view);
+                                    
+                                    layoutView.pager.show(new Pager.PaginatorView({view: view}));
+                                });
+                        });
+                        App.contents.show(layoutView);
+                    })
             });
         },
 

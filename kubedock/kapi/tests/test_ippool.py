@@ -3,9 +3,9 @@
 import unittest
 
 import mock
-import ipaddress
 import responses
 
+from kubedock import api
 from kubedock.core import db
 from kubedock.exceptions import APIError
 from kubedock.kapi import ippool
@@ -32,6 +32,12 @@ class TestIpPool(DBTestCase):
         self.stubs.node_info_update_in_k8s_api(self.node.hostname)
 
         current_app.config['FIXED_IP_POOLS'] = True
+
+        patcher = mock.patch.object(api.check_api_version, '__nonzero__')
+        patcher.start()
+        api.check_api_version.__nonzero__ = mock.Mock(
+            return_value=False)
+        self.addCleanup(patcher.stop)
 
     def test_get_returns_emtpy_list_by_default(self):
         res = ippool.IpAddrPool().get()

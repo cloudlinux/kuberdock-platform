@@ -127,11 +127,22 @@ define(['app_data/app', 'app_data/controller', 'app_data/utils',
             data[cmd + '_ip'] = ip;
             return subnet.save(data, {wait: true, context: this})
                 .always(function(){ subnet.set(cmd + '_ip', null); })
+                .success(function(response){
+                    this.model.collection.blocks = response.data.blocks;
+                    this.model.collection.fetch(
+                        {to: this.model.collection.state.currentPage});
+                })
                 .fail(utils.notifyWindow);
         },
 
-        blockIP: function(){ this.commandIP('block', this.model.get('ip')); },
-        unblockIP: function(){ this.commandIP('unblock', this.model.get('ip')); },
+        blockIP: function(){
+            this.commandIP('block', this.model.get('ip'));
+            App.resourceRemoveCache('ippoolCollection');
+        },
+        unblockIP: function(){
+            this.commandIP('unblock', this.model.get('ip'));
+            App.resourceRemoveCache('ippoolCollection');
+        },
         templateHelpers: function(){
             return { isAWS: this.isAWS };
         }
@@ -281,7 +292,7 @@ define(['app_data/app', 'app_data/controller', 'app_data/utils',
         templateHelpers: function(){
             var totalFreeIps;
             totalFreeIps = this.collection.fullCollection.reduce(
-                function(sum, model){ return sum + model.get('free_hosts').length; }, 0);
+                function(sum, model){ return sum + model.get('free_host_count'); }, 0);
 
             return {
                 isFloating   : this.isFloating,
@@ -298,7 +309,7 @@ define(['app_data/app', 'app_data/controller', 'app_data/utils',
             {tagName: 'tr', template: subnetIpsEmptyTpl}),
 
         initialize: function(){
-            this.isAWS = this.model.collection.ipPoolMode === 'aws';
+            this.isAWS = this.options.ipPoolMode === 'aws';
             if (!this.collection.length){
                 // if there is no free IPs, show all by default
                 this.collection.showExcluded = !this.collection.showExcluded;

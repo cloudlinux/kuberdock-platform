@@ -16,7 +16,7 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
         'app_data/pods/templates/pod_container_tab_logs.tpl',
         'app_data/pods/templates/pod_container_tab_stats.tpl',
         'app_data/pods/templates/pod_item_graph.tpl',
-        'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer', 'nicescroll',
+        'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer',
         'bootstrap-select', 'tooltip'],
        function(App, Model, utils,
                 layoutWizardTpl,
@@ -531,18 +531,6 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
                 this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
             else  // stay at the same position
                 this.ui.textarea.scrollTop(this.logScroll);
-
-            if (this.niceScroll !== undefined)
-                this.niceScroll.remove();
-            this.niceScroll = this.ui.textarea.niceScroll({
-                cursorcolor: "#69AEDF",
-                cursorwidth: "12px",
-                cursorborder: "none",
-                cursorborderradius: "none",
-                background: "#E7F4FF",
-                autohidemode: false,
-                railoffset: 'bottom'
-            });
         },
 
         onBeforeDestroy: function () {
@@ -550,8 +538,6 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             delete this.model.get('before').editKubesQty;
             this.destroyed = true;
             clearTimeout(this.model.get('before').logsTimeout);
-            if (this.niceScroll !== undefined)
-                this.niceScroll.remove();
         },
 
         getLogs: function() {

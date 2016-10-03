@@ -17,7 +17,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         'app_data/nodes/templates/layout.tpl',
 
         'jqplot', 'jqplot-axis-renderer',
-        'bootstrap-select', 'nicescroll', 'tooltip'],
+        'bootstrap-select', 'tooltip'],
        function(App, Controller, Marionette, utils,
 
                 nodeDetailedLayoutTpl,
@@ -467,26 +467,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
                 this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
             else  // stay at the same position
                 this.ui.textarea.scrollTop(this.logScroll);
-
-            if (this.niceScroll !== undefined)
-                this.niceScroll.remove();
-            this.niceScroll = this.ui.textarea.niceScroll({
-                cursorcolor: '#E7F4FF',
-                cursorwidth: '12px',
-                cursorborder: 'none',
-                cursorborderradius: 'none',
-                background: 'transparent',
-                autohidemode: false,
-                railoffset: 'bottom',
-                hidecursordelay: 0
-            });
         },
 
         onBeforeDestroy: function () {
             this.destroyed = true;
             clearTimeout(this.model.get('timeout'));
-            if (this.niceScroll !== undefined)
-                this.niceScroll.remove();
         }
     });
 

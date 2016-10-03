@@ -38,7 +38,6 @@ var webpackConfig = {
             'bootstrap-editable'  : 'x-editable/dist/bootstrap3-editable/js/bootstrap-editable.min',
             'jqplot'              : 'lib/jquery.jqplot.min',
             'jqplot-axis-renderer': 'lib/jqplot.dateAxisRenderer.min',
-            'nicescroll'          : 'lib/nicescroll.min',
             // prepackaged versions (due to large size or fucked-up internal imports)
             'js-yaml'             : 'js-yaml/dist/js-yaml.min',
             'sinon'               : 'sinon/pkg/sinon',

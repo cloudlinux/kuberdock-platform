@@ -54,10 +54,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             'click @ui.deleteNode' : 'deleteNode'
         },
 
-        modelEvents: {
-            'change': 'render'
-        },
-
+        modelEvents: { 'change': 'render' },
         templateHelpers: function(){
             var model = this.model,
                 kubeType = App.kubeTypeCollection.get(model.get('kube_type'));
@@ -98,22 +95,30 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         className          : 'container',
 
         ui: {
-            th : 'table th' //TODO move filter to model
+            th : 'table th'
         },
 
         events: {
-            'click @ui.th'  : 'toggleSort' //TODO move filter to model
+            'click @ui.th' : 'toggleSort'
         },
 
-        initialize: function(options){ //TODO move filter to model
-            this.searchString = options.searchString;
-            this.counter = 1;
-            this.sortingType = {
-                hostname : 1,
-                ip : 1,
-                kube_type : 1,
-                status : 1
-            };
+        initialize: function(){
+            this.collection.order = [
+                {key: 'hostname', order: 1},
+                {key: 'ip', order: 1},
+                {key: 'kube_type', order: 1},
+                {key: 'status', order: 1}
+            ];
+            this.collection.fullCollection.sort();
+            this.collection.on('update reset', function(){
+                this.fullCollection.sort();
+            });
+        },
+
+        templateHelpers: function(){
+            return {
+                sortingType: this.collection.orderAsDict()
+            }
         },
 
         search: function(data){
@@ -121,31 +126,11 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
             this.collection.refilter();
         },
 
-        templateHelpers: function(){
-            return {
-                sortingType : this.sortingType //TODO move filter to model
-            };
-        },
-
         toggleSort: function(e) { //TODO move filter to model
-            var that = this,
-                targetClass = e.target.className;
-
-            if (targetClass) {
-                this.collection.setSorting(targetClass, this.counter);
-                this.collection.fullCollection.sort();
-                this.counter = this.counter * (-1);
-
-                if (that.sortingType[targetClass] === 1){
-                    _.each(that.sortingType, function(item, index){
-                        that.sortingType[index] = 1;
-                    });
-                    that.sortingType[targetClass] = -1;
-                } else {
-                    that.sortingType[targetClass] = 1;
-                }
-                this.render();
-            }
+            var targetClass = e.target.className;
+            if (!targetClass) return;
+            this.collection.toggleSort(targetClass);
+            this.render();
         }
     });
 

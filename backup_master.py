@@ -140,7 +140,7 @@ def delete_nodes():
     PodIP.query.delete()
     ContainerState.query.delete()
     PodDomain.query.delete()
-    PersistentDisk.get_all_query().delete(synchronize_session=False)
+    PersistentDisk.query.delete()
     PodState.query.delete()
     Pod.query.delete()
     logger.info("All pod data purged.")

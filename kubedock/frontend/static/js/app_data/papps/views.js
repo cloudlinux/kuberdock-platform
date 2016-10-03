@@ -255,6 +255,11 @@ define(['app_data/app', 'app_data/utils', 'marionette', 'js-yaml',
                 };
             },
 
+            search: function(data){
+                this.collection.searchString = data;
+                this.collection.refilter();
+            },
+
             toggleSort: function(e) {
                 var targetClass = e.target.className;
                 if (!targetClass) return;

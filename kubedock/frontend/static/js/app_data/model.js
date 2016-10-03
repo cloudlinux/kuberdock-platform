@@ -155,7 +155,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             this.on('change', this.resetID);
             this.resetID();
             if (!this.get('hostPort'))
-                this.set('hostPort', this.get('containerPort'))
+                this.set('hostPort', this.get('containerPort'));
         },
         resetID: function(){
             // modelId works well for collections.get(ID), but it doesn't
@@ -1295,34 +1295,13 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         parse: unwrapper,
     });
 
-    data.AppCollection = Backbone.PageableCollection.extend({
+    data.AppCollection = data.SortableCollection.extend({
         url: '/api/predefined-apps',
         model: data.AppModel,
         parse: unwrapper,
         mode: 'client',
         state: {
             pageSize: 8
-        },
-        initialize: function(models){
-            this.filtered = new data.SortableCollection(
-                null, {state: this.state});
-            this.filtered.getForSort = function(model, key){
-                if (key === 'name')
-                    return (model.get(key) || '').toLowerCase();
-                return model.get(key);
-            };
-            this.listenTo(this, 'add', this.refilter);
-            this.listenTo(this, 'remove', this.refilter);
-        },
-        filterByOrigin: function(){
-            var filtered = this.fullCollection.filter(function(model){
-                return _.contains(['kuberdock', 'unknown'], model.get('origin'));
-            });
-            this.filtered.fullCollection.reset(filtered);
-            return this.filtered;
-        },
-        refilter: function(){
-            this.filterByOrigin();
         }
     });
 

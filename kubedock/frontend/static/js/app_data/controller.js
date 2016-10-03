@@ -314,9 +314,9 @@ define([
                             general: Views.WizardGeneralSubView,
                             env: Views.WizardEnvSubView,
                         },
-                        fixedPrice = App.userPackage.get('count_type') === 'fixed'
-                            && settings.byName('billing_type')
-                                .get('value').toLowerCase() !== 'no billing';
+                        fixedPrice = App.userPackage.get('count_type') === 'fixed' &&
+                            settings.byName('billing_type')
+                            .get('value').toLowerCase() !== 'no billing';
 
                     if (!model || !_.contains(_.keys(tabViews), tab))
                         return that.pageNotFound();
@@ -1311,7 +1311,7 @@ define([
                     button = {id: 'add_pod', href: '#predefined-apps/newapp',
                              title: 'Add new application'},
                     breadcrumbsControls = new Breadcrumbs.Controls(
-                        {button: button}
+                        {search: true, button: button}
                     );
 
                 that.listenTo(mainLayout, 'show', function(){
@@ -1321,10 +1321,19 @@ define([
                        new Breadcrumbs.Text({text: 'Predefined Apps'}));
                     breadcrumbsLayout.controls.show(breadcrumbsControls);
                     App.getAppCollection().done(function(appCollection){
+                        var filteredCollection = appCollection.getFiltered(function(model){
+                            var searchFilter = !this.searchString ||
+                                this.searchString.length < 3 ||
+                                model.get('name').indexOf(this.searchString) !== -1;
+                            var originFilter = _.contains(
+                                    ['kuberdock', 'unknown'], model.get('origin'));
+                            return searchFilter && originFilter;
+                        });
                         var view = new Views.AppList(
-                            {collection: appCollection.filterByOrigin()});
+                            {collection: filteredCollection});
                         mainLayout.main.show(view);
                         mainLayout.pager.show(new Pager.PaginatorView({view: view}));
+                        view.listenTo(breadcrumbsControls, 'search', view.search);
                     });
                 });
                 App.contents.show(mainLayout);

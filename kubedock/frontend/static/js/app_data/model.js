@@ -374,6 +374,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 node: null,
                 kube_type: defaultKube.id,
                 status: 'stopped',
+                public_ip: null
             };
         },
         editableAttributes: [

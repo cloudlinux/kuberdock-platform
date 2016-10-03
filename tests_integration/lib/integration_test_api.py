@@ -990,6 +990,19 @@ class _RedminePaPods(KDPAPod):
         assert_in("Redmine", self.do_GET())
 
 
+class _JoomlaPaPod(KDPAPod):
+    SRC = 'joomla.yaml'
+
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        ports = ports or [80]
+        self._wait_for_ports(ports, timeout)
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/installation/index.php')
+        assert_in(u"Joomla! - Open Source Content Management", page)
+
+
 class VagrantIsAlreadyUpException(Exception):
     pass
 

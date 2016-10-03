@@ -97,7 +97,7 @@ KUBE_TYPE_TO_INT = {
 }
 INT_TO_KUBE_TYPE = {
     v: k for k, v in KUBE_TYPE_TO_INT.iteritems()
-    }
+}
 
 
 def kube_type_to_int(kube_type):
@@ -110,20 +110,20 @@ def kube_type_to_str(kube_type):
 
 def assert_eq(actual, expected):
     if actual != expected:
-        raise AssertionError("Values are not equal\n"
+        raise AssertionError(u"Values are not equal\n"
                              "Expected: {0}\n"
                              "Actual  : {1}".format(expected, actual))
 
 
 def assert_not_eq(actual, not_expected):
     if actual == not_expected:
-        raise AssertionError("Value should not be equal {}"
+        raise AssertionError(u"Value should not be equal {}"
                              .format(not_expected))
 
 
 def assert_in(item, sequence):
     if item not in sequence:
-        raise AssertionError("Item '{0}' not in '{1}'".format(
+        raise AssertionError(u"Item '{0}' not in '{1}'".format(
             item, sequence
         ))
 

@@ -2,15 +2,14 @@ FROM centos:7
 
 RUN yum -y install epel-release && \
     yum -y update && \
-    yum -y install wget make gcc rsync wget python-netaddr git && \
+    yum -y install wget make gcc rsync wget git python-netaddr python-passlib && \
     wget http://cbs.centos.org/kojifiles/packages/ansible/2.1.0.0/1.el7/noarch/ansible-2.1.0.0-1.el7.noarch.rpm && \
     yum -y localinstall ansible-2.1.0.0-1.el7.noarch.rpm && rm -f ansible-2.1.0.0-1.el7.noarch.rpm && \
     wget https://releases.hashicorp.com/vagrant/1.8.5/vagrant_1.8.5_x86_64.rpm && \
     yum -y localinstall vagrant_1.8.5_x86_64.rpm && rm -f vagrant_1.8.5_x86_64.rpm && \
     vagrant plugin install vagrant-gatling-rsync && \
     vagrant plugin install vagrant-rsync-back && \
-    wget  https://github.com/histrio/opennebula-provider/releases/download/1.1.2/opennebula-provider-1.1.2.pre.3.gem && \
-    vagrant plugin install opennebula-provider-1.1.2.pre.3.gem && \
+    vagrant plugin install opennebula-provider --plugin-version 1.1.2 && \
     yum clean all
 
 # Remove annoying "duplicated key at line 132 ignored: :nic" warning

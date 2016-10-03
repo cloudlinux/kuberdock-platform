@@ -1,4 +1,4 @@
-# --fail!/bin/bash
+#!/bin/bash
 
 KUBERDOCK_DIR=/var/opt/kuberdock
 KUBERDOCK_LIB_DIR=/var/lib/kuberdock
@@ -411,7 +411,7 @@ setup_ntpd ()
     yum erase -y chrony
     yum install -y ntp
 
-    function _sync_time() {
+    _sync_time() {
         grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -u
     }
 
@@ -539,6 +539,13 @@ if [ "$ISAMAZON" = true ];then
     if [ -z "$AWS_ACCESS_KEY_ID" ] || [ -z "$AWS_SECRET_ACCESS_KEY" ];then
         log_it echo "Either AWS ACCESS KEY ID or AWS SECRET ACCESS KEY missing. Exit"
         exit 1
+    fi
+
+    if [ -z "$AWS_EBS_DEFAULT_SIZE" ];then
+        read -p "Enter your AWS EBS DEFAULT SIZE in GB [20]: " AWS_EBS_DEFAULT_SIZE
+    fi
+    if [ -z "$AWS_EBS_DEFAULT_SIZE" ];then
+        AWS_EBS_DEFAULT_SIZE=20
     fi
 
     if [ -z "$ROUTE_TABLE_ID" ];then
@@ -1039,12 +1046,13 @@ for i in kube-apiserver kube-controller-manager kube-scheduler heapster;
 
 #16. Adding amazon and ceph config data
 if [ "$ISAMAZON" = true ];then
-cat > $KUBERDOCK_DIR/kubedock/amazon_settings.py << EOF
-AWS=True
-REGION="$REGION"
-AVAILABILITY_ZONE="$AVAILABILITY_ZONE"
-AWS_ACCESS_KEY_ID="$AWS_ACCESS_KEY_ID"
-AWS_SECRET_ACCESS_KEY="$AWS_SECRET_ACCESS_KEY"
+cat >> $KUBERDOCK_MAIN_CONFIG << EOF
+AWS = yes
+REGION = $REGION
+AVAILABILITY_ZONE = $AVAILABILITY_ZONE
+AWS_ACCESS_KEY_ID = $AWS_ACCESS_KEY_ID
+AWS_SECRET_ACCESS_KEY = $AWS_SECRET_ACCESS_KEY
+AWS_EBS_EXTEND_STEP = $AWS_EBS_DEFAULT_SIZE
 EOF
 fi
 

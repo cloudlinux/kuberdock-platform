@@ -139,16 +139,18 @@ class PredefinedAppExc(object):
         message_template = 'Unable to parse template'
 
     class InvalidTemplate(APIError):
-        message_template = 'Invalid template structure'
-        # TODO: change type and don't replace message with schemaErrors
-        # for now clients expect this type, fix them first
+        # TODO: change type and don't replace message with cerberus schema
+        # errors and other stuff.
+        # For now clients expect this type.
+        # Rethink errors format for PA, fix all clients, then fix this: AC-4707
         type = 'ValidationError'
 
         def __init__(self, *args, **kwargs):
             super(PredefinedAppExc.InvalidTemplate, self).__init__(
                 *args, **kwargs)
-            if self.details.get('schemaErrors'):
-                self._message = self.details.get('schemaErrors')
+            self._message = self.details
+            if not self.details:
+                self._message = {'common': 'Invalid template structure'}
 
     class NotPredefinedAppPod(APIError):
         message_template = 'Pod not created from predefined app'

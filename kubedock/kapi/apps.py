@@ -659,12 +659,14 @@ class PredefinedApp(object):
         for plan_item in plans:
             name = plan_item.get('name')
             if name not in names:
+                msg = '{0} "{1}" not found in pod "{2}"'.format(
+                    err_collection.capitalize(), name, err_name)
                 raise PredefinedAppExc.InvalidTemplate(
-                    '{0} "{1}" not found in pod "{2}"'.format(
-                        err_collection.capitalize(), name, err_name))
+                    details={'appPackages': msg})
             if name in used_names:
+                msg = 'Duplicate {0} name in appPackage'.format(err_collection)
                 raise PredefinedAppExc.InvalidTemplate(
-                    'Duplicate {0} name in appPackage'.format(err_collection))
+                    details={'appPackages': msg})
             used_names.add(name)
 
     @staticmethod
@@ -842,8 +844,9 @@ class PredefinedApp(object):
         if validate:
             if (len(plans) != 1 and
                     len([p for p in plans if p.get('recommended')]) != 1):
-                raise PredefinedAppExc.InvalidTemplate(
-                    'Exactly one package must be "recommended"')
+                raise PredefinedAppExc.InvalidTemplate(details={
+                    'appPackages': 'Exactly one package must be "recommended"'
+                })
         return plans
 
     def _get_plan_by_name(self, name, index_only=False):
@@ -892,12 +895,13 @@ class PredefinedApp(object):
             # check for $VAR$ without full definition ($VAR|default:...$)
             for entity in self._entities.itervalues():
                 if not entity.defined:
-                    raise PredefinedAppExc.InvalidTemplate("""
-                        'Variable {0} not defined [line:{1}, col:{2}].
-                        At least one occurence of full form like
-                        ${0}|default:...$ is expected.
-                        """.format(entity.name, entity.line, entity.col,
-                                   entity.name))
+                    raise PredefinedAppExc.InvalidTemplate(details={
+                        'customFields': (
+                            'Variable {0} not defined [line:{1}, col:{2}]. '
+                            'At least one occurence of full form like '
+                            '${0}|default:...$ is expected.'
+                            .format(entity.name, entity.line, entity.col)),
+                    })
 
         self._preprocessed_template = preprocessed
         return self._preprocessed_template
@@ -1030,7 +1034,7 @@ class PredefinedApp(object):
                                         predefined_app_schema)
         if validator.errors:
             raise PredefinedAppExc.InvalidTemplate(
-                details={'schemaErrors': validator.errors})
+                details={'schema': validator.errors})
         plans = self._get_plans(validated, validate=True)
         package = self._get_package(validated)
         available_kubes = set(kube.kube_id for kube in package.kubes)
@@ -1039,14 +1043,17 @@ class PredefinedApp(object):
         for plan in plans:
             for plan_pod in plan.get('pods', []):
                 if plan_pod['name'] != validated['metadata']['name']:
-                    raise PredefinedAppExc.InvalidTemplate(
-                        'Pod "{0}" not found in spec'.format(plan_pod['name']))
+                    raise PredefinedAppExc.InvalidTemplate(details={
+                        'appPackages': ('Pod "{0}" not found in spec'
+                                        .format(plan_pod['name'])),
+                    })
 
                 kube_id = plan_pod.get('kubeType')
                 if kube_id is not None and kube_id not in available_kubes:
+                    msg = 'kube ID "{0}" not found in "{1}" package'.format(
+                        kube_id, package.name)
                     raise PredefinedAppExc.InvalidTemplate(
-                            'kube ID "{0}" not found in "{1}" package'.format(
-                                kube_id, package.name))
+                        details={'appPackages': msg})
 
                 self._check_names(spec.get('containers', []),
                                   plan_pod.get('containers', []),

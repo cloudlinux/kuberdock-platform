@@ -8,7 +8,8 @@ class Connect(object):
     def __init__(self, host, user, token):
         self.host = host
         self.user = user
-        self.token = token
+        _token = ''.join(token.split())  # if token entered as multi-line string
+        self.token = _token
         self.api_type = 'json-api'
 
     def _request(self, method, function, data=None):

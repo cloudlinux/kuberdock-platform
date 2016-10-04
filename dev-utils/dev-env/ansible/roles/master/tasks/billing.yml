@@ -13,7 +13,7 @@
 - name: Patching a UI on host
   become: False
   lineinfile:
-      dest: "../../kubedock/frontend/templates/apps/index.html"
+      dest: "{{ host_proj_root }}/kubedock/frontend/templates/apps/index.html"
       regexp: "{{ item }}"
       state: absent
   with_items:
@@ -26,7 +26,7 @@
 
 - name: Hide modified UI file from git
   become: False
-  command: git update-index --assume-unchanged ../../kubedock/frontend/templates/apps/index.html
+  command: git update-index --assume-unchanged "{{ host_proj_root }}/kubedock/frontend/templates/apps/index.html"
   delegate_to: localhost
   tags:
   - ui_patch

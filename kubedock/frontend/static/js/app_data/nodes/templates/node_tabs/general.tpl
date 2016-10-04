@@ -1,4 +1,3 @@
-<div class="status-line"><span class="icon text-capitalize <%- status %>">Status: <%- status %></span></div>
 <% switch (status) { case 'running': %>
 <% var ram = (resources.memory / (1024*1024*1024)).toFixed(2); %>
 <div class="control-icons col-md-10 col-md-offset-1 clearfix">

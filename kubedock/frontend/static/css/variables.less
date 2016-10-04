@@ -1,3 +1,9 @@
+@regular: "open_sansregular";
+@light: "open_sanslight";
+@bold: "open_sansbold";
+@semibold: "open_sanssemibold";
+@materials: "Material Icons";
+
 .clearfix{
     zoom: 1;
     &:before, &:after{
@@ -183,6 +189,7 @@
         max-width: @iconSize + 2px;
         font: normal normal normal @iconSize/1 @materials;
     }
+    > a,
     > span{
         min-height: @iconSize;
         font-size: @textsize;
@@ -200,6 +207,14 @@
 }
 .relative{
     position: relative;
+}
+.center{
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    margin: auto;
+    position: absolute;
 }
 .kuberdock-scroll{
     &::-webkit-scrollbar {

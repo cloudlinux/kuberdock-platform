@@ -19,13 +19,6 @@ a{
     }
 }
 
-/* new design */
-@regular: "open_sansregular";
-@light: "open_sanslight";
-@bold: "open_sansbold";
-@semibold: "open_sanssemibold";
-@materials: "Material Icons";
-
 body{
     color: #1d1d1d;
     font-family: @regular;
@@ -168,16 +161,16 @@ body{
                 padding: 15px 0;
                 > li{
                     &.profile-menu{
-                        padding-left: 25px;
+                        top: 0;
+                        left: 0;
                         position: relative;
+                        padding-left: 25px;
                         &:before{
+                            top: 0;
                             left: 0;
-                            top: 1px;
-                            content: '';
-                            width: 16px;
-                            height: 15px;
+                            bottom: 0;
+                            margin: auto;
                             position: absolute;
-                            background: url('../img/userpic.png') 0 0 no-repeat;
                         }
                     }
                     > a {
@@ -497,7 +490,6 @@ body{
                             position: absolute;
                             background-color: #fff;
                         }
-
                         &:hover{
                             &:not(disabled){
                                 color: #f2f2f2;
@@ -529,7 +521,6 @@ body{
                     &#create_user,
                     &#edit_user,
                     &#rename_node,
-                    &#delete_node,
                     &#delete_user,
                     &#create_network,
                     &#login_this_user{
@@ -577,7 +568,6 @@ body{
                             background: url('../img/rename-node.png') 0 0 no-repeat;
                         }
                     }
-                    &#delete_node,
                     &#delete_user{
                         padding:0 0 0 28px;
                         &:before{

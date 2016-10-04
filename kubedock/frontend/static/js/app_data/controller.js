@@ -970,7 +970,7 @@ define([
                         view = new Views.NodeAddStep({
                                 model: new Backbone.Model(),
                                 setupInfo: setupInfo
-                            })
+                            });
                         layoutView.main.show(view);
                     });
                     App.contents.show(layoutView);
@@ -985,11 +985,6 @@ define([
             require(['app_data/nodes/views'], function(Views){
                 App.getNodeCollection().done(function(nodeCollection){
                     var node = nodeCollection.get(nodeId),
-                        button = {
-                            id: 'delete_node',
-                            title: 'Delete node' },
-                        breadcrumbsControls = new Breadcrumbs.Controls(
-                            {button: button}),
                         layoutView = new Views.NodeDetailedLayout({nodeId: nodeId, tab: tab}),
                         navbar = new Menu.NavList({collection: App.menuCollection}),
                         breadcrumbsLayout = new Breadcrumbs.Layout(
@@ -1011,9 +1006,11 @@ define([
                             new Breadcrumbs.Link({text: 'Nodes', href:'#nodes'}));
                         breadcrumbsLayout.name.show(
                             new Breadcrumbs.Text({text: node.get('hostname')}));
-                        breadcrumbsLayout.tab.show(
-                                new Breadcrumbs.Text({text: tab}));
-                        breadcrumbsLayout.controls.show(breadcrumbsControls);
+                        breadcrumbsLayout.tab.show(new Breadcrumbs.Text({text: tab}));
+                        layoutView.sidebar.show(
+                            new Views.NodeDetailedSidebar({tab: tab, nodeId : nodeId}));
+                        layoutView.statusLine.show(
+                            new Views.NodeDetailedSatusLine({model : node, nodeId: nodeId}));
 
                         if (tab === 'logs') {
                             layoutView.tabContent.show(

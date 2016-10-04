@@ -9,6 +9,10 @@
 @checkedColor: #61c46d;
 
 
+.profile-menu{
+    .mdi('person_outline', 20px, #3197ee, #3d464d);
+}
+
 #breadcrumbs{
     #nav-search{
         .mdi('search',34px, #fff, #fff);
@@ -132,56 +136,55 @@
 .sidebar{
     .nav-sidebar{
         li{
-            span{ color: @statusLineTextColor; }
+            span, a{ color: @statusLineTextColor; }
             &.users{
                 .mdi('group',18px, @defaultIconColor, @defaultIconColorDarken);
-                &:hover span{color: @hoverStatusLineText; }
+                &:hover span, a{color: @hoverStatusLineText; }
             }
             &.profile{
                 .mdi('person',18px, @defaultIconColor, @defaultIconColorDarken);
-                &:hover span{color: @hoverStatusLineText; }
+                &:hover span, a{color: @hoverStatusLineText; }
             }
             &.variables{
                 .mdi('tune',18px, @defaultIconColor, @defaultIconColorDarken);
-                &:hover span{color: @hoverStatusLineText; }
+                &:hover span, a{color: @hoverStatusLineText; }
             }
             &.stats{
                 .mdi('equalizer',18px, @defaultIconColor, @defaultIconColorDarken);
-                &:hover span{color: @hoverStatusLineText; }
+                &:hover span, a{color: @hoverStatusLineText; }
             }
             &.logHistory{
                 .mdi('history',18px, @defaultIconColor, @defaultIconColorDarken);
-                &:hover span{color: @hoverStatusLineText; }
+                &:hover span, a{color: @hoverStatusLineText; }
             }
             &.license{
                 .mdi('star_border',18px, @defaultIconColor, @defaultIconColorDarken);
-                &:hover span{color: @hoverStatusLineText; }
+                &:hover span, a{color: @hoverStatusLineText; }
             }
             &.domain{
                 .mdi('language',18px, @defaultIconColor, @defaultIconColorDarken);
-                &:hover span{color: @hoverStatusLineText; }
+                &:hover span, a{color: @hoverStatusLineText; }
             }
             &.billing{
                 .mdi('attach_money',18px, @defaultIconColor, @defaultIconColorDarken);
-                &:hover span{color: @hoverStatusLineText; }
+                &:hover span, a{color: @hoverStatusLineText; }
             }
             &.monitoring{
                 .mdi('timeline',18px, @defaultIconColor, @defaultIconColorDarken);
-                &:hover span{color: @hoverStatusLineText; }
+                &:hover span, a{color: @hoverStatusLineText; }
             }
             &.configuration, &.general{
                 .mdi('settings',18px, @defaultIconColor, @defaultIconColorDarken);
-                &:hover span{color: @hoverStatusLineText; }
+                &:hover span, a{color: @hoverStatusLineText; }
             }
             &.activityPage{
                 .mdi('transfer_within_a_station',18px, @defaultIconColor, @defaultIconColorDarken);
             }
             &.active{
-                &:before, a, span{ color: @activeIconColor }
+                &:before, span, a{ color: @activeIconColor }
                 &:hover{
-                    &:before, a, span{ color: @activeIconColor }
+                    &:before, span, a{ color: @activeIconColor }
                 }
-
             }
         }
     }

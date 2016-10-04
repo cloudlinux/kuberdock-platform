@@ -1,3 +1,5 @@
+@import "variables.less";
+
 .message-box {
     .transition(all 300ms ease);
     .box-shadow-materials();
@@ -23,32 +25,20 @@
         #message-ctl{
             float: right;
             .toggler{
+                .font-fix();
                 .border-radius(50%);
                 top: 6px;
                 bottom: 0;
-                right: 4px;
+                right: 3px;
                 width: 27px;
                 height: 27px;
                 padding: 5px;
-                font-size: 0;
                 color: #dee6ef;
                 position: absolute;
-                background-color: #fff;
                 background: #fff url('../img/bell-small.png') center no-repeat;
-                &:before{
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    margin: auto;
-                }
-                &:hover{
-                    cursor: pointer;
-                }
-                &.move{
-                    .animation(bell, 5s, linear infinite)
-                }
+                &:before{ .center(); }
+                &:hover{ cursor: pointer; }
+                &.move{ .animation(bell, 5s, linear infinite); }
             }
         }
     }
@@ -62,22 +52,22 @@
         .info, .error, .warning, .success{
             font-size: 13px;
             font-weight: 400;
+            padding: 5px 10px;
             line-height: 17px;
             border-style: double;
             background-color: #fff;
-            padding: 5px 40px 5px 10px;
         }
         .info{
-            border-color: #fff;
+            border-color: #0074BF;
         }
         .error{
-            border-color: #E04D4D;
+            border-color: #f1485c;
         }
         .warning{
-            border-color: #EAAF51;
+            border-color: #f69336;
         }
         .success{
-            border-color: #69BC3C;
+            border-color: #43a047;
         }
     }
 }

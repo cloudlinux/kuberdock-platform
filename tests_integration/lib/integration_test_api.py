@@ -804,9 +804,15 @@ class KDPod(RESTMixin):
             u"pods delete --name {}".format(self.escaped_name),
             user=self.owner)
 
-    def redeploy(self):
+    def redeploy(self, wipeOut=False, applyEdit=False):
+        commands = {}
+        if wipeOut is True:
+            commands['wipeOut'] = wipeOut
+        if applyEdit is True:
+            commands['applyEdit'] = applyEdit
+
         data = {
-            'command': 'redeploy', 'commandOptions': {'wipeOut': True}
+            'command': 'redeploy', 'commandOptions': commands
         }
         self.cluster.kcli2(
             u"pods update --name {} '{}'".format(
@@ -921,6 +927,50 @@ class KDPod(RESTMixin):
         assert_eq(spec['restartPolicy'], self.restart_policy)
         assert_eq(spec['status'], "running")
         return spec
+
+    def change_kubes(self, kubes, container_name=None, container_image=None):
+        pod_spec = self.get_spec()
+        edit_data = {
+            "command": "edit",
+            "commandOptions": {},
+            "edited_config": {
+                "containers": pod_spec['containers'],
+                "kube_type": pod_spec["kube_type"],
+                "name": "",
+                "node": None,
+                "replicas": pod_spec["replicas"],
+                "restartPolicy": pod_spec['restartPolicy'],
+                "status": pod_spec['status'],
+                "volumes": pod_spec['volumes']
+            }
+        }
+        if not (container_name is None) ^ (container_image is None):
+            raise ValueError('You need to specify either the container_name'
+                             ' or container image')
+
+        if container_name is not None:
+            def predicate(c):
+                return c['name'] == container_name
+        elif container_image is not None:
+            def predicate(c):
+                return c['image'] == container_image
+
+        try:
+            container = next(c for c in
+                             edit_data['edited_config']['containers']
+                             if predicate(c))
+            container['kubes'] = kubes
+        except StopIteration:
+            LOG.error("Pod {} does not have {} container".format(
+                self.name, container_name))
+
+        _, out, _ = self.cluster.kcli2(
+            "pods update --name '{}' '{}'".format(self.name,
+                                                  json.dumps(edit_data)),
+            out_as_dict=True, user=self.owner)
+        LOG.debug("Pod {} updated".format(out))
+        self.redeploy(applyEdit=True)
+        self.kubes = kubes
 
 
 class _NginxPod(KDPod):
@@ -1085,65 +1135,6 @@ class _MybbPaPod(KDPAPod):
         self._generic_healthcheck()
         page = self.do_GET(path='/install/index.php')
         assert_in(u"MyBB Installation Wizard", page)
-
-
-class _OpenCartPaPod(KDPAPod):
-    SRC = 'opencart.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        page = self.do_GET(path='/install/index.php')
-        assert_in(u"Please read the OpenCart licence agreement", page)
-
-
-class _LimesurveyPaPod(KDPAPod):
-    SRC = 'limesurvey.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        page = self.do_GET(path='/index.php?r=installer/welcome')
-        assert_in(u"LimeSurvey installer", page)
-
-
-class _KokenPaPod(KDPAPod):
-    SRC = 'koken.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        page = self.do_GET()
-        assert_in(u"Koken - Setup", page)
-
-
-class _OwnCloudPaPod(KDPAPod):
-    SRC = 'owncloud.yaml'
-
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
-        ports = ports or [80]
-        self._wait_for_ports(ports, timeout)
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        page = self.do_GET()
-        assert_in(u"ownCloud", page)
-        assert_in(u"web services under your control", page)
-
-
-class _PhpBBPaPod(KDPAPod):
-    SRC = 'phpbb.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        page = self.do_GET(path='/install/index.php')
-        assert_in(u"Welcome to phpBB3!", page)
-
-
-class _WordpressPaPod(KDPAPod):
-    SRC = 'wordpress.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        page = self.do_GET(path='/wp-admin/install.php')
-        assert_in(u"WordPress &rsaquo; Installation", page)
 
 
 class VagrantIsAlreadyUpException(Exception):

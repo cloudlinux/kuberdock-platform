@@ -28,4 +28,4 @@ def test_redeploy_pod_with_unicode_name(cluster):
                     size=1)
 
     # Test redeploy ability
-    pod1.redeploy()
+    pod1.redeploy(wipeOut=True)

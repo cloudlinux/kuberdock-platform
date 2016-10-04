@@ -1,3 +1,5 @@
+import time
+
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.integration_test_utils import \
@@ -133,6 +135,20 @@ def test_pod_ip_resource(cluster):
     cluster.pods.create("nginx", "test_nginx_pod_3",
                         start=True, open_all_ports=False,
                         wait_for_status='running')
+
+
+@pipeline('main')
+@pipeline('main_upgraded')
+def test_nginx_kublet_resize(cluster):
+    # type: (KDIntegrationTestAPI) -> None
+    pod = cluster.pods.create("nginx", "test_nginx_pod_1",
+                              open_all_ports=True,
+                              start=True, wait_ports=True, healthcheck=True,
+                              wait_for_status='running')
+    pod.change_kubes(kubes=2, container_image='nginx')
+    pod.wait_for_ports()
+    time.sleep(15)
+    pod.healthcheck()
 
 
 def _gen_rnd_ceph_pv_name():

@@ -11,6 +11,9 @@ from kubedock.users.models import User, UserActivity
 from kubedock.pods.models import Pod
 from kubedock.billing.models import Package, PackageKube, Kube
 from kubedock.kapi import podcollection as kapi_podcollection
+from kubedock.kapi.podcollection import PodCollection
+from kubedock.pods.models import PodIP, IPPool
+from kubedock.validation import check_change_pod_data
 
 
 class UserCRUDTestCase(APITestCase):
@@ -183,8 +186,6 @@ class UserCRUDTestCase(APITestCase):
     @mock.patch.object(kapi_podcollection.KubeQuery, '_run')
     def test_suspend(self, _run):
         """AC-1608 In case of unsuspend, return all public IPs"""
-        from kubedock.kapi.podcollection import PodCollection
-        from kubedock.pods.models import PodIP, IPPool
 
         # Disable as otherwise test breaks. Was created before introducing
         # this feature
@@ -281,6 +282,48 @@ class UserCRUDTestCase(APITestCase):
         self.assert200(response)
         self.assertEqual(_count_pods_with_public_ip(), 2,
                          'all pods must get their ip back')
+
+    @mock.patch.object(kapi_podcollection, '_check_license', lambda: True)
+    @mock.patch.object(kapi_podcollection.PodCollection, 'update',
+                       return_value={})
+    @mock.patch.object(kapi_podcollection.KubeQuery, '_run')
+    def test_start_pod_suspend(self, _run, mock_update):
+        user = self.user
+        url = self.item_url(self.user.id)
+
+        ippool = IPPool(network='192.168.1.252/30')
+        ippool.block_ip([u'192.168.1.252', u'192.168.1.255'])
+        ippool.save()
+        min_pod = {'restartPolicy': 'Always', 'kube_type': 0, 'containers': [{
+            'image': 'nginx', 'name': 'fk8i0gai',
+            'args': ['nginx', '-g', 'daemon off;'],
+            'ports': [{'protocol': 'tcp', 'isPublic': True,
+                       'containerPort': 80}],
+        }]}
+
+        # pod
+        res = PodCollection(user).add(dict(min_pod, name='pod-1'),
+                                      skip_check=False)
+
+        data = {'command': 'start'}
+        pod_url = '/'.join(['podapi', res['id']])
+        response = self.open(url=pod_url, method='PUT',
+                             auth=self.userauth,
+                             json=data)
+        self.assert200(response)
+        check_data = check_change_pod_data(data)
+        mock_update.assert_called_once_with(res['id'], check_data)
+
+        data = {'suspended': True}
+        response = self.admin_open(url=url, method='PUT', json=data)
+        self.assert200(response)
+
+        mock_update.called = False
+        response = self.open(url=pod_url, method='PUT',
+                             auth=self.userauth,
+                             json={'command': 'start'})
+        self.assertAPIError(response, 403, "PermissionDenied")
+        assert mock_update.not_called
 
 
 class TestUsers(APITestCase):

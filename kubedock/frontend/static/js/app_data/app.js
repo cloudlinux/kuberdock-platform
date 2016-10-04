@@ -363,14 +363,15 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
 
     // track all unfinished requests, so we can abort them on logout
     $.xhrPool = [];
-    $(document).ajaxSend(function(e, xhr, options){
+
+    App.ajaxSendWrapper = function(e, xhr, options) {
         $.xhrPool.push(xhr);
 
         if (options.authWrap){
             var token = App.getCurrentAuth();
             if (token){
                 xhr.done(function(){
-                    if (xhr && (xhr.status === 401 || xhr.status === 403)){
+                    if (xhr && (xhr.status === 401)){
                         App.cleanUp().initApp();
                     } else if (App.getCurrentAuth()){
                         var token = xhr.getResponseHeader('X-Auth-Token');
@@ -380,7 +381,7 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                     }
                 })
                 .fail(function(xhr){
-                    if (xhr.status === 401 || xhr.status === 403) {
+                    if (xhr.status === 401) {
                         App.cleanUp().initApp();
                     }
                 }).setRequestHeader('X-Auth-Token', token);
@@ -389,7 +390,9 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                 App.cleanUp().initApp();
             }
         }
-    });
+    };
+
+    $(document).ajaxSend(App.ajaxSendWrapper);
     $(document).ajaxComplete(function(e, xhr){
         $.xhrPool.splice(_.indexOf($.xhrPool, xhr), 1);
     });

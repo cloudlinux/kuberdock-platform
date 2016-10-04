@@ -8,7 +8,7 @@
 - name: Patching a licensing
   lineinfile:
       dest: "{{ master_kd_src_path }}/kubedock/kapi/licensing.py"
-      line: "def is_valid(): return True" 
+      line: "def is_valid(): return True"
       state: present
   when: license_path == 'patch'
   register: patch_license
@@ -23,8 +23,8 @@
 - name: Patching a licensing on host
   become: false
   lineinfile:
-      dest: "../../kubedock/kapi/licensing.py"
-      line: "def is_valid(): return True" 
+      dest: "{{ host_proj_root }}/kubedock/kapi/licensing.py"
+      line: "def is_valid(): return True"
       state: present
   when: license_path == 'patch'
   delegate_to: localhost
@@ -34,7 +34,7 @@
 
 - name: Hide modified license file from git
   become: False
-  command: git update-index --assume-unchanged ../../kubedock/kapi/licensing.py
+  command: git update-index --assume-unchanged "{{ host_proj_root }}/kubedock/kapi/licensing.py"
   delegate_to: localhost
   when: license_path == 'patch'
   tags:

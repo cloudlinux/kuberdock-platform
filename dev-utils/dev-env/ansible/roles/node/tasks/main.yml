@@ -2,7 +2,7 @@
 
 - name: Docker options
   set_fact:
-      docker_options: --insecure-registry=192.168.115.165:5001 --insecure-registry=dockerhub-proxy.cloudlinux.com:5000 --registry-mirror=https://dockerhub-proxy.cloudlinux.com:5000 --registry-mirror=http://192.168.115.165:5001
+      docker_options: --insecure-registry=192.168.115.165:5001 --registry-mirror=http://192.168.115.165:5001
   when: is_nebula
 
 - name: Assign key

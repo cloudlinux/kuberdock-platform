@@ -453,10 +453,10 @@ class NodeList(object):
 
     def add(self, node_name, kube_type="Standard"):
         docker_options = \
-            '' \
             '--insecure-registry=192.168.115.165:5001' \
+            '--registry-mirror=http://192.168.115.165:5001' \
             '' \
-            '--registry-mirror=http://192.168.115.165:5001'
+            ''
 
         add_cmd = 'add-node --hostname {} --kube-type {} --do-deploy -t ' \
                   '--docker-options="{}"'.format(node_name, kube_type,

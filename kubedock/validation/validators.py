@@ -11,6 +11,7 @@ from kubedock.rbac.models import Role
 from kubedock.settings import KUBERDOCK_INTERNAL_USER, AWS, CEPH
 from kubedock.system_settings.models import SystemSettings
 from kubedock.users.utils import strip_offset_from_timezone
+from kubedock.utils import get_timezone
 from .exceptions import APIError, ValidationError
 from .schemas import *
 
@@ -237,6 +238,13 @@ def check_node_data(data):
     V(allow_unknown=True)._api_validation(data, node_schema)
     if is_ip(data['hostname']):
         raise ValidationError('Please add nodes by hostname, not by ip')
+
+    try:
+        get_timezone()
+    except OSError as err:
+        raise ValidationError(
+            'Unable to decect timezone on master: "{}". Please set timezone '
+            'before adding a node.'.format(repr(err)))
 
 
 def is_ip(addr):

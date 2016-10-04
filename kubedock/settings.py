@@ -249,6 +249,7 @@ ETCD_REGISTERED_HOSTS = 'http://127.0.0.1:4001/' \
 NONFLOATING_PUBLIC_IPS = False
 WITH_TESTING = False
 
+AWS = False
 # Import hoster settings in update case
 
 
@@ -277,7 +278,18 @@ if cp.read(KUBERDOCK_SETTINGS_FILE) and cp.has_section('main'):
         SECRET_KEY = cp.get('main', 'SECRET_KEY')
     if cp.has_option('main', 'WITH_TESTING'):
         WITH_TESTING = cp.getboolean('main', 'WITH_TESTING')
-
+    if cp.has_option('main', 'AWS'):
+        AWS = cp.getboolean('main', 'AWS')
+    if cp.has_option('main', 'REGION'):
+        REGION = cp.get('main', 'REGION')
+    if cp.has_option('main', 'AVAILABILITY_ZONE'):
+        AVAILABILITY_ZONE = cp.get('main', 'AVAILABILITY_ZONE')
+    if cp.has_option('main', 'AWS_ACCESS_KEY_ID'):
+        AWS_ACCESS_KEY_ID = cp.get('main', 'AWS_ACCESS_KEY_ID')
+    if cp.has_option('main', 'AWS_SECRET_ACCESS_KEY'):
+        AWS_SECRET_ACCESS_KEY = cp.get('main', 'AWS_SECRET_ACCESS_KEY')
+    if cp.has_option('main', 'AWS_EBS_DEFAULT_SIZE'):
+        AWS_EBS_EXTEND_STEP = cp.get('main', 'AWS_EBS_DEFAULT_SIZE')
 
 # Import local settings
 try:
@@ -291,16 +303,6 @@ DB_CONNECT_STRING = "{0}:{1}@{2}/{3}".format(DB_USER, DB_PASSWORD,
                                              DB_HOST, DB_NAME)
 SQLALCHEMY_DATABASE_URI = '{0}://{1}'.format(DB_ENGINE, DB_CONNECT_STRING)
 
-
-AWS = False
-# Default size to extend persistent storage on AWS nodes (in GB)
-# TODO: replace with reasonable value. 1 GB size is for test purpose only.
-# TODO: https://cloudlinux.atlassian.net/browse/AC-3699
-AWS_EBS_EXTEND_STEP = 1
-try:
-    from .amazon_settings import *  # noqa
-except ImportError:
-    pass
 
 CEPH = False
 CEPH_POOL_NAME = 'rbd'

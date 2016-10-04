@@ -850,6 +850,19 @@ class KDPod(RESTMixin):
     def escaped_name(self):
         return pipes.quote(self.name)
 
+    @property
+    def ssh_credentials(self):
+        return retry(self._get_creds, tries=10, interval=1)
+
+    def _get_creds(self):
+        direct_access = self.get_spec()['direct_access']
+        links = [v.split('@') for v in direct_access['links'].values()]
+        return {
+            'password': direct_access['auth'],
+            'users': [v[0] for v in links],
+            'hosts': [v[1] for v in links]
+        }
+
     def get_container_ip(self, container_id):
         """
         Returns internal IP of a given container within the current POD

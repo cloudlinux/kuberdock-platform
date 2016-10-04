@@ -2,10 +2,14 @@ import os
 from collections import defaultdict
 from functools import wraps
 from ipaddress import IPv4Network
+from shutil import rmtree
 
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
 from tests_integration.lib.integration_test_utils import set_eviction_timeout
+from tempfile import NamedTemporaryFile, mkdtemp
+
+from tests_integration.lib.integration_test_utils import get_rnd_string
 
 
 class MainPipeline(Pipeline):
@@ -191,6 +195,80 @@ class PredefinedApps(Pipeline):
     def post_create_hook(self):
         super(PredefinedApps, self).post_create_hook()
         self.cluster.wait_for_service_pods()
+
+
+class SSHPipeline(Pipeline):
+    NAME = 'ssh_feature'
+    ROUTABLE_IP_COUNT = 1
+    ENV = {
+        'KD_NODES_COUNT': '1'
+    }
+
+    def set_up(self):
+        self.cluster.temp_files = self._create_temp_files()
+        super(SSHPipeline, self).set_up()
+
+    def tear_down(self):
+        super(SSHPipeline, self).tear_down()
+        self._delete_temp_files()
+
+    def _create_temp_files(self):
+        local_src_file = self._create_file()
+        # Need to make an extra subdirectory level to avoid conflicts during
+        # testing
+        local_src_dir = mkdtemp(dir=mkdtemp())
+        local_src_subdir = mkdtemp(dir=local_src_dir)
+        local_files = [os.path.basename(self._create_file(
+                       dst_dir=local_src_dir))
+                       for _ in range(3)]
+        local_files.append(os.path.join(
+            os.path.basename(local_src_subdir),
+            os.path.basename(self._create_file(dst_dir=local_src_subdir))))
+
+        local_dst_file = self._create_file()
+        local_dst_dir = mkdtemp()
+
+        remote_src_file = self._create_file()
+        remote_src_dir = mkdtemp(dir=local_dst_dir)
+        remote_src_subdir = mkdtemp(dir=remote_src_dir)
+        remote_files = [os.path.basename(self._create_file(
+                        dst_dir=remote_src_dir))
+                        for _ in range(3)]
+        remote_files.append(os.path.join(
+            os.path.basename(remote_src_subdir),
+            os.path.basename(self._create_file(dst_dir=remote_src_subdir))))
+
+        remote_dst_file = self._create_file()
+        remote_dst_dir = os.path.dirname(local_src_dir)
+
+        return {
+            'local_src_file': local_src_file,
+            'local_src_dir': local_src_dir,
+            'local_src_subdir': local_src_subdir,
+            'local_files': local_files,
+            'local_dst_file': local_dst_file,
+            'local_dst_dir': local_dst_dir,
+            'remote_src_file': remote_src_file,
+            'remote_src_dir': remote_src_dir,
+            'remote_src_subdir': remote_src_subdir,
+            'remote_files': remote_files,
+            'remote_dst_file': remote_dst_file,
+            'remote_dst_dir': remote_dst_dir
+        }
+
+    def _create_file(self, dst_dir=None):
+        with NamedTemporaryFile(delete=False, dir=dst_dir) as f:
+            f.write(get_rnd_string(prefix='source_file_string_'))
+            f.close()
+            return f.name
+
+    def _delete_temp_files(self):
+        for key in self.cluster.temp_files:
+            if key != 'local_files' and key != 'remote_files':
+                if os.path.isdir(self.cluster.temp_files[key]):
+                    rmtree(self.cluster.temp_files[key])
+                elif os.path.exists(self.cluster.temp_files[key]):
+                    os.unlink(self.cluster.temp_files[key])
 
 
 pipelines = defaultdict(list)

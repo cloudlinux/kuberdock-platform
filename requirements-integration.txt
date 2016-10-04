@@ -8,6 +8,7 @@ pytest==3.0.1
 pytest-instafail==0.3.0
 pygments
 click>=6.3
+pexpect==4.2.0
 git+https://github.com/python-oca/python-oca@fe5e7fee2a3e9c21874f90aca8940ad895b529c8
 junit-xml==1.7
 requests==2.4.3

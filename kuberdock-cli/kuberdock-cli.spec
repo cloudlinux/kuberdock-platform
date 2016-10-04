@@ -57,7 +57,7 @@ rm -rf %{buildroot}
 
 %changelog
 
-* Thu Sep 12 2016 Aleksandr Skorodumov <askorodumov@cloudlinux.com> 1.0-5
+* Mon Sep 12 2016 Aleksandr Skorodumov <askorodumov@cloudlinux.com> 1.0-5
 - AC-3931 AC-3696 Network isolation rules
 
 * Thu Jul 07 2016 Sergey Gruntovsky <sgruntovsky@cloudlinux.com>, Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>, Aleksandr Skorodumov <askorodumov@cloudlinux.com> 1.0-4

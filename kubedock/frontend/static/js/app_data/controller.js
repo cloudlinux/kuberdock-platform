@@ -974,7 +974,7 @@ define([
                         layoutView.main.show(view);
                     });
                     App.contents.show(layoutView);
-                })
+                });
             });
         },
 

@@ -12,8 +12,7 @@ from kubedock.kapi import ippool
 from kubedock.pods.models import IPPool
 from kubedock.testutils.fixtures import K8SAPIStubs
 from kubedock.testutils.testcases import DBTestCase
-from kubedock.kapi.node import Node as K8SNode, \
-    NodeExceptionNegativeFreeIPCount
+from kubedock.kapi.node import Node as K8SNode
 from kubedock.testutils.testcases import attr
 from flask import current_app
 

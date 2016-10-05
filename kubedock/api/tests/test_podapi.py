@@ -4,7 +4,7 @@ from uuid import uuid4
 
 import mock
 
-from kubedock.kapi.podcollection import PodNotFound
+from kubedock.kapi.podcollection import PodNotFound, PodCollection, KubeQuery
 from kubedock.system_settings.models import SystemSettings
 from kubedock.testutils.testcases import APITestCase
 
@@ -139,6 +139,20 @@ class TestPodAPI(APITestCase):
 
         PodCollection().update_container.assert_called_once_with(
             pod_id, container_name)
+
+    @mock.patch.object(PodCollection, 'stop_unpaid', return_value=None)
+    @mock.patch.object(KubeQuery, '_run')
+    def test_stop_unpaid(self, _run, _stop_unpaid):
+        pod = self.fixtures.pod(status='succeeded', owner=self.user)
+
+        data = {
+            'command': 'stop-unpaid',
+        }
+        response = self.open(PodAPIUrl.put(pod.id), 'PUT', data,
+                             auth=self.adminauth)
+        self.assert200(response)
+        assert _stop_unpaid.called
+        assert _stop_unpaid.call_args[0][0].id == pod.id
 
 
 if __name__ == '__main__':

@@ -41,7 +41,7 @@ from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
-from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils
+from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils, send_event_to_role
 
 UNKNOWN_ADDRESS = 'Unknown'
 
@@ -633,6 +633,7 @@ class PodCollection(object):
             # add new pod config that will be applied after next manual restart
             'edit': self.edit,
             'unbind-ip': self._unbind_ip,
+            'stop-unpaid': self.stop_unpaid,
         }
         if command in dispatcher:
             return dispatcher[command](pod, data)
@@ -1413,6 +1414,12 @@ class PodCollection(object):
     def _unbind_ip(self, pod, data=None):
         self.unbind_publicIP(pod.id)
 
+    @classmethod
+    def stop_unpaid(cls, pod, data=None, block=False):
+        if block:
+            pod_stop_and_unpaid(pod)
+        else:
+            pod_stop_and_unpaid_task.delay(pod)
 
 def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
                     error_message=None):
@@ -1976,3 +1983,20 @@ def change_pv_size(persistent_disk_id, new_size):
             restart=restart_required
         )
     return ok, changed_pod_ids
+
+
+def pod_stop_and_unpaid(pod):
+    PodCollection._stop_pod(pod, raise_=False, block=True)
+    if pod.status in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
+        pod.set_status(POD_STATUSES.unpaid, send_update=True)
+    else:
+        message = 'Cannot set "unpaid" status: pod is not stopped.'
+        admin_message = '{0} PodId is {1}'.format(message, pod.id)
+        send_event_to_role('notify:error',
+                           {'message': admin_message}, 'Admin')
+        raise APIError(message)
+
+
+@celery.task(ignore_results=True)
+def pod_stop_and_unpaid_task(*args, **kwargs):
+    pod_stop_and_unpaid(*args, **kwargs)

@@ -9,9 +9,12 @@ RUN pip install --upgrade pip && pip install virtualenv
 # Pre-build test env. Before test run requirements are checked again.
 # It is much faster to check/install-missing than full install.
 COPY requirements.txt requirements-dev.txt /
+
+# FIXME http://stackoverflow.com/questions/38836293/make-python-libraries-installed-with-requirements-txt-immediately-available
 RUN cd / && \
     virtualenv venv && \
     source venv/bin/activate && \
+    pip install requests==2.4.3 && \
     pip install -r requirements.txt -r requirements-dev.txt && \
     rm -f requirements.txt requirements-dev.txt
 

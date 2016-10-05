@@ -57,3 +57,8 @@ def test_magento_pa(cluster):
 @pipeline('predefined_apps')
 def test_mantis_pa(cluster):
     check_pa(cluster, 'mantis.yaml')
+
+
+@pipeline('predefined_apps')
+def test_mybb_pa(cluster):
+    check_pa(cluster, 'mybb.yaml')

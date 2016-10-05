@@ -1081,6 +1081,15 @@ class _MantisPaPod(KDPAPod):
         assert_in(u"Administration - Installation - MantisBT", page)
 
 
+class _MybbPaPod(KDPAPod):
+    SRC = 'mybb.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/install/index.php')
+        assert_in(u"MyBB Installation Wizard", page)
+
+
 class VagrantIsAlreadyUpException(Exception):
     pass
 

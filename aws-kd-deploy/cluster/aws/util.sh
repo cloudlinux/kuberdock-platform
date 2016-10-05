@@ -232,7 +232,6 @@ function query-running-minions () {
            --filters Name=instance-state-name,Values=running \
                      Name=vpc-id,Values=${VPC_ID} \
                      Name=tag:KubernetesCluster,Values=${CLUSTER_ID} \
-                     Name=tag:aws:autoscaling:groupName,Values=${ASG_NAME} \
                      Name=tag:Role,Values=${NODE_TAG} \
            --query ${query}
 }
@@ -1301,34 +1300,56 @@ function start-minions() {
   else
     public_ip_option="--no-associate-public-ip-address"
   fi
-  local spot_price_option
-  if [[ -n "${NODE_SPOT_PRICE:-}" ]]; then
-    spot_price_option="--spot-price ${NODE_SPOT_PRICE}"
-  else
-    spot_price_option=""
-  fi
-  ${AWS_ASG_CMD} create-launch-configuration \
-      --launch-configuration-name ${ASG_NAME} \
-      --image-id $KUBE_NODE_IMAGE \
-      --iam-instance-profile ${IAM_PROFILE_NODE} \
-      --instance-type $NODE_SIZE \
-      --key-name ${AWS_SSH_KEY_NAME} \
-      --security-groups ${NODE_SG_ID} \
-      ${public_ip_option} \
-      ${spot_price_option} \
-      --block-device-mappings "${NODE_BLOCK_DEVICE_MAPPINGS}" \
-      --user-data "fileb://${KUBE_TEMP}/node-user-data.gz"
 
-  echo "Creating autoscaling group"
-  ${AWS_ASG_CMD} create-auto-scaling-group \
-      --auto-scaling-group-name ${ASG_NAME} \
-      --launch-configuration-name ${ASG_NAME} \
-      --min-size ${NUM_NODES} \
-      --max-size ${NUM_NODES} \
-      --vpc-zone-identifier ${SUBNET_ID} \
-      --tags ResourceId=${ASG_NAME},ResourceType=auto-scaling-group,Key=Name,Value=${NODE_INSTANCE_PREFIX} \
-             ResourceId=${ASG_NAME},ResourceType=auto-scaling-group,Key=Role,Value=${NODE_TAG} \
-             ResourceId=${ASG_NAME},ResourceType=auto-scaling-group,Key=KubernetesCluster,Value=${CLUSTER_ID}
+  for i in $(seq 1 $NUM_NODES); do
+      echo "Creating minion #$i"
+      node_id=$($AWS_CMD run-instances \
+        --image-id $AWS_IMAGE \
+        --iam-instance-profile Name=$IAM_PROFILE_NODE \
+        --instance-type $NODE_SIZE \
+        --subnet-id $SUBNET_ID \
+        --key-name ${AWS_SSH_KEY_NAME} \
+        --security-group-ids ${MASTER_SG_ID} \
+        $public_ip_option \
+        --block-device-mappings "${NODE_BLOCK_DEVICE_MAPPINGS}" \
+        --user-data fileb://${KUBE_TEMP}/node-user-data.gz \
+        --query Instances[].InstanceId)
+
+      add-tag $node_id Role $NODE_TAG
+      add-tag $node_id Name ${NODE_NAME}-$i
+      add-tag $node_id KubernetesCluster ${CLUSTER_ID}
+      $AWS_CMD modify-instance-attribute --instance-id $node_id --source-dest-check '{"Value": false}'
+  done
+
+# TODO: Autoscalling is disabled until it is fixed in AC-4506
+#  local spot_price_option
+#  if [[ -n "${NODE_SPOT_PRICE:-}" ]]; then
+#    spot_price_option="--spot-price ${NODE_SPOT_PRICE}"
+#  else
+#    spot_price_option=""
+#  fi
+#  ${AWS_ASG_CMD} create-launch-configuration \
+#      --launch-configuration-name ${ASG_NAME} \
+#      --image-id $KUBE_NODE_IMAGE \
+#      --iam-instance-profile ${IAM_PROFILE_NODE} \
+#      --instance-type $NODE_SIZE \
+#      --key-name ${AWS_SSH_KEY_NAME} \
+#      --security-groups ${NODE_SG_ID} \
+#      ${public_ip_option} \
+#      ${spot_price_option} \
+#      --block-device-mappings "${NODE_BLOCK_DEVICE_MAPPINGS}" \
+#      --user-data "fileb://${KUBE_TEMP}/node-user-data.gz"
+#
+#  echo "Creating autoscaling group"
+#  ${AWS_ASG_CMD} create-auto-scaling-group \
+#      --auto-scaling-group-name ${ASG_NAME} \
+#      --launch-configuration-name ${ASG_NAME} \
+#      --min-size ${NUM_NODES} \
+#      --max-size ${NUM_NODES} \
+#      --vpc-zone-identifier ${SUBNET_ID} \
+#      --tags ResourceId=${ASG_NAME},ResourceType=auto-scaling-group,Key=Name,Value=${NODE_INSTANCE_PREFIX} \
+#             ResourceId=${ASG_NAME},ResourceType=auto-scaling-group,Key=Role,Value=${NODE_TAG} \
+#             ResourceId=${ASG_NAME},ResourceType=auto-scaling-group,Key=KubernetesCluster,Value=${CLUSTER_ID}
 }
 
 function wait-minions {
@@ -1360,10 +1381,6 @@ function wait-minions {
     echo -e " ${color_yellow}${#NODE_IDS[@]} minions started; waiting${color_norm}"
     attempt=$(($attempt+1))
     sleep 10
-  done
-
-  for node_id in "${NODE_IDS[@]}"; do
-    $AWS_CMD modify-instance-attribute --instance-id $node_id --source-dest-check '{"Value": false}'
   done
 }
 
@@ -1495,19 +1512,20 @@ function kube-down {
                             --query Reservations[].Instances[].InstanceId)
 
     if [[ -n "${instance_ids}" ]]; then
-      asg_groups=$($AWS_CMD   describe-instances \
-                              --query 'Reservations[].Instances[].Tags[?Key==`aws:autoscaling:groupName`].Value[]' \
-                              --instance-ids ${instance_ids})
-      for asg_group in ${asg_groups}; do
-        if [[ -n $(${AWS_ASG_CMD} describe-auto-scaling-groups --auto-scaling-group-names ${asg_group} --query AutoScalingGroups[].AutoScalingGroupName) ]]; then
-          echo "Deleting auto-scaling group: ${asg_group}"
-          ${AWS_ASG_CMD} delete-auto-scaling-group --force-delete --auto-scaling-group-name ${asg_group}
-        fi
-        if [[ -n $(${AWS_ASG_CMD} describe-launch-configurations --launch-configuration-names ${asg_group} --query LaunchConfigurations[].LaunchConfigurationName) ]]; then
-          echo "Deleting auto-scaling launch configuration: ${asg_group}"
-          ${AWS_ASG_CMD} delete-launch-configuration --launch-configuration-name ${asg_group}
-        fi
-      done
+# TODO: AC-4506 uncomment in that ticket
+#      asg_groups=$($AWS_CMD   describe-instances \
+#                              --query 'Reservations[].Instances[].Tags[?Key==`aws:autoscaling:groupName`].Value[]' \
+#                              --instance-ids ${instance_ids})
+#      for asg_group in ${asg_groups}; do
+#        if [[ -n $(${AWS_ASG_CMD} describe-auto-scaling-groups --auto-scaling-group-names ${asg_group} --query AutoScalingGroups[].AutoScalingGroupName) ]]; then
+#          echo "Deleting auto-scaling group: ${asg_group}"
+#          ${AWS_ASG_CMD} delete-auto-scaling-group --force-delete --auto-scaling-group-name ${asg_group}
+#        fi
+#        if [[ -n $(${AWS_ASG_CMD} describe-launch-configurations --launch-configuration-names ${asg_group} --query LaunchConfigurations[].LaunchConfigurationName) ]]; then
+#          echo "Deleting auto-scaling launch configuration: ${asg_group}"
+#          ${AWS_ASG_CMD} delete-launch-configuration --launch-configuration-name ${asg_group}
+#        fi
+#      done
 
       $AWS_CMD terminate-instances --instance-ids ${instance_ids} > $LOG
       echo "Waiting for instances to be deleted"

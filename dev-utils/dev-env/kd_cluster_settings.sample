@@ -55,7 +55,7 @@ export VAGRANT_CWD=dev-utils/dev-env/
 
 # Custom OpenNebula template ID for registered hosts
 # default: 0 - non-valid value. Must be set when KD_RHOSTS_COUNT>0.
-#export KD_NEBULA_RHOST_TEMPLATE_ID=226
+#export KD_NEBULA_RHOST_TEMPLATE_ID=100
 
 # OpenNebula template name
 # default: kd-dev-public-net

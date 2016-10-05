@@ -1110,9 +1110,9 @@ function deploy-master(){
     fi
 
     if [[ ${TESTING} == "yes" ]]; then
-	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "sudo ROUTE_TABLE_ID=${ROUTE_TABLE_ID} AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} bash -l deploy.sh -t" < <(cat) 2>"$LOG"
+	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "sudo ROUTE_TABLE_ID=${ROUTE_TABLE_ID} AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} AWS_EBS_DEFAULT_SIZE=${AWS_EBS_DEFAULT_SIZE} bash -l deploy.sh -t" < <(cat) 2>"$LOG"
     else
-	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "sudo ROUTE_TABLE_ID=${ROUTE_TABLE_ID} AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} bash -l deploy.sh" < <(cat) 2>"$LOG"
+	ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "sudo ROUTE_TABLE_ID=${ROUTE_TABLE_ID} AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} AWS_EBS_DEFAULT_SIZE=${AWS_EBS_DEFAULT_SIZE} bash -l deploy.sh" < <(cat) 2>"$LOG"
     fi
 
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" mkdir /home/${SSH_USER}/kuberdock-files  2>"$LOG"

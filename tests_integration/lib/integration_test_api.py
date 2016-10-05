@@ -13,7 +13,6 @@ from datetime import datetime
 
 import paramiko
 import vagrant
-import yaml
 import redis
 import memcache
 from ipaddress import IPv4Network
@@ -1061,6 +1060,20 @@ class _MemcachedPaPod(KDPAPod):
                              debug=0)
         mc.set("foo", "bar")
         assert_eq(mc.get("foo"), "bar")
+
+
+class _Gallery3PaPod(KDPAPod):
+    SRC = 'gallery3.yaml'
+
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        ports = ports or [80]
+        self._wait_for_ports(ports, timeout)
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/installer/')
+        assert_in(u"Installing Gallery is easy.  "
+                  "We just need a place to put your photos", page)
 
 
 class VagrantIsAlreadyUpException(Exception):

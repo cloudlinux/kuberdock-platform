@@ -42,3 +42,8 @@ def test_joomla_pa(cluster):
 @pipeline('predefined_apps')
 def test_memcached_pa(cluster):
     check_pa(cluster, 'memcached.yaml')
+
+
+@pipeline('predefined_apps')
+def test_gallery_pa(cluster):
+    check_pa(cluster, 'gallery3.yaml')

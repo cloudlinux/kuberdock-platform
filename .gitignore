@@ -32,3 +32,4 @@ node_modules/
 npm-debug.log*
 kubedock/frontend/static/local-config.js
 aws-kd-deploy/kuberdock-files/
+kubedock/frontend/static/prepared*

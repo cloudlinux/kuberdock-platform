@@ -1,7 +1,3 @@
-define(['app_data/tests/specs/models',
-        'app_data/tests/specs/views',
-        'app_data/tests/specs/utils'
-
-], function(){
-
-});
+import './specs/models';
+import './specs/utils';
+import './specs/users/views.js';

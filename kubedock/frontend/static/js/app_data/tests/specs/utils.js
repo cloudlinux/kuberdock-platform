@@ -1,8 +1,10 @@
 /* eslint-env mocha */
 mocha.allowUncaught();
 
-const chai = require('chai');
-const utils = require('app_data/utils');
+import chai from 'chai';
+import * as utils from 'app_data/utils';
+import {__RewireAPI__ as UtilsRewireAPI} from 'app_data/utils';
+
 
 describe('Utils Tests', function(){
 
@@ -34,7 +36,7 @@ describe('Utils Tests', function(){
             window.setTimeout(function () { // if next expect assert
                 chai.expect($('body').scrollTop()).to.be.equal($toScroll.offset().top - 50);
                 done();
-            }, 600);
+            }, 550);
         });
 
     });
@@ -78,7 +80,7 @@ describe('Utils Tests', function(){
                 }
             };
         };
-        utils.__with__({moment: momentMock})(function(){
+        UtilsRewireAPI.__with__({moment: momentMock})(function(){
             utils.dateYYYYMMDD(testDate);
         });
     });
@@ -252,83 +254,84 @@ describe('Utils Tests', function(){
     });
 
 
-    it("notifyWindow", function () {
+    describe("notifyWindow", function () {
 
-        // fake jqXHR message
-        var fakejqXHR = {
-            'responseJSON': {
-                'data': 'test message',
-                'status': 'ok'
-            },
-            'status': 200,
-            getResponseHeader: function(contentType){ return 'text/html'; }
-        };
+        after(function(){ $('.notifyjs-wrapper').remove(); });
 
-        utils.notifyWindow(fakejqXHR);
-        chai.expect($('.notify-msg').html()).to.be.equal('test message');
+        it("notifyWindow", function (done) {
 
-        // test error codes
-        var messageTemplate = 'It seems like something goes wrong (%error%). Reload page,' +
-            ' try again later, or contact support if problem appears again.';
+            // fake jqXHR message
+            var fakejqXHR = {
+                'responseJSON': {
+                    'data': 'test message',
+                    'status': 'ok'
+                },
+                'status': 200,
+                getResponseHeader: function(contentType){ return 'text/html'; }
+            };
 
-        delete fakejqXHR.responseJSON;
+            $.notify.defaults({autoHideDelay: 50, showDuration: 50, hideDuration: 50});
 
-        fakejqXHR.status = 500;
-        utils.notifyWindow(fakejqXHR);
-        chai.expect($('.notify-msg').html()).to.be.equal(
-            messageTemplate.replace('%error%', 'Internal server error')
-        );
+            utils.notifyWindow(fakejqXHR);
+            chai.expect($('.notify-msg').html()).to.be.equal('test message');
 
-        fakejqXHR.status = 502;
-        utils.notifyWindow(fakejqXHR);
-        chai.expect($('.notify-msg').html()).to.be.equal(
-            messageTemplate.replace('%error%', 'Server is unavailable')
-        );
+            // test error codes
+            var messageTemplate = 'It seems like something goes wrong (%error%). Reload page,' +
+                ' try again later, or contact support if problem appears again.';
 
-        fakejqXHR.status = 504;
-        utils.notifyWindow(fakejqXHR);
-        chai.expect($('.notify-msg').html()).to.be.equal(
-            messageTemplate.replace('%error%', 'Timeout error')
-        );
+            delete fakejqXHR.responseJSON;
 
-        // costom server message
-        fakejqXHR.status = 501;
-        fakejqXHR.statusText = 'Not Implemented';
-        utils.notifyWindow(fakejqXHR);
-        chai.expect($('.notify-msg').html()).to.be.equal(
-            messageTemplate.replace('%error%', 'Not Implemented')
-        );
+            fakejqXHR.status = 500;
+            utils.notifyWindow(fakejqXHR);
+            chai.expect($('.notify-msg').html()).to.be.equal(
+                messageTemplate.replace('%error%', 'Internal server error')
+            );
 
-        // string message
-        utils.notifyWindow('string message', 'ok');
-        chai.expect($('.notify-msg').html()).to.be.equal('string message');
-        chai.expect($('.notify-count').html()).to.be.equal('');
-        // repeat message
-        utils.notifyWindow('string message', 'ok');
-        chai.expect($('.notify-count').html()).to.be.equal('');
+            fakejqXHR.status = 502;
+            utils.notifyWindow(fakejqXHR);
+            chai.expect($('.notify-msg').html()).to.be.equal(
+                messageTemplate.replace('%error%', 'Server is unavailable')
+            );
 
-        // show notify count only for error messages
-        utils.notifyWindow('error message', 'error');
-        utils.notifyWindow('error message', 'error');
-        chai.expect($('.notify-count').html()).to.be.equal('2');
+            fakejqXHR.status = 504;
+            utils.notifyWindow(fakejqXHR);
+            chai.expect($('.notify-msg').html()).to.be.equal(
+                messageTemplate.replace('%error%', 'Timeout error')
+            );
 
+            // costom server message
+            fakejqXHR.status = 501;
+            fakejqXHR.statusText = 'Not Implemented';
+            utils.notifyWindow(fakejqXHR);
+            chai.expect($('.notify-msg').html()).to.be.equal(
+                messageTemplate.replace('%error%', 'Not Implemented')
+            );
 
+            // string message
+            utils.notifyWindow('string message', 'success');
+            chai.expect($('.notify-msg').html()).to.be.equal('string message');
+            chai.expect($('.notify-count').html()).to.be.equal('');
+            // repeat message
+            utils.notifyWindow('string message', 'success');
+            chai.expect($('.notify-count').html()).to.be.equal('');
+
+            // show notify count only for error messages
+            utils.notifyWindow('error message', 'error');
+            utils.notifyWindow('error message', 'error');
+            chai.expect($('.notify-count').html()).to.be.equal('2');
+
+            _.delay(() => {
+                // all "success" notification should be closed automatically
+                chai.expect($('.notify-msg').length).to.be.equal(5);
+                utils.notifyWindowClose();  // close all errors too
+                _.delay(() => {
+                    chai.expect($('.notify-msg').length).to.be.equal(0);
+                    done();
+                }, 60);
+            }, 160);
+        });
     });
 
-    it("notifyWindowClose", function (done) {
-        $('.notifyjs-bootstrap-error').remove();
-        $('.notifyjs-bootstrap-base').remove();
-        utils.notifyList = {};
-        chai.expect($('.notify-msg').length).to.be.equal(0);
-        window.aa = utils.notifyWindow;
-        utils.notifyWindow('error message', 'error');
-        chai.expect($('.notify-msg').length).to.be.equal(1);
-        utils.notifyWindowClose();
-        window.setTimeout(function () { // if next expect assert
-            chai.expect($('.notify-msg').length).to.be.equal(0);
-            done();
-        }, 200);
-    });
 
     // function readClipboard (){
     //     var val,

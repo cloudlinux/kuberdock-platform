@@ -1213,7 +1213,7 @@ define([
                     layoutView.nav.show(navbar);
                     App.getUserCollection().done(function(userCollection){
                         var model = userCollection.fullCollection.get(Number(userId)),
-                            view = new Views.UserProfileViewLogHistory({ model: model });
+                            view = new Views.UserProfileLogHistory({ model: model });
                         layoutView.main.show(view);
                     });
                 });

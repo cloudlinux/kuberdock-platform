@@ -2003,6 +2003,8 @@ def change_pv_size(persistent_disk_id, new_size):
 
 def pod_stop_and_unpaid(pod):
     PodCollection._stop_pod(pod, raise_=False, block=True)
+    db.session.expire(DBPod.query.get(pod.id), ['status'])
+    pod = PodCollection()._get_by_id(pod.id)
     if pod.status in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
         pod.set_status(POD_STATUSES.unpaid, send_update=True)
     else:

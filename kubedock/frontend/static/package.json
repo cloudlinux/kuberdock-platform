@@ -10,7 +10,7 @@
     }
   ],
   "scripts": {
-    "build": "./node_modules/webpack/bin/webpack.js --progress",
+    "build": "./node_modules/webpack/bin/webpack.js",
     "dev": "node ./server.js"
   },
   "keywords": [

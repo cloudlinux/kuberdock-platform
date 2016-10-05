@@ -19,6 +19,7 @@ else
     rm -rf "$TMP_PATH"
     mkdir "$TMP_PATH"
     rsync -aP --quiet --exclude=".*" --exclude="dev-utils" --exclude="kubedock/vcrpy_test_cassettes"  --exclude="*.rpm" . "$TMP_PATH/"
+    cp ./kubedock/frontend/static/.babelrc "$TMP_PATH/kubedock/frontend/static/.babelrc"
     cd /tmp
     tar -cjf "$NAME-$VERSION.tar.bz2" "$NAME-$VERSION"
     cd -

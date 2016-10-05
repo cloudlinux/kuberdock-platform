@@ -67,7 +67,7 @@ var webpackConfig = {
             test: /\.(?:png|gif|svg|ttf|woff2?|eot)$/, include: /node_modules/,
             // files less then 16kb will be converted to the dataURI
             // the others will be moved to /static/
-            loader: 'url', query: {limit: 16384, name: '[name]-[hash].[ext]'},
+            loader: 'url', query: {limit: 16384, name: 'prepared-[name]-[hash].[ext]'},
         }, {
             // same, but only for our files: no emit required
             test: /\.(?:png|gif|svg|ttf|woff2?|eot)$/, exclude: /node_modules/,

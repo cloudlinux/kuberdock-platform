@@ -1,7 +1,7 @@
 /* eslint-env node, es6 */
 /* eslint no-console: off */
 
-var ERRORS_TRESHOLD = 261;
+var ERRORS_THRESHOLD = 137;
 
 var CLIEngine = require('eslint').CLIEngine;
 var process = require('process');
@@ -16,6 +16,6 @@ console.log(formatter(report.results));
 console.log(`
 ####################### Linter results ############################
 Found errors   : ${errorCount}
-Errors treshold: ${ERRORS_TRESHOLD}
+Errors treshold: ${ERRORS_THRESHOLD}
 `);
-process.exit(errorCount > ERRORS_TRESHOLD);
+process.exit(errorCount > ERRORS_THRESHOLD);

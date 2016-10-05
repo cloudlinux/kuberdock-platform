@@ -3,6 +3,7 @@ from StringIO import StringIO
 from fabric.operations import run, get, put
 from fabric.context_managers import quiet
 from os import path
+import socket
 
 from kubedock.kapi.nodes import (
     KUBERDOCK_DNS_POD_NAME,
@@ -18,13 +19,15 @@ from kubedock.settings import (
 )
 from kubedock.updates import helpers
 from kubedock.users.models import User
-from kubedock.utils import Etcd
+from kubedock.utils import Etcd, get_calico_ip_tunnel_address
 
 from kubedock.kapi.helpers import Services, LOCAL_SVC_TYPE
 from kubedock.kapi.helpers import KUBERDOCK_POD_UID, KUBERDOCK_TYPE
 from kubedock.kapi.podutils import raise_if_failure
 from kubedock.kapi.podcollection import PodCollection, run_service
 from kubedock.utils import POD_STATUSES
+from kubedock.nodes.models import Node
+from kubedock.core import db
 
 #
 # WARNING: etcd should be >= 2.0.10 for successful Calico node running
@@ -190,7 +193,7 @@ def _master_calico():
     )
     helpers.local(
         'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl node '
-        '--ip="{0}" --node-image=kuberdock/calico-node:0.20.0.confd'
+        '--ip="{0}" --node-image=kuberdock/calico-node:0.22.0.confd'
         .format(MASTER_IP)
     )
 
@@ -206,19 +209,134 @@ def _master_k8s_extensions():
 def _master_network_policy():
     helpers.local('echo "{0}" | kubectl create -f -'.format(_K8S_EXTENSIONS))
     helpers.local(
-        "etcdctl set /calico/v1/policy/tier/kuberdock-service/metadata "
+        "etcdctl set /calico/v1/policy/tier/failsafe/metadata "
+        "'{\"order\": 0}'"
+    )
+    helpers.local(
+        "etcdctl set /calico/v1/policy/tier/kuberdock-nodes/metadata "
         "'{\"order\": 10}'"
+    )
+    helpers.local(
+        "etcdctl set /calico/v1/policy/tier/kuberdock-service/metadata "
+        "'{\"order\": 20}'"
     )
     helpers.local(
         'etcdctl mkdir /calico/v1/policy/tier/kuberdock-service/policy'
     )
     helpers.local(
         "etcdctl set /calico/v1/policy/tier/kuberdock-hosts/metadata "
-        "'{\"order\": 20}'"
+        "'{\"order\": 30}'"
     )
     helpers.local(
         'etcdctl mkdir /calico/v1/policy/tier/kuberdock-hosts/policy')
 
+    KD_HOST_ROLE = 'kdnode'
+    MASTER_TUNNEL_IP = get_calico_ip_tunnel_address()
+
+    KD_NODES_POLICY = {
+        "id": "kd-nodes-public",
+        "selector": 'role=="{}"'.format(KD_HOST_ROLE),
+        "order": 100,
+        "inbound_rules": [
+            {
+                "src_net": "{}/32".format(MASTER_IP),
+                "action": "allow"
+            },
+            {
+                "src_net": "{}/32".format(MASTER_TUNNEL_IP),
+                "action": "allow"
+            },
+            {"action": "next-tier"}
+        ],
+        "outbound_rules": [{"action": "allow"}]
+    }
+    helpers.local(
+        "etcdctl set "
+        "/calico/v1/policy/tier/kuberdock-nodes/policy/kuberdock-nodes '{}'"
+        .format(json.dumps(KD_NODES_POLICY))
+    )
+
+    KD_MASTER_ROLE = 'kdmaster'
+    master_public_tcp_ports = [80, 443, 6443, 2379, 8123, 8118]
+    master_public_udp_ports = [123]
+    KD_MASTER_POLICY = {
+        "id": "kdmaster-public",
+        "selector": 'role=="{}"'.format(KD_MASTER_ROLE),
+        "order": 200,
+        "inbound_rules": [
+            {
+                "protocol": "tcp",
+                "dst_ports": master_public_tcp_ports,
+                "action": "allow"
+            },
+            {
+                "protocol": "tcp",
+                "dst_ports": master_public_udp_ports,
+                "action": "allow"
+            },
+            {
+                "action": "next-tier"
+            }
+        ],
+        "outbound_rules": [{"action": "allow"}]
+    }
+    helpers.local(
+        "etcdctl set "
+        "/calico/v1/policy/tier/kuberdock-nodes/policy/kuberdock-master '{}'"
+        .format(json.dumps(KD_MASTER_POLICY))
+    )
+
+    KD_NODES_FAILSAFE_POLICY = {
+        "id": "failsafe-all",
+        "selector": "all()",
+        "order": 100,
+
+        "inbound_rules": [
+            {
+                "protocol": "tcp",
+                "dst_ports": [22],
+                "action": "allow"
+            },
+            {"protocol": "icmp", "action": "allow"},
+            {
+                "dst_net": "10.1.0.0/16",
+                "src_net": "{}/32".format(MASTER_TUNNEL_IP),
+                "action": "allow"
+            },
+            {"action": "next-tier"}
+        ],
+        "outbound_rules": [
+            {
+                "protocol": "tcp",
+                "dst_ports": [2379],
+                "dst_net": "{}/32".format(MASTER_IP),
+                "action": "allow"
+            },
+            {
+                "src_net": "{}/32".format(MASTER_TUNNEL_IP),
+                "action": "allow"
+            },
+            {"protocol": "udp", "dst_ports": [67], "action": "allow"},
+            {"action": "next-tier"}
+        ]
+    }
+    helpers.local(
+        "etcdctl set "
+        "/calico/v1/policy/tier/failsafe/policy/failsafe '{}'"
+        .format(json.dumps(KD_NODES_FAILSAFE_POLICY))
+    )
+
+    MASTER_HOST_ENDPOINT = {
+        "expected_ipv4_addrs": [MASTER_IP],
+        "labels": {"role": KD_MASTER_ROLE},
+        "profile_ids": []
+    }
+    MASTER_HOSTNAME = socket.gethostname()
+    etcd_path = '/calico/v1/host/{0}/endpoint/{0}'.format(MASTER_HOSTNAME)
+    helpers.local(
+        "etcdctl set {} '{}'".format(
+            etcd_path, json.dumps(MASTER_HOST_ENDPOINT))
+    )
 
 def _get_internal_user():
     return User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
@@ -261,16 +379,28 @@ def _node_kube_proxy():
     )
 
 
+RM_FLANNEL_COMMANDS = [
+    'systemctl stop flanneld',
+    'systemctl stop kuberdock-watcher',
+    'rm -f /etc/sysconfig/flanneld',
+    'rm -f /etc/systemd/system/flanneld.service',
+    'rm -f /etc/systemd/system/docker.service.d/flannel.conf',
+]
+
+
+def _master_flannel():
+    for cmd in RM_FLANNEL_COMMANDS:
+        helpers.local(cmd)
+    run('systemctl daemon-reload')
+    helpers.install_package('flannel', action='remove')
+
+
 def _node_flannel():
-    # TODO remove master flannel too (AC-4482)
-    run('systemctl stop flanneld')
-    run('systemctl stop kuberdock-watcher')
-    run('rm -f /etc/sysconfig/flanneld')
-    run('rm -f /etc/systemd/system/flanneld.service')
+    for cmd in RM_FLANNEL_COMMANDS:
+        run(cmd)
     # disable kuberdock-watcher but do not remove Kuberdock Network Plugin
     # because it should be replaced by new one
     run('rm -f /etc/systemd/system/kuberdock-watcher.service')
-    run('rm -f /etc/systemd/system/docker.service.d/flannel.conf')
     run('systemctl daemon-reload')
     helpers.remote_install('flannel', action='remove')
     helpers.remote_install('ipset', action='remove')
@@ -311,7 +441,7 @@ def _node_calico(node_name, node_ip):
         'HOSTNAME="{1}"'
         '/opt/bin/calicoctl node '
         '--ip="{2}" '
-        '--node-image=kuberdock/calico-node:0.20.0.confd'
+        '--node-image=kuberdock/calico-node:0.22.0.confd'
         .format(MASTER_IP, node_name, node_ip)
     )
 
@@ -358,7 +488,17 @@ def _node_move_config():
     put(new_fd, new_path)
 
 
+def _add_nodes_host_endpoints():
+    """Adds calico host endpoint for every node,
+    sets DefaultEndpointToHostAction to DROP.
+    """
+    for node in db.session.query(Node).all():
+        complete_calico_node_config(node.hostname, node.ip)
+
+
 def upgrade(upd, with_testing, *args, **kwargs):
+    _master_flannel()
+
     _master_shared_etcd()
     helpers.restart_service('nginx')
 
@@ -396,3 +536,7 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
 
 def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):
     pass
+
+
+def post_upgrade_nodes(upd, with_testing, *args, **kwargs):
+    _add_nodes_host_endpoints()

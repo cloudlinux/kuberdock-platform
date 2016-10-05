@@ -10,6 +10,14 @@ DEPLOY_LOG_FILE=/var/log/kuberdock_master_deploy.log
 EXIT_MESSAGE="Installation error. Install log saved to $DEPLOY_LOG_FILE"
 NGINX_SHARED_ETCD="/etc/nginx/conf.d/shared-etcd.conf"
 
+# Just to ensure HOSTNAME is not empty. Anyway it should be set to valid value
+# but we do not know here what value is valid.
+HOSTNAME=${HOSTNAME:-$(uname -n)}
+
+
+ELASTICSEARCH_PORT=9200
+CADVISOR_PORT=4194
+
 # Back up old logs
 if [ -f $DEPLOY_LOG_FILE ]; then
     TIMESTAMP=$(stat --format=%Y $DEPLOY_LOG_FILE)
@@ -603,32 +611,12 @@ if [ $? -ne 0 ];then
 fi
 log_it echo "CLUSTER_NETWORK has been determined as $CLUSTER_NETWORK"
 
-log_it rpm -q firewalld && firewall-cmd --state
-if [ $? -ne 0 ];then
-    log_it echo 'Firewalld is not running, installing...'
-    yum_wrapper install -y firewalld
-    do_and_log systemctl restart firewalld
-    do_and_log systemctl reenable firewalld
+rpm -q firewalld
+if [ $? == 0 ];then
+    echo "Stop firewalld. Dynamic Iptables rules will be used instead."
+    systemctl stop firewalld
+    systemctl mask firewalld
 fi
-log_it echo 'Adding Firewalld rules...'
-# nginx
-do_and_log firewall-cmd --permanent --zone=public --add-port=80/tcp
-do_and_log firewall-cmd --permanent --zone=public --add-port=443/tcp
-
-# ntp
-do_and_log firewall-cmd --permanent --zone=public --add-port=123/udp
-
-# kube-apiserver secure
-do_and_log firewall-cmd --permanent --zone=public --add-port=6443/tcp
-# etcd secure
-do_and_log firewall-cmd --permanent --zone=public --add-port=2379/tcp
-
-# open ports for cpanel flannel and kube-proxy
-do_and_log firewall-cmd --permanent --zone=public --add-port=8123/tcp
-do_and_log firewall-cmd --permanent --zone=public --add-port=8118/tcp
-
-log_it echo 'Reload firewall...'
-do_and_log firewall-cmd --reload
 
 
 #4. Install kuberdock
@@ -641,6 +629,9 @@ else
     yum_wrapper -y install kuberdock
 fi
 
+# FIXME: move to kube-proxy or kuberdock dependencies
+yum_wrapper -y install conntrack
+
 #4.1 Fix package path bug
 mkdir /var/run/kubernetes || /bin/true
 do_and_log chown kube:kube /var/run/kubernetes
@@ -650,8 +641,8 @@ do_and_log chown kube:kube /var/run/kubernetes
 # After kuberdock, because we need installed semanage package to do check
 SESTATUS=$(sestatus|awk '/SELinux\sstatus/ {print $3}')
 if [ "$SESTATUS" != disabled ];then
-    log_it echo 'Adding SELinux rule for http on port 9200'
-    do_and_log semanage port -a -t http_port_t -p tcp 9200
+    log_it echo "Adding SELinux rule for http on port $ELASTICSEARCH_PORT"
+    do_and_log semanage port -a -t http_port_t -p tcp $ELASTICSEARCH_PORT
 fi
 
 #4.3 nginx config fix
@@ -924,7 +915,7 @@ time sync
 sleep 10
 
 log_it echo "Starting Calico node..."
-ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl node --ip="$MASTER_IP" --node-image=kuberdock/calico-node:0.20.0.confd
+ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl node --ip="$MASTER_IP" --node-image=kuberdock/calico-node:0.22.0.confd
 
 
 #14 Create k8s database
@@ -1017,22 +1008,157 @@ versions:
 - name: v1alpha1
 EOF
 
+KD_NODES_FAILSAFE_POLICY_ORDER=0
+KD_NODES_POLICY_ORDER=10
+KD_SERVICE_POLICY_ORDER=20
+KD_HOSTS_POLICY_ORDER=30
+
 RULE_NEXT_TIER='{"id": "next-tier", "order": 9999, "inbound_rules": [{"action": "next-tier"}], "outbound_rules": [{"action": "next-tier"}], "selector": "all()"}'
-echo "$RULE_NEXT_TIER" | python -m json.tool   # for self-validation and debug
-if [[ $? -ne 0 ]];then
-    log_it echo "Invalid json in rule"
-    exit 42
-fi
+
+check_json()
+{
+  echo "$1" | python -m json.tool   # for self-validation and debug
+  if [[ $? -ne 0 ]];then
+      log_it echo "Invalid json in rule"
+      exit 42
+  fi
+}
+
+check_json "$RULE_NEXT_TIER"
+
 
 # etcdctl is not tolerant to etcd temporary unavailibility so we use wrapper
 # with increased timeouts from 2s to 30s
-do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-service/metadata '{"order": 10}'
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-service/metadata '{"order": '$KD_SERVICE_POLICY_ORDER'}'
 do_and_log etcdctl_wpr mkdir /calico/v1/policy/tier/kuberdock-service/policy
 do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-service/policy/next-tier "$RULE_NEXT_TIER"
-do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-hosts/metadata '{"order": 20}'
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-hosts/metadata '{"order": '$KD_HOSTS_POLICY_ORDER'}'
 do_and_log etcdctl_wpr mkdir /calico/v1/policy/tier/kuberdock-hosts/policy
 do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-hosts/policy/next-tier "$RULE_NEXT_TIER"
 
+# Calico tiered policy to allow some traffic on nodes:
+# * elasticsearch (tcp 9200) from master
+# * cadvisor (tcp 4194) from master
+# * all outbound traffic from nodes
+#
+# We will add endpoints for all nodes ('host endpoints', see
+# http://docs.projectcalico.org/en/latest/etcd-data-model.html#endpoint-data).
+# This will close all traffic to and from nodes, so we should explicitly allow
+# what we need. Also we create failsafe rules as recommended in
+# http://docs.projectcalico.org/en/latest/bare-metal.html#failsafe-rules
+# Role name for KD host endpoint
+KD_HOST_ROLE=kdnode
+# Role name for kuberdock master host
+KD_MASTER_ROLE=kdmaster
+
+MASTER_TUNNEL_IP=$(etcdctl get /calico/v1/host/$HOSTNAME/config/IpInIpTunnelAddr)
+
+KD_NODES_POLICY='{
+    "id": "kd-nodes-public",
+    "selector": "role==\"'$KD_HOST_ROLE'\"",
+    "order": 100,
+    "inbound_rules": [
+        {
+            "src_net": "'"$MASTER_IP"'/32",
+            "action": "allow"
+        },
+        {
+            "src_net": "'"$MASTER_TUNNEL_IP"'/32",
+            "action": "allow"
+        },
+        {"action": "next-tier"}
+    ],
+    "outbound_rules": [{"action": "allow"}]
+}'
+
+check_json "$KD_NODES_POLICY"
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-nodes/metadata '{"order": '$KD_NODES_POLICY_ORDER'}'
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-nodes/policy/kuberdock-nodes "$KD_NODES_POLICY"
+
+# Master host isolation
+# 80, 443 - KD API & web server
+# 6443 - kube-api server secure
+# 2379 - etcd secure
+# 8123, 8118 open ports for cpanel flannel (??) and kube-proxy
+MASTER_PUBLIC_TCP_PORTS='[80, 443, 6443, 2379, 8123, 8118]'
+
+# 123 - ntp
+MASTER_PUBLIC_UDP_PORTS='[123]'
+
+KD_MASTER_POLICY='{
+    "id": "kdmaster-public",
+    "selector": "role==\"'$KD_MASTER_ROLE'\"",
+    "order": 200,
+    "inbound_rules": [
+        {
+            "protocol": "tcp",
+            "dst_ports": '"$MASTER_PUBLIC_TCP_PORTS"',
+            "action": "allow"
+        },
+        {
+            "protocol": "udp",
+            "dst_ports": '"$MASTER_PUBLIC_UDP_PORTS"',
+            "action": "allow"
+        },
+        {
+            "action": "next-tier"
+        }
+    ],
+    "outbound_rules": [{"action": "allow"}]
+}'
+check_json "$KD_MASTER_POLICY"
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-nodes/policy/kuberdock-master "$KD_MASTER_POLICY"
+
+
+# Here we allow all traffic from master to calico subnet. It is a
+# workaround and it must be rewritten to specify more secure policy
+# for access from master to some services.
+KD_NODES_FAILSAFE_POLICY='{
+    "id": "failsafe-all",
+    "selector": "all()",
+    "order": 100,
+
+    "inbound_rules": [
+        {
+            "protocol": "tcp",
+            "dst_ports": [22],
+            "action": "allow"
+        },
+        {"protocol": "icmp", "action": "allow"},
+        {
+            "dst_net": "10.1.0.0/16",
+            "src_net": "'$MASTER_TUNNEL_IP'/32",
+            "action": "allow"
+        },
+        {"action": "next-tier"}
+    ],
+    "outbound_rules": [
+        {
+            "protocol": "tcp",
+            "dst_ports": [2379],
+            "dst_net": "'$MASTER_IP'/32",
+            "action": "allow"
+        },
+        {
+            "src_net": "'$MASTER_TUNNEL_IP'/32",
+            "action": "allow"
+        },
+        {"protocol": "udp", "dst_ports": [67], "action": "allow"},
+        {"action": "next-tier"}
+    ]
+}'
+check_json "$KD_NODES_FAILSAFE_POLICY"
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/failsafe/metadata '{"order": '$KD_NODES_FAILSAFE_POLICY_ORDER'}'
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/failsafe/policy/failsafe "$KD_NODES_FAILSAFE_POLICY"
+
+# Add master as calico host endpoint
+MASTER_HOST_ENDPOINT='{
+    "expected_ipv4_addrs": ["'$MASTER_IP'"],
+    "labels": {"role": "'$KD_MASTER_ROLE'"},
+    "profile_ids": []
+}'
+check_json "$MASTER_HOST_ENDPOINT"
+do_and_log etcdctl_wpr set /calico/v1/host/$HOSTNAME/endpoint/$HOSTNAME "$MASTER_HOST_ENDPOINT"
 
 #16. Adding amazon and ceph config data
 if [ "$ISAMAZON" = true ];then

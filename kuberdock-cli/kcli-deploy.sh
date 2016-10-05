@@ -103,7 +103,7 @@ install_calico() {
     do_and_log curl https://github.com/projectcalico/calico-containers/releases/download/v0.22.0/calicoctl --create-dirs --location --output /opt/bin/calicoctl --silent --show-error
     do_and_log chmod +x /opt/bin/calicoctl
     echo "Starting Calico Node..."
-    ETCD_AUTHORITY="$KD_HOST:8123" do_and_log /opt/bin/calicoctl node --node-image=kuberdock/calico-node:0.20.0.confd
+    ETCD_AUTHORITY="$KD_HOST:8123" do_and_log /opt/bin/calicoctl node --node-image=kuberdock/calico-node:0.22.0.confd
     # wait for calico routes to bring up
     sleep 20
     # register again with Calico network running

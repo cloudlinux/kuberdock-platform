@@ -44,7 +44,9 @@ from .kapi.pstorage import (
     check_namespace_exists)
 from .kapi.usage import update_states
 from .kapi.node import Node as K8SNode
-from .kapi.node_utils import setup_storage_to_aws_node, add_volume_to_node_ls
+from .kapi.node_utils import (
+    setup_storage_to_aws_node, add_volume_to_node_ls,
+    complete_calico_node_config)
 
 from .kd_celery import celery, exclusive_task
 
@@ -352,6 +354,8 @@ def add_new_node(self, node_id, log_pod_ip, with_testing=False, redeploy=False,
                       channels)
             setup_node_storage(ssh, node_id, ls_devices, ebs_volume,
                                channels)
+
+        complete_calico_node_config(host, db_node.ip)
 
         send_logs(node_id, 'Rebooting node...', log_file, channels)
         ssh.exec_command(

@@ -9,13 +9,14 @@ from paramiko.ssh_exception import SSHException
 
 from ..nodes.models import Node, NodeFlag, LocalStorageDevices
 from ..system_settings.models import SystemSettings
-from ..utils import from_binunit, from_siunit, get_api_url, NODE_STATUSES
+from ..utils import from_binunit, from_siunit, get_api_url, NODE_STATUSES, Etcd
 from ..billing.models import Kube
 from ..exceptions import APIError
 from ..core import db, ssh_connect
 from ..settings import (
     NODE_INSTALL_LOG_FILE, AWS, CEPH, PD_NAMESPACE, PD_NS_SEPARATOR,
-    NODE_STORAGE_MANAGE_CMD, ZFS)
+    NODE_STORAGE_MANAGE_CMD, ZFS, ETCD_CALICO_HOST_ENDPOINT_KEY_PATH_TEMPLATE,
+    ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE)
 
 
 def get_nodes_collection(kube_type=None):
@@ -552,3 +553,48 @@ def get_ls_info(hostname, raise_on_error=False):
         if raise_on_error:
             raise APIError(error_message)
     return json.loads(o.read())
+
+
+def create_calico_host_endpoint(node_hostname, node_ipv4):
+    """Creates host endpoint for the node"""
+    # If the node is added as host endpoint, then by default there will be
+    # dropped all traffic (incoming and outgoing) to the node.
+    # So there must be added an appropriate policy to role 'kdnode' and it
+    # must be set during KD cluster deployment.
+    node_endpoint = {
+        "expected_ipv4_addrs": [node_ipv4],
+        "labels": {"role": "kdnode"},
+        "profile_ids": []
+    }
+    etcd_path = ETCD_CALICO_HOST_ENDPOINT_KEY_PATH_TEMPLATE.format(
+        hostname=node_hostname
+    )
+    Etcd(etcd_path).put(None, value=node_endpoint)
+
+
+def drop_endpoint_traffic_to_node(node_hostname):
+    """Drops all connections from pods to the node where those pods are
+    running.
+    It must be 'DROP' by default (according to calico docs), but
+    actually it is set to RETURN
+    FIXME: actually works until rebooting, see
+    https://github.com/projectcalico/calico-containers/issues/1190
+    """
+    ETCD_ENDPOINT_TO_HOST_ACTION_KEY = 'DefaultEndpointToHostAction'
+    etcd_path = ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE.format(
+        hostname=node_hostname
+    )
+    Etcd(etcd_path).put(
+        ETCD_ENDPOINT_TO_HOST_ACTION_KEY, value='DROP', asjson=False
+    )
+
+
+def complete_calico_node_config(node_hostname, node_ipv4):
+    """Sets necessary records to etcd to complete node configuration in
+    calico:
+        * creates host endpoint for the node;
+        * sets DefaultEndpointToHostAction to DROP to prevent traffic from
+          pods to the node on which those pods run.
+    """
+    create_calico_host_endpoint(node_hostname, node_ipv4)
+    drop_endpoint_traffic_to_node(node_hostname)

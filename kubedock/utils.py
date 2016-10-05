@@ -1097,8 +1097,10 @@ class Etcd(object):
     def delete(self, key):
         return self._make_request(requests.delete, key)
 
-    def put(self, key, value=None):
-        data = None if value is None else {'value': json.dumps(value)}
+    def put(self, key, value=None, asjson=True):
+        if asjson:
+            value = json.dumps(value)
+        data = None if value is None else {'value': value}
         return self._make_request(requests.put, key, data=data)
 
     def get(self, key=None, recursive=False):
@@ -1138,8 +1140,7 @@ def get_calico_ip_tunnel_address(hostname=None):
     if not hostname:
         hostname = get_hostname()
     url = ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE.format(
-        hostname=hostname, key=ETCD_KEY_CALICO_HOST_IP_TUNNEL_ADDRESS
-    )
+        hostname=hostname) + '/' + ETCD_KEY_CALICO_HOST_IP_TUNNEL_ADDRESS
     try:
         result = Etcd(url).get()
     except requests.exceptions.HTTPError:

@@ -274,8 +274,11 @@ ETCD_NETWORK_POLICY_SERVICE = \
     ETCD_CALICO_V_PATH + '/policy/tier/kuberdock-service/policy'
 ETCD_NETWORK_POLICY_HOSTS = \
     ETCD_CALICO_V_PATH + '/policy/tier/kuberdock-hosts/policy'
+ETCD_CALICO_HOST_KEY_PATH_TEMPLATE = ETCD_CALICO_V_PATH + '/host/{hostname}'
 ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE = \
-    ETCD_CALICO_V_PATH + '/host/{hostname}/config/{key}'
+    ETCD_CALICO_HOST_KEY_PATH_TEMPLATE + '/config'
+ETCD_CALICO_HOST_ENDPOINT_KEY_PATH_TEMPLATE = \
+    ETCD_CALICO_HOST_KEY_PATH_TEMPLATE + '/endpoint/{hostname}'
 
 ETCD_PKI = '/etc/pki/etcd/'
 ETCD_CACERT = os.path.join(ETCD_PKI, 'ca.crt')

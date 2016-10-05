@@ -14,12 +14,12 @@ from .billing.models import Kube
 from .nodes.models import Node
 from .pods.models import Pod, PersistentDisk
 from .users.models import User
-from .settings import KUBERDOCK_INTERNAL_USER
+from .settings import CALICO, KUBERDOCK_INTERNAL_USER
 from .utils import (get_api_url, unregistered_pod_warning,
                     send_event_to_role, send_event_to_user,
                     pod_without_id_warning, k8s_json_object_hook,
                     send_pod_status_update, POD_STATUSES, nested_dict_utils,
-                    session_scope)
+                    session_scope, fix_calico)
 from .kapi.usage import update_states
 from .kapi.pstorage import get_storage_class
 from .kapi.podcollection import PodCollection, set_public_address
@@ -231,6 +231,13 @@ def process_nodes_event(data, app):
                                              hostname, node.id)
                     send_event_to_role('node:change', {'id': node.id}, 'Admin')
             tasks.process_node_actions.delay(node_host=hostname)
+
+        # This fix is for node can access master via Calico network
+        # It seems the code bellow is not needed -- containers can access
+        # master without any problem
+        # node = Node.query.filter_by(hostname=hostname).first()
+        # if node is not None:
+        #     fix_calico(node.ip)
 
 
 def mark_restore_as_finished(pod_id):

@@ -276,7 +276,7 @@ def _node_flannel():
     helpers.remote_install('ipset', action='remove')
 
 
-def _node_calico(node_ip):
+def _node_calico(node_name, node_ip):
     run(
         'curl https://github.com/projectcalico/calico-cni/releases/download/'
         'v1.3.1/calico --create-dirs --location --output /opt/cni/bin/calico '
@@ -308,10 +308,11 @@ def _node_calico(node_ip):
         'ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt '
         'ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt '
         'ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key '
+        'HOSTNAME="{1}"'
         '/opt/bin/calicoctl node '
-        '--ip="${1}" '
+        '--ip="{2}" '
         '--node-image=kuberdock/calico-node:0.20.0.confd'
-        .format(MASTER_IP, node_ip)
+        .format(MASTER_IP, node_name, node_ip)
     )
 
 
@@ -393,7 +394,7 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
     _node_kube_proxy()
     _node_flannel()
-    _node_calico(node_ip=kwargs['node_ip'])
+    _node_calico(node_name=env.host_string, node_ip=kwargs['node_ip'])
     _node_policy_agent(env.host_string)
     _node_kubelet()
     _node_move_config()

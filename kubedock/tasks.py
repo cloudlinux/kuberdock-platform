@@ -176,9 +176,7 @@ def add_new_node(self, node_id, log_pod_ip, with_testing=False, redeploy=False,
         try:
             timezone = get_timezone()
         except OSError as e:
-            timezone = 'UTC'
-            err = '{0}. Using "{1}"'.format(e, timezone)
-            raise NodeInstallException(err)
+            raise NodeInstallException('Cannot get master timezone: {}'.format(repr(e)))
 
         if redeploy:
             send_logs(node_id, 'Redeploy.', log_file, channels)

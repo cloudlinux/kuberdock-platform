@@ -47,3 +47,8 @@ def test_memcached_pa(cluster):
 @pipeline('predefined_apps')
 def test_gallery_pa(cluster):
     check_pa(cluster, 'gallery3.yaml')
+
+
+@pipeline('predefined_apps')
+def test_magento_pa(cluster):
+    check_pa(cluster, 'magento.yaml')

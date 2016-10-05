@@ -6,6 +6,7 @@ import subprocess
 import sys
 import time
 import urllib2
+import itertools
 
 from collections import namedtuple
 from contextlib import contextmanager
@@ -582,6 +583,8 @@ class PodList(object):
         if wait_ports:
             pod.wait_for_ports()
         if healthcheck:
+            LOG.info("Waiting 15 sec. Needed to starting application correctly")
+            time.sleep(15)
             pod.healthcheck()
 
         return pod
@@ -631,11 +634,25 @@ class KDPod(RESTMixin):
         self.kube_type = kube_type
         self.kubes = kubes
         self.restart_policy = restart_policy
-        self.public_ip = None
         self.owner = owner
         self.pvs = pvs
         self.open_all_ports = open_all_ports
-        self.ports = None
+
+    @property
+    def public_ip(self):
+        spec = self.get_spec()
+        return spec.get('public_ip')
+
+    @property
+    def ports(self):
+        def _get_ports(containers):
+            all_ports = itertools.chain(
+                *[c['ports'] for c in containers])
+            return [port['containerPort']
+                    for port in all_ports if port.get('isPublic') is True]
+
+        spec = self.get_spec()
+        return _get_ports(spec['containers'])
 
     @classmethod
     def create(cls, cluster, image, name, kube_type, kubes,
@@ -760,10 +777,8 @@ class KDPod(RESTMixin):
         kube_type = kube_type_to_str(data['kube_type'])
         restart_policy = data['restartPolicy']
         this_pod_class = cls._get_pod_class(image)
-        pod = this_pod_class(cluster, "", name, kube_type, "", True,
-                             restart_policy, "", owner)
-        pod.public_ip = data['public_ip']
-        return pod
+        return this_pod_class(cluster, "", name, kube_type, "", True,
+                              restart_policy, "", owner)
 
     @classmethod
     def _get_pod_class(cls, image):
@@ -929,34 +944,34 @@ class _NginxPod(KDPod):
 
 
 class KDPAPod(KDPod):
-    def __init__(self, cluster, pod_name, plan_id, owner):
+    def __init__(self, cluster, pod_name, plan_id, kube_type, restart_policy,
+                 owner):
         self.cluster = cluster
         self.name = pod_name
         self.plan_id = plan_id
         self.owner = owner
         self.open_all_ports = True
+        self.kube_type = kube_type
+        self.restart_policy = restart_policy
 
     @classmethod
     def create(cls, cluster, template_name, plan_id, owner, rnd_str=None):
 
-        template_id = cluster.pas.get_by_name(template_name)['id']
+        pa_data = cluster.pas.get_by_name(template_name)
+        pa_id = pa_data['id']
         data = json.dumps({'PD_RAND': rnd_str or 'test_data_random'})
         _, pod_description, _ = cluster.kcli2(
             "predefined-apps create-pod {} {} '{}'".format(
-                template_id, plan_id, data),
+                pa_id, plan_id, data),
             out_as_dict=True)
 
         data = pod_description['data']
         pod_name = data['name']
+        kube_type = kube_type_to_str(data['kube_type'])
+        restart_policy = data['restartPolicy']
         this_pod_class = cls._get_pod_class(template_name)
-        pod = this_pod_class(cluster, pod_name, plan_id, owner)
-        pod.kube_type = kube_type_to_str(data['kube_type'])
-        pod.restart_policy = data['restartPolicy']
-        if 'public_ip' in data and data['public_ip']:
-            pod.public_ip = pod.get_spec()['public_ip']
-        else:
-            pod.public_ip = None
-        return pod
+        return this_pod_class(cluster, pod_name, plan_id, kube_type,
+                              restart_policy, owner)
 
     def _generic_healthcheck(self):
         spec = self.get_spec()
@@ -968,10 +983,6 @@ class KDPAPod(KDPod):
 
 class _RedisPaPod(KDPAPod):
     SRC = 'redis.yaml'
-
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
-        ports = ports or [6379]
-        self._wait_for_ports(ports, timeout)
 
     def healthcheck(self):
         spec = self._generic_healthcheck()
@@ -985,10 +996,6 @@ class _RedisPaPod(KDPAPod):
 class _DokuwikiPaPod(KDPAPod):
     SRC = 'dokuwiki.yaml'
 
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
-        ports = ports or [80]
-        self._wait_for_ports(ports, timeout)
-
     def healthcheck(self):
         self._generic_healthcheck()
         assert_in("Welcome to your new DokuWiki",
@@ -997,10 +1004,6 @@ class _DokuwikiPaPod(KDPAPod):
 
 class _DrupalPaPod(KDPAPod):
     SRC = 'drupal.yaml'
-
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
-        ports = ports or [80]
-        self._wait_for_ports(ports, timeout)
 
     def healthcheck(self):
         self._generic_healthcheck()
@@ -1023,10 +1026,6 @@ class _ElasticsearchPaPod(KDPAPod):
 class _RedminePaPods(KDPAPod):
     SRC = 'redmine.yaml'
 
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
-        ports = ports or [3000]
-        self._wait_for_ports(ports, timeout)
-
     def healthcheck(self):
         self._generic_healthcheck()
         assert_in("Redmine", self.do_GET())
@@ -1034,10 +1033,6 @@ class _RedminePaPods(KDPAPod):
 
 class _JoomlaPaPod(KDPAPod):
     SRC = 'joomla.yaml'
-
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
-        ports = ports or [80]
-        self._wait_for_ports(ports, timeout)
 
     def healthcheck(self):
         self._generic_healthcheck()
@@ -1047,10 +1042,6 @@ class _JoomlaPaPod(KDPAPod):
 
 class _MemcachedPaPod(KDPAPod):
     SRC = 'memcached.yaml'
-
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
-        ports = ports or [11211]
-        self._wait_for_ports(ports, timeout)
 
     def healthcheck(self):
         spec = self._generic_healthcheck()
@@ -1065,15 +1056,20 @@ class _MemcachedPaPod(KDPAPod):
 class _Gallery3PaPod(KDPAPod):
     SRC = 'gallery3.yaml'
 
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
-        ports = ports or [80]
-        self._wait_for_ports(ports, timeout)
-
     def healthcheck(self):
         self._generic_healthcheck()
         page = self.do_GET(path='/installer/')
         assert_in(u"Installing Gallery is easy.  "
                   "We just need a place to put your photos", page)
+
+
+class _MagentoPaPod(KDPAPod):
+    SRC = 'magento.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/index.php/install/')
+        assert_in(u"Magento is a trademark of Magento Inc.", page)
 
 
 class VagrantIsAlreadyUpException(Exception):

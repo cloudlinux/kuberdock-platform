@@ -49,7 +49,6 @@ rm -rf %{buildroot}
 %defattr(-,root,root,-)
 %{_bindir}/kcli
 %{_bindir}/kcli-iptables
-%{_sysconfdir}/kubecli.conf
 %{_libexecdir}/suidwrap
 %{python_sitelib}/kubecli/*
 

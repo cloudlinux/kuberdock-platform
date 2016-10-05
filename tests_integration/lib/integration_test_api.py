@@ -1072,6 +1072,15 @@ class _MagentoPaPod(KDPAPod):
         assert_in(u"Magento is a trademark of Magento Inc.", page)
 
 
+class _MantisPaPod(KDPAPod):
+    SRC = 'mantis.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/admin/install.php')
+        assert_in(u"Administration - Installation - MantisBT", page)
+
+
 class VagrantIsAlreadyUpException(Exception):
     pass
 

@@ -358,12 +358,6 @@ def _node_move_config():
     put(new_fd, new_path)
 
 
-def _node_kubelet():
-    run('sed -i \'s/KUBELET_ADDRESS=.*'
-        '/KUBELET_ADDRESS="--address=127.0.0.1"/g\' '
-        '/etc/kubernetes/kubelet')
-
-
 def upgrade(upd, with_testing, *args, **kwargs):
     _master_shared_etcd()
     helpers.restart_service('nginx')
@@ -396,7 +390,6 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     _node_flannel()
     _node_calico(node_name=env.host_string, node_ip=kwargs['node_ip'])
     _node_policy_agent(env.host_string)
-    _node_kubelet()
     _node_move_config()
     helpers.reboot_node(upd)
 

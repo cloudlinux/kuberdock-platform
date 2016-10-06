@@ -8,6 +8,7 @@ from kubedock.exceptions import APIError
 from kubedock.login import auth_required
 from kubedock.core import db
 from kubedock.kapi.nginx_utils import update_nginx_proxy_restriction
+from kubedock.kapi.network_policies import get_rhost_policy
 from kubedock.nodes.models import RegisteredHost
 from kubedock.utils import Etcd, KubeUtils, atomic, fix_calico, get_ip_address
 from kubedock.settings import (CALICO, ETCD_REGISTERED_HOSTS,
@@ -69,20 +70,5 @@ def register_host_calico(ip):
     policy_hosts = Etcd(ETCD_NETWORK_POLICY_HOSTS)
     if policy_hosts.exists(ip):
         raise APIError('Host is already registered', 409, type='data exist')
-    policy_hosts.put(ip, value=get_host_policy(ip))
+    policy_hosts.put(ip, value=get_rhost_policy(ip))
     return {'ip': ip}
-
-
-def get_host_policy(ip):
-    return {
-        "id": ip,
-        "order": 10,
-        "inbound_rules": [{
-            "action": "allow",
-            "src_net": "{0}/32".format(ip)
-        }],
-        "outbound_rules": [{
-            "action": "allow"
-        }],
-        "selector": ""
-    }

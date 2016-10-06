@@ -10,11 +10,12 @@ from sqlalchemy.exc import IntegrityError
 from . import pstorage
 from .node_utils import add_node_to_db, delete_node_from_db, remove_ls_storage
 from .podcollection import PodCollection
+from .network_policies import get_dns_policy_config, get_logs_policy_config
 from .. import tasks
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
 from ..core import db
-from ..exceptions import APIError, SubsystemtIsNotReadyError
+from ..exceptions import APIError
 from ..nodes.models import Node, NodeFlag, NodeFlagNames
 from ..pods.models import Pod
 from ..settings import (
@@ -30,7 +31,6 @@ from ..utils import (
     retry,
     NODE_STATUSES,
     get_node_token,
-    get_calico_ip_tunnel_address
 )
 from ..validation import check_internal_pod_data
 from ..kd_celery import celery
@@ -831,64 +831,4 @@ def get_policy_agent_config(master, token):
                 "terminationMessagePath": None
             },
         ]
-    }
-
-
-def get_dns_policy_config(user_id, namespace):
-    return {
-        "id": "kuberdock-dns",
-        "order": 10,
-        "inbound_rules": [{
-            "action": "allow"
-        }],
-        "outbound_rules": [{
-            "action": "allow"
-        }],
-        "selector": ("kuberdock-user-uid == '{0}' && calico/k8s_ns == '{1}'"
-                     .format(user_id, namespace))
-    }
-
-
-def get_logs_policy_config(user_id, namespace, logs_pod_name):
-    calico_ip_tunnel_address = get_calico_ip_tunnel_address()
-    if not calico_ip_tunnel_address:
-        raise SubsystemtIsNotReadyError(
-            'Can not get calico IPIP tunnel address')
-    return {
-        "id": logs_pod_name + '-master-access',
-        "order": 10,
-        "inbound_rules": [
-            # First two rules are for access to elasticsearch from master
-            # Actually works the second rule (with master ip tunnel address)
-            {
-                "protocol": "tcp",
-                "dst_ports": [ELASTICSEARCH_REST_PORT],
-                "src_net": MASTER_IP + '/32',
-                "action": "allow",
-            },
-            {
-                "protocol": "tcp",
-                "dst_ports": [ELASTICSEARCH_REST_PORT],
-                "src_net": u'{}/32'.format(calico_ip_tunnel_address),
-                "action": "allow",
-            },
-            # This rule should allow interaction of different elasticsearch
-            # pods. It must work without this rule (by k8s policies), but it
-            # looks like this policy overlaps k8s policies.
-            # So just allow access to elasticsearch from service pods.
-            # TODO: looks like workaround, may be there is a better solution.
-            {
-                'protocol': 'tcp',
-                'dst_ports': [
-                    ELASTICSEARCH_REST_PORT, ELASTICSEARCH_PUBLISH_PORT
-                ],
-                "src_selector": "kuberdock-user-uid == '{}'".format(user_id),
-                'action': 'allow',
-            },
-        ],
-        "outbound_rules": [{
-            "action": "allow"
-        }],
-        "selector": ("kuberdock-user-uid == '{0}' && calico/k8s_ns == '{1}'"
-                     .format(user_id, namespace))
     }

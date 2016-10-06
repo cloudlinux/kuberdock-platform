@@ -12,7 +12,7 @@ from kubedock import settings
 from kubedock.billing.models import Kube
 from kubedock.core import db
 from kubedock.exceptions import APIError
-from kubedock.kapi import nodes
+from kubedock.kapi import nodes, network_policies
 from kubedock.nodes.models import Node
 from kubedock.users.models import User
 from kubedock.pods.models import IPPool
@@ -105,7 +105,7 @@ class TestNodes(DBTestCase):
         with self.assertRaises(APIError):
             nodes.create_node(None, 'anotherhost', kube_id)
 
-    @mock.patch.object(nodes, 'get_calico_ip_tunnel_address')
+    @mock.patch.object(network_policies, 'get_calico_ip_tunnel_address')
     @mock.patch.object(nodes, 'Etcd')
     @mock.patch.object(nodes, 'PodCollection')
     def test_create_logs_pod(self, podcollection_mock, etcd_mock,

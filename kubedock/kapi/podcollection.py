@@ -21,6 +21,11 @@ from kubedock.exceptions import (
 from node import Node as K8SNode
 from node import NodeException
 from pod import Pod
+from network_policies import (
+    allow_public_ports_policy,
+    allow_same_user_policy,
+    PUBLIC_PORT_POLICY_NAME
+)
 from .. import billing
 from kubedock.kapi.lbpoll import get_service_provider
 from .. import dns_management
@@ -711,26 +716,9 @@ class PodCollection(object):
             # current_app.logger.debug(rv)
 
             # Add main ns policy
-            policy = {
-                "kind": "NetworkPolicy",
-                "apiVersion": settings.KUBE_NP_API_VERSION,
-                "metadata": {
-                    "name": owner_repr
-                },
-                "spec": {
-                    "podSelector": {
-                        "kuberdock-user-uid": owner_repr
-                    },
-                    "ingress": [{
-                        "from": [{
-                            "namespaces": {"kuberdock-user-uid": owner_repr}
-                        }]
-                    }]
-                }
-            }
             _get_network_policy_api().post(
                 ['networkpolicys'],
-                json.dumps(policy),
+                json.dumps(allow_same_user_policy(owner_repr)),
                 rest=True,
                 ns=namespace,
             )
@@ -1919,37 +1907,10 @@ def set_public_ports_policy(namespace, ports, owner):
     :param ports: list of public ports
     :param owner: pod owner
     """
-    owner_repr = str(owner.id)
-    ingress_ports = []
-    for port in ports:
-        public_port = {'port': port['port'], 'protocol': port['protocol']}
-        origin_port = {'port': port['targetPort'], 'protocol': port['protocol']}
-        ingress_ports.append(public_port)
-        # TODO we can try to limit access even more if we set rule that
-        # origin_ports are accessible only from node ip (kube-proxy) but this
-        # is tricky and require low-level policy. Also this has little to none
-        # benefit for us because this port is public anyway. We should revice
-        # it later and take into account AWS case.
-        ingress_ports.append(origin_port)
-    policy = {
-        "kind": "NetworkPolicy",
-        "metadata": {
-            "name": 'public'
-        },
-        "spec": {
-            # TODO do we really need this selector here?
-            "podSelector": {
-                "kuberdock-user-uid": owner_repr
-            },
-            "ingress": [{
-                "ports": ingress_ports
-            }]
-        }
-    }
     del_public_ports_policy(namespace)
     _get_network_policy_api().post(
         ['networkpolicys'],
-        json.dumps(policy),
+        json.dumps(allow_public_ports_policy(ports, owner)),
         rest=True,
         ns=namespace,
     )
@@ -1961,6 +1922,6 @@ def del_public_ports_policy(namespace):
     :param namespace: pod namespace
     """
     _get_network_policy_api().delete(
-        ['networkpolicys', 'public'],
+        ['networkpolicys', PUBLIC_PORT_POLICY_NAME],
         ns=namespace,
     )

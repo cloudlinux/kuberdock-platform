@@ -609,6 +609,13 @@ EOF
 echo "Configuring kubernetes..."
 sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/config
 sed -i '/^KUBELET_HOSTNAME/s/^/#/' $KUBERNETES_CONF_DIR/kubelet
+
+# Kubelet's 10255 port (built-in cadvisor) should be accessible from master,
+# because heapster.service use it to gather data for our "usage statistics"
+# feature. Master-only access is ensured by our cluster-wide firewall
+sed -i "/^KUBELET_ADDRESS/ {s|127.0.0.1|0.0.0.0|}" $KUBERNETES_CONF_DIR/kubelet
+check_status
+
 sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/kubelet
 if [ "$AWS" = True ];then
     sed -i '/^KUBELET_ARGS/ {s|""|"--cloud-provider=aws --kubeconfig=/etc/kubernetes/configfile --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}'"|}' $KUBERNETES_CONF_DIR/kubelet

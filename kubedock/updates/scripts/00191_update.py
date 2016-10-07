@@ -24,16 +24,17 @@ from kubedock.utils import Etcd, get_calico_ip_tunnel_address
 from kubedock.kapi.helpers import Services, LOCAL_SVC_TYPE
 from kubedock.kapi.helpers import KUBERDOCK_POD_UID, KUBERDOCK_TYPE
 from kubedock.kapi.podutils import raise_if_failure
+from kubedock.kapi import podcollection
 from kubedock.kapi.podcollection import PodCollection, run_service
 from kubedock.utils import POD_STATUSES
 from kubedock.nodes.models import Node
+from kubedock.kapi.node_utils import complete_calico_node_config
 from kubedock.core import db
 
 #
 # WARNING: etcd should be >= 2.0.10 for successful Calico node running
 # WARNING: kubernetes should be >= 1.2.0 for Network policy applying
 #
-
 
 _NGINX_SHARED_ETCD = '/etc/nginx/conf.d/shared-etcd.conf'
 _WEBAPP_USER = 'nginx'
@@ -92,19 +93,6 @@ metadata:
 description: "Specification for a network isolation policy"
 versions:
 - name: v1alpha1'''
-
-_NETWORK_POLICY = '''\
-kind: NetworkPolicy
-apiVersion: net.alpha.kubernetes.io/v1alpha1
-metadata:
-  name: "{0}"
-spec:
-  podSelector:
-    kuberdock-user-uid: "{0}"
-  ingress:
-    - from:
-      - namespaces:
-          kuberdock-user-uid: "{0}"'''
 
 _NODE_ETCD_CONF = '''\
 # Calico etcd authority
@@ -207,7 +195,13 @@ def _master_k8s_extensions():
 
 
 def _master_network_policy():
-    helpers.local('echo "{0}" | kubectl create -f -'.format(_K8S_EXTENSIONS))
+    RULE_NEXT_TIER = {
+        "id": "next-tier",
+        "order": 9999,
+        "inbound_rules": [{"action": "next-tier"}],
+        "outbound_rules": [{"action": "next-tier"}],
+        "selector": "all()"
+    }
     helpers.local(
         "etcdctl set /calico/v1/policy/tier/failsafe/metadata "
         "'{\"order\": 0}'"
@@ -224,11 +218,17 @@ def _master_network_policy():
         'etcdctl mkdir /calico/v1/policy/tier/kuberdock-service/policy'
     )
     helpers.local(
+        "etcdctl set /calico/v1/policy/tier/kuberdock-service/policy/next-tier "
+        "'{}'".format(json.dumps(RULE_NEXT_TIER)))
+    helpers.local(
         "etcdctl set /calico/v1/policy/tier/kuberdock-hosts/metadata "
         "'{\"order\": 30}'"
     )
     helpers.local(
         'etcdctl mkdir /calico/v1/policy/tier/kuberdock-hosts/policy')
+    helpers.local(
+        "etcdctl set /calico/v1/policy/tier/kuberdock-hosts/policy/next-tier "
+        "'{}'".format(json.dumps(RULE_NEXT_TIER)))
 
     KD_HOST_ROLE = 'kdnode'
     MASTER_TUNNEL_IP = get_calico_ip_tunnel_address()
@@ -355,8 +355,7 @@ def _master_pods_policy():
     pods = Pod.query.filter(Pod.status != 'deleted')
     for pod in pods:
         namespace = pod.get_dbconfig()['namespace']
-        owner_repr = str(pod.owner_id)
-        policy = _NETWORK_POLICY.format(owner_repr)
+        owner_repr = str(pod.owner.id)
         helpers.local(
             'kubectl annotate ns {0} '
             '"net.alpha.kubernetes.io/network-isolation=yes" '
@@ -366,10 +365,10 @@ def _master_pods_policy():
             'kubectl label ns {0} "kuberdock-user-uid={1}" '
             '--overwrite=true'.format(namespace, owner_repr)
         )
-        helpers.local(
-            'echo "{0}" | kubectl create --namespace={1} '
-            '-f -'.format(policy, namespace)
-        )
+        rv = podcollection._get_network_policy_api().post(
+            ['networkpolicys'],
+            json.dumps(podcollection.allow_same_user_policy(owner_repr)),
+            rest=True, ns=namespace)
 
 
 def _node_kube_proxy():
@@ -391,7 +390,7 @@ RM_FLANNEL_COMMANDS = [
 def _master_flannel():
     for cmd in RM_FLANNEL_COMMANDS:
         helpers.local(cmd)
-    run('systemctl daemon-reload')
+    helpers.local('systemctl daemon-reload')
     helpers.install_package('flannel', action='remove')
 
 
@@ -432,18 +431,21 @@ def _node_calico(node_name, node_ip):
         'python /var/lib/kuberdock/scripts/kubelet_args.py '
         '--network-plugin=cni --network-plugin-dir=/etc/cni/net.d'
     )
-    run(
-        'ETCD_AUTHORITY="{0}:2379" '
-        'ETCD_SCHEME=https '
-        'ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt '
-        'ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt '
-        'ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key '
-        'HOSTNAME="{1}"'
-        '/opt/bin/calicoctl node '
-        '--ip="{2}" '
-        '--node-image=kuberdock/calico-node:0.22.0.confd'
-        .format(MASTER_IP, node_name, node_ip)
-    )
+    with quiet():
+        # pull image separately to get reed of calicoctl timeouts
+        run('docker pull kuberdock/calico-node:0.22.0.confd')
+        run(
+            'ETCD_AUTHORITY="{0}:2379" '
+            'ETCD_SCHEME=https '
+            'ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt '
+            'ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt '
+            'ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key '
+            'HOSTNAME="{1}" '
+            '/opt/bin/calicoctl node '
+            '--ip="{2}" '
+            '--node-image=kuberdock/calico-node:0.22.0.confd'
+            .format(MASTER_IP, node_name, node_ip)
+        )
 
 
 def _node_policy_agent(hostname):
@@ -461,7 +463,7 @@ def _master_service_update():
         labels = svc['metadata'].get('labels', {})
         if KUBERDOCK_POD_UID in selector and KUBERDOCK_TYPE not in labels:
             namespace = svc['metadata']['namespace']
-            name= svc['metadata']['name']
+            name = svc['metadata']['name']
             data = {'metadata': {'labels':
                                  {KUBERDOCK_TYPE: LOCAL_SVC_TYPE,
                                   KUBERDOCK_POD_UID: namespace}}}
@@ -487,6 +489,15 @@ def _node_move_config():
     json.dump(data, new_fd)
     put(new_fd, new_path)
 
+def _node_k8s(with_testing):
+    helpers.remote_install(
+        'kubernetes-node-1.2.4-3.el7.cloudlinux', with_testing)
+
+def _master_firewalld():
+    helpers.local('systemctl stop firewalld')
+    helpers.local('systemctl disable firewalld')
+    helpers.install_package('firewalld', action='remove')
+    helpers.local('systemctl daemon-reload')
 
 def _add_nodes_host_endpoints():
     """Adds calico host endpoint for every node,
@@ -508,10 +519,15 @@ def upgrade(upd, with_testing, *args, **kwargs):
     helpers.restart_service('etcd')
 
     _master_docker()
+    _master_firewalld()
     _master_k8s_node()
     _master_calico()
 
     _master_k8s_extensions()
+    helpers.restart_master_kubernetes()
+    helpers.local('echo "{0}" | kubectl create -f -'.format(_K8S_EXTENSIONS))
+    # we need to restart here again, because kubernetes sometimes don't accept
+    # extensions onfly
     helpers.restart_master_kubernetes()
     _master_network_policy()
 
@@ -526,6 +542,7 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
 
 
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
+    _node_k8s(with_testing)
     _node_kube_proxy()
     _node_flannel()
     _node_calico(node_name=env.host_string, node_ip=kwargs['node_ip'])

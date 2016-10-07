@@ -214,7 +214,7 @@ def create_policy_pod(hostname, owner, token):
             policy_conf = get_policy_agent_config(MASTER_IP, token)
             check_internal_pod_data(policy_conf, owner)
             policy_pod = PodCollection(owner).add(policy_conf, skip_check=True)
-            PodCollection(owner).update(policy_pod['id'], {'command': 'start'})
+            PodCollection(owner).update(policy_pod['id'], {'command': 'synchronous_start'})
             return True
         except (IntegrityError, APIError):
             # Either pod already exists or an error occurred during it's

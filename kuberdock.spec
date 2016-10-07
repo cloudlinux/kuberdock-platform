@@ -23,10 +23,6 @@ Requires: kubernetes-node == 1:1.2.4-3.el7.cloudlinux
 Requires: docker == 1:1.8.2-11.el7
 Requires: docker-selinux == 1:1.8.2-11.el7
 
-# TODO remove (AC-4482):
-Requires: flannel == 1:0.5.3
-
-Requires: dnsmasq >= 2.66
 # For semanage, but in new CentOS it's installed by default:
 Requires: policycoreutils-python >= 2.2
 Requires: python-uwsgi

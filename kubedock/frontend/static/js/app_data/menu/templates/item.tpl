@@ -6,5 +6,5 @@
 <% }) %>
 </ul>
 <% } else { %>
-<a href="<%= path %>"><%= name %></a>
+<a class="<%= active ? 'active' : '' %>" href="<%= path %>"><%= name %></a>
 <% } %>

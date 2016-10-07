@@ -144,7 +144,7 @@ class PodCollection(object):
 
     def _preprocess_pod_dump(self, dump, skip_check=False):
         hidden_fields = ['node', 'podIP', 'status', 'db_status', 'k8s_status',
-                         'service', 'serviceAccount']
+                         'service', 'serviceAccount', 'hostNetwork']
 
         pod_data = {k: v
                     for k, v in dump['pod_data'].iteritems()

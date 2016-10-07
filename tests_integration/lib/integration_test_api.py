@@ -794,11 +794,7 @@ class KDPod(RESTMixin):
             out_as_dict=True)
 
     def start(self):
-        _, out, _ = self.command("start")
-        try:
-            self.public_ip = out['data']['public_ip']
-        except KeyError:
-            pass
+        self.command("start")
 
     def stop(self):
         self.command("stop")

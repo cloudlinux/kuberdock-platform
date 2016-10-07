@@ -463,6 +463,7 @@ del pod_dump_data_schema['node']
 del pod_dump_data_schema['podIP']
 del pod_dump_data_schema['serviceAccount']
 del pod_dump_data_schema['status']
+del pod_dump_data_schema['hostNetwork']
 
 pod_dump_schema = {
     'pod_data': {

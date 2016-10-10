@@ -232,7 +232,8 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(helpers.KubeQuery, 'post')
     def test_pod_run_service(
-            self, post_, dbpod_mock, raise_if_failure_mock, mock_get, mock_del):
+            self, post_, dbpod_mock, raise_if_failure_mock, mock_get,
+            mock_del):
         """
         Test that _run_service generates expected service config
         :type post_: mock.Mock
@@ -288,8 +289,6 @@ class TestPodCollectionRunService(unittest.TestCase, TestCaseMixin):
             elif service_type == helpers.LOCAL_SVC_TYPE:
                 self.assertEqual(service['spec']['ports'], ports)
             print service
-
-
 
 
 class TestPodcollectionUtils(unittest.TestCase, TestCaseMixin):
@@ -1012,6 +1011,11 @@ class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
         pod_ = podcollection.Pod.return_value
         self.assertTrue(pod_.as_dict.called)
 
+    @mock.patch.object(podcollection.PodCollection, '_add_pod')
+    def test_dry_run(self, _add_pod):
+        self.assertIs(self.pod_collection.add(self.params, dry_run=True), True)
+        self.assertFalse(_add_pod.called)
+
 
 class TestPodCollectionUpdate(unittest.TestCase, TestCaseMixin):
     def setUp(self):
@@ -1428,7 +1432,8 @@ class TestPodCollectionMerge(unittest.TestCase, TestCaseMixin):
         ])
 
 
-@mock.patch.object(podcollection.SystemSettings, 'get_by_name', return_value=10)
+@mock.patch.object(podcollection.SystemSettings, 'get_by_name',
+                   return_value=10)
 class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
     def setUp(self):
         self.mock_methods(podcollection.PodCollection, '_get_namespaces',
@@ -1469,26 +1474,29 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
         self.assertFalse(raise_mock.called)
 
     @mock.patch.object(podcollection.podutils, 'raise_')
-    def test_add_kubes_to_exists_pod_enough(self, raise_mock, systemSettings_mock):
+    def test_add_kubes_to_exists_pod_enough(self, raise_mock,
+                                            systemSettings_mock):
         """ user is trial and have enough kubes for a exists pod """
         self.user.is_trial = lambda: True
         edit_pod = self.pod_factory('bbbbbbbb-72b4-49c0-869d-34d87fb4edf6', 3)
         pods = type("Pods", (), {
             'filter': lambda q, a: filter(
                 lambda x: not a.compare(DBPod.id != x.id), [
-                    self.pod_factory('aaaaaaaa-72b4-49c0-869d-34d87fb4edf6', 2),
+                    self.pod_factory(
+                        'aaaaaaaa-72b4-49c0-869d-34d87fb4edf6', 2),
                     edit_pod
                 ])})
 
         self.user.pods = pods()
 
         containers = [{'kubes': 3}, {'kubes': 3}, {'kubes': 2}]
-        podcollection.PodCollection(self.user)._check_trial(containers,
-                                 original_pod=edit_pod)
+        podcollection.PodCollection(self.user)._check_trial(
+            containers, original_pod=edit_pod)
         self.assertFalse(raise_mock.called)
 
     @mock.patch.object(podcollection.podutils, 'raise_')
-    def test_add_kubes_to_exists_pod_not_enough(self, raise_mock, systemSettings_mock):
+    def test_add_kubes_to_exists_pod_not_enough(self, raise_mock,
+                                                systemSettings_mock):
         """ user is trial and don't have enough kubes for a exists pod """
         self.user.is_trial = lambda: True
 
@@ -1496,7 +1504,8 @@ class TestPodCollectionCheckTrial(unittest.TestCase, TestCaseMixin):
         pods = type("Pods", (), {
             'filter': lambda q, a: filter(
                 lambda x: not a.compare(DBPod.id != x.id), [
-                    self.pod_factory('aaaaaaaa-72b4-49c0-869d-34d87fb4edf6', 3),
+                    self.pod_factory(
+                        'aaaaaaaa-72b4-49c0-869d-34d87fb4edf6', 3),
                     edit_pod
                 ])})
 

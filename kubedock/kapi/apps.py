@@ -20,6 +20,7 @@ from kubedock.settings import KUBE_API_VERSION
 from kubedock.utils import send_event_to_user
 from kubedock.validation import V, predefined_app_schema
 from kubedock.validation.exceptions import ValidationError
+from kubedock.validation.validators import check_new_pod_data
 from kubedock.rbac import check_permission
 from kubedock.billing import has_billing
 
@@ -54,7 +55,7 @@ def generate(length=8):
     :param length: int -> default string length
     :return: string -> random string
     """
-    rest = ''.join(random.sample(lowercase + digits, length-1))
+    rest = ''.join(random.sample(lowercase + digits, length - 1))
     return random.choice(lowercase) + rest
 
 
@@ -1045,8 +1046,8 @@ class PredefinedApp(object):
                 kube_id = plan_pod.get('kubeType')
                 if kube_id is not None and kube_id not in available_kubes:
                     raise PredefinedAppExc.InvalidTemplate(
-                            'kube ID "{0}" not found in "{1}" package'.format(
-                                kube_id, package.name))
+                        'kube ID "{0}" not found in "{1}" package'.format(
+                            kube_id, package.name))
 
                 self._check_names(spec.get('containers', []),
                                   plan_pod.get('containers', []),
@@ -1112,6 +1113,25 @@ class PredefinedApp(object):
                     return False
                 return True
             return value
+
+
+def start_pod_from_yaml(pod_data, user=None, template_id=None, dry_run=False):
+    if not isinstance(pod_data, list):
+        pod_data = [pod_data]  # should be list of docs
+    new_pod = dispatch_kind(pod_data, template_id)
+    new_pod = check_new_pod_data(new_pod, user)
+
+    if template_id is None and user and user.role.rolename == 'LimitedUser':
+        # legacy check that filled yaml is created from template
+        # TODO: remove after AC-4516
+        template_id = new_pod.get('kuberdock_template_id')
+        if template_id is None:
+            raise PredefinedAppExc.NotPredefinedAppPod
+        pa = PredefinedApp.get(template_id)
+        if not pa.is_template_for(pod_data[0]):
+            raise PredefinedAppExc.NotPredefinedAppPod
+
+    return PodCollection(user).add(new_pod, dry_run=dry_run)
 
 
 def dispatch_kind(docs, template_id=None):

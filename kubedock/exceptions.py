@@ -103,6 +103,30 @@ class NotFound(APIError):
     status_code = 404
 
 
+class ResourceExists(APIError):
+    message_template = '{type} already exists'
+    status_code = 409
+    resource_type = 'Unknown resource'
+
+    _message_template_with_name = '{type} with name "{name}" already exists'
+    _message_template_with_id = '{type} with id "{id}" already exists'
+
+    def __init__(self, type_=None, name=None, id_=None):
+        if name is not None:
+            self.message_template = self._message_template_with_name
+        elif id_ is not None:
+            self.message_template = self._message_template_with_id
+        if type_ is None:
+            type_ = self.resource_type
+
+        super(ResourceExists, self).__init__(
+            details={'type': type_, 'name': name, 'id': id_})
+
+
+class PodExists(ResourceExists):
+    resource_type = 'Pod'
+
+
 class DomainNotFound(NotFound):
     message_template = 'Domain not found'
 

@@ -13,7 +13,7 @@ from flask import current_app
 from sqlalchemy.dialects import postgresql
 
 from ..core import db
-from ..exceptions import NoFreeIPs
+from ..exceptions import NoFreeIPs, PodExists
 from ..kapi import pd_utils
 from ..models_mixin import BaseModelMixin
 from ..settings import DOCKER_IMG_CACHE_TIMEOUT, KUBERDOCK_INTERNAL_USER
@@ -156,6 +156,15 @@ class Pod(BaseModelMixin, db.Model):
             self.save()
         return self
 
+    @classmethod
+    def check_name(cls, name, owner_id, pod_id=None):
+        query = cls.query.filter(cls.name == name, cls.owner_id == owner_id)
+        if pod_id is not None:
+            query = query.filter(cls.id != pod_id)
+        duplicate = query.first()
+        if duplicate:
+            raise PodExists(name=name, id_=duplicate.id)
+
     def to_dict(self):
         return dict(
             id=self.id,
@@ -175,8 +184,8 @@ class ImageCache(db.Model):
     time_stamp = db.Column(db.DateTime, nullable=False)
 
     def __repr__(self):
-        return "<ImageCache(query='{}', data='{}', time_stamp='{}'')>" \
-                .format(self.query, self.data, self.time_stamp)
+        return ("<ImageCache(query='{}', data='{}', time_stamp='{}'')>"
+                .format(self.query, self.data, self.time_stamp))
 
     @property
     def outdated(self):

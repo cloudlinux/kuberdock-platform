@@ -551,15 +551,7 @@ class Pod(object):
             })
 
     def check_name(self):
-        pod = DBPod.query.filter(DBPod.name == self.name,
-                                 DBPod.owner_id == self.owner.id,
-                                 DBPod.id != self.id).first()
-        if pod:
-            raise APIError(
-                u'Pod with name "{0}" already exists.'.format(self.name),
-                status_code=409, type='PodNameConflict',
-                details={'id': pod.id, 'name': pod.name}
-            )
+        DBPod.check_name(self.name, self.owner.id, self.id)
 
     def set_status(self, status, send_update=False, force=False):
         """Updates pod status in database"""

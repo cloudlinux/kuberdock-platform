@@ -217,7 +217,8 @@ class TestFillingWorkflow(unittest.TestCase):
         pa = apps.PredefinedApp.get(1)
         pa._get_filled_template_for_plan(8, 'test')
         sp.assert_called_once_with(8)
-        ft.assert_called_once_with(loaded=mock.sentinel.SQUEEZED, values='test')
+        ft.assert_called_once_with(
+            loaded=mock.sentinel.SQUEEZED, values='test')
 
     @mock.patch('kubedock.kapi.apps.PredefinedApp._fill_template')
     @mock.patch('kubedock.kapi.apps.PredefinedApp._squeeze_plans')
@@ -506,7 +507,8 @@ class TestCheckPlans(DBTestCase):
     def test_check_plans_2_recommended(self):
         pa = apps.PredefinedApp.get(1)
         pa.get_plans()
-        pa._filled_template['kuberdock']['appPackages'][1]['recommended'] = True
+        app_packages = pa._filled_template['kuberdock']['appPackages']
+        app_packages[1]['recommended'] = True
         with self.assertRaises(PredefinedAppExc.InvalidTemplate):
             pa._validate_template()
 
@@ -550,6 +552,25 @@ class TestCheckPlans(DBTestCase):
         pod['kubeType'] = other_kube.id
         with self.assertRaises(PredefinedAppExc.InvalidTemplate):
             pa._validate_template()
+
+
+@mock.patch('kubedock.kapi.apps.PodCollection')
+@mock.patch('kubedock.kapi.apps.check_new_pod_data')
+@mock.patch('kubedock.kapi.apps.dispatch_kind')
+class TestStartPodFromYAML(DBTestCase):
+    def setUp(self):
+        self.user, _ = self.fixtures.user_fixtures()
+
+    def test_dry_run(self, dispatch_kind, check_new_pod_data, PodCollection):
+        self.assertEqual(
+            apps.start_pod_from_yaml({}, self.user, dry_run=True),
+            PodCollection.return_value.add.return_value)
+
+        check_new_pod_data.assert_called_once_with(
+            dispatch_kind.return_value, self.user)
+        PodCollection.assert_called_once_with(self.user)
+        PodCollection.return_value.add.assert_called_once_with(
+            check_new_pod_data.return_value, dry_run=True)
 
 
 if __name__ == '__main__':

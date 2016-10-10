@@ -1,3 +1,5 @@
+from functools import wraps
+
 from flask import Blueprint, current_app, request
 
 from kubedock.core import db
@@ -7,8 +9,9 @@ from kubedock.login import auth_required
 from kubedock.utils import atomic, KubeUtils
 from kubedock.billing.models import Package, Kube
 from kubedock.system_settings.models import SystemSettings
-from kubedock.kapi.apps import PredefinedApp
+from kubedock.kapi.apps import PredefinedApp, start_pod_from_yaml
 from kubedock.kapi.podcollection import PodCollection
+from kubedock.validation.validators import check_new_pod_data
 import json
 
 
@@ -31,63 +34,76 @@ def no_billing_data():
     }
 
 
+def with_billing(raise_=True):
+    def decorator(func):
+        @wraps(func)
+        def inner(*args, **kwargs):
+            billing_type = SystemSettings.get_by_name('billing_type')
+            if billing_type == 'No billing':
+                if raise_:
+                    raise WithoutBilling()
+                driver = None
+            else:
+                driver = current_app.billing_factory.get_billing(billing_type)
+            return func(driver, *args, **kwargs)
+        return inner
+    return decorator
+
+
 @billing.route('/info', methods=['GET'], strict_slashes=False)
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
-def get_billing_info():
+@with_billing(raise_=False)
+def get_billing_info(billing_driver):
     data = KubeUtils._get_params()
-    current_billing = SystemSettings.get_by_name('billing_type')
-    if current_billing == 'No billing':
+    if billing_driver is None:
         return no_billing_data()
-    billing = current_app.billing_factory.get_billing(current_billing)
-    return billing.getkuberdockinfo(**data)
+    return billing_driver.getkuberdockinfo(**data)
 
 
 @billing.route('/paymentmethods', methods=['GET'], strict_slashes=False)
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
-def payment_methods():
-    current_billing = SystemSettings.get_by_name('billing_type')
-    if current_billing == 'No billing':
-        raise WithoutBilling()
-    billing = current_app.billing_factory.get_billing(current_billing)
-    return billing.getpaymentmethods()
+@with_billing()
+def payment_methods(billing_driver):
+    return billing_driver.getpaymentmethods()
 
 
 @billing.route('/order', methods=['POST'], strict_slashes=False)
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
-def order_product():
+@with_billing()
+def order_product(billing_driver):
     data = KubeUtils._get_params()
-    current_billing = SystemSettings.get_by_name('billing_type')
-    if current_billing == 'No billing':
-        raise WithoutBilling()
-    billing = current_app.billing_factory.get_billing(current_billing)
     if data.get('pod'):
+        user = KubeUtils.get_current_user()
+        pod = data.get('pod')
+        if isinstance(pod, basestring):  # TODO: AC-4523
+            pod = json.loads(pod)
+        check_new_pod_data(pod)
+        PodCollection(user).add(pod, dry_run=True)
+
         data['referer'] = data['referer'] if 'referer' in data else ''
-        return billing.orderpod(**data)
-    return billing.orderproduct(**data)
+        return billing_driver.orderpod(**data)
+    return billing_driver.orderproduct(**data)
 
 
 @billing.route('/orderPodEdit', methods=['POST'], strict_slashes=False)
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
-def order_edit():
+@with_billing()
+def order_edit(billing_driver):
     data = KubeUtils._get_params()
     data['pod'] = json.dumps(data['pod'])
-    current_billing = SystemSettings.get_by_name('billing_type')
-    if current_billing == 'No billing':
-        raise WithoutBilling()
-    billing = current_app.billing_factory.get_billing(current_billing)
     data['referer'] = data['referer'] if 'referer' in data else ''
-    response = billing.orderpodedit(**data)
+    response = billing_driver.orderpodedit(**data)
     if isinstance(response, basestring):
         raise BillingExc.InternalBillingError(
-                    details={'message': response})
+            details={'message': response})
     if response.get('result') == 'error':
         raise APIError(response.get('message'))
     return response
@@ -98,11 +114,8 @@ def order_edit():
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
-def switch_app_package(pod_id, plan_id):
-    current_billing = SystemSettings.get_by_name('billing_type')
-    if current_billing == 'No billing':
-        raise WithoutBilling()
-    billing = current_app.billing_factory.get_billing(current_billing)
+@with_billing()
+def switch_app_package(billing_driver, pod_id, plan_id):
     owner = KubeUtils.get_current_user()
 
     transaction = db.session.begin_nested()
@@ -118,21 +131,18 @@ def switch_app_package(pod_id, plan_id):
     data['oldPod'] = old_pod
     data['referer'] = data.get('referer') or ''
 
-    return billing.orderswitchapppackage(**data)
+    return billing_driver.orderswitchapppackage(**data)
 
 
 @billing.route('/orderKubes', methods=['POST'], strict_slashes=False)
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
-def order_kubes():
+@with_billing()
+def order_kubes(billing_driver):
     data = KubeUtils._get_params()
-    current_billing = SystemSettings.get_by_name('billing_type')
-    if current_billing == 'No billing':
-        raise WithoutBilling()
-    billing = current_app.billing_factory.get_billing(current_billing)
     data['referer'] = data['referer'] if 'referer' in data else ''
-    return billing.orderkubes(**data)
+    return billing_driver.orderkubes(**data)
 
 
 @billing.route('/orderapp/<int:template_id>/<int:plan_id>',
@@ -141,13 +151,16 @@ def order_kubes():
 # @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
-def order_app(template_id, plan_id):
+@with_billing()
+def order_app(billing_driver, template_id, plan_id):
     data = KubeUtils._get_params()
-    current_billing = SystemSettings.get_by_name('billing_type')
-    if current_billing == 'No billing':
-        raise WithoutBilling()
     app = PredefinedApp.get(template_id)
+
+    start_pod_from_yaml(app.get_filled_template_for_plan(plan_id, data),
+                        dry_run=True)
+
     filled = app.get_filled_template_for_plan(plan_id, data, as_yaml=True)
     pkgid = app._get_package().id
-    billing = current_app.billing_factory.get_billing(current_billing)
-    return billing.orderapp(pkgid=pkgid, yaml=filled, referer=request.referrer)
+
+    return billing_driver.orderapp(pkgid=pkgid, yaml=filled,
+                                   referer=request.referrer)

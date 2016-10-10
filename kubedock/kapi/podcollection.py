@@ -14,7 +14,8 @@ import node_utils
 import pod_domains
 import podutils
 import pstorage
-from helpers import KubeQuery, K8sSecretsClient, K8sSecretsBuilder, LocalService
+from helpers import (
+    KubeQuery, K8sSecretsClient, K8sSecretsBuilder, LocalService)
 from images import Image
 from kubedock.exceptions import (
     NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError, ServicePodDumpError)
@@ -33,7 +34,7 @@ from .. import settings
 from .. import utils
 from ..core import db
 from ..domains.models import PodDomain
-from ..exceptions import APIError, PodStartFailure
+from ..exceptions import APIError, InsufficientData, PodStartFailure
 from ..kd_celery import celery
 from ..nodes.models import Node
 from ..pods.models import (
@@ -131,6 +132,14 @@ class PodCollection(object):
 
         params['owner'] = self.owner
 
+        # TODO: AC-4126 preliminary check for:
+        # there is alive node with desired Kube Type (done in validator, move?)
+        # there is a free public IP (if required)
+        # DNS management system is ok (if required)
+        # ...
+        if self.owner is not None:
+            DBPod.check_name(params.get('name'), self.owner.id)
+
         return params, secrets
 
     def _preprocess_pod_dump(self, dump, skip_check=False):
@@ -176,7 +185,8 @@ class PodCollection(object):
             container.setdefault('kubes', 1)
 
         if not skip_check:
-            self._check_trial(containers, original_pod=original_pod)
+            if self.owner is not None:  # may not have an owner in dry-run
+                self._check_trial(containers, original_pod=original_pod)
             Image.check_containers(containers, secrets)
 
     def _check_status(self, pod_data):
@@ -231,12 +241,18 @@ class PodCollection(object):
         db_pod.set_dbconfig(pod_config, save=True)
         return pod.as_dict()
 
-    def add(self, params, skip_check=False, reuse_pv=True):  # TODO: celery
+    def add(self, params, skip_check=False, reuse_pv=True, dry_run=False):
+        if self.owner is None and not dry_run:
+            raise InsufficientData('Cannot create a pod without an owner')
+
         if not skip_check:
             _check_license()
 
         params, secrets = self._preprocess_new_pod(
             params, skip_check=skip_check)
+
+        if dry_run:
+            return True
 
         return self._add_pod(params, secrets, skip_check, reuse_pv)
 
@@ -1035,7 +1051,7 @@ class PodCollection(object):
     def _assign_public_ip(pod, db_pod, db_config, node=None):
         """Returns assigned ip"""
 
-        #@utils.atomic()  # atomic does not work
+        # @utils.atomic()  # atomic does not work
         def _assign(desired_ip, notify_on_change=False):
             """Try to assign desired IP to pod.
 

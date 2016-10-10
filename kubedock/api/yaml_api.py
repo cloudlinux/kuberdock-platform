@@ -1,16 +1,16 @@
 import yaml
+
 from flask import Blueprint, Response
 from flask.views import MethodView
 
 from kubedock.api.utils import use_kwargs
 from kubedock.decorators import maintenance_protected
-from kubedock.exceptions import APIError, PredefinedAppExc, InsufficientData
-from kubedock.login import auth_required
-from kubedock.utils import KubeUtils, register_api, send_event_to_user
+from kubedock.exceptions import APIError, InsufficientData, PredefinedAppExc
+from kubedock.kapi.apps import PredefinedApp, start_pod_from_yaml
 from kubedock.kapi.podcollection import PodCollection
-from kubedock.validation import check_new_pod_data
+from kubedock.login import auth_required
 from kubedock.rbac import check_permission
-from kubedock.kapi.apps import PredefinedApp, dispatch_kind
+from kubedock.utils import KubeUtils, register_api, send_event_to_user
 from kubedock.validation.coerce import extbool
 
 
@@ -26,9 +26,11 @@ class YamlAPI(KubeUtils, MethodView):
     )
 
     @maintenance_protected
-    def post(self):
+    @use_kwargs({'data': {'type': 'string', 'empty': False}},
+                allow_unknown=True)
+    def post(self, **params):
         user = self.get_current_user()
-        data = self._get_params().get('data')
+        data = params.get('data')
         if data is None:
             raise InsufficientData('No "data" provided')
         try:
@@ -36,19 +38,9 @@ class YamlAPI(KubeUtils, MethodView):
         except yaml.YAMLError as e:
             raise PredefinedAppExc.UnparseableTemplate(
                 'Incorrect yaml, parsing failed: "{0}"'.format(str(e)))
-        new_pod = dispatch_kind(parsed_data)
-        new_pod = check_new_pod_data(new_pod, user)
-
-        if user.role.rolename == 'LimitedUser':
-            template_id = new_pod.get('kuberdock_template_id')
-            if template_id is None:
-                raise PredefinedAppExc.NotPredefinedAppPod
-            pa = PredefinedApp.get(template_id)
-            if not pa.is_template_for(parsed_data[0]):
-                raise PredefinedAppExc.NotPredefinedAppPod
 
         try:
-            res = PodCollection(user).add(new_pod)
+            res = start_pod_from_yaml(parsed_data, user=user)
         except APIError as e:  # pass as is
             raise
         except Exception as e:
@@ -61,10 +53,10 @@ register_api(yamlapi, YamlAPI, 'yamlapi', '/', 'pod_id', strict_slashes=False)
 
 
 @yamlapi.route('/fill/<int:template_id>/<int:plan_id>', methods=['POST'])
-def fill_template(template_id, plan_id):
-    data = KubeUtils._get_params()
+@use_kwargs({}, allow_unknown=True)
+def fill_template(template_id, plan_id, **params):
     app = PredefinedApp.get(template_id)
-    filled = app.get_filled_template_for_plan(plan_id, data, as_yaml=True)
+    filled = app.get_filled_template_for_plan(plan_id, params, as_yaml=True)
     return Response(filled, content_type='application/x-yaml')
 
 
@@ -72,15 +64,15 @@ def fill_template(template_id, plan_id):
 @auth_required
 @check_permission('create', 'yaml_pods')
 @KubeUtils.jsonwrap
-def create_pod(template_id, plan_id):
+@use_kwargs({'start': {'type': 'boolean', 'coerce': extbool}},
+            allow_unknown=True)
+def create_pod(template_id, plan_id, **data):
     user = KubeUtils.get_current_user()
-    data = KubeUtils._get_params()
-    start = extbool(data.pop('start', True))
+    start = data.pop('start', True)
+
     app = PredefinedApp.get(template_id)
     pod_data = app.get_filled_template_for_plan(plan_id, data, user=user)
-    new_pod = dispatch_kind([pod_data], template_id)
-    new_pod = check_new_pod_data(new_pod, user)
-    res = PodCollection(user).add(new_pod)
+    res = start_pod_from_yaml(pod_data, user=user, template_id=template_id)
     if start:
         PodCollection(user).update(res['id'],
                                    {'command': 'start', 'commandOptions': {}})

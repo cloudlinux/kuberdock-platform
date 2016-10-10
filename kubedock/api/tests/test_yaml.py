@@ -65,7 +65,8 @@ class TestYamlAPI(APITestCase):
         response = self.user_open(YamlURL.post(), 'POST', {
             'data': ""
         })
-        self.assertAPIError(response, 400, 'ValidationError')
+        self.assertAPIError(response, 400, 'ValidationError',
+                            {'data': 'empty values not allowed'})
 
     def test_no_document(self):
         response = self.user_open(YamlURL.post(), 'POST', {
@@ -133,7 +134,7 @@ class TestYamlAPI(APITestCase):
 
     @mock.patch.object(yaml_api, 'send_event_to_user')
     @mock.patch('kubedock.validation.V._validate_kube_type_exists')
-    @mock.patch('kubedock.api.yaml_api.PodCollection')
+    @mock.patch('kubedock.kapi.apps.PodCollection')
     def test_correct_yaml(self, PodCollection, *_):
         PodCollection().add.return_value = {}
 

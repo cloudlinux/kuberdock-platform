@@ -2,6 +2,7 @@ import subprocess
 
 import nginx
 
+from flask import current_app
 from ..nodes.models import Node
 from ..settings import MASTER_IP
 
@@ -27,8 +28,12 @@ def update_allowed(accept_ips, conf):
 
 
 def update_nginx_proxy_restriction(accept_ips):
+    current_app.logger.debug('UPDATE NGINX PROXY FOR RHOSTS: {}'
+                             .format(accept_ips))
     for filename in files:
         conf = nginx.loadf(filename)
         update_allowed(accept_ips, conf)
         nginx.dumpf(conf, filename)
+    # Because only root can reload daemons we've created special wrapper
+    # and configure sudo to allow required action
     subprocess.call('sudo /var/opt/kuberdock/nginx_reload.sh', shell=True)

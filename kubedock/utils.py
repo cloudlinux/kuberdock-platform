@@ -35,7 +35,9 @@ from .pods import Pod
 from .rbac.models import Role
 from .settings import (
     KUBE_MASTER_URL, KUBE_BASE_URL, KUBE_API_VERSION, NODE_TOBIND_EXTERNAL_IPS,
-    ETCD_BASE_URL, ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE)
+    ETCD_BASE_URL, ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE,
+    ETCD_CALICO_V_PATH, ETCD_CALICO_HOST_KEY_PATH_TEMPLATE
+)
 from .users.models import SessionData
 
 
@@ -1048,6 +1050,7 @@ def get_node_token():
         return None
 
 
+# TODO possibly not needed anymore
 def get_ip_address(ifname):
     # http://stackoverflow.com/a/24196955
     try:
@@ -1148,6 +1151,47 @@ def get_calico_ip_tunnel_address(hostname=None):
     return result[u'node'][u'value']
 
 
+def get_current_calico_hosts():
+    """
+    Return all calico hosts currently present in etcd as list of strings
+    :return: list, error_str
+    """
+    res = []
+    try:
+        resp = Etcd(ETCD_CALICO_V_PATH + '/host/').get()
+        for host in resp[u'node'][u'nodes']:
+            if host[u'dir']:
+                hostname = host[u'key'].rsplit(u'/', 1)[-1]
+                res.append(hostname)
+    except (requests.exceptions.HTTPError, KeyError):
+        return None, "Can't get list of calico hosts"
+    return res, None
+
+
+def get_calico_host_bird_ip(hostname):
+    try:
+        resp = Etcd(
+            ETCD_CALICO_HOST_KEY_PATH_TEMPLATE.format(hostname=hostname) +
+            '/bird_ip').get()
+        return resp[u'node'][u'value'], None
+    except (requests.exceptions.HTTPError, KeyError):
+        return None, "Can't get calico host bird ip"
+
+
+def find_calico_host_by_ip(bird_ip):
+    all_hosts, err = get_current_calico_hosts()
+    if err:
+        return None, err
+
+    for host in all_hosts:
+        host_bird_ip, err = get_calico_host_bird_ip(host)
+        if not host_bird_ip:
+            return None, err
+        if host_bird_ip == bird_ip:
+            return host, None
+    return None, None
+
+
 @contextmanager
 def session_scope(session):
     """
@@ -1175,6 +1219,8 @@ def _find_calico_host(nodes, ip):
                 return node['key'].split('/')[-1]
 
 
+# TODO not needed anymore. Remove after regression testing of Calico
+# Also remote it's commented reference in listeners.py
 def fix_calico(ip):
     """
     Fix issue when Calico network is unreachable from newly added host

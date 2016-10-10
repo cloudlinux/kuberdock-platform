@@ -911,11 +911,15 @@ waitAndCatchFailure 3 10 docker info > /dev/null
 
 # Could be a workaround if failed on etcd access(AC-4634) or Docker access (AC-4679)
 # under heavy IO during deploy process
-time sync
-sleep 10
+#time sync
+#sleep 10       # TODO TEST WHETHER STILL NEEDED
 
 log_it echo "Starting Calico node..."
-ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl node --ip="$MASTER_IP" --node-image=kuberdock/calico-node:0.22.0.confd
+# Separate pull command may help to prevent timeout bugs in calicoctl (AC-4679)
+# If it's not enough we could add few retries here
+CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0.confd"
+docker pull "$CALICO_NODE_IMAGE"
+ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl node --ip="$MASTER_IP" --node-image="$CALICO_NODE_IMAGE"
 
 
 #14 Create k8s database

@@ -27,7 +27,6 @@ show_help() {
     echo "-t|--testing          : Use testing repositories"
     echo "-k|--kuberdock        : Specify KuberDock master hostname or IP address (if not specified '127.0.0.1' is used)"
     echo "-i|--interface        : Network interface to use"
-    echo "-c|--calico           : Use Calico Networking"
     echo "-C|--switch-to-calico : Switch Networking to Calico"
     echo "-h|--help             : Show this help"
     exit 0
@@ -103,11 +102,15 @@ install_calico() {
     do_and_log curl https://github.com/projectcalico/calico-containers/releases/download/v0.22.0/calicoctl --create-dirs --location --output /opt/bin/calicoctl --silent --show-error
     do_and_log chmod +x /opt/bin/calicoctl
     echo "Starting Calico Node..."
-    ETCD_AUTHORITY="$KD_HOST:8123" do_and_log /opt/bin/calicoctl node --node-image=kuberdock/calico-node:0.22.0.confd
+    # Separate pull command may help to prevent timeout bugs in calicoctl (AC-4679)
+    # If it's not enough we could add few retries here
+    CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0.confd"
+    docker pull "$CALICO_NODE_IMAGE"
+    # In case of ambiguity we can force calico to register host with
+    # envvar HOSTNAME="$SOME_HOSTNAME"
+    ETCD_AUTHORITY="$KD_HOST:8123" do_and_log /opt/bin/calicoctl node --node-image="$CALICO_NODE_IMAGE"
     # wait for calico routes to bring up
-    sleep 20
-    # register again with Calico network running
-    do_and_log kcli kubectl register
+    #sleep 20    # TODO test without this after all fixes!!!!!!!!!!!!!
 }
 
 
@@ -139,9 +142,6 @@ while true;do
         ;;
         -i|--interface)
             IFACE=$2;shift 2;
-        ;;
-        -c|--calico)
-            CALICO=true;shift;
         ;;
         -C|--switch-to-calico)
             switch_to_calico
@@ -230,45 +230,39 @@ else
     exit 1
 fi
 
+register_host() {
+    REGISTER_INFO=$(kcli kubectl register 2>&1)
+    if [ $? -ne 0 ];then
+        echo $REGISTER_INFO | grep -iq "already registered"
+        if [ $? -ne 0 ];then
+            echo "Could not register host in KuberDock. Check hostname, username and password and try again. Quitting."
+            exit 1
+        else
+            echo "Already registered"
+        fi
+    else
+        echo "Done"
+    fi
+}
 
 echo -n "Registering host in KuberDock... "
-REGISTER_INFO=$(kcli kubectl register 2>&1)
-if [ $? -ne 0 ];then
-    echo $REGISTER_INFO | grep -iq "already registered"
-    if [ $? -ne 0 ];then
-        echo "Could not register host in KuberDock. Check hostname, username and password and try again. Quitting."
-        exit 1
-    else
-        echo "Already registered"
-    fi
-else
-    echo "Done"
-fi
+register_host
 
 yum_wrapper -y install kubernetes-proxy at
+# FIXME: move to kube-proxy or kuberdock dependencies
+yum_wrapper -y install conntrack
 
-if [ -z "$CALICO" ]; then
-    yum_wrapper -y install flannel
+yum_wrapper -y install at
 
-    sed -i "s/^FLANNEL_ETCD=.*$/FLANNEL_ETCD=\"http:\/\/$KD_HOST:8123\"/" $FLANNEL_CONFIG
-    sed -i "s/^FLANNEL_ETCD_KEY=.*$/FLANNEL_ETCD_KEY=\"\/kuberdock\/network\"/" $FLANNEL_CONFIG
+install_calico
 
-    if [ -n "$IFACE" ];then
-       sed -i "s/^#\?FLANNEL_OPTIONS=.*$/FLANNEL_OPTIONS=\"--iface=$IFACE\"/" $FLANNEL_CONFIG
-    fi
+echo "Re-registering host again with network running..."
+register_host
 
-    if [ "$VER" == "7" ];then
-        do_and_log systemctl enable flanneld
-        do_and_log systemctl start flanneld
-    else
-        do_and_log chkconfig flanneld on
-        do_and_log service flanneld start
-    fi
-else
-    install_calico
-fi
 
-sed -i "s/^#\?KUBE_PROXY_ARGS=.*$/KUBE_PROXY_ARGS=\"--proxy-mode userspace\"/" $PROXY_CONFIG_ARGS
+# looks like userspace mode works fine too, but maybe cPanel will conflicts
+# with some iptables rules?
+sed -i "s/^#\?KUBE_PROXY_ARGS=.*$/KUBE_PROXY_ARGS=\"--proxy-mode iptables\"/" $PROXY_CONFIG_ARGS
 
 sed -i "s/^KUBE_MASTER=.*$/KUBE_MASTER=\"--master=http:\/\/$KD_HOST:8118\"/" $PROXY_CONFIG
 

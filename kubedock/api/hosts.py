@@ -1,4 +1,4 @@
-from flask import Blueprint, redirect, request
+from flask import Blueprint, redirect, request, current_app
 
 from datetime import datetime
 from urlparse import urlparse, urlunparse
@@ -33,6 +33,7 @@ def create_host():
         return register_host(ip)
 
 
+# TODO merge both registrations to one, because old is not needed anymore
 @atomic(nested=False)
 def register_host(ip):
     host = RegisteredHost.query.filter_by(host=ip).first()
@@ -46,29 +47,60 @@ def register_host(ip):
     return {'ip': ip}
 
 
+# def register_host_calico_OLD(ip):
+#     # request should be performed from Calico network
+#     tunl_ip = get_ip_address('tunl0')  # Calico interface
+#     if tunl_ip is None:
+#         raise APIError('Failed to get Calico interface IP address', 500)
+#     if request.environ.get('HTTP_HOST') != tunl_ip:
+#         try:
+#             return register_host(ip)
+#         except APIError as e:
+#             if e.type != 'data exist':
+#                 raise
+#         # fix issue when sometimes calico network is unreachable
+#         # Not needed with correct policy:
+#         # fix_calico(ip)
+#         # replace host with Calico IP and redirect to it
+#         url = urlparse(request.url)
+#         netloc = tunl_ip
+#         if url.port is not None:
+#             netloc = '{0}:{1}'.format(netloc, url.port)
+#         url = url._replace(netloc=netloc)
+#         new_url = urlunparse(url)
+#         return redirect(new_url, code=307)
+#     policy_hosts = Etcd(ETCD_NETWORK_POLICY_HOSTS)
+#     if policy_hosts.exists(ip):
+#         raise APIError('Host is already registered', 409, type='data exist')
+#     policy_hosts.put(ip, value=get_rhost_policy(ip))
+#     return {'ip': ip}
+
+
 def register_host_calico(ip):
-    # request should be performed from Calico network
-    tunl_ip = get_ip_address('tunl0')  # Calico interface
-    if tunl_ip is None:
-        raise APIError('Failed to get Calico interface IP address', 500)
-    if request.environ.get('HTTP_HOST') != tunl_ip:
-        try:
-            return register_host(ip)
-        except APIError as e:
-            if e.type != 'data exist':
-                raise
-        # fix issue when sometimes calico network is unreachable
-        fix_calico(ip)
-        # replace host with Calico IP and redirect to it
-        url = urlparse(request.url)
-        netloc = tunl_ip
-        if url.port is not None:
-            netloc = '{0}:{1}'.format(netloc, url.port)
-        url = url._replace(netloc=netloc)
-        new_url = urlunparse(url)
-        return redirect(new_url, code=307)
+    current_app.logger.info('REGISTERING REMOTE HOST IN KD NETWORK, IP: {}'
+                            .format(ip))
+    try:
+        return register_host(ip)
+    except APIError as e:
+        if e.type != 'data exist':
+            raise
+    # We need registration twice - ones for access to etcd and ones for
+    # creating correct hosts policy that include Calico tunnel ip address,
+    # so we do second step anyway, even if host is already registered
+    policy, err = get_rhost_policy(ip)
+    if policy is None:
+        if err:
+            current_app.logger.error(err)
+            raise APIError("Error during registering host")
+        else:
+            # This is a case for first registration when calico node is not
+            # ready and does't have tunnel ip yet
+            return {'ip': ip}
     policy_hosts = Etcd(ETCD_NETWORK_POLICY_HOSTS)
+    current_app.logger.debug('GENERATED POLICY FOR REMOTE HOST IS: {}'
+                             .format(policy))
+    policy_hosts.put(ip, value=policy)
     if policy_hosts.exists(ip):
-        raise APIError('Host is already registered', 409, type='data exist')
-    policy_hosts.put(ip, value=get_rhost_policy(ip))
+        raise APIError('Host is already registered, updating rules', 409,
+                       type='data exist')
     return {'ip': ip}

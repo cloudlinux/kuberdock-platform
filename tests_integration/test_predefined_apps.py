@@ -62,3 +62,33 @@ def test_mantis_pa(cluster):
 @pipeline('predefined_apps')
 def test_mybb_pa(cluster):
     check_pa(cluster, 'mybb.yaml')
+
+
+@pipeline('predefined_apps')
+def test_opencart_pa(cluster):
+    check_pa(cluster, 'opencart.yaml')
+
+
+@pipeline('predefined_apps')
+def test_limesurvey_pa(cluster):
+    check_pa(cluster, 'limesurvey.yaml')
+
+
+@pipeline('predefined_apps')
+def test_koken_pa(cluster):
+    check_pa(cluster, 'koken.yaml')
+
+
+@pipeline('predefined_apps')
+def test_owncloud_pa(cluster):
+    check_pa(cluster, 'owncloud.yaml')
+
+
+@pipeline('predefined_apps')
+def test_phpbb_pa(cluster):
+    check_pa(cluster, 'phpbb.yaml')
+
+
+@pipeline('predefined_apps')
+def test_wordpress_pa(cluster):
+    check_pa(cluster, 'wordpress.yaml')

@@ -583,7 +583,8 @@ class PodList(object):
         if wait_ports:
             pod.wait_for_ports()
         if healthcheck:
-            LOG.info("Waiting 15 sec. Needed to starting application correctly")
+            LOG.info("Waiting 15 sec. Needed to starting application"
+                     " correctly")
             time.sleep(15)
             pod.healthcheck()
 
@@ -1088,6 +1089,65 @@ class _MybbPaPod(KDPAPod):
         self._generic_healthcheck()
         page = self.do_GET(path='/install/index.php')
         assert_in(u"MyBB Installation Wizard", page)
+
+
+class _OpenCartPaPod(KDPAPod):
+    SRC = 'opencart.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/install/index.php')
+        assert_in(u"Please read the OpenCart licence agreement", page)
+
+
+class _LimesurveyPaPod(KDPAPod):
+    SRC = 'limesurvey.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/index.php?r=installer/welcome')
+        assert_in(u"LimeSurvey installer", page)
+
+
+class _KokenPaPod(KDPAPod):
+    SRC = 'koken.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET()
+        assert_in(u"Koken - Setup", page)
+
+
+class _OwnCloudPaPod(KDPAPod):
+    SRC = 'owncloud.yaml'
+
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        ports = ports or [80]
+        self._wait_for_ports(ports, timeout)
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET()
+        assert_in(u"ownCloud", page)
+        assert_in(u"web services under your control", page)
+
+
+class _PhpBBPaPod(KDPAPod):
+    SRC = 'phpbb.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/install/index.php')
+        assert_in(u"Welcome to phpBB3!", page)
+
+
+class _WordpressPaPod(KDPAPod):
+    SRC = 'wordpress.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/wp-admin/install.php')
+        assert_in(u"WordPress &rsaquo; Installation", page)
 
 
 class VagrantIsAlreadyUpException(Exception):

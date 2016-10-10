@@ -21,5 +21,4 @@ rpms_to_check:
     - kdctl
 admin_password: admin
 
-add_node_command: add-node
 install_plesk: false

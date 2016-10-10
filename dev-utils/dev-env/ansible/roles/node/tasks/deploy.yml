@@ -9,13 +9,8 @@
   when:
       ansible_hostname in ntypes
 
-#TODO: Remove after new consistensy manage.py command will be released.
-- set_fact:
-    add_node_command: add_node
-  when: is_release_install
-
 - name: Add node to master
-  shell: python "{{ master_kd_src_path }}/manage.py" {{ add_node_command }} --hostname {{ ansible_hostname }} {{ kube_type | default("") }} --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}"
+  shell: python "{{ master_kd_src_path }}/manage.py" add-node --hostname {{ ansible_hostname }} {{ kube_type | default("") }} --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}"
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
   tags:

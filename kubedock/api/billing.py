@@ -11,7 +11,6 @@ from kubedock.billing.models import Package, Kube
 from kubedock.system_settings.models import SystemSettings
 from kubedock.kapi.apps import PredefinedApp, start_pod_from_yaml
 from kubedock.kapi.podcollection import PodCollection
-from kubedock.validation.validators import check_new_pod_data
 import json
 
 
@@ -79,13 +78,6 @@ def payment_methods(billing_driver):
 def order_product(billing_driver):
     data = KubeUtils._get_params()
     if data.get('pod'):
-        user = KubeUtils.get_current_user()
-        pod = data.get('pod')
-        if isinstance(pod, basestring):  # TODO: AC-4523
-            pod = json.loads(pod)
-        check_new_pod_data(pod)
-        PodCollection(user).add(pod, dry_run=True)
-
         data['referer'] = data['referer'] if 'referer' in data else ''
         return billing_driver.orderpod(**data)
     return billing_driver.orderproduct(**data)

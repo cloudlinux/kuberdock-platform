@@ -275,6 +275,14 @@ class SSHPipeline(Pipeline):
                     os.unlink(self.cluster.temp_files[key])
 
 
+class PACatalogPipeline(Pipeline):
+    NAME = 'PA_catalog'
+    ROUTABLE_IP_COUNT = 1
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
+    }
+
 pipelines = defaultdict(list)
 
 

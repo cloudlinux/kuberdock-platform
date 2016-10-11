@@ -85,3 +85,17 @@ class VmProvisionError(Exception):
 
 class ClusterUpgradeError(Exception):
     pass
+
+
+class WrongCLICommand(Exception):
+
+    """Be risen if wrong cli command is called.
+
+     For example, PA-pod can be created by both kdctl and kcli2 commands.
+     The one is chosen by specifying parameter "command", when calling
+     pods.create_pa() method. If some other (not kdctl or kcli2) is
+     specified as "command" for create_pa(), this exception should be risen.
+
+    """
+
+    pass

@@ -560,9 +560,17 @@ class PodList(object):
         return pod
 
     def create_pa(self, template_name, plan_id=1, wait_ports=False,
-                  healthcheck=False, wait_for_status=None,
-                  owner='test_user'):
-        pod = KDPAPod.create(self.cluster, template_name, plan_id, owner)
+                  healthcheck=False, wait_for_status=None, owner='test_user',
+                  command="kcli2", rnd_str='test_data_random'):
+        """Create new pod with predefined application in the Kuberdock.
+
+        :param rnd_str: string which will be applied to the name of
+            persistent volumes, which will be created with the pod
+        :return: object via which Kuberdock pod can be managed
+
+        """
+        pod = KDPAPod.create(self.cluster, template_name, plan_id, owner,
+                             command, rnd_str=rnd_str)
 
         if wait_for_status:
             pod.wait_for_status(wait_for_status)
@@ -628,31 +636,31 @@ class PV(object):
                                  .format(inits.keys()))
 
     def _create_new(self, size):
-        """
-        Create new PV in Kuberdock.
+        """Create new PV in Kuberdock.
 
         Create Python object which models PV in Kuberdock
         and also create new PV in the Kuberdock.
+
         """
         self.size = size
         self.cluster.kcli(u"drives add --size {} {}".format(
             self.size, self.name), self.owner)
 
     def _create_dummy(self, size):
-        """
-        Create Python object, which models PV.
+        """Create Python object, which models PV.
 
         Don't create PV in the Kuberdock. This object will be used
         for creation of new PV in Kuberdock together with pod.
+
         """
         self.size = size
 
     def _load_existing(self, size):
-        """
-        Find PV in Kuberdock.
+        """Find PV in Kuberdock.
 
         Create Python obejct which models PV and link it to PV which
         already exist in Kuberdock.
+
         """
         # TODO: Currently this method is never used. May be it will be
         # TODO: in use, when we start testing PAs. If it will not
@@ -680,7 +688,8 @@ class PV(object):
     def volume_dict(self):
         """
         :return: dictionary contain description of volume, necessary for
-        creation of general pod via kcli2
+            creation of general pod via kcli2
+
         """
         persistent_disk = dict(pdName=self.name, pdSize=self.size)
         return dict(name=self.volume_name, persistentDisk=persistent_disk)
@@ -689,6 +698,7 @@ class PV(object):
     def volume_mount_dict(self):
         """
         :return: dictionary contain description of volume mount, necessary for
-        creation of general pod via kcli2
+            creation of general pod via kcli2
+
         """
         return dict(mountPath=self.mount_path, name=self.volume_name)

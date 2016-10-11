@@ -9,6 +9,7 @@ import redis
 
 from pg import DB
 
+from tests_integration.lib.exceptions import WrongCLICommand
 from tests_integration.lib.pod import KDPod
 from tests_integration.lib.pod import DEFAULT_WAIT_POD_TIMEOUT
 from tests_integration.lib.integration_test_utils import \
@@ -32,14 +33,24 @@ class KDPAPod(KDPod):
         self.restart_policy = restart_policy
 
     @classmethod
-    def create(cls, cluster, template_name, plan_id, owner, rnd_str=None):
-
+    def create(cls, cluster, template_name, plan_id, owner, command, rnd_str):
+        commands = {
+            "kcli2": cluster.kcli2,
+            "kdctl": cluster.kdctl
+        }
+        if command not in commands:
+            raise WrongCLICommand("Only kcli2 and kdctl tools can be used for "
+                                  "creation of new pod, however '{}' is used".
+                                  format(command))
         pa_data = cluster.pas.get_by_name(template_name)
         pa_id = pa_data['id']
-        data = json.dumps({'PD_RAND': rnd_str or 'test_data_random'})
-        _, pod_description, _ = cluster.kcli2(
-            "predefined-apps create-pod {} {} '{}'".format(
-                pa_id, plan_id, data),
+        data = json.dumps({'PD_RAND': rnd_str})
+        owner_option = ""
+        if command == "kdctl":
+            owner_option = " --owner {}".format(owner)
+        _, pod_description, _ = commands[command](
+            "predefined-apps create-pod {} {} '{}'{}".format(
+                pa_id, plan_id, data, owner_option),
             out_as_dict=True)
 
         data = pod_description['data']

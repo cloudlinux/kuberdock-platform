@@ -124,6 +124,19 @@ class ExclusiveLock(object):
             redis_con.delete(*keys)
 
 
+class ExclusiveLockContextManager(object):
+
+    def __init__(self, name, blocking=False, ttl=None):
+        self.blocking = blocking
+        self._lock = ExclusiveLock(name, ttl=ttl)
+
+    def __enter__(self):
+        return self._lock.lock(blocking=self.blocking)
+
+    def __exit__(self, *_):
+        self._lock.release()
+
+
 class ServerSentEvents(object):
 
     def __init__(self):

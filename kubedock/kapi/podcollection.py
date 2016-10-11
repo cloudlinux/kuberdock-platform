@@ -32,9 +32,14 @@ from kubedock.kapi.lbpoll import get_service_provider
 from .. import dns_management
 from .. import settings
 from .. import utils
-from ..core import db
+from ..core import ExclusiveLockContextManager, db
 from ..domains.models import PodDomain
-from ..exceptions import APIError, InsufficientData, PodStartFailure
+from ..exceptions import (
+    APIError,
+    InsufficientData,
+    PodStartFailure,
+    PublicIPAssigningError,
+)
 from ..kd_celery import celery
 from ..nodes.models import Node
 from ..pods.models import (
@@ -51,6 +56,9 @@ UNKNOWN_ADDRESS = 'Unknown'
 # will be copied to each node at deploy stage
 DIRECT_SSH_USERNAME_LEN = 30
 DIRECT_SSH_ERROR = "Error retrieving ssh access, please contact administrator"
+
+
+PUBLIC_IP_ASSIGNING_TIMEOUT = 10
 
 
 def _check_license():
@@ -1064,37 +1072,45 @@ class PodCollection(object):
                 Before call ensure that PodIP for specified pod is not present
                 in db.
             """
-            ip_address = IPPool.get_free_host(as_int=True, node=node,
-                                              ip=desired_ip)
+            with ExclusiveLockContextManager(
+                    'PodCollection._assing_public_ip',
+                    blocking=True, ttl=PUBLIC_IP_ASSIGNING_TIMEOUT) as lock:
+                if not lock:
+                    raise PublicIPAssigningError(details={
+                        'message': 'Timeout getting Public IP'
+                    })
 
-            if notify_on_change and ip_address != utils.ip2int(desired_ip):
-                # send event 'IP changed'
-                send_to_ids = {
-                    KubeUtils.get_current_user().id,
-                    pod.owner.id  # can be the same as current user
-                }
-                msg = ('Please, take into account that IP address of pod '
-                       '{pod_name} was changed from {old_ip} to {new_ip}'
-                       .format(pod_name=pod.name, old_ip=desired_ip,
-                               new_ip=utils.int2ip(ip_address)))
-                for user_id in send_to_ids:
-                    utils.send_event_to_user(
-                        # TODO: change event_name to 'notify:warning' when it
-                        # will be implemented
-                        event_name='notify:error', data={'message': msg},
-                        user_id=user_id)
+                ip_address = IPPool.get_free_host(as_int=True, node=node,
+                                                  ip=desired_ip)
 
-            network = IPPool.get_network_by_ip(ip_address)
+                if notify_on_change and ip_address != utils.ip2int(desired_ip):
+                    # send event 'IP changed'
+                    send_to_ids = {
+                        KubeUtils.get_current_user().id,
+                        pod.owner.id  # can be the same as current user
+                    }
+                    msg = ('Please, take into account that IP address of pod '
+                           '{pod_name} was changed from {old_ip} to {new_ip}'
+                           .format(pod_name=pod.name, old_ip=desired_ip,
+                                   new_ip=utils.int2ip(ip_address)))
+                    for user_id in send_to_ids:
+                        utils.send_event_to_user(
+                            # TODO: change event_name to 'notify:warning' when
+                            # it will be implemented
+                            event_name='notify:error', data={'message': msg},
+                            user_id=user_id)
 
-            pod_ip = PodIP.create(pod_id=pod.id, network=network.network,
-                                  ip_address=ip_address)
-            db.session.add(pod_ip)
-            assigned_ip = str(pod_ip)
-            pod.public_ip = assigned_ip
-            IpState.start(pod.id, pod_ip)
-            db_config['public_ip'] = assigned_ip
-            db_pod.set_dbconfig(db_config)
-            return assigned_ip
+                network = IPPool.get_network_by_ip(ip_address)
+
+                pod_ip = PodIP.create(pod_id=pod.id, network=network.network,
+                                      ip_address=ip_address)
+                db.session.add(pod_ip)
+                assigned_ip = str(pod_ip)
+                pod.public_ip = assigned_ip
+                IpState.start(pod.id, pod_ip)
+                db_config['public_ip'] = assigned_ip
+                db_pod.set_dbconfig(db_config)
+                return assigned_ip
 
         try:
             pod_public_ip = getattr(pod, 'public_ip', None)
@@ -1115,7 +1131,7 @@ class PodCollection(object):
 
             return rv
 
-        except NoFreeIPs:
+        except (NoFreeIPs, PublicIPAssigningError):
             pod.set_status(POD_STATUSES.stopped, send_update=True)
             raise
         except Exception:

@@ -140,6 +140,10 @@ class NoFreeIPs(APIError):
                         'KuberDock administrator')
 
 
+class PublicIPAssigningError(APIError):
+    message_template = "Can't assign Public IP to the Pod: {message}"
+
+
 class NoSuitableNode(APIError):
     message_template = ('There are no suitable nodes for the pod. Please try '
                         'again later or contact KuberDock administrator')

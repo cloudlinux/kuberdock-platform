@@ -5,7 +5,6 @@ import unittest
 import mock
 import responses
 
-from kubedock import api
 from kubedock.core import db
 from kubedock.exceptions import APIError
 from kubedock.kapi import ippool
@@ -32,12 +31,6 @@ class TestIpPool(DBTestCase):
         self.stubs.node_info_update_in_k8s_api(self.node.hostname)
 
         current_app.config['FIXED_IP_POOLS'] = True
-
-        patcher = mock.patch.object(api.check_api_version, '__nonzero__')
-        patcher.start()
-        api.check_api_version.__nonzero__ = mock.Mock(
-            return_value=False)
-        self.addCleanup(patcher.stop)
 
     def test_get_returns_emtpy_list_by_default(self):
         res = ippool.IpAddrPool().get()
@@ -122,15 +115,12 @@ class TestIpPool(DBTestCase):
             'network': u'192.168.1.1/32',
             'node': self.node.hostname,
         }
-        res = ippool.IpAddrPool().create(data)
-        self.assertEqual(res, {'network': data['network'],
-                               'free_hosts': ['192.168.1.1'],
-                               'blocked_list': [],
-                               'ipv6': False,
-                               'pages': 1, 'page': 1,
-                               'id': data['network'],
-                               'allocation': [('192.168.1.1', None, 'free')],
-                               'node': data['node']})
+        pool = ippool.IpAddrPool().create(data)
+        self.assertEqual(pool.network, data['network'])
+        self.assertEqual(pool.node, self.node)
+        self.assertEqual(pool.get_blocked_set(), set([]))
+        self.assertEqual(pool.ipv6, False)
+        self.assertEqual(pool.free_hosts(), ['192.168.1.1'])
 
     @responses.activate
     def test_create_correctly_excludes_blocks(self):
@@ -138,10 +128,8 @@ class TestIpPool(DBTestCase):
         db.session.add(pool)
         db.session.commit()
 
-        expected_block_ips = [
-            u'192.168.2.1', u'192.168.2.3', u'192.168.2.4',
-            u'192.168.2.5', u'192.168.2.7'
-        ]
+        expected_block_ips = {u'192.168.2.1', u'192.168.2.3', u'192.168.2.4',
+                              u'192.168.2.5', u'192.168.2.7'}
 
         block = '192.168.2.1,192.168.2.3-192.168.2.5,192.168.2.7'
 
@@ -150,10 +138,10 @@ class TestIpPool(DBTestCase):
             'autoblock': block,
             'node': self.node.hostname,
         }
-        res = ippool.IpAddrPool().create(data)
+        pool = ippool.IpAddrPool().create(data)
         self.assertEqual({
-            'network': res['network'],
-            'blocked_list': res['blocked_list']
+            'network': pool.network,
+            'blocked_list': pool.get_blocked_set()
         }, {
             'network': data['network'],
             'blocked_list': expected_block_ips,
@@ -195,9 +183,10 @@ class TestIpPool(DBTestCase):
         }
         ippool.IpAddrPool().create(data)
 
-        res1 = ippool.IpAddrPool().update(network, None)
-        self.assertIsNotNone(res1)
-        self.assertEqual(res1['network'], network)
+        pool = ippool.IpAddrPool().update(network, None)
+        self.assertIsNotNone(pool)
+        blocked_list1 = pool.get_blocked_set()
+        self.assertEqual(pool.network, network)
 
         # add already blocked ip
         block_ip = u'192.168.2.1'
@@ -208,42 +197,46 @@ class TestIpPool(DBTestCase):
         # block new ip
         block_ip1 = u'192.168.2.111'
         params = {'block_ip': block_ip1}
-        res = ippool.IpAddrPool().update(network, params)
+        blocked_list = ippool.IpAddrPool().update(network, params)\
+            .get_blocked_set()
         self.assertEqual(
-            set(res['blocked_list']),
-            set(res1['blocked_list']) | {block_ip1}
+            blocked_list,
+            blocked_list1 | {block_ip1}
         )
 
         # and one else
         block_ip2 = u'192.168.2.112'
         params = {'block_ip': block_ip2}
-        res = ippool.IpAddrPool().update(network, params)
+        blocked_list = ippool.IpAddrPool().update(network, params)\
+            .get_blocked_set()
         self.assertEqual(
-            set(res['blocked_list']),
-            set(res1['blocked_list']) | {block_ip1, block_ip2}
+            blocked_list,
+            blocked_list1 | {block_ip1, block_ip2}
         )
 
         unblock_ip = block_ip1
         params = {'unblock_ip': unblock_ip}
-        res = ippool.IpAddrPool().update(network, params)
+        blocked_list = ippool.IpAddrPool().update(network, params)\
+            .get_blocked_set()
         self.assertEqual(
-            set(res['blocked_list']),
-            set(res1['blocked_list']) | {block_ip2}
+            blocked_list,
+            blocked_list1 | {block_ip2}
         )
 
         self.assertFalse(remove_public_mock.called)
 
         unbind_ip = '192.168.2.222'
         params = {'unbind_ip': unbind_ip}
-        res = ippool.IpAddrPool().update(network, params)
+        blocked_list = ippool.IpAddrPool().update(network, params)\
+            .get_blocked_set()
         self.assertEqual(
-            set(res['blocked_list']),
-            set(res1['blocked_list']) | {block_ip2}
+            blocked_list,
+            blocked_list1 | {block_ip2}
         )
         remove_public_mock.assert_called_once_with(ip=unbind_ip)
 
-        res = ippool.IpAddrPool().update(network, {'node': node.hostname})
-        self.assertEqual(res['node'], node.hostname)
+        pool = ippool.IpAddrPool().update(network, {'node': node.hostname})
+        self.assertEqual(pool.node, node)
 
     @mock.patch.object(ippool, 'PodIP')
     def test_delete(self, pod_ip_mock):
@@ -376,6 +369,80 @@ class TestIpPool(DBTestCase):
             ip=u'192.168.2.7', node_hostname=self.node.hostname))
         self.assertFalse(pool2.is_ip_available(
             ip=u'192.168.2.6', node_hostname="some_other_node"))
+
+    @responses.activate
+    def test_get_networks_list(self):
+        network = u'192.168.2.0/32'
+        self._create_network(network)
+
+        res = ippool.IpAddrPool().get_networks_list()
+        self.assertEqual(res,
+                         [{'node': self.node.hostname,
+                           'free_host_count': 1,
+                           'ipv6': False,
+                           'id': '192.168.2.0/32',
+                           'network': '192.168.2.0/32'}]
+                         )
+
+    @mock.patch('kubedock.kapi.ippool.AWS', True)
+    def test_get_networks_list_aws(self):
+        res = ippool.IpAddrPool.get_networks_list()
+        self.assertEqual(res, [
+            {'node': None, 'free_host_count': 0, 'ipv6': False, 'id': None,
+             'network': None}])
+
+    @responses.activate
+    def test_get_network_ips(self):
+        network = u'192.168.2.0/32'
+        self._create_network(network)
+
+        res = ippool.IpAddrPool().get_network_ips(network)
+        self.assertEqual(res,
+                         {'node': self.node.hostname,
+                          'free_host_count': 1,
+                          'ipv6': False,
+                          'id': '192.168.2.0/32',
+                          'network': '192.168.2.0/32',
+                          'blocks': [(3232236032, 3232236032, 'free')]}
+                         )
+
+    @responses.activate
+    def test_get_network_ips_24(self):
+        network = u'192.168.2.0/24'
+        self._create_network(network)
+
+        res = ippool.IpAddrPool().get_network_ips(network)
+        self.assertEqual(res,
+                         {'node': self.node.hostname,
+                          'free_host_count': 256,
+                          'ipv6': False,
+                          'id': '192.168.2.0/24',
+                          'network': '192.168.2.0/24',
+                          'blocks': [(3232236032, 3232236287, 'free')]}
+                         )
+
+    @responses.activate
+    @mock.patch('kubedock.kapi.ippool.AWS', True)
+    @mock.patch.object(ippool, 'Pod')
+    @mock.patch('kubedock.kapi.ippool.LoadBalanceService')
+    def test_get_network_ips_aws(self, LoadBalanceService, Pod):
+        mock_pod = mock.Mock()
+        mock_pod.id = 'id'
+        mock_pod.name = 'name'
+        mock_pod.owner.username = 'owner'
+        LoadBalanceService.return_value = mock.Mock(get_dns_by_pods=lambda
+            x: {y: y for y in x})
+        Pod.query.filter().all.return_value = [mock_pod]
+        res = ippool.IpAddrPool().get_network_ips(None)
+        self.assertEqual(res,
+                         {'blocks': [('id', 'id', 'busy', 'name', 'owner')],
+                          'free_host_count': 0,
+                          'id': 'aws',
+                          'ipv6': False,
+                          'network': None,
+                          'node': None}
+
+                         )
 
 
 if __name__ == '__main__':

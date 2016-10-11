@@ -1,23 +1,16 @@
 import ipaddress
 import responses
-import mock
 
-from kubedock import api
 from kubedock.kapi.ippool import IpAddrPool, PodIP, IPPool
 from kubedock.testutils.fixtures import K8SAPIStubs
 from kubedock.testutils.testcases import APITestCase
 
-class TestIPPool(APITestCase):
+
+class BaseTestIPPool(APITestCase):
     url = '/ippool'
     maxDiff = None
 
     def setUp(self):
-        patcher = mock.patch.object(api.check_api_version, '__nonzero__',
-        mock.Mock(
-            return_value=False))
-        patcher.start()
-        self.addCleanup(patcher.stop)
-
         network = u'192.168.1.0/30'
         self.node = self.fixtures.node()
         IpAddrPool().create(
@@ -38,6 +31,8 @@ class TestIPPool(APITestCase):
         self.stubs.node_info_in_k8s_api(self.node.hostname)
         self.stubs.node_info_update_in_k8s_api(self.node.hostname)
 
+
+class TestIPPool(BaseTestIPPool):
     def test_get_user_ips(self):
         response = self.user_open(self.item_url('userstat'))
         self.assert200(response)
@@ -47,7 +42,29 @@ class TestIPPool(APITestCase):
 
     def test_get(self):
         response = self.admin_open()
-        self.assert200(response)  # TODO: check response format
+        self.assert200(response)
+        self.assertEqual(response.json,
+
+                         {'data': [
+                             {'allocation': [['192.168.1.0', None, 'free'],
+                                             ['192.168.1.1', None,
+                                              'blocked'],
+                                             ['192.168.1.2',
+                                              self.pod.name, 'busy'],
+                                             ['192.168.1.3', None,
+                                              'free']],
+                              'blocked_list': ['192.168.1.1'],
+                              'free_hosts': ['192.168.1.0',
+                                             '192.168.1.3'],
+                              'id': '192.168.1.0/30',
+                              'ipv6': False,
+                              'network': '192.168.1.0/30',
+                              'node': None,
+                              'page': 1,
+                              'pages': 1}],
+                             'status': 'OK'}
+
+                         )
         response = self.admin_open(self.item_url(self.ippool.network))
         self.assert200(response)  # TODO: check response format
 
@@ -58,21 +75,180 @@ class TestIPPool(APITestCase):
             'node': self.node.hostname
         }
         response = self.admin_open(method='POST', json=new_network)
-        self.assert200(response)  # TODO: check response format
+        self.assert200(response)
+        self.assertEqual(response.json,
+                         {'data': {
+                             'allocation': [['192.168.2.0', None, 'free'],
+                                            ['192.168.2.1', None, 'free'],
+                                            ['192.168.2.2', None, 'free'],
+                                            ['192.168.2.3', None, 'free']],
+                             'blocked_list': [],
+                             'free_hosts': ['192.168.2.0',
+                                            '192.168.2.1',
+                                            '192.168.2.2',
+                                            '192.168.2.3'],
+                             'id': '192.168.2.0/30',
+                             'ipv6': False,
+                             'network': '192.168.2.0/30',
+                             'node': self.node.hostname,
+                             'page': 1,
+                             'pages': 1},
+                          'status': 'OK'}
+
+                         )
 
     def test_update(self):
         url = self.item_url(self.ippool.network)
         unblock = {'unblock_ip': '192.168.1.1'}
         response = self.admin_open(url, method='PUT', json=unblock)
-        self.assert200(response)  # TODO: check response format
+        self.assert200(response)
+        self.assertEqual(response.json,
+                         {'data': {
+                             'allocation': [['192.168.1.0', None, 'free'],
+                                            ['192.168.1.1', None,
+                                             'free'],
+                                            ['192.168.1.2',
+                                             self.pod.name, 'busy'],
+                                            ['192.168.1.3', None,
+                                             'free']],
+                             'blocked_list': [],
+                             'free_hosts': ['192.168.1.0',
+                                            '192.168.1.1',
+                                            '192.168.1.3'],
+                             'id': '192.168.1.0/30',
+                             'ipv6': False,
+                             'network': '192.168.1.0/30',
+                             'node': None,
+                             'page': 1,
+                             'pages': 1},
+                             'status': 'OK'}
+
+                         )
         response = self.admin_open(self.item_url(self.ippool.network))
         self.assert200(response)
-        self.assertEqual(len(response.json['data']['blocked_list']), 0)
+        self.assertEqual(response.json,
+                         {'data': {
+                             'allocation': [['192.168.1.0', None, 'free'],
+                                            ['192.168.1.1', None, 'free'],
+                                            ['192.168.1.2', self.pod.name,
+                                             'busy'],
+                                            ['192.168.1.3', None, 'free']],
+                             'blocked_list': [],
+                             'free_hosts': ['192.168.1.0', '192.168.1.1',
+                                            '192.168.1.3'],
+                             'id': '192.168.1.0/30',
+                             'ipv6': False,
+                             'network': '192.168.1.0/30',
+                             'node': None,
+                             'page': 1,
+                             'pages': 1},
+                             'status': 'OK'}
+                         )
 
     def test_delete(self):
         url = self.item_url(self.ippool.network)
-        self.assert400(self.admin_open(url, method='DELETE'))
+        response = self.admin_open(url, method='DELETE')
+        self.assert400(response)
+        self.assertEqual(response.json,
+                         {
+                             'data': "You cannot delete this network "
+                                     "'192.168.1.0/30' while some of "
+                                     "IP-addresses of this network are "
+                                     "assigned to Pods",
+                             'details': {},
+                             'status': u'error',
+                             'type': u'APIError'}
+
+                         )
         # free IPs before deletion
         self.db.session.delete(self.pod_ip)
         self.db.session.commit()
-        self.assert200(self.admin_open(url, method='DELETE'))
+        response = self.admin_open(url, method='DELETE')
+        self.assert200(response)
+        self.assertEqual(response.json, {'status': 'OK'})
+
+
+class TestIPPool_v2(BaseTestIPPool):
+    def open(self, url=None, method='GET', json=None, auth=None, headers=None,
+             version=None, **kwargs):
+        return super(TestIPPool_v2, self).open(url, method, json, auth,
+                                               headers, 'v2', **kwargs)
+
+    def test_get(self):
+        response = self.admin_open()
+        self.assert200(response)
+        self.assertEqual(response.json, {'status': 'OK', 'data': [
+            {'free_host_count': 2, 'network': '192.168.1.0/30',
+             'node': None, 'id': '192.168.1.0/30', 'ipv6': False}]})
+        response = self.admin_open(self.item_url(self.ippool.network))
+        self.assert200(response)
+        self.assertEqual(response.json,
+                         {'status': 'OK',
+                          'data': {'free_host_count': 2,
+                                   'network': '192.168.1.0/30',
+                                   'node': None,
+                                   'id': '192.168.1.0/30',
+                                   'ipv6': False,
+                                   'blocks': [
+                                       [3232235776, 3232235776, 'free'],
+                                       [3232235777, 3232235777, 'blocked'],
+                                       [3232235778, 3232235778, 'busy',
+                                        self.pod.name],
+                                       [3232235779, 3232235779, 'free']]
+                                   }})
+
+    @responses.activate
+    def test_create(self):
+        new_network = {
+            'network': '192.168.2.0/30', 'autoblock': '',
+            'node': self.node.hostname
+        }
+        response = self.admin_open(method='POST', json=new_network)
+        self.assert200(response)
+        self.assertEqual(response.json, {
+            'data': {'blocks': [[3232236032, 3232236035, u'free']],
+                     'free_host_count': 4,
+                     'id': '192.168.2.0/30',
+                     'ipv6': False,
+                     'network': '192.168.2.0/30',
+                     'node': self.node.hostname},
+            'status': 'OK'})
+
+    def test_update(self):
+        url = self.item_url(self.ippool.network)
+        unblock = {'unblock_ip': '192.168.1.1'}
+        response = self.admin_open(url, method='PUT', json=unblock)
+        self.assert200(response)
+        self.assertEqual(response.json,
+
+                         {'data': {
+                             'blocks': [[3232235776, 3232235777, 'free'],
+                                        [3232235778, 3232235778, 'busy',
+                                         self.pod.name],
+                                        [3232235779, 3232235779, 'free']],
+                             'free_host_count': 3,
+                             'id': '192.168.1.0/30',
+                             'ipv6': False,
+                             'network': '192.168.1.0/30',
+                             'node': None},
+                             'status': 'OK'}
+
+                         )
+
+        response = self.admin_open(self.item_url(self.ippool.network))
+        self.assert200(response)
+        self.assertEqual(response.json,
+
+                         {'data': {
+                             'blocks': [[3232235776, 3232235777, 'free'],
+                                        [3232235778, 3232235778, 'busy',
+                                         self.pod.name],
+                                        [3232235779, 3232235779, 'free']],
+                             'free_host_count': 3,
+                             'id': '192.168.1.0/30',
+                             'ipv6': False,
+                             'network': '192.168.1.0/30',
+                             'node': None},
+                             'status': 'OK'}
+
+                         )

@@ -6,8 +6,6 @@ from flask import current_app
 from ..kapi.helpers import KubeQuery
 from ..kapi import podutils
 
-from kubedock.api import check_api_version
-from kubedock.utils import API_VERSIONS
 from .podcollection import PodCollection
 from .. import utils
 from .. import validation
@@ -69,7 +67,7 @@ class IpAddrPool(object):
             which define a list of IP addresses to exclude. IP range has a
             following format 10.0.0.1-10.0.0.32. You can mix ranges with
             single IPs, like 10.0.0.1,10.0.0.30-10.0.1.32,10.0.0.2
-        :return: dict with fields 'network' and 'autoblock'
+        :return: pool
 
         """
         data = validation.V()._api_validation(data or {},
@@ -103,17 +101,14 @@ class IpAddrPool(object):
                         'Node isn\'t deployed yet. Please try later.')
 
         pool.save()
-        if check_api_version(API_VERSIONS.v2):
-            return IpAddrPool.get_network_ips(data['network'])
-
-        return pool.to_dict(page=1)
+        return pool
 
     @classmethod
     @utils.atomic(nested=False)
     def update(cls, network, params):
         net = cls._get_network_by_cidr(network)
         if not params:
-            return net.to_dict()
+            return net
 
         block_ip = params.get('block_ip')
         unblock_ip = params.get('unblock_ip')
@@ -134,10 +129,7 @@ class IpAddrPool(object):
             cls._update_free_public_ip_counter(net.node.hostname, block_ip,
                                                unblock_ip,
                                                unbind_ip)
-        if check_api_version(API_VERSIONS.v2):
-            return IpAddrPool.get_network_ips(network)
-
-        return net.to_dict()
+        return net
 
     @staticmethod
     def _update_free_public_ip_counter(hostname, block_ip, unblock_ip,
@@ -341,14 +333,14 @@ class IpAddrPool(object):
             if block[0] > next_ip:
                 missed_blocks.append((next_ip, block[0] - 1))
             next_ip = block[1] + 1
-        if int(end_ip) > next_ip:
+        if int(end_ip) >= next_ip:
             missed_blocks.append((next_ip, int(end_ip)))
         return missed_blocks
 
     @classmethod
     def get_network_ips(cls, net):
         """Return list of subnets
-        :param net: network ('x.x.x.x/x')
+        :param net: network ('x.x.x.x/x') or anything for AWS
         """
         if AWS:
             info = {

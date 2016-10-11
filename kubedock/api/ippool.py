@@ -19,7 +19,7 @@ def get_ippool(network=None):
     params = KubeUtils._get_params()
     if 'free-only' in params:
         return IpAddrPool.get_free()
-    if check_api_version(API_VERSIONS.v2):
+    if check_api_version([API_VERSIONS.v2]):
         if network:
             return IpAddrPool.get_network_ips(network)
         else:
@@ -49,7 +49,11 @@ def get_user_address():
 @KubeUtils.jsonwrap
 def create_item():
     params = KubeUtils._get_params()
-    return IpAddrPool.create(params)
+    pool = IpAddrPool.create(params)
+
+    if check_api_version([API_VERSIONS.v2]):
+        return IpAddrPool.get_network_ips(params['network'])
+    return pool.to_dict(page=1)
 
 
 @ippool.route('/<path:network>', methods=['PUT'])
@@ -58,7 +62,10 @@ def create_item():
 @KubeUtils.jsonwrap
 def update_ippool(network):
     params = KubeUtils._get_params()
-    return IpAddrPool.update(network, params)
+    net = IpAddrPool.update(network, params)
+    if check_api_version([API_VERSIONS.v2]):
+        return IpAddrPool.get_network_ips(network)
+    return net.to_dict()
 
 
 @ippool.route('/<path:network>', methods=['DELETE'])

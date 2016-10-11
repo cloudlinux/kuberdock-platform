@@ -142,19 +142,27 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
         'click @ui.nodeAddBtn'      : 'complete',
         'focus @ui.node_name'       : 'removeError',
         'change @ui.nodeTypeSelect' : 'changeKubeType',
-        'change @ui.block_device'   : 'changeLsDevices'
+        'change @ui.block_device'   : 'changeLsDevices',
+        'change @ui.node_name'      : 'changeHostname'
     },
 
     initialize: function(options){
         this.setupInfo = options.setupInfo;
+        this.model.set('hostname', '');
         if (!this.setupInfo.AWS && this.setupInfo.ZFS){
             this.model.set('lsdevices', ['']);
         }
     },
 
     changeKubeType: function(evt) {
-        if (this.ui.nodeTypeSelect.value !== null) {
+        if (!this.ui.nodeTypeSelect.value) {
             this.model.set('kube_type', Number(evt.target.value));
+        }
+    },
+
+    changeHostname: function(evt) {
+        if (!this.ui.node_name.value) {
+            this.model.set('hostname', evt.target.value);
         }
     },
 

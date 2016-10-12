@@ -27,7 +27,7 @@ def test_elasticsearch_pa(cluster):
     check_pa(cluster, 'elasticsearch.yaml')
 
 
-# Uncomment after AC-4615
+# Uncomment after AC-4745
 # @pipeline('predefined_apps')
 def test_redmine_pa(cluster):
     check_pa(cluster, 'redmine.yaml')
@@ -91,3 +91,18 @@ def test_phpbb_pa(cluster):
 @pipeline('predefined_apps')
 def test_wordpress_pa(cluster):
     check_pa(cluster, 'wordpress.yaml')
+
+
+@pipeline('predefined_apps')
+def test_phpmysqladmin_pa(cluster):
+    check_pa(cluster, 'phpmyadmin.yaml')
+
+
+@pipeline('predefined_apps')
+def test_sugarcrm_pa(cluster):
+    check_pa(cluster, 'sugarcrm.yaml')
+
+
+@pipeline('predefined_apps')
+def test_postgres_pa(cluster):
+    check_pa(cluster, 'postgres.yaml')

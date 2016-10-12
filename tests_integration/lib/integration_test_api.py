@@ -18,6 +18,8 @@ import redis
 import memcache
 from ipaddress import IPv4Network
 
+from pg import DB
+
 from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
     VmCreationError, VmProvisionError
 from tests_integration.lib.exceptions import StatusWaitException, \
@@ -1135,6 +1137,50 @@ class _MybbPaPod(KDPAPod):
         self._generic_healthcheck()
         page = self.do_GET(path='/install/index.php')
         assert_in(u"MyBB Installation Wizard", page)
+
+
+class _PhpMyAdminPaPod(KDPAPod):
+    SRC = 'phpmyadmin.yaml'
+
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        ports = ports or [80]
+        self._wait_for_ports(ports, timeout)
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/server_databases.php')
+        assert_in(u"information_schema", page)
+        assert_in(u"mydata", page)
+
+
+class _SugarCrmPaPod(KDPAPod):
+    SRC = 'sugarcrm.yaml'
+
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        ports = ports or [80]
+        self._wait_for_ports(ports, timeout)
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/install.php')
+        assert_in(u"Sugar Setup Wizard:", page)
+        assert_in(u"Welcome to the SugarCRM", page)
+
+
+class _PostgresPaPod(KDPAPod):
+    SRC = 'postgres.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        spec = self.get_spec()
+        env = {e['name']: e['value'] for e in spec['containers'][0]['env']}
+        user = env['POSTGRES_USER']
+        passwd = env['POSTGRES_PASSWORD']
+        db = DB(dbname=user, host=self.public_ip, port=5432,
+                user=user, passwd=passwd)
+        sql = "create table test_table(id serial primary key, name varchar)"
+        db.query(sql)
+        assert_in('public.test_table', db.get_tables())
 
 
 class VagrantIsAlreadyUpException(Exception):

@@ -49,7 +49,7 @@ def with_billing(raise_=True):
     return decorator
 
 
-@billing.route('/info', methods=['GET'], strict_slashes=False)
+@billing.route('/info', methods=['GET'])
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
@@ -61,7 +61,7 @@ def get_billing_info(billing_driver):
     return billing_driver.getkuberdockinfo(**data)
 
 
-@billing.route('/paymentmethods', methods=['GET'], strict_slashes=False)
+@billing.route('/paymentmethods', methods=['GET'])
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
@@ -70,7 +70,7 @@ def payment_methods(billing_driver):
     return billing_driver.getpaymentmethods()
 
 
-@billing.route('/order', methods=['POST'], strict_slashes=False)
+@billing.route('/order', methods=['POST'])
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
@@ -83,7 +83,7 @@ def order_product(billing_driver):
     return billing_driver.orderproduct(**data)
 
 
-@billing.route('/orderPodEdit', methods=['POST'], strict_slashes=False)
+@billing.route('/orderPodEdit', methods=['POST'])
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
@@ -102,7 +102,7 @@ def order_edit(billing_driver):
 
 
 @billing.route('/switch-app-package/<pod_id>/<int:plan_id>',
-               methods=['POST'], strict_slashes=False)
+               methods=['POST'])
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
@@ -126,7 +126,7 @@ def switch_app_package(billing_driver, pod_id, plan_id):
     return billing_driver.orderswitchapppackage(**data)
 
 
-@billing.route('/orderKubes', methods=['POST'], strict_slashes=False)
+@billing.route('/orderKubes', methods=['POST'])
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap
@@ -138,7 +138,7 @@ def order_kubes(billing_driver):
 
 
 @billing.route('/orderapp/<int:template_id>/<int:plan_id>',
-               methods=['POST'], strict_slashes=False)
+               methods=['POST'])
 # Currently this workflow does not imply authentication but we can force it
 # @auth_required
 @maintenance_protected

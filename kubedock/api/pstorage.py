@@ -141,11 +141,10 @@ def add_kube_types(disks):
     return disks
 
 
-register_api(pstorage, PersistentStorageAPI, 'pstorage', '/', 'device_id',
-             strict_slashes=False)
+register_api(pstorage, PersistentStorageAPI, 'pstorage', '/', 'device_id')
 
 
-@pstorage.route('/is_volume_resizable', methods=['GET'], strict_slashes=False)
+@pstorage.route('/is_volume_resizable', methods=['GET'])
 @auth_required
 @KubeUtils.jsonwrap
 def is_volume_resizable():

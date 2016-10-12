@@ -134,5 +134,4 @@ class SystemSettingsAPI(KubeUtils, MethodView):
     def delete(self, sid):
         pass
 
-register_api(settings, SystemSettingsAPI, 'settings', '/sysapi/', 'sid', 'int',
-             strict_slashes=False)
+register_api(settings, SystemSettingsAPI, 'settings', '/sysapi/', 'sid', 'int')

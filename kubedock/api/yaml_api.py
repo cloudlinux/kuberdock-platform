@@ -49,7 +49,7 @@ class YamlAPI(KubeUtils, MethodView):
         send_event_to_user('pod:change', res, user.id)
         return res
 
-register_api(yamlapi, YamlAPI, 'yamlapi', '/', 'pod_id', strict_slashes=False)
+register_api(yamlapi, YamlAPI, 'yamlapi', '/', 'pod_id')
 
 
 @yamlapi.route('/fill/<int:template_id>/<int:plan_id>', methods=['POST'])

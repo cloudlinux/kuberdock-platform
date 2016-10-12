@@ -129,11 +129,10 @@ class PodsAPI(KubeUtils, MethodView):
         return pods.delete(pod_id)
 
 
-register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id', strict_slashes=False)
+register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id')
 
 
-@podapi.route('/<pod_id>/<container_name>/update', methods=['GET'],
-              strict_slashes=False)
+@podapi.route('/<pod_id>/<container_name>/update', methods=['GET'])
 @auth_required
 @KubeUtils.jsonwrap
 @use_kwargs(schema)
@@ -150,8 +149,7 @@ def check_updates(pod_id, container_name, owner=None):
     return PodCollection(owner).check_updates(pod_id, container_name)
 
 
-@podapi.route('/<pod_id>/<container_name>/update', methods=['POST'],
-              strict_slashes=False)
+@podapi.route('/<pod_id>/<container_name>/update', methods=['POST'])
 @auth_required
 @KubeUtils.jsonwrap
 @use_kwargs(schema)
@@ -168,8 +166,7 @@ def update_container(pod_id, container_name, owner=None):
     return PodCollection(owner).update_container(pod_id, container_name)
 
 
-@podapi.route('/<pod_id>/reset_direct_access_pass', methods=['GET'],
-              strict_slashes=False)
+@podapi.route('/<pod_id>/reset_direct_access_pass', methods=['GET'])
 @auth_required
 @KubeUtils.jsonwrap
 @use_kwargs(schema)
@@ -185,7 +182,7 @@ def reset_access_container(pod_id, owner=None):
     return PodCollection(owner).reset_direct_access_pass(pod_id)
 
 
-@podapi.route('/<pod_id>/dump', methods=['GET'], strict_slashes=False)
+@podapi.route('/<pod_id>/dump', methods=['GET'])
 @auth_required
 @maintenance_protected
 @check_permission('dump', 'pods')
@@ -194,7 +191,7 @@ def dump(pod_id):
     return PodCollection().dump(pod_id)
 
 
-@podapi.route('/dump', methods=['GET'], strict_slashes=False)
+@podapi.route('/dump', methods=['GET'])
 @auth_required
 @maintenance_protected
 @check_permission('dump', 'pods')
@@ -223,7 +220,7 @@ restore_args_schema = {
 }
 
 
-@podapi.route('/restore', methods=['POST'], strict_slashes=False)
+@podapi.route('/restore', methods=['POST'])
 @auth_required
 @maintenance_protected
 @check_permission('create_non_owned', 'pods')
@@ -234,7 +231,7 @@ def restore(pod_dump, owner, **kwargs):
         return backup_pods.restore(pod_dump=pod_dump, owner=owner, **kwargs)
 
 
-@podapi.route('/<pod_id>/plans-info', methods=['GET'], strict_slashes=False)
+@podapi.route('/<pod_id>/plans-info', methods=['GET'])
 @auth_required
 @KubeUtils.jsonwrap
 def get_plans_info_for_pod(pod_id):

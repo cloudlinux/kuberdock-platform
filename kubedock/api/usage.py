@@ -20,7 +20,7 @@ DATE_FROM = 'date_from'
 DATE_TO = 'date_to'
 
 
-@usage.route('/', methods=['GET'], strict_slashes=False)
+@usage.route('/', methods=['GET'])
 @auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap

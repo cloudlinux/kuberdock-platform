@@ -108,5 +108,4 @@ class DomainsAPI(KubeUtils, MethodView):
                 'Domain cannot be deleted: there are some pods that use it')
         db.session.delete(domain)
 
-register_api(domains, DomainsAPI, 'domains', '/', 'domain_id', 'int',
-             strict_slashes=False)
+register_api(domains, DomainsAPI, 'domains', '/', 'domain_id', 'int')

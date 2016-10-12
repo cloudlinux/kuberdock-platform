@@ -99,7 +99,7 @@ def get_user_activities(user):
         user, data_from, date_to, to_dict=True)
 
 
-@users.route('/logHistory', methods=['GET'], strict_slashes=False)
+@users.route('/logHistory', methods=['GET'])
 @auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
@@ -113,7 +113,7 @@ def get_user_log_history():
     return UserActivity.get_sessions(uid, data_from, date_to)
 
 
-@users.route('/online', methods=['GET'], strict_slashes=False)
+@users.route('/online', methods=['GET'])
 @auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
@@ -146,7 +146,7 @@ class UsersAPI(KubeUtils, MethodView):
     def delete(self, uid):
         force = KubeUtils._get_params().get('force', False)
         return UserCollection(KubeUtils.get_current_user()).delete(uid, force)
-register_api(users, UsersAPI, 'podapi', '/all/', 'uid', strict_slashes=False)
+register_api(users, UsersAPI, 'podapi', '/all/', 'uid')
 
 
 @users.route('/editself', methods=['GET'])
@@ -169,9 +169,8 @@ def edit_self():
     return UserCollection(doer).update_profile(uid, data)
 
 
-@users.route('/undelete', methods=['POST'], defaults={'uid': None},
-             strict_slashes=False)
-@users.route('/undelete/<uid>', methods=['POST'], strict_slashes=False)
+@users.route('/undelete', methods=['POST'], defaults={'uid': None})
+@users.route('/undelete/<uid>', methods=['POST'])
 @auth_required
 @check_permission('create', 'users')
 @KubeUtils.jsonwrap

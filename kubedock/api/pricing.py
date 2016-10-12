@@ -58,7 +58,7 @@ class PackageInUse(APIError):
 # === PACKAGE ROUTINES ===
 
 
-@pricing.route('/userpackage', methods=['GET'], strict_slashes=False)
+@pricing.route('/userpackage', methods=['GET'])
 @auth_required
 @KubeUtils.jsonwrap
 @check_permission('get_own', 'pricing')
@@ -158,10 +158,10 @@ class PackagesAPI(KubeUtils, MethodView):
         db.session.delete(package)
 
 register_api(pricing, PackagesAPI, 'packages', '/packages/', 'package_id',
-             'int', strict_slashes=False)
+             'int')
 
 
-@pricing.route('/packages/default', methods=['GET'], strict_slashes=False)
+@pricing.route('/packages/default', methods=['GET'])
 @auth_required
 @KubeUtils.jsonwrap
 @check_permission('get', 'pricing')
@@ -240,11 +240,10 @@ class KubesAPI(KubeUtils, MethodView):
         PackageKube.query.filter_by(kube_id=kube_id).delete()
         db.session.delete(kube)
 
-register_api(pricing, KubesAPI, 'kubes', '/kubes/', 'kube_id',
-             strict_slashes=False)
+register_api(pricing, KubesAPI, 'kubes', '/kubes/', 'kube_id')
 
 
-@pricing.route('/kubes/default', methods=['GET'], strict_slashes=False)
+@pricing.route('/kubes/default', methods=['GET'])
 @auth_required
 @KubeUtils.jsonwrap
 @check_permission('get', 'pricing')
@@ -275,8 +274,7 @@ def add_kube(data):
 # === PACKAGE KUBE ROUTINES ===
 
 
-@pricing.route('/packages/<int:package_id>/kubes-by-id', methods=['GET'],
-               strict_slashes=False)
+@pricing.route('/packages/<int:package_id>/kubes-by-id', methods=['GET'])
 @auth_required
 @KubeUtils.jsonwrap
 @check_permission('get', 'pricing')
@@ -287,8 +285,7 @@ def get_package_kube_ids(package_id):
     return [kube.kube_id for kube in package.kubes]
 
 
-@pricing.route('/packages/<int:package_id>/kubes-by-name', methods=['GET'],
-               strict_slashes=False)
+@pricing.route('/packages/<int:package_id>/kubes-by-name', methods=['GET'])
 @auth_required
 @KubeUtils.jsonwrap
 @check_permission('get', 'pricing')
@@ -373,8 +370,7 @@ class PackageKubesAPI(KubeUtils, MethodView):
         db.session.delete(package_kube)
 
 register_api(pricing, PackageKubesAPI, 'packagekubes',
-             '/packages/<int:package_id>/kubes/', 'kube_id',
-             strict_slashes=False)
+             '/packages/<int:package_id>/kubes/', 'kube_id')
 
 
 def _add_kube_type_to_package(package_id, kube_id, kube_price):
@@ -494,7 +490,7 @@ def process_collection(data):
     return result
 
 
-@pricing.route('/license', methods=['GET'], strict_slashes=False)
+@pricing.route('/license', methods=['GET'])
 @auth_required
 @KubeUtils.jsonwrap
 @check_permission('read_private', 'system_settings')
@@ -504,8 +500,7 @@ def get_license():
     return process_collection(data)
 
 
-@pricing.route('/license/installation_id', methods=['POST'],
-               strict_slashes=False)
+@pricing.route('/license/installation_id', methods=['POST'])
 @auth_required
 @KubeUtils.jsonwrap
 @check_permission('write', 'system_settings')

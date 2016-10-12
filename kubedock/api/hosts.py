@@ -17,7 +17,7 @@ from kubedock.settings import (CALICO, ETCD_REGISTERED_HOSTS,
 hosts = Blueprint('hosts', __name__, url_prefix='/hosts')
 
 
-@hosts.route('/register', methods=['POST'], strict_slashes=False)
+@hosts.route('/register', methods=['POST'])
 @auth_required
 @maintenance_protected
 @KubeUtils.jsonwrap

@@ -30,6 +30,7 @@ class APIJSONEncoder(JSONEncoder):
 
 def create_app(package_name, package_path, settings_override=None):
     app = Flask(package_name, instance_relative_config=True)
+    app.url_map.strict_slashes = False
     app.config.from_object('kubedock.settings')
     app.config.from_pyfile('settings.cfg', silent=True)
     app.config.from_object(settings_override)

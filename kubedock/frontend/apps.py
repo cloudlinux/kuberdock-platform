@@ -11,7 +11,7 @@ apps = Blueprint('apps', __name__, url_prefix='/apps')
 PLAN_FIELDS_ORDER = {'kubeType': 0, 'kube': 1, 'pdSize': 2}
 
 
-@apps.route('/<app_hash>', methods=['GET'], strict_slashes=False)
+@apps.route('/<app_hash>', methods=['GET'])
 def index(app_hash):
     plan_id = request.args.get('plan')
     try:

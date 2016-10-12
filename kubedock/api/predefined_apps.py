@@ -115,11 +115,10 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
         PredefinedApp.delete(app_id)
 
 register_api(predefined_apps, PredefinedAppsAPI, 'predefined_apps', '/',
-             'app_id', pk_type='int', strict_slashes=False)
+             'app_id', pk_type='int')
 
 
-@predefined_apps.route('/validate-template', methods=['POST'],
-                       strict_slashes=False)
+@predefined_apps.route('/validate-template', methods=['POST'])
 @auth_required
 @check_permission('create', 'predefined_apps')
 @KubeUtils.jsonwrap

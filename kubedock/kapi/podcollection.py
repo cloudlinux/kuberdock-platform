@@ -1634,7 +1634,7 @@ def prepare_and_run_pod(pod):
 
         hosts = getattr(pod, 'kuberdock_resolve', [])
         if hosts:
-            url = '{}/{}'.format(settings.DNS_URL, pod.namespace)
+            url = '{}/{}'.format(settings.DNS_URL.rstrip('/'), pod.namespace)
             verify = settings.ETCD_CACERT
             cert = (settings.DNS_CLIENT_CRT, settings.DNS_CLIENT_KEY)
             etcd = utils.Etcd(url, verify=verify, cert=cert)

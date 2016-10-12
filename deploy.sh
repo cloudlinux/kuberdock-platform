@@ -875,7 +875,8 @@ do_and_log systemctl restart kuberdock-k8s2etcd
 sed -i 's/\":8086\"/\"127\.0\.0\.1:8086\"/' /etc/influxdb/influxdb.conf
 
 # Start early or curl connection refused
-do_and_log systemctl reenable influxdb
+# full path specified as a workaround if /lib is not a symlink to /usr/lib
+do_and_log systemctl reenable /lib/systemd/system/influxdb.service
 do_and_log systemctl restart influxdb
 
 

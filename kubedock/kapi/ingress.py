@@ -55,7 +55,10 @@ def create_ingress_controller_pod():
     if Pod.query.filter_by(name=KUBERDOCK_INGRESS_POD_NAME,
                            owner=owner).first():
         return
-    IPPool.get_free_host()  # will raise exception if there are no free IPs
+
+    if not current_app.config['AWS']:
+        # Raises exception if there are no free IPs. Not needed in AWS case
+        IPPool.get_free_host()
 
     def _create_pod():
         try:

@@ -14,7 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 SSH_USER="centos"
-TESTING="no"
+TESTING=${KUBE_AWS_USE_TESTING:-no}
 DEPLOY_SH=${DEPLOY_SH:-http://repo.cloudlinux.com/kubernetes/deploy.sh}
 ZONE=${KUBE_AWS_ZONE:-us-west-2b}
 MASTER_SIZE=${MASTER_SIZE:-}

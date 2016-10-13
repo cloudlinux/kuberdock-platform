@@ -608,7 +608,7 @@ class TestPodConfig(DBTestCase):
                        _update_kubes,
                        ):
         pod_id = str(uuid4())
-        PredefinedAppModel(id=1,name='test', template=VALID_TEMPLATE1).save()
+        PredefinedAppModel(id=1, name='test', template=VALID_TEMPLATE1).save()
         self.fixtures.pod(
             id=pod_id,
             owner_id=1,

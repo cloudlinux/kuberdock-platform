@@ -138,7 +138,7 @@ class TestFunctions(TestCase):
     def test_create_or_update_type_A_record(self, plugin_mock, ingress_mock):
         plugin_mock.return_value.is_ready.return_value = (False, '')
         ingress_mock.return_value.is_ready.return_value = (False, '')
-        ok, _ = entry.create_or_update_type_A_record('qq')
+        ok, _ = entry.create_or_update_record('qq', 'A')
         self.assertFalse(ok)
 
         plugin_mock.return_value.is_ready.return_value = (True, None)
@@ -149,7 +149,7 @@ class TestFunctions(TestCase):
         plugin_mock.return_value.get_kwargs.return_value = kwargs
 
         domain = 'qwqwqwq'
-        ok, _ = entry.create_or_update_type_A_record(domain)
+        ok, _ = entry.create_or_update_record(domain, 'A')
         self.assertTrue(ok)
         plugin_mock.return_value.get_plugin.return_value\
             .entry.create_or_update_type_A_record.assert_called_once_with(
@@ -158,20 +158,20 @@ class TestFunctions(TestCase):
         plugin_mock.return_value.get_plugin.return_value\
             .entry.create_or_update_type_A_record.side_effect = Exception(
                 'fail')
-        ok, _ = entry.create_or_update_type_A_record(domain)
+        ok, _ = entry.create_or_update_record(domain, 'A')
         self.assertFalse(ok)
 
     @mock.patch.object(entry, '_Plugin')
-    def test_delete_type_A_record(self, plugin_mock):
+    def test_delete_record(self, plugin_mock):
         plugin_mock.return_value.is_ready.return_value = (False, '')
-        ok, _ = entry.delete_type_A_record('qwerty')
+        ok, _ = entry.delete_record('qwerty', 'A')
         self.assertFalse(ok)
 
         plugin_mock.return_value.is_ready.return_value = (True, None)
         kwargs = {'one': '1', 'two': '2'}
         plugin_mock.return_value.get_kwargs.return_value = kwargs
         domain = 'asdfg'
-        ok, _ = entry.delete_type_A_record(domain)
+        ok, _ = entry.delete_record(domain, 'A')
         self.assertTrue(ok)
         plugin_mock.return_value.get_plugin.return_value\
             .entry.delete_type_A_record.assert_called_once_with(
@@ -179,7 +179,7 @@ class TestFunctions(TestCase):
 
         plugin_mock.return_value.get_plugin.return_value\
             .entry.delete_type_A_record.side_effect = Exception('fail')
-        ok, _ = entry.delete_type_A_record(domain)
+        ok, _ = entry.delete_record(domain, 'A')
         self.assertFalse(ok)
 
 

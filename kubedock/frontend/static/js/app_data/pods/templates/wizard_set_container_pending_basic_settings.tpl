@@ -36,7 +36,7 @@
 <div class="col-md-9 col-md-offset-3 col-sm-12 no-padding">
     <div class="description pull-left">
         <p>
-            <sup>*</sup> Public IP will require additional payment<br>
+            <% if (!isAWS) { %><sup>*</sup> Public IP will require additional payment<br><% } %>
             <sup>**</sup> Data wiped out on each container restart, use persistent storage if you want data to persist<br>
             <span id="public-access-type-note">
                 <sup>***</sup> Type will apply for each container

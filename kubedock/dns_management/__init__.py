@@ -1,8 +1,12 @@
 from ._entry import (
-    create_or_update_type_A_record, delete_type_A_record, check_if_zone_exists,
+    check_if_zone_exists,
+    create_or_update_record,
+    delete_record,
     is_domain_system_ready)
 
 __all__ = [
-    'create_or_update_type_A_record', 'delete_type_A_record',
-    'check_if_zone_exists', 'is_domain_system_ready'
+    'check_if_zone_exists',
+    'create_or_update_record',
+    'delete_record',
+    'is_domain_system_ready',
 ]

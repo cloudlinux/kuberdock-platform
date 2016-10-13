@@ -29,6 +29,32 @@ def delete_type_A_record(domain, **kwargs):
     zone.delete_a(domain, all=False)
 
 
+def delete_type_CNAME_record(domain, **kwargs):
+    """
+    Delete CNAME record for domain
+
+    :param domain: domain to delete
+    :param dict kwargs: additional params such as id and secret for access to
+        AWS ROUTE 53
+    :return: None
+    """
+    if not domain.endswith('.'):
+        domain += '.'
+    main_domain = domain.split('.', 1)[-1]
+
+    conn = Route53Connection(kwargs['id'], kwargs['secret'])
+
+    zone = conn.get_zone(main_domain)
+    if zone is None:
+        return
+
+    record = zone.get_cname(domain)
+    if record is None:
+        return
+
+    zone.delete_cname(domain, all=False)
+
+
 def create_or_update_type_A_record(domain, new_ips, **kwargs):
     """
     Create or update A record for domain
@@ -86,3 +112,54 @@ def check_if_zone_exists(domain, **kwargs):
     conn = Route53Connection(kwargs['id'], kwargs['secret'])
     zone = conn.get_zone(domain)
     return bool(zone)
+
+
+def create_or_update_type_CNAME_record(domain, target, **kwargs):
+    """
+    Create or update CNAME record for domain
+
+    :param str domain: domain to add
+    :param list target: CNAME target to point the domain to
+    :param dict kwargs: additional params such as id and secret for access to
+        AWS ROUTE 53
+    :return:
+    """
+    if not domain.endswith('.'):
+        domain += '.'
+    main_domain = domain.split('.', 1)[-1]
+
+    conn = Route53Connection(kwargs['id'], kwargs['secret'])
+
+    zone = conn.get_zone(main_domain)
+    if zone is None:
+        raise ValueError('Zone for domain {} not found. '
+                         'Need to configure the zone'.format(domain))
+
+    record = zone.get_cname(domain)
+    if record is None:
+        zone.add_cname(domain, target)
+        current_app.logger.debug(
+            'Create new record CNAME in zone "{zone}" with '
+            '"{domain}" and taget "{target}"'.format(
+                zone=zone.name, domain=domain, target=target,
+            )
+        )
+        return
+
+    if target == record.resource_records:
+        current_app.logger.debug(
+            'CNAME record for "{domain}" with '
+            'to "{target}" in zone "{zone}" '
+            'already exists'.format(
+                zone=zone.name, target=target, domain=domain
+            )
+        )
+        return
+
+    zone.update_cname(domain, target)
+    current_app.logger.debug(
+        'Updated CNAME record in zone "{zone}" with '
+        'domain "{domain}" and target "{target}"'.format(
+            zone=zone.name, domain=domain, target=target,
+        )
+    )

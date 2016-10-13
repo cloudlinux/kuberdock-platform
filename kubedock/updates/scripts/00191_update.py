@@ -246,7 +246,6 @@ def _master_network_policy():
                 "src_net": "{}/32".format(MASTER_TUNNEL_IP),
                 "action": "allow"
             },
-            {"action": "next-tier"}
         ],
         "outbound_rules": [{"action": "allow"}]
     }

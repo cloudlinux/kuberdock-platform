@@ -672,12 +672,18 @@ sysctl -w net.ipv4.ip_nonlocal_bind=1
 sysctl -w net.ipv4.ip_forward=1
 sysctl -w net.bridge.bridge-nf-call-iptables=1
 sysctl -w net.bridge.bridge-nf-call-ip6tables=1
+# AC-4738. This is needed because MySQL(and many other) containers actively
+# uses aio and consume lots of this resource which is by default 65535 so we
+# should increase it to achieve much higher density of containers. No kernel
+# data structures are pre-allocated for this.
+sysctl -w fs.aio-max-nr=1048576
 check_status
 cat > $KD_KERNEL_VARS << EOF
 net.ipv4.ip_nonlocal_bind = 1
 net.ipv4.ip_forward = 1
 net.bridge.bridge-nf-call-iptables = 1
 net.bridge.bridge-nf-call-ip6tables = 1
+fs.aio-max-nr = 1048576
 EOF
 
 

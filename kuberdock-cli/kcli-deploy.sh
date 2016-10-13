@@ -101,16 +101,24 @@ install_calico() {
     echo "Downloading calicoctl..."
     do_and_log curl https://github.com/projectcalico/calico-containers/releases/download/v0.22.0/calicoctl --create-dirs --location --output /opt/bin/calicoctl --silent --show-error
     do_and_log chmod +x /opt/bin/calicoctl
-    echo "Starting Calico Node..."
-    # Separate pull command may help to prevent timeout bugs in calicoctl (AC-4679)
-    # If it's not enough we could add few retries here
+
+    # Separate pull command helps to prevent timeout bugs in calicoctl (AC-4679)
+    # during deploy process under heavy IO (slow dev clusters).
+    # If it's not enough we could add few retries with sleep here
     CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0.confd"
-    docker pull "$CALICO_NODE_IMAGE"
+    echo "Pulling Calico node image..."
+    docker pull "$CALICO_NODE_IMAGE" > /dev/null
+    time sync
+    #sleep 10   # even harder workaround
+    echo "Starting Calico node..."
     # In case of ambiguity we can force calico to register host with
     # envvar HOSTNAME="$SOME_HOSTNAME"
     ETCD_AUTHORITY="$KD_HOST:8123" do_and_log /opt/bin/calicoctl node --node-image="$CALICO_NODE_IMAGE"
+
     # wait for calico routes to bring up
-    #sleep 20    # TODO test without this after all fixes!!!!!!!!!!!!!
+    # TODO looks like this workaround is not needed after all fixes and may be
+    # safely removed after few iterations of KD with Calico (KD 1.5.0)
+    #sleep 20
 }
 
 

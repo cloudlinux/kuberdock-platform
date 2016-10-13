@@ -909,16 +909,16 @@ do_and_log systemctl reenable kube-proxy
 log_it systemctl restart kube-proxy
 waitAndCatchFailure 3 10 docker info > /dev/null
 
-# Could be a workaround if failed on etcd access(AC-4634) or Docker access (AC-4679)
-# under heavy IO during deploy process
-#time sync
-#sleep 10       # TODO TEST WHETHER STILL NEEDED
 
-log_it echo "Starting Calico node..."
-# Separate pull command may help to prevent timeout bugs in calicoctl (AC-4679)
-# If it's not enough we could add few retries here
+# Separate pull command helps to prevent timeout bugs in calicoctl (AC-4679)
+# during deploy process under heavy IO (slow dev clusters).
+# If it's not enough we could add few retries with sleep here
 CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0.confd"
-docker pull "$CALICO_NODE_IMAGE"
+log_it echo "Pulling Calico node image..."
+docker pull "$CALICO_NODE_IMAGE" > /dev/null
+time sync
+#sleep 10   # even harder workaround
+log_it echo "Starting Calico node..."
 ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl node --ip="$MASTER_IP" --node-image="$CALICO_NODE_IMAGE"
 
 

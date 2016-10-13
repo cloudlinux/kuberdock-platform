@@ -7,7 +7,7 @@
         <div class="form-field row">
             <div class="col-md-6 col-sm-12">
                 <label for="node_address">Node name</label>
-                <input class="find-input" type="text" placeholder="Enter node hostname here" id="node_address" name="node_address"/>
+                <input class="find-input" type="text" placeholder="Enter node hostname here" id="node_address" name="node_address" value="<%= hostname %>"/>
             </div>
         </div>
         <% if (setupInfo.ZFS && !setupInfo.AWS) { %>

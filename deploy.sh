@@ -1013,9 +1013,9 @@ versions:
 EOF
 
 KD_NODES_FAILSAFE_POLICY_ORDER=0
+KD_HOSTS_POLICY_ORDER=5
 KD_NODES_POLICY_ORDER=10
 KD_SERVICE_POLICY_ORDER=20
-KD_HOSTS_POLICY_ORDER=30
 
 RULE_NEXT_TIER='{"id": "next-tier", "order": 9999, "inbound_rules": [{"action": "next-tier"}], "outbound_rules": [{"action": "next-tier"}], "selector": "all()"}'
 

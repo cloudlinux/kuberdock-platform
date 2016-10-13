@@ -413,20 +413,23 @@ export const UserFormBaseView = Marionette.ItemView.extend({
         'focus @ui.input'          : 'removeError',
     },
 
-    getData: function(){
-        return {
-            'username'        : this.ui.username.val(),
-            'first_name'      : this.ui.first_name.val(),
-            'last_name'       : this.ui.last_name.val(),
-            'middle_initials' : this.ui.middle_initials.val(),
-            'password'        : this.ui.password.val(),
-            'email'           : this.ui.email.val(),
-            'timezone'        : this.ui.timezone.val(),
-            'active'          : this.ui.user_status.val() == 1,
-            'suspended'       : this.ui.user_suspend.prop('checked'),
-            'rolename'        : this.ui.role_select.val(),
-            'package'         : this.ui.package_select.val(),
-        };
+    getData: function(passwordAgain){
+        let data = {
+                'username'        : this.ui.username.val(),
+                'first_name'      : this.ui.first_name.val(),
+                'last_name'       : this.ui.last_name.val(),
+                'middle_initials' : this.ui.middle_initials.val(),
+                'password'        : this.ui.password.val(),
+                'password_again'  : this.ui.password_again.val(),
+                'email'           : this.ui.email.val(),
+                'timezone'        : this.ui.timezone.val(),
+                'active'          : this.ui.user_status.val() === '1',
+                'suspended'       : this.ui.user_suspend.prop('checked'),
+                'rolename'        : this.ui.role_select.val(),
+                'package'         : this.ui.package_select.val(),
+            };
+        if (!passwordAgain) data = _.omit(data, 'password_again');
+        return data;
     },
 
     validate: function(isNew){
@@ -762,19 +765,27 @@ export const UserProfileView = Marionette.ItemView.extend({
 export const UsersEditView = UserFormBaseView.extend({
     events: function(){
         return _.extend({}, this.constructor.__super__.events, {
-            'click @ui.user_cancel_btn'        : 'cancel',
-            'click @ui.user_add_btn'           : 'onSave',
-            'input @ui.input'                  : 'changeValue',
-            'change @ui.selectpicker'          : 'changeValue',
-            'change @ui.input[type="checkbox"]': 'changeValue',
+            'click @ui.user_cancel_btn'         : 'cancel',
+            'click @ui.user_add_btn'            : 'onSave',
+            'input @ui.input'                   : 'toggleShowAddBtn',
+            'change @ui.selectpicker'           : 'toggleShowAddBtn',
+            'change @ui.input[type="checkbox"]' : 'toggleShowAddBtn',
         });
     },
 
-    changeValue: function(){
+    isEqual: function(){
+        var data = this.getData(true);
+        if (data.password || data.password_again){
+            data.password = data.password || data.password_again;
+            delete data.password_again;
+        }
         var orig = _.mapObject(this.model.attributes,
-                               function(val){ return val === null ? '' : val; }),
-            changed = !_.isMatch(orig, this.getData());
-        if (changed)
+                               val => val == null ? '' : val);
+        return _.isMatch(orig, data);
+    },
+
+    toggleShowAddBtn: function(){
+        if (!this.isEqual())
             this.ui.user_add_btn.show();
         else
             this.ui.user_add_btn.hide();
@@ -785,9 +796,11 @@ export const UsersEditView = UserFormBaseView.extend({
     },
 
     getData: function(){
-        var data = _.omit(this.constructor.__super__.getData.call(this), 'username');
-        if (!data.password)  // ignore if not specified
+        var data = _.omit(this.constructor.__super__.getData.apply(this, arguments), 'username');
+        if (!data.password && !data.password_again){   // ignore if not specified
             delete data.password;
+            delete data.password_again;
+        }
         return data;
     },
 
@@ -819,11 +832,6 @@ export const UsersLayout = Marionette.LayoutView.extend({
         pager : 'div#pager'
     },
 
-    onBeforeShow: function(){
-        utils.preloader.show();
-    },
-
-    onShow: function(){
-        utils.preloader.hide();
-    }
+    onBeforeShow: function(){ utils.preloader.show(); },
+    onShow: function(){ utils.preloader.hide(); }
 });

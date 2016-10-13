@@ -234,7 +234,7 @@ export const LicenseView = Marionette.ItemView.extend({
     },
 
     modelEvents: {
-        'change': 'modelChanged'
+        'change' : 'modelChanged'
     },
 
     modelChanged: function(evt){
@@ -272,7 +272,7 @@ export const LicenseView = Marionette.ItemView.extend({
             },
             error: function(){
                 that.ui.updateStats.removeClass('start-atimation');
-                console.log('Could not fetch statistics', 'error');
+                utils.notifyWindow('Could not fetch statistics', 'error');
             }
         });
     },
@@ -289,7 +289,7 @@ export const LicenseView = Marionette.ItemView.extend({
     },
 
     events: {
-        'click @ui.updateStats': 'updateStatistics'
+        'click @ui.updateStats' : 'updateStatistics'
     },
 
     onRender: function(){
@@ -344,18 +344,16 @@ export const ProfileEditView = Backbone.Marionette.ItemView.extend({
         'back'             : 'button#template-back-btn',
         'editBtn'          : '#template-edit-btn',
         'input'            : 'input',
-        /*'deleteBtn'        : '#template-remove-btn'*/
     },
 
     events: {
-        'click @ui.back'       : 'back',
         'click @ui.save'       : 'onSave',
-        'click @ui.editBtn'    : 'editTemplate',
-        'change @ui.input'     : 'changeValue',
-        'keyup @ui.input'     : 'changeValue',
-        'change @ui.timezone'  : 'changeValue',
+        'click @ui.back'       : 'toggleShowEditTemplate',
+        'click @ui.editBtn'    : 'toggleShowEditTemplate',
+        'change @ui.input'     : 'toggleShowSaveButton',
+        'keyup @ui.input'      : 'toggleShowSaveButton',
+        'change @ui.timezone'  : 'toggleShowSaveButton',
         'focus @ui.input'      : 'removeError',
-        /*'click @ui.deleteBtn'  : 'deleteProfile',*/
     },
 
     templateHelpers: function(){
@@ -379,14 +377,14 @@ export const ProfileEditView = Backbone.Marionette.ItemView.extend({
         this.ui.timezone.selectpicker({ size: 7 });
     },
 
-    changeValue: function(){
-        var equal,
-        oldData = {
+    isEqual: function(){
+        let oldData = {
             'first_name'      : this.model.get('first_name'),
             'last_name'       : this.model.get('last_name'),
             'middle_initials' : this.model.get('middle_initials'),
             'email'           : this.model.get('email'),
             'password'        : '',
+            'password_again'  : '',
             'timezone'        : this.model.get('timezone').split(' (', 1)[0],
         },
         newData = {
@@ -395,48 +393,25 @@ export const ProfileEditView = Backbone.Marionette.ItemView.extend({
             'middle_initials' : this.ui.middle_initials.val(),
             'email'           : this.ui.email.val(),
             'password'        : this.ui.password.val(),
+            'password_again'  : this.ui.password_again.val(),
             'timezone'        : this.ui.timezone.val().split(' (', 1)[0],
         };
 
-        equal = _.isEqual(oldData, newData);
-        if (!equal){
-            this.ui.save.show();
-        } else {
+        return _.isEqual(oldData, newData);
+    },
+
+    toggleShowSaveButton(){
+        if (this.isEqual()){
             this.ui.save.hide();
+        } else {
+            this.ui.save.show();
         }
     },
 
-    back: function(){
-        this.model.in_edit = false;
+    toggleShowEditTemplate: function(){
+        this.model.in_edit = !this.model.in_edit;
         this.render();
     },
-
-    editTemplate: function(){
-        this.model.in_edit = true;
-        this.render();
-    },
-
-    /*deleteProfile: function(){
-        var that = this;
-        utils.modalDialogDelete({
-            title: "Terminate account?",
-            body: "Are you sure you want to terminate your account ?",
-            small: true,
-            show: true,
-            footer: {
-                buttonOk: function(){
-                    that.model.destroy(undefined, {
-                        wait: true,
-                        success: function(){
-                            that.model.in_edit = false;
-                            that.render();
-                        },
-                    })
-                },
-                buttonCancel: true
-            }
-        });
-    },*/
 
     removeError: function(evt){ utils.removeError($(evt.target)); },
 
@@ -504,30 +479,9 @@ export const SettingsLayout = Marionette.LayoutView.extend({
         general   : 'li.general'
     },
 
-    events: {
-        'click @ui.tabButton' : 'changeTab'
-    },
-
     templateHelpers: function(){ return {user: App.currentUser}; },
-
-    onBeforeShow: function(){
-        utils.preloader.show();
-    },
-
-    onShow: function(){
-        utils.preloader.hide();
-    },
-
-    changeTab: function (evt) {
-        evt.preventDefault();
-        var tgt = $(evt.target);
-        if (tgt.not("li")) tgt = tgt.parent('li');
-        if (tgt.hasClass('general')) App.navigate('settings/general', {trigger: true});
-        if (tgt.hasClass('license')) App.navigate('settings/license', {trigger: true});
-        if (tgt.hasClass('domain')) App.navigate('settings/domain', {trigger: true});
-        if (tgt.hasClass('billing')) App.navigate('settings/billing', {trigger: true});
-        else if (tgt.hasClass('profile')) App.navigate('settings/profile', {trigger: true});
-    },
+    onBeforeShow: function(){ utils.preloader.show(); },
+    onShow: function(){ utils.preloader.hide(); },
 
     onRender: function(){
         var that = this,

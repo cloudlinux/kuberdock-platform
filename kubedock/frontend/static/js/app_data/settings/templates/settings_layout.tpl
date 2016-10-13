@@ -14,12 +14,22 @@
             <div class="col-sm-12 col-md-2 sidebar">
                 <ul class="nav nav-sidebar list-unstyled" >
                     <% if(user.get('rolename')  === 'Admin') { %>
-                        <li class="general"><span>General</span></li>
-                        <li class="license"><span>License</span></li>
-                        <li class="domain"><span>DNS provider</span></li>
-                        <li class="billing"><span>Billing</span></li>
+                        <li class="general">
+                            <a href="/#settings/general">General</a>
+                        </li>
+                        <li class="license">
+                            <a href="/#settings/license">License</a>
+                        </li>
+                        <li class="domain">
+                            <a href="/#settings/domain">DNS provider</a>
+                        </li>
+                        <li class="billing">
+                            <a href="/#settings/billing">Billing</a>
+                        </li>
                     <% } %>
-                    <li class="profile"><span>Profile</span></li>
+                    <li class="profile">
+                        <a href="/#settings/profile">Profile</a>
+                    </li>
                 </ul>
             </div>
             <div id="details_content" class="col-sm-12 col-md-10">

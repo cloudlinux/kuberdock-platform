@@ -34,6 +34,7 @@ define(['app_data/app', 'app_data/utils', 'marionette', 'js-yaml',
                 pager: '#footer',
             },
 
+
             initialize: function(){
                 var that = this;
                 this.listenTo(this.main, 'show', function(view){

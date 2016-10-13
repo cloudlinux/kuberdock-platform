@@ -46,6 +46,7 @@ chmod 4755 %{buildroot}%{_libexecdir}/suidwrap
 rm -rf %{buildroot}
 
 %files
+%doc LICENSE
 %defattr(-,root,root,-)
 %{_bindir}/kcli
 %{_bindir}/kcli-iptables

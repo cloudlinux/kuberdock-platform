@@ -47,6 +47,7 @@ rm -rf %{buildroot}
 
 
 %files
+%doc LICENSE
 %defattr(-,root,root,-)
 %{_sysconfdir}/*
 %{_bindir}/*

@@ -1,0 +1,153 @@
+KUBERDOCK LICENSE AGREEMENT
+
+READ THIS LICENSE AGREEMENT BEFORE INSTALLING THESE PROGRAMS.  THIS
+LICENSE AGREEMENT IS A LEGAL CONTRACT BETWEEN YOU AND CLOUD LINUX INC.
+("CLOUD LINUX") GOVERNING YOUR USE OF ANY PROGRAMS DOWNLOADED, INSTALLED
+OR USED BY YOU (THE "PROGRAMS"). CLOUD LINUX IS UNWILLING TO LICENSE
+THE PROGRAMS EXCEPT ON THE TERMS CONTAINED IN THIS LICENSE AGREEMENT.
+THE ACT OF DOWNLOADING, INSTALLING OR USING THE PROGRAMS SHALL
+CONSTITUTE AN ACCEPTANCE BY YOU OF THE TERMS OF THIS LICENSE AGREEMENT.
+IF YOU DO NOT WISH TO AGREE TO THE TERMS OF THIS LICENSE AGREEMENT,
+PROMPTLY EXIT THE INSTALLATION NOW AND REMOVE IT FROM YOUR SYSTEM.
+
+THIS LICENSE AGREEMENT IS THE COMPLETE AND EXCLUSIVE STATEMENT OF CLOUD
+LINUX'S OBLIGATIONS AND RESPONSIBILITIES TO YOU AS LICENSEE, AND
+SUPERSEDES ANY OTHER PROPOSAL, REPRESENTATION, OR OTHER COMMUNICATION BY
+OR ON BEHALF OF CLOUD LINUX RELATING TO THE SUBJECT.
+
+    1. GRANT OF LICENSE.  Cloud Linux hereby grants to you, and you
+accept, a limited, nonexclusive license to use the Programs in
+machine-readable, object code form only, and the user manuals
+accompanying the Programs (the "Documentation"), only as authorized
+in this Agreement. For purposes of this Agreement, the "Programs"
+include any updates, enhancements, modifications, revisions, or
+additions to the Programs made by Cloud Linux and made available to
+end-users. Notwithstanding the foregoing, Cloud Linux shall be under no
+obligation to provide any updates, enhancements, modifications,
+revisions, or additions to the Programs.
+
+    You may use one copy of the Programs only on systems, including
+servers, work stations, virtual machines, blades, nodes or disk
+partitions, for which you have purchased Subscription Services from
+Cloud Linux or its resellers. For purposes of this Agreement, "use"
+of the Programs means loading the Programs into the temporary or
+permanent memory of a computer. Installation of the Programs on a
+network server solely for distribution to other computers is not
+"use" of the Programs, and is permitted, as long as you have
+purchased Subscription Services for the systems being accessed by the
+Programs.
+
+    Your installation or use of the Programs grants Cloud Linux limited
+access to your system information for the sole purpose of security
+analysis and reporting.  Such access and information collected includes
+reviewing installed packages and applications, the names, sizes, and
+attributes of files, the server or system uptime, load, and running
+processes.
+
+    2. PROTECTION OF PROPRIETARY RIGHTS.  You acknowledge that the
+Programs and each of their components are owned by Cloud Linux and
+others, and are protected under copyright law and other laws as
+applicable.  Title to the Programs, or to any copy, modification, or
+merged portion thereof shall remain with their respective owners,
+subject to the applicable license.  You may commercially redistribute
+the Programs only if, you have entered into a separate agreement with
+Cloud Linux authorizing such commercial redistribution or Cloud Linux
+has otherwise granted you permission, in writing.
+
+    You agree not to remove any confidential or proprietary legends from
+the Programs.
+
+    You acknowledge that, in the event of your breach of any of the
+foregoing provisions, Cloud Linux will not have an adequate remedy in
+money or damages.  Cloud Linux shall therefore be entitled to obtain an
+injunction against such breach from any court of competent jurisdiction
+immediately upon request.  Cloud Linux's right to obtain injunctive
+relief shall not limit its right to seek further remedies.
+
+    Your obligations hereunder shall remain in effect for as long as you
+continue to possess or use the Programs, or any proprietary interests
+therein.
+
+    3. LIMITED WARRANTY; EXCLUSIVE REMEDIES.
+
+    Limited Warranty:  Cloud Linux warrants that (i) the media on which
+the Programs are furnished will be free from defects in materials and
+manufacture under normal use of a period of 30 days from the date of
+delivery to you; and (ii) Cloud Linux is the owner or authorized
+licensee of the Programs, or has the rights to license the Programs to
+you.
+
+    No person other than Cloud Linux, in writing, is authorized to
+make any representation or warranty to you regarding the
+Programs.
+
+    Exclusive Remedy:  In the event of a breach of the limited
+warranty above, your exclusive remedy relative to the Programs shall be
+for Cloud Linux, at Cloud Linux’s option, to either: (i) replace the
+Programs that does not meet the limited warranty; or (ii) refund to you
+the Programs license fees (and no other fees) paid by you, during the 12
+month period immediately preceding the breach of the limited warranty,
+for the Programs which fails to comply with the limited warranties.
+
+    4. DISCLAIMER; LIMITATION ON LIABILITY
+
+    Disclaimer:  THE LIMITED WARRANTY ABOVE IS THE SOLE WARRANTY MADE BY
+CLOUD LINUX.  CLOUD LINUX MAKES NO OTHER WARRANTY OF ANY KIND
+WHATSOEVER, EXPRESS OR IMPLIED.  ANY AND ALL WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT
+ARE EXPRESSLY DISCLAIMED AND EXCLUDED BY CLOUD LINUX.
+
+    Limitation on Consequential Damages:  IN NO EVENT SHALL CLOUD
+LINUX BE LIABLE TO YOU, AS LICENSEE, OR ANY OTHER PERSON FOR ANY
+INDIRECT, CONSEQUENTIAL OR INCIDENTAL DAMAGES (INCLUDING DAMAGES FOR
+BUSINESS PROFITS, BUSINESS INTERRUPTION, LOSS OF BUSINESS INFORMATION OR
+SIMILAR LOSSES) EVEN IF CLOUD LINUX HAS BEEN ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGES.
+
+    Limitation on Liability:  THE CUMULATIVE LIABILITY OF CLOUD
+LINUX TO YOU FOR ALL CLAIMS RELATED TO THE PROGRAMS AND THIS LICENSE
+AGREEMENT, INCLUDING ANY CAUSE OF ACTION SOUNDING IN CONTRACT, TORT, OR
+STRICT LIABILITY SHALL NOT EXCEED THE TOTAL AMOUNT OF ALL LICENSE FEES
+(AND NO OTHER FEES) PAID TO CLOUD LINUX FOR THE PROGRAMS DURING THE
+TWELVE (12) MONTH PERIOD IMMEDIATELY PRECEDING THE INITIAL EVENT GIVING
+RISE TO THE CLAIM.
+
+    All limitations on liability, damages and claims are intended to
+apply without regard to whether other provisions of this License
+Agreement have been breached or have proven ineffective.
+
+    5. TERMINATION.  The license granted herein is effective
+until terminated.  The license will automatically terminate, without
+notice, if you fail to comply with any provision of this License
+Agreement.  Upon termination of this License Agreement, all rights
+granted to you pursuant to this License Agreement will terminate and
+revert to Cloud Linux.
+
+    6. EXPORT CONTROL.  You agree to comply with all applicable
+laws, regulations, rulings and executive orders of the United States
+relating to the exportation or importation of any copies of the Programs
+(including but not limited to the export and destination control
+regulations of the Commerce and Treasury Department) and with all
+applicable foreign laws relating to the use, importation, licensing or
+distribution of copies of the Programs.
+
+    7. GENERAL.  This License Agreement shall be governed by
+and construed in accordance with the laws of the State of Delaware and
+the United States, without regard to any conflict of laws provisions.
+The rights and obligations of the parties to this License Agreement
+shall not be governed by the United Nations Convention on the
+International Sale of Goods.
+
+    No modification of this License Agreement shall be binding
+unless it is in writing and is signed by an authorized representative of
+the party against whom enforcement of the modification is sought.
+
+    Any notices required or permitted under this License Agreement
+shall be in writing and delivered in person or sent by registered or
+certified mail, return receipt requested, with proper postage affixed.
+
+    In the event that any term of this License Agreement is or
+becomes or is declared to be invalid or void by any court or tribunal of
+competent jurisdiction, such term shall be null and void and shall be
+deemed severed from this License Agreement, and all the remaining terms
+of this License Agreement shall remain in full force and effect.

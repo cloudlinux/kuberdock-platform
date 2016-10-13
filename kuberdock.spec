@@ -186,6 +186,7 @@ if [ "$1" = "0" ]; then
 fi
 
 %files
+%doc LICENSE
 %defattr(-,root,root)
 %attr (-,nginx,nginx) /var/opt/kuberdock
 %attr (-,nginx,nginx) /var/log/kuberdock

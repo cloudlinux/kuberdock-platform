@@ -22,14 +22,16 @@ def _format_msg(error, message, return_value):
 
 
 def raise_if_failure(return_value, message=None, api_error=None):
-    """
-    Raises error if request to k8s fails
+    """Raises error if request to k8s fails.
+
     :param return_value: k8s answer as dictionary
     :param message: APIError message sent to user in case of an error. Defaults
                     to a message composed from k8s answer and err_msg from
                     is_failed_k8s_answer
+    :param api_error: Instance of APIError that will be raised
     :type return_value: dict
     :type message: str
+    :type api_error: APIError
     """
     failed, err_msg = is_failed_k8s_answer(return_value)
     if not failed:
@@ -47,9 +49,11 @@ def raise_if_failure(return_value, message=None, api_error=None):
 
 
 def is_failed_k8s_answer(return_value):
-    """
+    """Check if k8s answer is failed.
+
     If return_value has 'status' field and it's not 'success' or 'working'
     return a tuple indicating that there was failure in request to k8s.
+
     :param return_value: k8s answer as dictionary
     :type return_value: dict
     :returns: (ERR_FLAG, ERR_MESSAGE)
@@ -57,23 +61,27 @@ def is_failed_k8s_answer(return_value):
     """
     if not isinstance(return_value, dict):
         err_msg = KD_UNKNOWN_ANSWER_FORMAT_ERROR
-        return (True, err_msg)
+        return True, err_msg
     else:
+        err_status = return_value.get('ErrStatus')
+        if err_status:
+            err_msg = K8S_ANSWER_ERROR
+            return True, err_msg
         if return_value.get('kind') != u'Status':
-            return (False, None)
+            return False, None
         status = return_value.get('status')
         if not isinstance(status, basestring):
             err_msg = K8S_UNKNOWN_ANSWER_STATUS_ERROR
-            return (True, err_msg)
+            return True, err_msg
         if status.lower() not in ('success', 'working'):
             err_msg = K8S_ANSWER_ERROR
-            return (True, err_msg)
-    return (False, None)
+            return True, err_msg
+    return False, None
 
 
 def make_name_from_image(image):
-    """
-    Appends random part to image
+    """Appends random part to image.
+
     :param image: string -> image name
     """
     n = '-'.join(x.lower() for x in image.split('/'))

@@ -45,7 +45,7 @@ class KDPod(RESTMixin):
     Port = namedtuple('Port', 'port proto')
 
     def __init__(self, cluster, image, name, kube_type, kubes,
-                 open_all_ports, restart_policy, pvs, owner, public_ports):
+                 open_all_ports, restart_policy, pvs, owner):
         self.cluster = cluster
         self.name = name
         self.image = image
@@ -69,7 +69,7 @@ class KDPod(RESTMixin):
     def ports(self):
         def _get_ports(containers):
             all_ports = itertools.chain.from_iterable(
-                c['ports'] for c in containers if c.get('ports'))
+                  c['ports'] for c in containers if c.get('ports'))
             return [port['containerPort']
                     for port in all_ports if port.get('isPublic') is True]
 
@@ -77,18 +77,16 @@ class KDPod(RESTMixin):
         return _get_ports(spec['containers'])
 
     @classmethod
-    def create(cls, cluster, image, name, kube_type, kubes,
-               open_all_ports, restart_policy, pvs, owner, password,
-               public_ports):
+    def create(cls, cluster, image, name, kube_type, kubes, open_all_ports,
+               restart_policy, pvs, owner, password, ports_to_open):
         """
         Create new pod in kuberdock
         :param open_all_ports: if true, open all ports of image (does not mean
         these are Public IP ports, depends on a cluster setup)
+        :param ports_to_open: if open_all_ports is False, open only the ports
+        from this list
         :return: object via which Kuberdock pod can be managed
         """
-
-        if public_ports is None:
-            public_ports = []
 
         def _get_image_ports(img):
             _, out, _ = cluster.kcli(
@@ -105,11 +103,11 @@ class KDPod(RESTMixin):
             """
             ports_list = []
             for port in ports:
-                ports_list.append(
-                    dict(containerPort=port.port,
-                         hostPort=port.port,
-                         isPublic=open_all_ports or port.port in public_ports,
-                         protocol=port.proto))
+                ports_list.append(dict(containerPort=port.port,
+                                       hostPort=port.port,
+                                       isPublic=(open_all_ports or
+                                                 port.port in ports_to_open),
+                                       protocol=port.proto))
             return ports_list
 
         escaped_name = pipes.quote(name)
@@ -137,8 +135,7 @@ class KDPod(RESTMixin):
                                   password=(password or owner))
         this_pod_class = cls._get_pod_class(image)
         return this_pod_class(cluster, image, name, kube_type, kubes,
-                              open_all_ports, restart_policy, pvs, owner,
-                              public_ports)
+                              open_all_ports, restart_policy, pvs, owner)
 
     @classmethod
     def restore(cls, cluster, user, file_path=None, pod_dump=None,
@@ -206,7 +203,7 @@ class KDPod(RESTMixin):
         restart_policy = data['restartPolicy']
         this_pod_class = cls._get_pod_class(image)
         return this_pod_class(cluster, "", name, kube_type, "", True,
-                              restart_policy, "", owner, "")
+                              restart_policy, "", owner)
 
     @classmethod
     def _get_pod_class(cls, image):
@@ -246,16 +243,17 @@ class KDPod(RESTMixin):
                 self.escaped_name, json.dumps(data), user=self.owner))
 
     def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        # NOTE: we still don't know if this is in a routable network, so
+        # open_all_ports does not exactly mean wait_for_ports pass.
+        # But for sure it does not make sense to wait if no ports open.
+        # Currently all ports can be open by setting open_all_ports, or some
+        # ports can be open by setting ports_to_open while creating a pod
+        if not (self.open_all_ports or self.ports):
+            raise Exception("Cannot wait for ports on a pod with no ports open")
         ports = ports or self.ports
         self._wait_for_ports(ports, timeout)
 
     def _wait_for_ports(self, ports, timeout):
-        # NOTE: we still don't know if this is in a routable network, so
-        # open_all_ports does not exactly mean wait_for_ports pass.
-        # But for sure it does not make sense to wait if no ports open.
-        if not self.open_all_ports:
-            raise Exception("Cannot wait for ports on a pod with no ports open"
-                            "(must pass open_all_ports=True)")
         for p in ports:
             wait_net_port(self.public_ip, p, timeout)
 
@@ -409,9 +407,8 @@ class _NginxPod(KDPod):
         self._wait_for_ports(ports, timeout)
 
     def healthcheck(self):
-        if not self.open_all_ports:
+        if not (self.open_all_ports or self.ports):
             raise Exception(
-                "Cannot perform nginx healthcheck without public IP"
-                "(must pass open_all_ports=True)")
+                "Cannot perform nginx healthcheck without public IP")
         self._generic_healthcheck()
         assert_in("Welcome to nginx!", self.do_GET())

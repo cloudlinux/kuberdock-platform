@@ -29,10 +29,10 @@ def setup_pods(cluster):
     pods = {
         'iso1': cluster.pods.create(
             'hub.kuberdock.com/nginx', 'iso1', owner='test_user',
-            public_ports=[HTTP_PORT, UDP_PORT]),
+            ports_to_open=[HTTP_PORT, UDP_PORT]),
         'iso2': cluster.pods.create(
             'hub.kuberdock.com/nginx', 'iso2', owner='alt_test_user',
-            public_ports=[HTTP_PORT], kube_type='Tiny'),
+            ports_to_open=[HTTP_PORT], kube_type='Tiny'),
         'iso3': cluster.pods.create(
             'hub.kuberdock.com/nginx', 'iso3', owner='test_user',
             kube_type='Tiny'),

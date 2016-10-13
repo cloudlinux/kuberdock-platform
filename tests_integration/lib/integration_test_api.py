@@ -531,17 +531,24 @@ class PodList(object):
         self.cluster = cluster
 
     def create(self, image, name, kube_type="Standard", kubes=1,
-               open_all_ports=False, restart_policy="Always", pvs=None,
-               start=True, wait_ports=False, healthcheck=False,
-               wait_for_status=None, owner='test_user', password=None,
-               public_ports=None):
+               open_all_ports=False, ports_to_open=(),
+               restart_policy="Always", pvs=None, start=True, wait_ports=False,
+               healthcheck=False, wait_for_status=None, owner='test_user',
+               password=None):
+        """
+        Create new pod in kuberdock
+        :param open_all_ports: if true, open all ports of image (does not mean
+        these are Public IP ports, depends on a cluster setup)
+        :param ports_to_open: if open_all_ports is False, open only the ports
+        from this list
+        :return: object via which Kuberdock pod can be managed
+        """
         assert_in(kube_type, ("Tiny", "Standard", "High memory"))
         assert_in(restart_policy, ("Always", "Never", "OnFailure"))
 
         pod = KDPod.create(self.cluster, image, name, kube_type, kubes,
                            open_all_ports, restart_policy, pvs, owner,
-                           password=(owner or password),
-                           public_ports=public_ports)
+                           owner or password, ports_to_open)
         if start:
             pod.start()
         if wait_for_status:

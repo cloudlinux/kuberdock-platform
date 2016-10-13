@@ -1070,6 +1070,11 @@ KD_NODES_POLICY='{
             "src_net": "'"$MASTER_TUNNEL_IP"'/32",
             "action": "allow"
         },
+        {
+            "protocol": "tcp",
+            "dst_ports": [22],
+            "action": "allow"
+        },
         {"action": "next-tier"}
     ],
     "outbound_rules": [{"action": "allow"}]
@@ -1080,11 +1085,12 @@ do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-nodes/metadata '{"or
 do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-nodes/policy/kuberdock-nodes "$KD_NODES_POLICY"
 
 # Master host isolation
+# 22 - ssh
 # 80, 443 - KD API & web server
 # 6443 - kube-api server secure
 # 2379 - etcd secure
 # 8123, 8118 open ports for cpanel flannel (??) and kube-proxy
-MASTER_PUBLIC_TCP_PORTS='[80, 443, 6443, 2379, 8123, 8118]'
+MASTER_PUBLIC_TCP_PORTS='[22, 80, 443, 6443, 2379, 8123, 8118]'
 
 # 123 - ntp
 MASTER_PUBLIC_UDP_PORTS='[123]'
@@ -1123,11 +1129,6 @@ KD_NODES_FAILSAFE_POLICY='{
     "order": 100,
 
     "inbound_rules": [
-        {
-            "protocol": "tcp",
-            "dst_ports": [22],
-            "action": "allow"
-        },
         {"protocol": "icmp", "action": "allow"},
         {
             "dst_net": "10.1.0.0/16",

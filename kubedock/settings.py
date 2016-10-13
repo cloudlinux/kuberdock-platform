@@ -274,16 +274,21 @@ ETCD_NETWORK_POLICY_SERVICE = \
     ETCD_CALICO_V_PATH + '/policy/tier/kuberdock-service/policy'
 ETCD_NETWORK_POLICY_HOSTS = \
     ETCD_CALICO_V_PATH + '/policy/tier/kuberdock-hosts/policy'
+ETCD_NETWORK_POLICY_NODES = \
+    ETCD_CALICO_V_PATH + '/policy/tier/kuberdock-nodes/policy'
 ETCD_CALICO_HOST_KEY_PATH_TEMPLATE = ETCD_CALICO_V_PATH + '/host/{hostname}'
 ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE = \
     ETCD_CALICO_HOST_KEY_PATH_TEMPLATE + '/config'
 ETCD_CALICO_HOST_ENDPOINT_KEY_PATH_TEMPLATE = \
     ETCD_CALICO_HOST_KEY_PATH_TEMPLATE + '/endpoint/{hostname}'
 
+# Role label for nodes calico host endpoints
+KD_NODE_HOST_ENDPOINT_ROLE = 'kdnode'
+
 ETCD_PKI = '/etc/pki/etcd/'
 ETCD_CACERT = os.path.join(ETCD_PKI, 'ca.crt')
 DNS_SERVICE_IP = '10.254.0.10'
-DNS_URL = 'https://{}:2379/v2/keys/skydns/kuberdock/svc/'.format(DNS_SERVICE_IP)
+DNS_URL = 'https://{}:2379/v2/keys/skydns/kuberdock/svc'.format(DNS_SERVICE_IP)
 DNS_CLIENT_CRT = os.path.join(ETCD_PKI, 'etcd-client.crt')
 DNS_CLIENT_KEY = os.path.join(ETCD_PKI, 'etcd-client.key')
 FIXED_IP_POOLS = False

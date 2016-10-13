@@ -8,7 +8,9 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
 from . import pstorage
-from .node_utils import add_node_to_db, delete_node_from_db, remove_ls_storage
+from .node_utils import (
+    add_node_to_db, delete_node_from_db, remove_ls_storage,
+    cleanup_node_network_policies)
 from .podcollection import PodCollection
 from .network_policies import get_dns_policy_config, get_logs_policy_config
 from .. import tasks
@@ -288,7 +290,16 @@ def delete_node(node_id=None, node=None, force=False, verbose=True):
         os.remove(NODE_INSTALL_LOG_FILE.format(hostname))
     except OSError:
         pass
+
     message = 'Node successfully deleted.'
+    try:
+        cleanup_node_network_policies(hostname)
+    except:
+        err = "Failed to cleanup network policies for the node: {}".format(
+            hostname)
+        current_app.logger.exception(err)
+        message += '\n{}'.format(err)
+
     if ls_clean_error:
         message += \
             '\nWarning: Failed to clean Local storage volumes on the node.\n'\

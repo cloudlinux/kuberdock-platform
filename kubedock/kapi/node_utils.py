@@ -16,7 +16,9 @@ from ..core import db, ssh_connect
 from ..settings import (
     NODE_INSTALL_LOG_FILE, AWS, CEPH, PD_NAMESPACE, PD_NS_SEPARATOR,
     NODE_STORAGE_MANAGE_CMD, ZFS, ETCD_CALICO_HOST_ENDPOINT_KEY_PATH_TEMPLATE,
-    ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE)
+    ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE, ETCD_NETWORK_POLICY_NODES,
+    KD_NODE_HOST_ENDPOINT_ROLE)
+from .network_policies import get_node_host_endpoint_policy
 
 
 def get_nodes_collection(kube_type=None):
@@ -563,7 +565,7 @@ def create_calico_host_endpoint(node_hostname, node_ipv4):
     # must be set during KD cluster deployment.
     node_endpoint = {
         "expected_ipv4_addrs": [node_ipv4],
-        "labels": {"role": "kdnode"},
+        "labels": {"role": KD_NODE_HOST_ENDPOINT_ROLE},
         "profile_ids": []
     }
     etcd_path = ETCD_CALICO_HOST_ENDPOINT_KEY_PATH_TEMPLATE.format(
@@ -589,6 +591,14 @@ def drop_endpoint_traffic_to_node(node_hostname):
     )
 
 
+def add_permissions_to_node_host_endpoint(node_hostname, node_ipv4):
+    """Adds permissions to host endpoints.
+    We allow here inbound traffic from host endpoint interface in KD cluster.
+    """
+    policy = get_node_host_endpoint_policy(node_hostname, node_ipv4)
+    Etcd(ETCD_NETWORK_POLICY_NODES).put(node_hostname, value=policy)
+
+
 def complete_calico_node_config(node_hostname, node_ipv4):
     """Sets necessary records to etcd to complete node configuration in
     calico:
@@ -598,3 +608,10 @@ def complete_calico_node_config(node_hostname, node_ipv4):
     """
     create_calico_host_endpoint(node_hostname, node_ipv4)
     drop_endpoint_traffic_to_node(node_hostname)
+    add_permissions_to_node_host_endpoint(node_hostname, node_ipv4)
+
+
+def cleanup_node_network_policies(node_hostname):
+    """Cleanup for calico node's policies after node deletion.
+    """
+    Etcd(ETCD_NETWORK_POLICY_NODES).delete(node_hostname)

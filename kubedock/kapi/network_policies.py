@@ -11,7 +11,7 @@ from .. import settings
 from ..settings import (
     ELASTICSEARCH_REST_PORT,
     ELASTICSEARCH_PUBLISH_PORT,
-    MASTER_IP
+    MASTER_IP, KD_NODE_HOST_ENDPOINT_ROLE
 )
 
 PUBLIC_PORT_POLICY_NAME = 'public'
@@ -176,3 +176,22 @@ def allow_public_ports_policy(ports, owner):
             }]
         }
     }
+
+
+def get_node_host_endpoint_policy(node_hostname, node_ip):
+    """Returns policy for a node's host endpoint.
+    Allows all traffic from this node_ip.
+    """
+    policy = {
+        "id": "kd-nodes-" + node_hostname,
+        "selector": 'role=="{}"'.format(KD_NODE_HOST_ENDPOINT_ROLE),
+        "order": 110,
+        "inbound_rules": [
+            {
+                "src_net": "{}/32".format(node_ip),
+                "action": "allow"
+            },
+        ],
+        "outbound_rules": []
+    }
+    return policy

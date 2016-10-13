@@ -27,6 +27,7 @@ Requires: dnsmasq >= 2.66
 Requires: policycoreutils-python >= 2.2
 Requires: python-uwsgi
 Requires: python-cerberus >= 0.9.1
+Requires: python-cerberus < 1.0.1
 Requires: python-click >= 6.3
 Requires: python-flask >= 0.10.1
 Requires: python-flask-mail >= 0.9.1

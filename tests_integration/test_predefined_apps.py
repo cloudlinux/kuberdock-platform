@@ -1,4 +1,3 @@
-
 from tests_integration.lib.pipelines import pipeline
 
 

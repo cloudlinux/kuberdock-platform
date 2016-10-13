@@ -41,6 +41,9 @@
 - include: ceph.yml
   when: use_ceph
 
+- include: zfs.yml
+  when: use_zfs
+
 - include: deploy.yml
 
 - name: Reset password

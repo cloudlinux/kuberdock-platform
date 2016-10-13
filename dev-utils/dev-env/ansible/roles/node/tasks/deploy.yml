@@ -10,7 +10,7 @@
       ansible_hostname in ntypes
 
 - name: Add node to master
-  shell: python "{{ master_kd_src_path }}/manage.py" add-node --hostname {{ ansible_hostname }} {{ kube_type | default("") }} --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}"
+  shell: python "{{ master_kd_src_path }}/manage.py" add-node --hostname {{ ansible_hostname }} {{ kube_type | default("") }} --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}" {{ zfs_node_params }}
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
   tags:
@@ -28,7 +28,7 @@
 
 - name: Wait for nodes
   run_once: true
-  shell: python "{{ master_kd_src_path }}/manage.py" wait-for-nodes --nodes "{{ hostnames }}" --timeout 600
+  shell: python "{{ master_kd_src_path }}/manage.py" wait-for-nodes --nodes "{{ hostnames }}" --timeout {{ wait_node_timeout }}
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
   changed_when: False

@@ -1,0 +1,30 @@
+---
+
+- name: Created zfs devices location
+  file: path="{{ zfs_devices_location }}" state=directory
+  tags:
+      - zfs
+
+- set_fact:
+    zfs_devices: "{{ (zfs_devices|default([])) | union([zfs_devices_location+'file'+item]) }}"
+  with_sequence: count="{{ zfs_devices_count }}"
+  tags:
+      - zfs
+
+- name: Create block devices
+  command: dd if=/dev/zero of="{{ item }}" bs=1024 count=0  seek=3G creates="{{ item }}"
+  with_items: zfs_devices
+  tags:
+      - zfs
+
+- set_fact:
+    zfs_node_params: "{{ zfs_node_params + ' --localstorage-device '+item }}"
+  with_items: zfs_devices
+  tags:
+      - zfs
+
+- name: Increase node waiting timeout
+  set_fact:
+    wait_node_timeout: "{{ wait_node_timeout * 3 }}"
+  tags:
+      - zfs

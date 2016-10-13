@@ -72,6 +72,8 @@ def config_ansible(ansible, nodesCount, rhostsCount)
 
         "install_plesk" => ENV['KD_INSTALL_PLESK'],
         "plesk_license" => ENV['KD_PLESK_LICENSE'],
+
+        "use_zfs" => ENV['KD_USE_ZFS'],
     }
 
     # Clean undefined vars

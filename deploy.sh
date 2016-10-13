@@ -1074,8 +1074,7 @@ KD_NODES_POLICY='{
             "protocol": "tcp",
             "dst_ports": [22],
             "action": "allow"
-        },
-        {"action": "next-tier"}
+        }
     ],
     "outbound_rules": [{"action": "allow"}]
 }'

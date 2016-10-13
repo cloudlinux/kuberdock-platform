@@ -207,6 +207,17 @@ def _master_network_policy():
         "'{\"order\": 0}'"
     )
     helpers.local(
+        "etcdctl set /calico/v1/policy/tier/kuberdock-hosts/metadata "
+        "'{\"order\": 5}'"
+    )
+    helpers.local(
+        'etcdctl mkdir /calico/v1/policy/tier/kuberdock-hosts/policy'
+    )
+    helpers.local(
+        "etcdctl set /calico/v1/policy/tier/kuberdock-hosts/policy/next-tier "
+        "'{}'".format(json.dumps(RULE_NEXT_TIER))
+    )
+    helpers.local(
         "etcdctl set /calico/v1/policy/tier/kuberdock-nodes/metadata "
         "'{\"order\": 10}'"
     )
@@ -219,16 +230,8 @@ def _master_network_policy():
     )
     helpers.local(
         "etcdctl set /calico/v1/policy/tier/kuberdock-service/policy/next-tier "
-        "'{}'".format(json.dumps(RULE_NEXT_TIER)))
-    helpers.local(
-        "etcdctl set /calico/v1/policy/tier/kuberdock-hosts/metadata "
-        "'{\"order\": 30}'"
+        "'{}'".format(json.dumps(RULE_NEXT_TIER))
     )
-    helpers.local(
-        'etcdctl mkdir /calico/v1/policy/tier/kuberdock-hosts/policy')
-    helpers.local(
-        "etcdctl set /calico/v1/policy/tier/kuberdock-hosts/policy/next-tier "
-        "'{}'".format(json.dumps(RULE_NEXT_TIER)))
 
     KD_HOST_ROLE = 'kdnode'
     MASTER_TUNNEL_IP = get_calico_ip_tunnel_address()

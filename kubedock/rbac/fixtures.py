@@ -17,7 +17,7 @@ resources = {
     'persistent_volumes': ('own', 'create', 'get', 'edit', 'delete',
                            'create_non_owned', 'get_non_owned',
                            'edit_non_owned', 'delete_non_owned'),
-    'yaml_pods': ('create',),
+    'yaml_pods': ('create', 'create_non_owned'),
     'ippool': ('create', 'get', 'edit', 'delete', 'view'),
     'notifications': ('create', 'get', 'edit', 'delete'),
     'system_settings': ('read', 'read_private', 'write', 'delete'),
@@ -82,6 +82,7 @@ permissions = {
         ('domains', 'get'): True,
         ('domains', 'edit'): True,
         ('domains', 'delete'): True,
+        ('yaml_pods', 'create_non_owned'): True,
     }),
     'User': dict(permissions_base, **{
         ('pods', 'own'): True,

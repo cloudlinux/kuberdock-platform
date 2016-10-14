@@ -79,6 +79,17 @@ class ValidateTemplate(SimpleCommand):
     corresponding_method = 'validate_template'
 
 
+@pa.command('create-pod', available_for=ADMIN)
+@kdclick.argument('template-id')
+@kdclick.argument('plan-id')
+@kdclick.data_argument('data')
+@kdclick.option('--owner')
+@kdclick.pass_obj
+class CreatePod(SimpleCommand):
+    """Create pod from template"""
+    corresponding_method = 'create_pod'
+
+
 @pa.command('create-pod', available_for=USER)
 @kdclick.argument('template-id')
 @kdclick.argument('plan-id')

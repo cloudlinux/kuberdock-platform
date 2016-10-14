@@ -1,5 +1,4 @@
 import yaml
-
 from flask import Blueprint, Response
 from flask.views import MethodView
 
@@ -12,7 +11,7 @@ from kubedock.login import auth_required
 from kubedock.rbac import check_permission
 from kubedock.utils import KubeUtils, register_api, send_event_to_user
 from kubedock.validation.coerce import extbool
-
+from kubedock.validation.schemas import owner_optional_schema
 
 yamlapi = Blueprint('yaml_api', __name__, url_prefix='/yamlapi')
 
@@ -49,6 +48,7 @@ class YamlAPI(KubeUtils, MethodView):
         send_event_to_user('pod:change', res, user.id)
         return res
 
+
 register_api(yamlapi, YamlAPI, 'yamlapi', '/', 'pod_id')
 
 
@@ -62,20 +62,26 @@ def fill_template(template_id, plan_id, **params):
 
 @yamlapi.route('/create/<int:template_id>/<int:plan_id>', methods=['POST'])
 @auth_required
-@check_permission('create', 'yaml_pods')
 @KubeUtils.jsonwrap
-@use_kwargs({'start': {'type': 'boolean', 'coerce': extbool}},
+@use_kwargs({'owner': owner_optional_schema,
+             'start': {'type': 'boolean', 'coerce': extbool}},
             allow_unknown=True)
-def create_pod(template_id, plan_id, **data):
-    user = KubeUtils.get_current_user()
-    start = data.pop('start', True)
+def create_pod(template_id, plan_id, owner=None, start=True, **data):
+    current_user = KubeUtils.get_current_user()
+    owner = owner or current_user
+
+    check_permission('own', 'pods', user=owner).check()
+    if owner == current_user:
+        check_permission('create', 'yaml_pods').check()
+    else:
+        check_permission('create_non_owned', 'yaml_pods').check()
 
     app = PredefinedApp.get(template_id)
-    pod_data = app.get_filled_template_for_plan(plan_id, data, user=user)
-    res = start_pod_from_yaml(pod_data, user=user, template_id=template_id)
+    pod_data = app.get_filled_template_for_plan(plan_id, data, user=owner)
+    res = start_pod_from_yaml(pod_data, user=owner, template_id=template_id)
     if start:
-        PodCollection(user).update(res['id'],
-                                   {'command': 'start', 'commandOptions': {}})
+        PodCollection(owner).update(
+            res['id'], {'command': 'start', 'commandOptions': {}})
     return res
 
 
@@ -89,7 +95,7 @@ def switch_pod_plan(pod_id, plan_id, **params):
     async = params.get('async', True)
     dry_run = params.get('dry-run', False)
     current_user = KubeUtils.get_current_user()
-    if plan_id.isdigit():   # plan_id specified with index (e.g. 0)
+    if plan_id.isdigit():  # plan_id specified with index (e.g. 0)
         plan_id = int(plan_id)
         func = PredefinedApp.update_pod_to_plan
     else:  # plan_id specified with name ('M', 'XXL')

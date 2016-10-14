@@ -1048,8 +1048,7 @@ class PodCollection(object):
     def assign_public_ip(self, pod_id, node=None):
         """Returns assigned ip"""
         pod = self._get_by_id(pod_id)
-        db_pod = DBPod.query.get(pod_id)
-        ":type: DBPod"
+        db_pod = DBPod.query.get(pod_id)  # type: DBPod
         if db_pod is None:
             raise Exception('Something goes wrong. Pod is present, but db_pod '
                             'is absent')

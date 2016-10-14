@@ -249,6 +249,11 @@ def _master_network_policy():
                 "src_net": "{}/32".format(MASTER_TUNNEL_IP),
                 "action": "allow"
             },
+            {
+                "protocol": "tcp",
+                "dst_ports": [22],
+                "action": "allow"
+            },
         ],
         "outbound_rules": [{"action": "allow"}]
     }
@@ -259,7 +264,7 @@ def _master_network_policy():
     )
 
     KD_MASTER_ROLE = 'kdmaster'
-    master_public_tcp_ports = [80, 443, 6443, 2379, 8123, 8118]
+    master_public_tcp_ports = [22, 80, 443, 6443, 2379, 8123, 8118]
     master_public_udp_ports = [123]
     KD_MASTER_POLICY = {
         "id": "kdmaster-public",
@@ -294,11 +299,6 @@ def _master_network_policy():
         "order": 100,
 
         "inbound_rules": [
-            {
-                "protocol": "tcp",
-                "dst_ports": [22],
-                "action": "allow"
-            },
             {"protocol": "icmp", "action": "allow"},
             {
                 "dst_net": "10.1.0.0/16",

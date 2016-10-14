@@ -53,12 +53,17 @@ def update_states(k8s_pod, event_type=None, event_time=None):
     deleted = event_type == 'DELETED'
 
     # get or create pod state
+    pod = Pod.query.get(pod_id)
     pod_state = PodState.query.filter(PodState.start_time == pod_start_time,
-                                      PodState.pod_id == pod_id).first()
+                                      PodState.pod_id == pod_id,
+                                      PodState.kube_id == pod.kube_id
+                                      ).first()
     if pod_state is None:
-        current_app.logger.debug('create PS: {0} {1}'.format(pod_id, host,
-                                                             pod_start_time))
-        pod_state = PodState(pod_id=pod_id, hostname=host, start_time=pod_start_time)
+        current_app.logger.debug('create PS: {0} {1}'.format(pod_id, host))
+        pod_state = PodState(pod_id=pod_id,
+                             hostname=host,
+                             start_time=pod_start_time,
+                             kube_id=pod.kube_id)
         db.session.add(pod_state)
     if event_type is not None and (pod_state.last_event_time is None or
                                    event_time >= pod_state.last_event_time):
@@ -69,7 +74,8 @@ def update_states(k8s_pod, event_type=None, event_time=None):
     pod = Pod.query.get(pod_id)
     kubes = {container.get('name'): container.get('kubes', 1)  # fallback
              for container in pod.get_dbconfig('containers', [])}
-    k8s_kubes = k8s_pod['metadata'].get('annotations', {}).get('kuberdock-container-kubes')
+    k8s_kubes = k8s_pod['metadata'].get('annotations', {}).get(
+        'kuberdock-container-kubes')
     if k8s_kubes:
         kubes.update(json.loads(k8s_kubes))
 
@@ -124,8 +130,8 @@ def update_states(k8s_pod, event_type=None, event_time=None):
             updated_CS.add(cs)
 
             # reset CS if it was marked as missing
-            if ((state_type == 'terminated' or deleted) and
-                    (cs.exit_code, cs.reason) == ContainerState.REASONS.missed):
+            if ((state_type == 'terminated' or deleted) and (
+                    cs.exit_code, cs.reason) == ContainerState.REASONS.missed):
                 cs.end_time, cs.exit_code, cs.reason = None, None, None
 
             # get end_time
@@ -151,7 +157,8 @@ def update_states(k8s_pod, event_type=None, event_time=None):
                 if cs.exit_code == 0 and cs.reason == 'Error':
                     cs.reason = None
             elif deleted and cs.exit_code is None:
-                cs.exit_code, cs.reason = ContainerState.REASONS.pod_was_stopped
+                cs.exit_code, cs.reason = \
+                    ContainerState.REASONS.pod_was_stopped
 
             # fix overlaping
             try:
@@ -169,12 +176,14 @@ def update_states(k8s_pod, event_type=None, event_time=None):
             else:
                 prev_cs.fix_overlap(start)
                 updated_CS.add(prev_cs)
-    prev_ps = PodState.query.filter(PodState.pod_id == pod_id,
-                                    PodState.start_time < pod_state.start_time,
-                                    db.or_(PodState.end_time > pod_state.start_time,
-                                           PodState.end_time.is_(None))).first()
+    prev_ps = PodState.query.filter(
+        PodState.pod_id == pod_id,
+        PodState.start_time < pod_state.start_time,
+        db.or_(PodState.end_time > pod_state.start_time,
+               PodState.end_time.is_(None))).first()
     if prev_ps:
-        PodState.close_other_pod_states(pod_id, pod_state.start_time, commit=False)
+        PodState.close_other_pod_states(pod_id, pod_state.start_time,
+                                        commit=False)
 
     if deleted and (pod_state.end_time is None or
                     k8s_pod_status.get('phase') == 'Failed'):
@@ -204,7 +213,8 @@ def fix_pods_timeline_heavy():
 
     cs1 = db.aliased(ContainerState, name='cs1')
     ps1 = db.aliased(PodState, name='ps1')
-    cs2 = db.session.query(ContainerState, PodState.pod_id).join(PodState).subquery()
+    cs2 = db.session.query(
+        ContainerState, PodState.pod_id).join(PodState).subquery()
     cs_query = db.session.query(cs1, cs2.c.start_time).join(
         ps1, ps1.id == cs1.pod_state_id
     ).join(
@@ -214,9 +224,8 @@ def fix_pods_timeline_heavy():
         cs1.start_time < cs2.c.start_time,
         db.or_(cs1.end_time > cs2.c.start_time,
                cs1.end_time.is_(None))
-    ).order_by(
-        ps1.pod_id, cs1.container_name, db.desc(cs1.start_time), cs2.c.start_time
-    )
+    ).order_by(ps1.pod_id, cs1.container_name, db.desc(cs1.start_time),
+               cs2.c.start_time)
 
     prev_cs = None
     for cs1_obj, cs2_start_time in cs_query:

@@ -64,15 +64,15 @@
         </div>
         {% endblock %}
 
-        {% block app_js_asset %}
-
-        <script src="{{ url_for('static', filename='prepared.js') }}"></script>
-        {% endblock %}
-
         {% if token %}
         <script>
             window.localStorage.authData = {{ token|tojson|safe }};
         </script>
         {% endif %}
+
+        {% block app_js_asset %}
+        <script src="{{ url_for('static', filename='prepared.js') }}"></script>
+        {% endblock %}
+
     </body>
 </html>

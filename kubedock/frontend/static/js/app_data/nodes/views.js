@@ -238,7 +238,7 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
                             hostname: val,
                             status: 'pending',
                             kube_type: that.model.get('kube_type'),
-                            lsdevices: that.model.get('lsdevices'),
+                            lsdevices: _.compact(that.model.get('lsdevices')),
                             install_log: ''
                         };
                     } else {

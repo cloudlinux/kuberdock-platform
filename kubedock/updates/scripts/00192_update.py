@@ -1,43 +1,329 @@
 import json
+import os
+import socket
 from StringIO import StringIO
 
 import yaml
 from fabric.operations import run, get, put
-from fabric.context_managers import quiet
-from os import path
-import socket
+from fabric.context_managers import cd, quiet
 
-from kubedock.kapi.node_utils import complete_calico_node_config
+from kubedock.core import db, ssh_connect
 from kubedock.kapi.nodes import (
     KUBERDOCK_DNS_POD_NAME,
     create_policy_pod,
     get_dns_policy_config,
     get_node_token,
 )
+from kubedock.kapi import podcollection
+from kubedock.kapi.helpers import (
+    KUBERDOCK_POD_UID,
+    KUBERDOCK_TYPE,
+    LOCAL_SVC_TYPE,
+    Services,
+    replace_pod_config,
+)
+from kubedock.kapi.node_utils import complete_calico_node_config
+from kubedock.kapi.nodes import get_kuberdock_logs_pod_name
+from kubedock.kapi.podutils import raise_if_failure
+from kubedock.kapi.podcollection import PodCollection, PodNotFound, run_service
+from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod
+from kubedock.predefined_apps.models import PredefinedApp
 from kubedock.settings import (
     ETCD_NETWORK_POLICY_SERVICE,
-    KUBERDOCK_INTERNAL_USER,
     MASTER_IP, NODE_DATA_DIR, NODE_TOBIND_EXTERNAL_IPS
 )
+from kubedock.system_settings import keys
+from kubedock.system_settings.models import SystemSettings
 from kubedock.updates import helpers
 from kubedock.users.models import User
-from kubedock.utils import Etcd, get_calico_ip_tunnel_address
+from kubedock.utils import POD_STATUSES, Etcd, get_calico_ip_tunnel_address
 
-from kubedock.kapi.helpers import Services, LOCAL_SVC_TYPE
-from kubedock.kapi.helpers import KUBERDOCK_POD_UID, KUBERDOCK_TYPE
-from kubedock.kapi.podutils import raise_if_failure
-from kubedock.kapi import podcollection
-from kubedock.kapi.podcollection import PodCollection, run_service
-from kubedock.utils import POD_STATUSES
-from kubedock.nodes.models import Node
-from kubedock.kapi.node_utils import complete_calico_node_config
-from kubedock.core import db
 
-#
-# WARNING: etcd should be >= 2.0.10 for successful Calico node running
-# WARNING: kubernetes should be >= 1.2.0 for Network policy applying
-#
+# update 00174
+K8S_VERSION = '1.2.4-3'
+K8S = 'kubernetes-{name}-{version}.el7.cloudlinux'
+K8S_NODE = K8S.format(name='node', version=K8S_VERSION)
+
+# update 00179
+RSYSLOG_CONF = '/etc/rsyslog.d/kuberdock.conf'
+
+# update 00186
+NAMES = (
+    keys.DNS_MANAGEMENT_CLOUDFLARE_EMAIL,
+    keys.DNS_MANAGEMENT_CLOUDFLARE_TOKEN,
+    keys.DNS_MANAGEMENT_CLOUDFLARE_CERTTOKEN,
+)
+
+# update 00188 (00187)
+NODE_SCRIPT_DIR = '/var/lib/kuberdock/scripts'
+NODE_STORAGE_MANAGE_DIR = 'node_storage_manage'
+KD_INSTALL_DIR = '/var/opt/kuberdock'
+
+
+def _update_00174_upgrade_node(upd, with_testing):
+    upd.print_log("Upgrading kubernetes")
+    helpers.remote_install(K8S_NODE, with_testing)
+    service, res = helpers.restart_node_kubernetes()
+    if res != 0:
+        raise helpers.UpgradeError('Failed to restart {0}. {1}'
+                                   .format(service, res))
+
+
+def _update_00176_upgrade(upd):
+    pas_to_upgrade = {
+        pa.id: pa for pa in PredefinedApp.query.all()
+        if _pa_contains_originroot_hack(pa)}
+
+    if not pas_to_upgrade:
+        upd.print_log('No outdated PAs. Skipping')
+        return
+
+    pods_to_upgrade = Pod.query.filter(
+        Pod.template_id.in_(pas_to_upgrade.keys())).all()
+
+    _remove_lifecycle_section_from_pods(upd, pods_to_upgrade, pas_to_upgrade)
+    _update_predefined_apps(upd, pas_to_upgrade)
+    _mark_volumes_as_prefilled(pas_to_upgrade, pods_to_upgrade)
+
+
+def _update_00176_upgrade_node(with_testing):
+    _upgrade_docker(with_testing)
+
+
+def _update_00179_upgrade_node(env):
+    nodename = env.host_string
+    log_pod_name = get_kuberdock_logs_pod_name(nodename)
+    internal_user = User.get_internal()
+    pc = PodCollection(internal_user)
+    dbpod = Pod.query.filter(
+        Pod.owner_id == internal_user.id, Pod.name == log_pod_name,
+        Pod.status != 'deleted').first()
+    if not dbpod:
+        raise Exception('Node {} have no logs pod. '
+                        'Delete the node and try again'.format(nodename))
+    pod = pc.get(dbpod.id, as_json=False)
+    old_ip = '127.0.0.1'
+    new_ip = pod['podIP']
+    run('sed -i "s/@{old_ip}:/@{new_ip}:/g" {conf}'.format(
+        old_ip=old_ip, new_ip=new_ip, conf=RSYSLOG_CONF))
+    run('systemctl restart rsyslog')
+
+
+def _update_00185_upgrade():
+    SystemSettings.query.filter_by(name=keys.MAX_KUBES_TRIAL_USER).delete()
+    db.session.add_all([
+        SystemSettings(
+            name=keys.MAX_KUBES_TRIAL_USER, value='5',
+            label='Kubes limit for Trial user',
+            placeholder='Enter Kubes limit for Trial user',
+            setting_group='general'
+        ),
+    ])
+    db.session.commit()
+
+
+def _update_00186_upgrade():
+    for setting_name in NAMES:
+        SystemSettings.query.filter_by(name=setting_name).delete()
+    db.session.add_all([
+        SystemSettings(
+            name=keys.DNS_MANAGEMENT_CLOUDFLARE_EMAIL,
+            label='CloudFlare Email',
+            description='Email for CloudFlare DNS management',
+            placeholder='Enter CloudFlare Email',
+            setting_group='domain'
+        ),
+        SystemSettings(
+            name=keys.DNS_MANAGEMENT_CLOUDFLARE_TOKEN,
+            label='CloudFlare Global API Key',
+            description='Global API Key for CloudFlare DNS management',
+            placeholder='Enter CloudFlare Global API Key',
+            setting_group='domain'
+        ),
+        SystemSettings(
+            name=keys.DNS_MANAGEMENT_CLOUDFLARE_CERTTOKEN,
+            label='CloudFlare Origin CA Key',
+            description='Origin CA Key for CloudFlare DNS management',
+            placeholder='Enter CloudFlare Origin CA Key',
+            setting_group='domain'
+        ),
+    ])
+    db.session.commit()
+
+
+def _update_00188_upgrade_node():  # update 00187 absorbed by 00188
+    target_script_dir = os.path.join(NODE_SCRIPT_DIR, NODE_STORAGE_MANAGE_DIR)
+    run('mkdir -p ' + target_script_dir)
+    scripts = [
+        'aws.py', 'common.py', '__init__.py', 'manage.py',
+        'node_lvm_manage.py', 'node_zfs_manage.py'
+    ]
+    for item in scripts:
+        put(os.path.join(KD_INSTALL_DIR, NODE_STORAGE_MANAGE_DIR, item),
+            target_script_dir)
+    # Update symlink only if it not exists
+    with cd(target_script_dir):
+        run('ln -s node_lvm_manage.py storage.py 2> /dev/null || true')
+
+
+def _update_00191_upgrade():
+    _master_flannel()
+
+    _master_shared_etcd()
+    helpers.restart_service('nginx')
+
+    etcd1 = helpers.local('uname -n')
+    _master_etcd_cert(etcd1)
+    _master_etcd_conf(etcd1)
+    helpers.restart_service('etcd')
+
+    _master_docker()
+    _master_firewalld()
+    _master_k8s_node()
+    _master_calico()
+
+    _master_k8s_extensions()
+    helpers.restart_master_kubernetes()
+    helpers.local('echo "{0}" | kubectl create -f -'.format(_K8S_EXTENSIONS))
+    # we need to restart here again, because kubernetes sometimes don't accept
+    # extensions onfly
+    helpers.restart_master_kubernetes()
+    _master_network_policy()
+
+    _master_dns_policy()
+    _master_pods_policy()
+
+    _master_service_update()
+
+
+def _update_00191_upgrade_node(env, **kwargs):
+    _node_kube_proxy()
+    _node_flannel()
+    _node_calico(node_name=env.host_string, node_ip=kwargs['node_ip'])
+    _node_policy_agent(env.host_string)
+    _node_move_config()
+
+
+def _update_00191_post_upgrade_nodes():
+    _add_nodes_host_endpoints()
+
+
+# update 00176 stuff bellow (update 00175 absorbed by 00176)
+
+DOCKER_VERSION = '1.12.1-2.el7'
+DOCKER = 'docker-{ver}'.format(ver=DOCKER_VERSION)
+SELINUX = 'docker-selinux-{ver}'.format(ver=DOCKER_VERSION)
+
+
+def _upgrade_docker(with_testing):
+    helpers.remote_install(SELINUX, with_testing)
+    helpers.remote_install(DOCKER, with_testing)
+    res = helpers.restart_service('docker')
+    if res != 0:
+        raise helpers.UpgradeError('Failed to restart docker. {}'.format(res))
+
+
+def contains_origin_root(container):
+    try:
+        return '/originroot/' in str(
+            container['lifecycle']['postStart']['exec']['command'])
+    except KeyError:
+        return False
+
+
+def _pa_contains_originroot_hack(app):
+    tpl = yaml.load(app.template)
+    try:
+        containers = tpl['spec']['template']['spec']['containers']
+    except KeyError:
+        return False
+
+    return any(contains_origin_root(c) for c in containers)
+
+
+def _remove_lifecycle_section_from_pods(upd, pods, pas):
+    # PodCollection.update({'command': 'change_config'}) can't delete keys
+    # thus mocking instead
+    def _mock_lifecycle(config):
+        for container in config['containers']:
+            if not contains_origin_root(container):
+                continue
+            container['lifecycle'] = {
+                'postStart': {'exec': {'command': ['/bin/true']}}
+            }
+        return config
+
+    def _set_prefill_flag(config, pod):
+        prefilled_volumes = _extract_prefilled_volumes_from_pod(pas, pod)
+
+        for container in config['containers']:
+            for vm in container.get('volumeMounts', []):
+                if vm['name'] in prefilled_volumes:
+                    vm['kdCopyFromImage'] = True
+
+    collection = PodCollection()
+
+    for pod in pods:
+        config = _mock_lifecycle(pod.get_dbconfig())
+        _set_prefill_flag(config, pod)
+        config['command'] = 'change_config'
+
+        try:
+            replace_pod_config(pod, config)
+            collection.update(pod.id, config)
+            upd.print_log('POD {} config patched'.format(pod.id))
+        except PodNotFound:
+            upd.print_log('Skipping POD {}. Not found in K8S'.format(pod.id))
+
+
+def _mark_volumes_as_prefilled(pas, pods):
+    for pod in pods:
+        prefilled_volumes = _extract_prefilled_volumes_from_pod(pas, pod)
+        config = pod.get_dbconfig()
+
+        paths_to_volumes = [
+            v['hostPath']['path'] for v in config['volumes']
+            if v['name'] in prefilled_volumes]
+
+        ssh, err = ssh_connect(pod.pinned_node)
+
+        if err:
+            raise Exception(err)
+
+        for path in paths_to_volumes:
+            lock_path = os.path.join(path, '.kd_prefill_succeded')
+            ssh.exec_command('touch {}'.format(lock_path))
+
+
+def _extract_prefilled_volumes_from_pod(pas, pod):
+    template = yaml.load(pas[pod.template_id].template)
+    containers = (c for c in
+                  template['spec']['template']['spec']['containers'])
+    return {vm['name'] for c in containers for vm in c['volumeMounts']}
+
+
+def _update_predefined_apps(upd, kd_pas):
+    for pa in kd_pas.values():
+        template = yaml.load(pa.template)
+
+        try:
+            containers = template['spec']['template']['spec']['containers']
+        except KeyError:
+            upd.print_log('Unexpected PA {} found. Skipping'.format(pa.id))
+            continue
+
+        for container in containers:
+            container.pop('lifecycle', None)
+            for mount in container.get('volumeMounts', []):
+                mount['kdCopyFromImage'] = True
+
+        pa.template = yaml.dump(template, default_flow_style=False)
+        pa.save()
+        upd.print_log('PA {} patched'.format(pa.name))
+
+
+# update 00191 stuff bellow
 
 _NGINX_SHARED_ETCD = '/etc/nginx/conf.d/shared-etcd.conf'
 _WEBAPP_USER = 'nginx'
@@ -343,17 +629,15 @@ def _master_network_policy():
             etcd_path, json.dumps(MASTER_HOST_ENDPOINT))
     )
 
-def _get_internal_user():
-    return User.query.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
-
 
 def _master_dns_policy():
-    ki = _get_internal_user()
+    ki = User.get_internal()
     dns_pod = Pod.query.filter_by(
         name=KUBERDOCK_DNS_POD_NAME, owner=ki).first()
-    dns_policy = get_dns_policy_config(ki.id, dns_pod.id)
-    Etcd(ETCD_NETWORK_POLICY_SERVICE).put(KUBERDOCK_DNS_POD_NAME,
-                                          value=dns_policy)
+    if dns_pod is not None:
+        dns_policy = get_dns_policy_config(ki.id, dns_pod.id)
+        Etcd(ETCD_NETWORK_POLICY_SERVICE).put(KUBERDOCK_DNS_POD_NAME,
+                                              value=dns_policy)
 
 
 def _master_pods_policy():
@@ -460,7 +744,7 @@ def _create_calico_config():
 
 
 def _node_policy_agent(hostname):
-    ki = _get_internal_user()
+    ki = User.get_internal()
     token = get_node_token()
     create_policy_pod(hostname, ki, token)
 
@@ -487,9 +771,9 @@ def _master_service_update():
 
 def _node_move_config():
     config = 'kuberdock.json'
-    old_path = path.join(
+    old_path = os.path.join(
         "/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/", config)
-    new_path = path.join(NODE_DATA_DIR, config)
+    new_path = os.path.join(NODE_DATA_DIR, config)
     with quiet():
         run("mv {} {}".format(old_path, new_path))
     fd = StringIO()
@@ -500,15 +784,13 @@ def _node_move_config():
     json.dump(data, new_fd)
     put(new_fd, new_path)
 
-def _node_k8s(with_testing):
-    helpers.remote_install(
-        'kubernetes-node-1.2.4-3.el7.cloudlinux', with_testing)
 
 def _master_firewalld():
     helpers.local('systemctl stop firewalld')
     helpers.local('systemctl disable firewalld')
     helpers.install_package('firewalld', action='remove')
     helpers.local('systemctl daemon-reload')
+
 
 def _add_nodes_host_endpoints():
     """Adds calico host endpoint for every node,
@@ -519,33 +801,10 @@ def _add_nodes_host_endpoints():
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
-    _master_flannel()
-
-    _master_shared_etcd()
-    helpers.restart_service('nginx')
-
-    etcd1 = helpers.local('uname -n')
-    _master_etcd_cert(etcd1)
-    _master_etcd_conf(etcd1)
-    helpers.restart_service('etcd')
-
-    _master_docker()
-    _master_firewalld()
-    _master_k8s_node()
-    _master_calico()
-
-    _master_k8s_extensions()
-    helpers.restart_master_kubernetes()
-    helpers.local('echo "{0}" | kubectl create -f -'.format(_K8S_EXTENSIONS))
-    # we need to restart here again, because kubernetes sometimes don't accept
-    # extensions onfly
-    helpers.restart_master_kubernetes()
-    _master_network_policy()
-
-    _master_dns_policy()
-    _master_pods_policy()
-
-    _master_service_update()
+    _update_00176_upgrade(upd)
+    _update_00185_upgrade()
+    _update_00186_upgrade()
+    _update_00191_upgrade()
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
@@ -553,12 +812,11 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
 
 
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
-    _node_k8s(with_testing)
-    _node_kube_proxy()
-    _node_flannel()
-    _node_calico(node_name=env.host_string, node_ip=kwargs['node_ip'])
-    _node_policy_agent(env.host_string)
-    _node_move_config()
+    _update_00174_upgrade_node(upd, with_testing)
+    _update_00176_upgrade_node(with_testing)
+    _update_00179_upgrade_node(env)
+    _update_00188_upgrade_node()
+    _update_00191_upgrade_node(env, **kwargs)
     helpers.reboot_node(upd)
 
 
@@ -567,4 +825,4 @@ def downgrade_node(upd, with_testing, env, exception, *args, **kwargs):
 
 
 def post_upgrade_nodes(upd, with_testing, *args, **kwargs):
-    _add_nodes_host_endpoints()
+    _update_00191_post_upgrade_nodes()

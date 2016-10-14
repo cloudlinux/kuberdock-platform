@@ -1017,6 +1017,9 @@ KD_HOSTS_POLICY_ORDER=5
 KD_NODES_POLICY_ORDER=10
 KD_SERVICE_POLICY_ORDER=20
 
+# This rule is needed for remote hosts tier (kuberdock-hosts). It will allow
+# next tiers processing if some rhosts policy is in this tier.
+# Remote hosts policies use selector 'all()'.
 RULE_NEXT_TIER='{"id": "next-tier", "order": 9999, "inbound_rules": [{"action": "next-tier"}], "outbound_rules": [{"action": "next-tier"}], "selector": "all()"}'
 
 check_json()

@@ -330,11 +330,15 @@ prjquota_enable()
   FS_TYPE=$(awk '{print $2}' <<< "$FS")
   if [ "$FS_TYPE" == "xfs" ]; then
     MOUNTPOINT=$(awk '{print $7}' <<< "$FS")
-    if [ "$MOUNTPOINT" == "/" ] && ! grep -E '^GRUB_CMDLINE_LINUX=.*rootflags=prjquota|^GRUB_CMDLINE_LINUX=.*rootflags=pquota' /etc/default/grub; then
-      sed -i '/^GRUB_CMDLINE_LINUX=/s/"$/ rootflags=prjquota"/' /etc/default/grub
-      grub2-mkconfig -o /boot/grub2/grub.cfg
+    if [ "$MOUNTPOINT" == "/" ]; then
+      if ! rpm -q grubby >> /dev/null; then
+        yum_wrapper -y install grubby
+      fi
+      echo "Enabling XFS Project Quota in GRUB"
+      grubby --args=rootflags=prjquota --update-kernel=ALL
     fi
     if ! grep -E "^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]].*prjquota|^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]].*pquota" /etc/fstab; then
+      echo "Enabling XFS Project Quota for $MOUNTPOINT in /etc/fstab"
       sed -i "\|^[^#]\S*[[:blank:]]$MOUNTPOINT[[:blank:]]|s|defaults|defaults,prjquota|" /etc/fstab
     fi
   else

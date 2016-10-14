@@ -15,3 +15,4 @@ requests==2.4.3
 redis==2.10.5
 python-memcached==1.58
 PyGreSQL==5.0.2
+pymongo==3.3.0

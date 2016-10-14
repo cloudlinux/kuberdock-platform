@@ -74,7 +74,7 @@ def filter_query_by_date(query, model, date_from, date_to):
 def get_pod_usage(user, date_from, date_to):
     rv = []
     for pod in user.pods:
-        time_ = defaultdict(list)
+        times = defaultdict(lambda: defaultdict(list))
         query = ContainerState.query.filter(ContainerState.pod == pod)
         query = filter_query_by_date(query, ContainerState, date_from, date_to)
         states = query.all()
@@ -82,13 +82,15 @@ def get_pod_usage(user, date_from, date_to):
             start = to_timestamp(state.start_time)
             end = (int(time.time()) if state.end_time is None else
                    to_timestamp(state.end_time))
-            time_[state.container_name].append({'kubes': state.kubes,
+            times[state.pod_state.kube_id][state.container_name].append({
+                'kubes':
+                                                               state.kubes,
                                                 'start': start, 'end': end})
-        if time_:
+        for (kube_id, time_) in times.iteritems():
             rv.append({'id': pod.id,
                        'name': pod.name,
                        'kubes': pod.kubes,
-                       'kube_id': pod.kube_id,
+                       'kube_id': kube_id,
                        'time': time_})
     return rv
 

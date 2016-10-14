@@ -53,12 +53,18 @@ def update_states(k8s_pod, event_type=None, event_time=None):
     deleted = event_type == 'DELETED'
 
     # get or create pod state
+    pod = Pod.query.get(pod_id)
     pod_state = PodState.query.filter(PodState.start_time == pod_start_time,
-                                      PodState.pod_id == pod_id).first()
+                                      PodState.pod_id == pod_id,
+                                      PodState.kube_id == pod.kube_id
+                                      ).first()
     if pod_state is None:
         current_app.logger.debug('create PS: {0} {1}'.format(pod_id, host,
                                                              pod_start_time))
-        pod_state = PodState(pod_id=pod_id, hostname=host, start_time=pod_start_time)
+        pod_state = PodState(pod_id=pod_id,
+                             hostname=host,
+                             start_time=pod_start_time,
+                             kube_id=pod.kube_id)
         db.session.add(pod_state)
     if event_type is not None and (pod_state.last_event_time is None or
                                    event_time >= pod_state.last_event_time):

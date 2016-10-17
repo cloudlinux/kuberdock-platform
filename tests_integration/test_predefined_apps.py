@@ -106,3 +106,23 @@ def test_sugarcrm_pa(cluster):
 @pipeline('predefined_apps')
 def test_postgres_pa(cluster):
     check_pa(cluster, 'postgres.yaml')
+
+
+@pipeline('predefined_apps')
+def test_mongodb_pa(cluster):
+    check_pa(cluster, 'mongodb.yaml')
+
+
+@pipeline('predefined_apps')
+def test_odoo_pa(cluster):
+    check_pa(cluster, 'odoo.yaml')
+
+
+@pipeline('predefined_apps')
+def test_wordpresselastic_pa(cluster):
+    check_pa(cluster, 'wordpress_elasticsearch.yaml')
+
+
+@pipeline('predefined_apps')
+def test_wordpressbackup_pa(cluster):
+    check_pa(cluster, 'wordpress_with_backup.yaml')

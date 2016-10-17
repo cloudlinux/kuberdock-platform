@@ -16,6 +16,7 @@ import paramiko
 import vagrant
 import redis
 import memcache
+import pymongo
 from ipaddress import IPv4Network
 
 from pg import DB
@@ -649,8 +650,8 @@ class KDPod(RESTMixin):
     @property
     def ports(self):
         def _get_ports(containers):
-            all_ports = itertools.chain(
-                *[c['ports'] for c in containers])
+            all_ports = itertools.chain.from_iterable(
+                  c['ports'] for c in containers if c.get('ports'))
             return [port['containerPort']
                     for port in all_ports if port.get('isPublic') is True]
 
@@ -1139,6 +1140,65 @@ class _MybbPaPod(KDPAPod):
         assert_in(u"MyBB Installation Wizard", page)
 
 
+class _OpenCartPaPod(KDPAPod):
+    SRC = 'opencart.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/install/index.php')
+        assert_in(u"Please read the OpenCart licence agreement", page)
+
+
+class _LimesurveyPaPod(KDPAPod):
+    SRC = 'limesurvey.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/index.php?r=installer/welcome')
+        assert_in(u"LimeSurvey installer", page)
+
+
+class _KokenPaPod(KDPAPod):
+    SRC = 'koken.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET()
+        assert_in(u"Koken - Setup", page)
+
+
+class _OwnCloudPaPod(KDPAPod):
+    SRC = 'owncloud.yaml'
+
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        ports = ports or [80]
+        self._wait_for_ports(ports, timeout)
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET()
+        assert_in(u"ownCloud", page)
+        assert_in(u"web services under your control", page)
+
+
+class _PhpBBPaPod(KDPAPod):
+    SRC = 'phpbb.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/install/index.php')
+        assert_in(u"Welcome to phpBB3!", page)
+
+
+class _WordpressPaPod(KDPAPod):
+    SRC = 'wordpress.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/wp-admin/install.php')
+        assert_in(u"WordPress &rsaquo; Installation", page)
+
+
 class _PhpMyAdminPaPod(KDPAPod):
     SRC = 'phpmyadmin.yaml'
 
@@ -1181,6 +1241,52 @@ class _PostgresPaPod(KDPAPod):
         sql = "create table test_table(id serial primary key, name varchar)"
         db.query(sql)
         assert_in('public.test_table', db.get_tables())
+
+
+class _MongodbPaPod(KDPAPod):
+    SRC = 'mongodb.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        mongo = pymongo.MongoClient(self.public_ip, 27017)
+        test_db = mongo.test_db
+        assert_eq(u'test_db', test_db.name)
+        obj_id = test_db.test_collection.insert_one({"x": 1}).inserted_id
+        obj = test_db.test_collection.find_one()
+        assert_eq(obj_id, obj['_id'])
+        assert_eq(1, obj['x'])
+
+
+class _OdooPaPod(KDPAPod):
+    SRC = 'odoo.yaml'
+ 
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+        # Though odoo also has ssl port 8071
+        ports = ports or [80]
+        self._wait_for_ports(ports, timeout)
+ 
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/web/database/selector')
+        assert_in(u"Fill in this form to create an Odoo database.", page)
+
+
+class _WordpressElasticPaPod(KDPAPod):
+    SRC = 'wordpress_elasticsearch.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/wp-admin/install.php')
+        assert_in(u"WordPress &rsaquo; Installation", page)
+
+
+class _WordpressBackupPaPod(KDPAPod):
+    SRC = 'wordpress_with_backup.yaml'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        page = self.do_GET(path='/wp-admin/install.php')
+        assert_in(u"WordPress &rsaquo; Installation", page)
 
 
 class VagrantIsAlreadyUpException(Exception):

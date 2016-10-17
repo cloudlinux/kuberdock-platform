@@ -6,6 +6,11 @@
 - name: Clean repositry cache
   command: yum clean all
 
+# Needed for integration tests. Once CI images are updated, this can be
+# removed.
+- name: Ensure netcat is installed
+  yum: name=nc state=installed
+
 - include: ../../../facts.yml
 
 - name: Update global environment variables

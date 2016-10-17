@@ -50,7 +50,7 @@ from sqlalchemy.orm.exc import NoResultFound
 logging.getLogger("requests").setLevel(logging.WARNING)
 
 WAIT_TIMEOUT = 10 * 60  # 10 minutes
-WAIT_TROUBLE_TIMEOUT = 3 * 60  # 3 minutes
+WAIT_TROUBLE_TIMEOUT = 6 * 60  # 6 minutes
 WAIT_RETRY_DELAY = 5  # seconds
 
 

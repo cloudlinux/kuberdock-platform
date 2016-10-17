@@ -14,12 +14,12 @@ from .billing.models import Kube
 from .nodes.models import Node
 from .pods.models import Pod, PersistentDisk
 from .users.models import User
-from .settings import CALICO, KUBERDOCK_INTERNAL_USER
+from .settings import KUBERDOCK_INTERNAL_USER
 from .utils import (get_api_url, unregistered_pod_warning,
                     send_event_to_role, send_event_to_user,
                     pod_without_id_warning, k8s_json_object_hook,
                     send_pod_status_update, POD_STATUSES, nested_dict_utils,
-                    session_scope, fix_calico)
+                    session_scope)
 from .kapi.usage import update_states
 from .kapi.podcollection import PodCollection, set_public_address
 from .kapi.lbpoll import LoadBalanceService
@@ -42,6 +42,9 @@ ETCD_POD_STATES_URL = ETCD_URL.format('/'.join([
 MAX_ATTEMPTS = 10
 # How ofter we will send error about listener reconnection to sentry
 ERROR_TIMEOUT = 3 * 60  # in seconds
+LISTENER_PROBLEM_MSG = ("Problems in the listeners module have been "
+                        "encountered. Please contact KuberDock Support"
+                        "(see Settings, the License page)")
 
 
 def filter_event(data, app):
@@ -510,7 +513,7 @@ def listen_fabric(watch_url, list_url, func, k8s_json_object_hook=None):
                         if (now - last_reconnect).total_seconds() > ERROR_TIMEOUT:
                             last_reconnect = now
                             logger = current_app.logger.error
-                        logger("WebSocker error()".format(fn_name),
+                        logger("WebSocker error({})".format(fn_name),
                                exc_info=True)
 
                         gevent.sleep(0.1)
@@ -538,12 +541,10 @@ def listen_fabric(watch_url, list_url, func, k8s_json_object_hook=None):
                                 with session_scope(db.session):
                                     func(data, app)
                             else:
-                                message = "Problems in the listeners module have\
-                                    been encountered. Please contact KuberDock\
-                                    Support (see Settings, the License page)"
-                                send_event_to_role('notify:error',
-                                                   {'message': message},
-                                                   'Admin')
+                                send_event_to_role(
+                                    'notify:error',
+                                    {'message': LISTENER_PROBLEM_MSG},
+                                    'Admin')
                                 current_app.logger.error(
                                     'skip event {}'.format(data), exc_info=True)
 
@@ -562,73 +563,6 @@ def listen_fabric(watch_url, list_url, func, k8s_json_object_hook=None):
                             logger = current_app.logger.error
                         logger('restarting listen: {}'.format(fn_name),
                                exc_info=True)
-                    gevent.sleep(0.2)
-    return result
-
-
-def listen_fabric_etcd(url, func, list_func=None):
-    fn_name = func.func_name
-
-    def result(app):
-        retry = 0
-        index = 0
-        last_reconnect = datetime.fromtimestamp(0)
-        with app.app_context():
-            while True:
-                try:
-                    current_app.logger.debug(
-                        'START WATCH {0}==pid:{1}'.format(fn_name, os.getpid()))
-                    if not index and list_func:
-                        index = list_func(app)
-                    current_app.logger.debug(
-                        "{}: start watch on event {}".format(fn_name, index))
-                    r = requests.get(url, params={'wait': True,
-                                                  'recursive': True,
-                                                  'waitIndex': index})
-                    if not r.ok:
-                        current_app.logger.error(
-                            "{}: Can't connect to etcd".format(fn_name))
-                        gevent.sleep(1)
-                        continue
-                    data = r.json()
-                    # The event in requested index is outdated and cleared
-                    if data.get('errorCode') == 401:
-                        current_app.logger.warning(
-                            "The event in requested index is outdated and \
-                            cleared. Skip all events and wait for new one")
-                        index = 0
-                        continue
-                    if retry < MAX_ATTEMPTS:
-                        # Because listeners aren't managed by flask we
-                        # have to do all transaction management manually
-                        with session_scope(db.session):
-                            func(data, app)
-                    else:
-                        message = "Problems in the listeners module have been\
-                            encountered. Please contact KuberDock Support\
-                            (see Settings, the License page)"
-                        send_event_to_role(
-                            'notify:error', {'message': message}, 'Admin')
-                        current_app.logger.error(
-                            'skip event {}'.format(data), exc_info=True)
-                    index = int(data['node']['modifiedIndex']) + 1
-                    retry = 0
-                except KeyboardInterrupt:
-                    break
-                except requests.exceptions.RequestException:
-                    now = datetime.now()
-                    logger = current_app.logger.warning
-                    if (now-last_reconnect).total_seconds() > ERROR_TIMEOUT:
-                        last_reconnect = now
-                        logger = current_app.logger.exception
-                    logger('Error while etcd connect({})'.format(fn_name))
-                    gevent.sleep(1)
-                    continue
-                except Exception as e:
-                    retry += 1
-                    current_app.logger.warning(
-                        'restarting listen: {0}'.format(fn_name),
-                        exc_info=True)
                     gevent.sleep(0.2)
     return result
 
@@ -674,51 +608,82 @@ def process_extended_statuses(data, app):
         current_app.logger.warning("error while delete:{}".format(r.text))
 
 
-def prelist_pod_states(app):
-    """ Check if there are already some pod states stored in etcd and
-    process them. Get etcd index from header and return it.
-    """
-    res = requests.get(ETCD_POD_STATES_URL,
-                       params={'recursive': True, 'sorted': True})
-    try:
-        if res.ok:
-            data = res.json()
-            etcd_index = res.headers['x-etcd-index']
-            for node in data['node'].get('nodes', []):
-                # TODO: for now send all prelist event to process,
-                # but there are no need to send old events to frontend,
-                # just need to save them to db. Need to have separate method
-                # or filter old events by time.
+def listen_fabric_etcd(url):
+
+    def result(app):
+        last_reconnect = datetime.fromtimestamp(0)
+        with app.app_context():
+            while True:
                 try:
-                    process_pod_states(
-                        {'action': 'set', 'node': node}, app, live=False)
-                except Exception:
-                    current_app.logger.exception(
-                        "Error while process event {}".format(node))
-            return int(etcd_index) + 1
-        elif res.json().get('errorCode') != 100:
-            raise ValueError()
-    except ValueError:
-        raise Exception("Error while prelist pod states: {}".format(res.text))
+                    res = requests.get(url,
+                                       params={
+                                           'recursive': True, 'sorted': True})
+                    if res.ok:
+                        data = res.json()
+                        etcd_index = res.headers['x-etcd-index']
+                        nodes = data['node'].get('nodes', tuple())
+                        if nodes:
+                            process_records(app, nodes)
+                            # we proceed all event, now we need to get
+                            # list again
+                            continue
+                        else:
+                            # list is empty, need to wait for new events
+                            requests.get(url, params={
+                                'wait': True, 'recursive': True,
+                                'waitIndex': etcd_index})
+                            # we have new event, need to get list again
+                            continue
+                except KeyboardInterrupt:
+                    break
+                except requests.exceptions.RequestException:
+                    now = datetime.now()
+                    logger = current_app.logger.warning
+                    if (now-last_reconnect).total_seconds() > ERROR_TIMEOUT:
+                        last_reconnect = now
+                        logger = current_app.logger.exception
+                    logger('Error while etcd connect', exc_info=True)
+                except Exception as e:
+                    current_app.logger.warning(
+                        "Error while get keys", exc_info=True)
+                # if we get here, that mean some exception occurred or
+                # we can't get list of keys.
+                # we sleep and try to get list of keys again
+                gevent.sleep(1)
+    return result
 
 
-def process_pod_states(data, app, live=True):
-    """ Get pod event from etcd event and prepare it for kuberdock process.
-    Delete pod event from etcd after processing.
-    """
-    if data['action'] != 'set':
-        return
-    key = data['node']['key']
-    _, ts = key.rsplit('/', 1)
-    obj = data['node']['value']
-    k8s_obj = json.loads(obj, object_hook=k8s_json_object_hook)
-    k8s_obj = filter_event(k8s_obj, app)
-    if k8s_obj is not None:
-        event_time = datetime.fromtimestamp(float(ts))
-        process_pods_event(k8s_obj, app, event_time, live)
-    r = requests.delete(ETCD_URL.format(key))
-    if not r.ok:
-        current_app.logger.warning("error while delete:{}".format(r.text))
+def process_records(app, nodes):
+    for node in nodes:
+        # TODO: for now send all prelist event to process,
+        # but there are no need to send old events to frontend,
+        # just need to save them to db. Need to have separate method
+        # or filter old events by time.
+        key = node['key']
+        for _ in range(MAX_ATTEMPTS):
+            try:
+                _, ts = key.rsplit('/', 1)
+                obj = node['value']
+                k8s_obj = json.loads(obj, object_hook=k8s_json_object_hook)
+                k8s_obj = filter_event(k8s_obj, app)
+                if k8s_obj is not None:
+                    event_time = datetime.fromtimestamp(float(ts))
+                    process_pods_event(k8s_obj, app, event_time, live=True)
+                break
+            except Exception:
+                current_app.logger.warning(
+                    "Error while process event {}".format(node), exc_info=True)
+        else:
+            # max_attempts exceeded, we skip event
+            send_event_to_role(
+                'notify:error', {'message': LISTENER_PROBLEM_MSG}, 'Admin')
+            current_app.logger.error(
+                'skip event {}'.format(node), exc_info=True)
+        # at the end we remove node anyway
+        r = requests.delete(ETCD_URL.format(key))
+        # don't know what we can do more, just log it
+        if not r.ok:
+            current_app.logger.warning("error while delete:{}".format(r.text))
 
 
 listen_pods = listen_fabric(
@@ -745,14 +710,11 @@ listen_events = listen_fabric(
     process_events_event
 )
 
-listen_extended_statuses = listen_fabric_etcd(
-    ETCD_EXTENDED_STATUSES_URL,
-    process_extended_statuses,
-    prelist_extended_statuses
-)
+# we don't use it for now
+#  listen_extended_statuses = listen_fabric_etcd(
+    #  ETCD_EXTENDED_STATUSES_URL,
+    #  process_extended_statuses,
+    #  prelist_extended_statuses
+#  )
 
-listen_pod_states = listen_fabric_etcd(
-    ETCD_POD_STATES_URL,
-    process_pod_states,
-    prelist_pod_states
-)
+listen_pod_states = listen_fabric_etcd(ETCD_POD_STATES_URL)

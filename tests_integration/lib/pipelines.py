@@ -31,6 +31,9 @@ class NetworkingPipeline(Pipeline):
     ENV = {
         'KD_NODES_COUNT': '2',
         'KD_RHOSTS_COUNT': '1',
+        # kube types are used to control pod-scheduling on specific nodes
+        # Ex: pod with kube_type==Standard -> node1, kube_type==Tiny -> node2
+        'KD_NODE_TYPES': 'node1=Standard,node2=Tiny',
         # rhost: use the same template as for master/nodes - cent7
         'KD_NEBULA_RHOST_TEMPLATE_ID': os.environ.get('KD_NEBULA_TEMPLATE_ID')
     }
@@ -39,6 +42,7 @@ class NetworkingPipeline(Pipeline):
         super(NetworkingPipeline, self).set_up()
         self.cluster.preload_docker_image('nginx')
         self.cluster.recreate_routable_ip_pool()
+        self.cluster.wait_for_service_pods()
 
 
 class NetworkingUpgradedPipeline(UpgradedPipelineMixin, NetworkingPipeline):

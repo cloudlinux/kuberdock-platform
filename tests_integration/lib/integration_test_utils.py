@@ -44,13 +44,13 @@ def _proceed_exec_result(out, err, ret_code, check_retcode):
             stdout=out, stderr=err, ret_code=ret_code)
 
 
-def local_exec(cmd, env=None, timeout=None, check_retcode=True):
+def local_exec(cmd, env=None, shell=False, timeout=None, check_retcode=True):
     LOG.debug("{}Calling local: '{}'{}".format(Style.DIM, cmd,
                                                Style.RESET_ALL))
     if env is not None:
         env = dict(os.environ, **env)
     proc = subprocess.Popen(cmd, env=env, stderr=subprocess.PIPE,
-                            stdout=subprocess.PIPE)
+                            stdout=subprocess.PIPE, shell=shell)
     out, err = proc.communicate()
     ret_code = proc.returncode
 

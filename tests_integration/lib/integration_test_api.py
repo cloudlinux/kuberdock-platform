@@ -556,13 +556,15 @@ class PodList(object):
     def create(self, image, name, kube_type="Standard", kubes=1,
                open_all_ports=False, restart_policy="Always", pvs=None,
                start=True, wait_ports=False, healthcheck=False,
-               wait_for_status=None, owner='test_user', password=None):
+               wait_for_status=None, owner='test_user', password=None,
+               public_ports=None):
         assert_in(kube_type, ("Tiny", "Standard", "High memory"))
         assert_in(restart_policy, ("Always", "Never", "OnFailure"))
 
         pod = KDPod.create(self.cluster, image, name, kube_type, kubes,
                            open_all_ports, restart_policy, pvs, owner,
-                           password=(owner or password))
+                           password=(owner or password),
+                           public_ports=public_ports)
         if start:
             pod.start()
         if wait_for_status:
@@ -628,7 +630,7 @@ class KDPod(RESTMixin):
     Port = namedtuple('Port', 'port proto')
 
     def __init__(self, cluster, image, name, kube_type, kubes,
-                 open_all_ports, restart_policy, pvs, owner):
+                 open_all_ports, restart_policy, pvs, owner, public_ports):
         self.cluster = cluster
         self.name = name
         self.image = image
@@ -638,6 +640,10 @@ class KDPod(RESTMixin):
         self.owner = owner
         self.pvs = pvs
         self.open_all_ports = open_all_ports
+
+    @property
+    def containers(self):
+        return self.get_spec().get('containers', [])
 
     @property
     def public_ip(self):
@@ -657,13 +663,17 @@ class KDPod(RESTMixin):
 
     @classmethod
     def create(cls, cluster, image, name, kube_type, kubes,
-               open_all_ports, restart_policy, pvs, owner, password):
+               open_all_ports, restart_policy, pvs, owner, password,
+               public_ports):
         """
         Create new pod in kuberdock
         :param open_all_ports: if true, open all ports of image (does not mean
         these are Public IP ports, depends on a cluster setup)
         :return: object via which Kuberdock pod can be managed
         """
+
+        if public_ports is None:
+            public_ports = []
 
         def _get_image_ports(img):
             _, out, _ = cluster.kcli(
@@ -680,10 +690,11 @@ class KDPod(RESTMixin):
             """
             ports_list = []
             for port in ports:
-                ports_list.append(dict(containerPort=port.port,
-                                       hostPort=port.port,
-                                       isPublic=open_all_ports,
-                                       protocol=port.proto))
+                ports_list.append(
+                    dict(containerPort=port.port,
+                         hostPort=port.port,
+                         isPublic=open_all_ports or port.port in public_ports,
+                         protocol=port.proto))
             return ports_list
 
         escaped_name = pipes.quote(name)
@@ -711,7 +722,8 @@ class KDPod(RESTMixin):
                                   password=(password or owner))
         this_pod_class = cls._get_pod_class(image)
         return this_pod_class(cluster, image, name, kube_type, kubes,
-                              open_all_ports, restart_policy, pvs, owner)
+                              open_all_ports, restart_policy, pvs, owner,
+                              public_ports)
 
     @classmethod
     def restore(cls, cluster, user, file_path=None, pod_dump=None,

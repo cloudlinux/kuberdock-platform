@@ -41,7 +41,7 @@ from kubedock.utils import POD_STATUSES, Etcd, get_calico_ip_tunnel_address
 
 
 # update 00174
-K8S_VERSION = '1.2.4-3'
+K8S_VERSION = '1.2.4-4'
 K8S = 'kubernetes-{name}-{version}.el7.cloudlinux'
 K8S_NODE = K8S.format(name='node', version=K8S_VERSION)
 

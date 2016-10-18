@@ -56,15 +56,17 @@ class PredefinedAppsClient(ClientBase):
             json=json
         )
 
-    def create_pod(self, template_id, plan_id, data):
+    def create_pod(self, template_id, plan_id, data, owner=None):
         # redirect to yaml_api
         return self._YamlClient(self.client) \
-            .create_pod(template_id, plan_id, data)
+            .create_pod(template_id, plan_id, data, owner)
 
     class _YamlClient(ClientBase):
         endpoint = '/yamlapi'
 
-        def create_pod(self, template_id, plan_id, data):
+        def create_pod(self, template_id, plan_id, data, owner=None):
+            if owner:
+                data.update(owner=owner)
             return self.transport.post(
                 self._url('create', template_id, plan_id),
                 json=data

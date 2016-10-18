@@ -32,9 +32,11 @@
     <% } %>
 </td>
 <td>
-    <% if (before && before.state == 'running') { %>
+    <% if (before && before.state == 'running' && pod.get('direct_access')) { %>
         <span class="copy-ssh-link" data-toggle="tooltip" data-placement="top" title="Copy SSH link to clipboard"></span>
         <span class="copy-ssh-password" data-toggle="tooltip" data-placement="top" title="Copy SSH password to clipboard"></span>
+    <% } else { %>
+        Not assigned yet
     <% } %>
 </td>
 <td><span>

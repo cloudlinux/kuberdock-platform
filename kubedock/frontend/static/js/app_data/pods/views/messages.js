@@ -70,8 +70,8 @@ define([
             model.cmdApplyChanges()
                 .always(utils.preloader.hide)
                 .done(function(){
-                    utils.notifyWindow('Pod will be restarted with the new '
-                                       + 'configuration soon', 'success');
+                    utils.notifyWindow('Pod will be restarted with the new ' +
+                                       'configuration soon', 'success');
                 });
         },
         resetChanges: function(){

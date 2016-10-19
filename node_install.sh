@@ -632,7 +632,7 @@ check_status
 
 # 6a. configure Calico CNI plugin
 echo "Enabling Calico CNI plugin ..."
-curl https://github.com/projectcalico/calico-cni/releases/download/v1.3.1/calico --create-dirs --location --output /opt/cni/bin/calico --silent --show-error
+curl https://github.com/cloudlinux/calico-cni/releases/download/1.3.1-kd/calico --create-dirs --location --output /opt/cni/bin/calico --silent --show-error
 chmod +x /opt/cni/bin/calico
 
 echo >> $KUBERNETES_CONF_DIR/config
@@ -872,7 +872,7 @@ check_status
 # Separate pull command helps to prevent timeout bugs in calicoctl (AC-4679)
 # during deploy process under heavy IO (slow dev clusters).
 # If it's not enough we could add few retries with sleep here
-CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0.confd"
+CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0-kd1"
 echo "Pulling Calico node image..."
 docker pull "$CALICO_NODE_IMAGE" > /dev/null
 time sync

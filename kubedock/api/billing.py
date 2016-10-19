@@ -122,7 +122,6 @@ def switch_app_package(billing_driver, pod_id, plan_id):
     data['pod'] = pod
     data['oldPod'] = old_pod
     data['referer'] = data.get('referer') or ''
-
     return billing_driver.orderswitchapppackage(**data)
 
 

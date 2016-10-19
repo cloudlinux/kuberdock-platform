@@ -166,6 +166,12 @@ class Pod(BaseModelMixin, db.Model):
         if duplicate:
             raise PodExists(name=name, id_=duplicate.id)
 
+    def get_volumes_size(self):
+        return {pd['persistentDisk']['pdName']:
+                pd['persistentDisk']['pdSize']
+                for pd in self.get_dbconfig('volumes_public', [])
+                if pd.get('persistentDisk')}
+
     def to_dict(self):
         return dict(
             id=self.id,

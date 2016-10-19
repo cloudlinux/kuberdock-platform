@@ -1967,7 +1967,7 @@ def del_public_ports_policy(namespace):
     )
 
 
-def change_pv_size(persistent_disk_id, new_size):
+def change_pv_size(persistent_disk_id, new_size, dry_run=False):
     max_size = int(
         SystemSettings.get_by_name(settings_keys.PERSISTENT_DISK_MAX_SIZE)
         or 0
@@ -1977,8 +1977,9 @@ def change_pv_size(persistent_disk_id, new_size):
             'Volume size can not be greater than {} Gb'.format(max_size)
         )
     storage = pstorage.STORAGE_CLASS()
-    ok, changed_pod_ids = storage.resize_pv(persistent_disk_id, new_size)
-    if not (ok and changed_pod_ids):
+    ok, changed_pod_ids = storage.resize_pv(persistent_disk_id, new_size,
+                                            dry_run=dry_run)
+    if dry_run or not (ok and changed_pod_ids):
         return ok, changed_pod_ids
     pc = PodCollection()
     for pod_id, restart_required in changed_pod_ids:

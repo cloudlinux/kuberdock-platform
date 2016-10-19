@@ -218,8 +218,9 @@ class PersistentDiskState(BaseModelMixin, db.Model):
     @classmethod
     def start(cls, user_id, pd_name, size):
         cls.end(user_id, pd_name)  # just to make sure
-        cls(user_id=user_id, pd_name=pd_name,
-            start_time=datetime.utcnow(), size=size).save()
+        db.session.add(cls(user_id=user_id, pd_name=pd_name,
+            start_time=datetime.utcnow(), size=size))
+        db.session.flush()
 
     @classmethod
     def end(cls, user_id=None, pd_name=None):
@@ -227,7 +228,7 @@ class PersistentDiskState(BaseModelMixin, db.Model):
                                  cls.user_id == user_id,
                                  cls.end_time.is_(None))
         query.update({'end_time': datetime.utcnow()})
-        db.session.commit()
+        db.session.flush()
 
     def to_dict(self, exclude=()):
         data = {

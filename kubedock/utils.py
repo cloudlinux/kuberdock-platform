@@ -1050,20 +1050,6 @@ def get_node_token():
         return None
 
 
-# TODO possibly not needed anymore
-def get_ip_address(ifname):
-    # http://stackoverflow.com/a/24196955
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        return socket.inet_ntoa(fcntl.ioctl(
-            s.fileno(),
-            0x8915,  # SIOCGIFADDR
-            struct.pack('256s', ifname[:15])
-        )[20:24])
-    except IOError:
-        return None
-
-
 class Etcd(object):
 
     RequestException = requests.RequestException
@@ -1217,39 +1203,3 @@ def _find_calico_host(nodes, ip):
         for sub_node in node['nodes']:
             if sub_node.get('value') == ip:
                 return node['key'].split('/')[-1]
-
-
-# TODO not needed anymore. Remove after regression testing of Calico
-# Also remote it's commented reference in listeners.py
-def fix_calico(ip):
-    """
-    Fix issue when Calico network is unreachable from newly added host
-      (extra host or node) -- ping probe from master "discovers" the network
-    :param ip: extra host/node IP
-    """
-    etcd = Etcd(ETCD_BASE_URL)
-
-    # get hostname by ip
-    try:
-        nodes = etcd.get('/calico/bgp/v1/host', recursive=True)['node']['nodes']
-    except (KeyError, Etcd.RequestException):
-        raise APIError("Can't get Calico nodes")
-
-    host = _find_calico_host(nodes, ip)
-    if host is None:
-        APIError("Can't find node {0} in Calico".format(ip))
-
-    # get ip in calico network by hostname
-    try:
-        key = '/calico/ipam/v2/host/{0}/ipv4/block'.format(host)
-        block = etcd.get(key)['node']['nodes'][0]['key']
-    except (KeyError, IndexError, Etcd.RequestException):
-        raise APIError("Can't find Calico ipam block for {0}".format(host))
-
-    calico_ip = block.split('/')[-1].split('-')[0]
-
-    # ping probe
-    subprocess.call(['ping', '-c', '1', calico_ip])
-    current_app.logger.debug(
-        'ping probe to {0} -- host {1} ({2})'.format(calico_ip, host, ip)
-    )

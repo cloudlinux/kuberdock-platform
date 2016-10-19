@@ -247,13 +247,6 @@ def process_nodes_event(data, app):
                     send_event_to_role('node:change', {'id': node.id}, 'Admin')
             tasks.process_node_actions.delay(node_host=hostname)
 
-        # This fix is for node can access master via Calico network
-        # It seems the code bellow is not needed -- containers can access
-        # master without any problem
-        # node = Node.query.filter_by(hostname=hostname).first()
-        # if node is not None:
-        #     fix_calico(node.ip)
-
 
 def mark_restore_as_finished(pod_id):
     """

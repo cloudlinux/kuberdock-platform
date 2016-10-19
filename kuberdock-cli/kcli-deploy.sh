@@ -88,24 +88,22 @@ remove_flannel() {
 
 
 install_calico() {
-    yum_wrapper -y install docker
-
     if [ "$VER" == "7" ];then
+        yum_wrapper -y install docker
         do_and_log systemctl enable docker
         do_and_log systemctl start docker
     else
+        yum_wrapper -y install docker-io
         do_and_log chkconfig docker on
         do_and_log service docker start
     fi
 
-    echo "Downloading calicoctl..."
-    do_and_log curl https://github.com/projectcalico/calico-containers/releases/download/v0.22.0/calicoctl --create-dirs --location --output /opt/bin/calicoctl --silent --show-error
-    do_and_log chmod +x /opt/bin/calicoctl
+    yum_wrapper -y install calicoctl-0.22.0
 
     # Separate pull command helps to prevent timeout bugs in calicoctl (AC-4679)
     # during deploy process under heavy IO (slow dev clusters).
     # If it's not enough we could add few retries with sleep here
-    CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0-kd1"
+    CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0-rh1"
     echo "Pulling Calico node image..."
     docker pull "$CALICO_NODE_IMAGE" > /dev/null
     time sync
@@ -210,8 +208,9 @@ EOF
 
 do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 
-
-yum_wrapper -y install kuberdock-cli kuberdock-plugin
+yum_wrapper -y install epel-release
+yum_wrapper -y install kuberdock-cli
+yum_wrapper -y install kuberdock-plugin
 
 sed -i -e "/^url/ {s|[ \t]*\$||}" -e "/^url/ {s|[^/]\+$|$KD_HOST|}" $GLOBAL_KCLI_CONFIG
 
@@ -256,16 +255,13 @@ register_host() {
 echo -n "Registering host in KuberDock... "
 register_host
 
-yum_wrapper -y install kubernetes-proxy at
+yum_wrapper -y install kubernetes-proxy
 # TODO AC-4871: move to kube-proxy dependencies
 yum_wrapper -y install conntrack-tools
 
 yum_wrapper -y install at
 
 install_calico
-
-echo "Re-registering host again with network running..."
-register_host
 
 
 # looks like userspace mode works fine too, but maybe cPanel will conflicts

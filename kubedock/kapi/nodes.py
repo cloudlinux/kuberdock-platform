@@ -799,7 +799,7 @@ def get_policy_agent_config(master, token):
             {
                 "command": [],
                 "kubes": 1,
-                "image": "calico/k8s-policy-agent:v0.1.4",
+                "image": "kuberdock/k8s-policy-agent:v0.1.4-kd",
                 "name": "policy-agent",
                 "env": [
                     {

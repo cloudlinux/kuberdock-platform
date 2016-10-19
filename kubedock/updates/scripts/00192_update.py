@@ -494,7 +494,7 @@ def _master_calico():
     )
     helpers.local(
         'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl node '
-        '--ip="{0}" --node-image=kuberdock/calico-node:0.22.0.confd'
+        '--ip="{0}" --node-image=kuberdock/calico-node:0.22.0-kd1'
         .format(MASTER_IP)
     )
 
@@ -720,8 +720,8 @@ def _node_flannel():
 
 def _node_calico(node_name, node_ip):
     run(
-        'curl https://github.com/projectcalico/calico-cni/releases/download/'
-        'v1.3.1/calico --create-dirs --location --output /opt/cni/bin/calico '
+        'curl https://github.com/cloudlinux/calico-cni/releases/download/'
+        '1.3.1-kd/calico --create-dirs --location --output /opt/cni/bin/calico '
         '--silent --show-error'
     )
     run('chmod +x /opt/cni/bin/calico')
@@ -743,7 +743,7 @@ def _node_calico(node_name, node_ip):
     )
     with quiet():
         # pull image separately to get reed of calicoctl timeouts
-        run('docker pull kuberdock/calico-node:0.22.0.confd')
+        run('docker pull kuberdock/calico-node:0.22.0-kd1')
         run(
             'ETCD_AUTHORITY="{0}:2379" '
             'ETCD_SCHEME=https '
@@ -753,7 +753,7 @@ def _node_calico(node_name, node_ip):
             'HOSTNAME="{1}" '
             '/opt/bin/calicoctl node '
             '--ip="{2}" '
-            '--node-image=kuberdock/calico-node:0.22.0.confd'
+            '--node-image=kuberdock/calico-node:0.22.0-kd1'
             .format(MASTER_IP, node_name, node_ip)
         )
 

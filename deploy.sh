@@ -913,7 +913,7 @@ waitAndCatchFailure 3 10 docker info > /dev/null
 # Separate pull command helps to prevent timeout bugs in calicoctl (AC-4679)
 # during deploy process under heavy IO (slow dev clusters).
 # If it's not enough we could add few retries with sleep here
-CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0.confd"
+CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0-kd1"
 log_it echo "Pulling Calico node image..."
 docker pull "$CALICO_NODE_IMAGE" > /dev/null
 time sync

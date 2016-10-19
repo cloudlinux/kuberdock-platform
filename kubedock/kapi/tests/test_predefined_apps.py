@@ -1,12 +1,19 @@
 """Tests for kapi.predefined_apps
 """
+import json
 import unittest
+from uuid import uuid4
+
 import mock
 
+from kubedock.core import db
+from kubedock.domains.models import BaseDomain, PodDomain
 from kubedock.kapi import apps
+from kubedock.pods.models import PersistentDisk, Pod
 from kubedock.testutils.testcases import DBTestCase
 from kubedock.exceptions import PredefinedAppExc
-
+from kubedock.utils import POD_STATUSES
+from kubedock.predefined_apps.models import PredefinedApp as PredefinedAppModel
 
 VALID_TEMPLATE1 = """---
 apiVersion: v1
@@ -33,7 +40,7 @@ kuberdock:
               kubes: 2
           persistentDisks:
             - name: wordpress-persistent-storage
-              pdSize: 10
+              pdSize: 1
             - name: mysql-persistent-storage$VAR_IN_NAME$
               pdSize: $MYSQL_PD_SIZE|default:2|MySQL persistent disk size$
     - name: M
@@ -48,7 +55,7 @@ kuberdock:
               kubes: 4
           persistentDisks:
             - name: wordpress-persistent-storage
-              pdSize: 1
+              pdSize: 2
             - name: mysql-persistent-storage$VAR_IN_NAME$
               pdSize: 3
 metadata:
@@ -572,6 +579,103 @@ class TestStartPodFromYAML(DBTestCase):
         PodCollection.return_value.add.assert_called_once_with(
             check_new_pod_data.return_value, dry_run=True)
 
+
+def fake_pod(**kwargs):
+    parents = kwargs.pop('use_parents', ())
+    return type('Pod', parents,
+                dict({
+                    'namespace': 'n',
+                    'owner': 'u',
+                    'id': 'u',
+                    'status': POD_STATUSES.running,
+                }, **kwargs))()
+
+
+class TestPodConfig(DBTestCase):
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._update_kubes')
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._update_IPs')
+    @mock.patch('kubedock.kapi.apps.PodCollection._get_namespaces')
+    @mock.patch('kubedock.kapi.apps.PodCollection.update')
+    @mock.patch('kubedock.kapi.apps.update_plan_async')
+    @mock.patch.object(apps.STORAGE_CLASS, 'is_pv_resizable',
+                       return_value=True)
+    @mock.patch('kubedock.kapi.apps.change_pv_size')
+    def test_new_sizes(self, change_pv_size, is_pv_resizable,
+                       update_plan_async,
+                       pod_collection_update,
+                       _get_namespaces,
+                       _update_IPs,
+                       _update_kubes,
+                       ):
+        pod_id = str(uuid4())
+        PredefinedAppModel(id=1,name='test', template=VALID_TEMPLATE1).save()
+        self.fixtures.pod(
+            id=pod_id,
+            owner_id=1,
+            name='pod1',
+            kube_id=0,
+            template_id=1,
+            config={
+                'volumes_public': [{
+                    'persistentDisk': {
+                        'pdName': 'mysql-persistent-storage',
+                        'pdSize': 2
+                    },
+                    'name': 'mysql-persistent-storage'
+
+                },
+                {
+                    'persistentDisk': {
+                        'pdName': 'wordpress-persistent-storage',
+                        'pdSize': 1
+                    },
+                    'name': 'wordpress-persistent-storage'
+                }],
+                "volumes": [
+                    {
+                        "name": "pd1",
+                        "annotation": {
+                            "localStorage": {
+                                "path": "/var/lib/kuberdock/storage/3/pd1",
+                                "name": "mysql-persistent-storage",
+                                "size": 2
+                            }
+                        }
+                    },
+                    {
+                        "name": "pd2",
+                        "annotation": {
+                            "localStorage": {
+                                "path": "/var/lib/kuberdock/storage/3/pd2",
+                                "name": "wordpress-persistent-storage",
+                                "size": 1
+                            }
+                        }
+                    }
+                ],
+                'containers': []
+            }
+        )
+        pd1 = self.fixtures.persistent_disk(
+            name='mysql-persistent-storag',
+            drive_name='3/mysql-persistent-storag',
+            owner_id=1,
+            size=2
+        )
+
+        pd2 = self.fixtures.persistent_disk(
+            name='wordpress-persistent-storage',
+            drive_name='3/wordpress-persistent-storage',
+            owner_id=1,
+            size=1
+        )
+
+        apps.PredefinedApp(
+            id=1,
+            name='test',
+            template=VALID_TEMPLATE1
+        ).update_pod_to_plan(pod_id, plan_id=1, async=False)
+        change_pv_size.assert_called_once_with(pd2.id, 2, dry_run=False)
 
 if __name__ == '__main__':
     unittest.main()

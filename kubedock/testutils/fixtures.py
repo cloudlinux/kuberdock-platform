@@ -7,6 +7,7 @@ import responses
 
 from kubedock.billing.fixtures import add_kubes_and_packages
 from kubedock.core import db
+from kubedock.pods.models import PersistentDisk
 from kubedock.utils import randstr, NODE_STATUSES
 from kubedock.kapi.node import Node as K8SNode
 from kubedock.models import User, Pod
@@ -115,6 +116,12 @@ def kube_type(**kwargs):
 
 def random_ip():
     return unicode(socket.inet_ntoa(struct.pack('>I', randint(1, 0xffffffff))))
+
+
+def persistent_disk(**kwargs):
+    if 'owner_id' not in kwargs and 'owner' not in kwargs:
+        kwargs['owner'], _ = user_fixtures()
+    return PersistentDisk(**kwargs).save()
 
 
 class K8SAPIStubs(object):

@@ -4,6 +4,7 @@ import re
 import socket
 from StringIO import StringIO
 
+from itertools import chain
 import yaml
 from fabric.operations import run, get, put
 from fabric.context_managers import cd, quiet
@@ -42,6 +43,7 @@ from kubedock.users.models import User
 from kubedock.utils import POD_STATUSES, Etcd, get_calico_ip_tunnel_address
 from kubedock.kapi import network_policies
 
+KUBERDOCK_MAIN_CONFIG = '/etc/sysconfig/kuberdock/kuberdock.conf'
 
 # update 00174
 K8S_VERSION = '1.2.4-4'
@@ -170,7 +172,7 @@ def _update_00188_upgrade_node():  # update 00187 absorbed by 00188
         run('ln -s node_lvm_manage.py storage.py 2> /dev/null || true')
 
 
-def _update_00191_upgrade():
+def _update_00191_upgrade(calico_network):
     _master_flannel()
 
     _master_shared_etcd()
@@ -184,7 +186,7 @@ def _update_00191_upgrade():
     _master_docker()
     _master_firewalld()
     _master_k8s_node()
-    _master_calico()
+    _master_calico(calico_network)
 
     _master_k8s_extensions()
     helpers.restart_master_kubernetes()
@@ -192,7 +194,7 @@ def _update_00191_upgrade():
     # we need to restart here again, because kubernetes sometimes don't accept
     # extensions onfly
     helpers.restart_master_kubernetes()
-    _master_network_policy()
+    _master_network_policy(calico_network)
 
     _master_dns_policy()
     _master_pods_policy()
@@ -475,7 +477,7 @@ def _master_k8s_node():
     helpers.restart_service('kube-proxy')
 
 
-def _master_calico():
+def _master_calico(calico_network):
     helpers.local(
         'curl https://github.com/projectcalico/calico-containers/releases/'
         'download/v0.22.0/calicoctl --create-dirs --location '
@@ -490,7 +492,7 @@ def _master_calico():
     helpers.local('chmod +x /opt/bin/policy')
     helpers.local(
         'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl pool add '
-        '10.1.0.0/16 --ipip --nat-outgoing'
+        '{} --ipip --nat-outgoing'.format(calico_network)
     )
     helpers.local(
         'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl node '
@@ -507,7 +509,7 @@ def _master_k8s_extensions():
     )
 
 
-def _master_network_policy():
+def _master_network_policy(calico_network):
     RULE_NEXT_TIER = {
         "id": "next-tier",
         "order": 9999,
@@ -614,7 +616,7 @@ def _master_network_policy():
         "inbound_rules": [
             {"protocol": "icmp", "action": "allow"},
             {
-                "dst_net": "10.1.0.0/16",
+                "dst_net": calico_network,
                 "src_net": "{}/32".format(MASTER_TUNNEL_IP),
                 "action": "allow"
             },
@@ -824,6 +826,32 @@ def _add_nodes_host_endpoints():
         complete_calico_node_config(node.hostname, node.ip)
 
 
+def overlaps(net1, net2):
+    nets = []
+    for net in (net1, net2):
+        netstr, bits = net.split('/')
+        ipaddr = int(''.join(['%02x' % int(x) for x in netstr.split('.')]), 16)
+        first = ipaddr & (0xffffffff ^ (1 << (32 - int(bits)))-1)
+        last = ipaddr | (1 << (32 - int(bits)))-1
+        nets.append((first, last))
+    return ((nets[1][0] <= nets[0][0] <= nets[1][1] or
+             nets[1][0] <= nets[0][1] <= nets[1][1]) or
+            (nets[0][0] <= nets[1][0] <= nets[0][1] or
+             nets[0][0] <= nets[1][1] <= nets[0][1]))
+
+
+def get_calico_network(host_nets):
+    nets = host_nets.splitlines()
+    base_net = '10.0.0.0/8'
+    filtered = [ip_net for ip_net in nets if overlaps(ip_net, base_net)]
+    # just create sequence 127,126,128,125,129,124,130,123,131,122,132...
+    addrs = list(chain(*zip(range(127, 254), reversed(range(0, 127)))))
+    for addr in addrs:
+        net = '10.{}.0.0/16'.format(addr)
+        if not any(overlaps(host_net, net) for host_net in filtered):
+            return str(net)
+
+
 def upgrade(upd, with_testing, *args, **kwargs):
     nets = helpers.local("ip -o -4 addr | grep -vP '\slo\s' | awk '{print $4}'")
     calico_network = get_calico_network(nets)
@@ -839,7 +867,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     _update_00176_upgrade(upd)
     _update_00185_upgrade()
     _update_00186_upgrade()
-    _update_00191_upgrade()
+    _update_00191_upgrade(calico_network)
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):

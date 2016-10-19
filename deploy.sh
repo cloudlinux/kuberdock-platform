@@ -250,6 +250,10 @@ while [[ $# -gt 0 ]];do
         --zfs)
         ZFS=yes
         ;;
+        --calico-network)
+        CALICO_NETWORK="$2"
+        shift
+        ;;
         *)
         echo "Unknown option: $key"
         exit 1
@@ -476,6 +480,42 @@ do_deploy()
 
 check_amazon
 
+if [ -z "$CALICO_NETWORK" ]; then
+    NETS=`ip -o -4 addr | grep -vP '\slo\s' | awk '{print $4}'`
+    CALICO_NETWORK=`python - << EOF
+from itertools import chain
+def overlaps(net1, net2):
+    nets = []
+    for net in (net1, net2):
+        netstr, bits = net.split('/')
+        ipaddr = int(''.join([ '%02x' % int(x) for x in netstr.split('.') ]), 16)
+        first = ipaddr & ( 0xffffffff ^ (1 << (32 - int(bits)))-1)
+        last = ipaddr | (1 << (32 - int(bits)))-1
+        nets.append((first, last))
+    return ((nets[1][0] <= nets[0][0] <= nets[1][1] or
+            nets[1][0] <= nets[0][1] <= nets[1][1]) or
+            (nets[0][0] <= nets[1][0] <= nets[0][1] or
+             nets[0][0] <= nets[1][1] <= nets[0][1]))
+
+def get_calico_network(host_nets):
+    nets = host_nets.splitlines()
+    base_net = '10.0.0.0/8'
+    filtered = [ip_net for ip_net in nets if overlaps(ip_net, base_net)]
+    # just create sequence 127,126,128,125,129,124,130,123,131,122,132...
+    addrs = list(chain(*zip(range(127, 254), reversed(range(0, 127)))))
+    for addr in addrs:
+        net = '10.{}.0.0/16'.format(addr)
+        if not any(overlaps(host_net, net) for host_net in filtered):
+            return str(net)
+print get_calico_network("""$NETS""")
+EOF`
+fi
+
+if [ "$CALICO_NETWORK" = "None" ]; then
+    log_it echo "Can't find suitable network for Calico"
+    exit 1
+fi
+
 # Get number of interfaces up
 IFACE_NUM=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;}}'|wc -l)
 
@@ -657,6 +697,7 @@ echo "MASTER_IP = $MASTER_IP" >> $KUBERDOCK_MAIN_CONFIG
 echo "MASTER_TOBIND_FLANNEL = $MASTER_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
 echo "NODE_TOBIND_EXTERNAL_IPS = $NODE_TOBIND_EXTERNAL_IPS" >> $KUBERDOCK_MAIN_CONFIG
 echo "PD_NAMESPACE = $PD_NAMESPACE" >> $KUBERDOCK_MAIN_CONFIG
+echo "CALICO_NETWORK = $CALICO_NETWORK" >> $KUBERDOCK_MAIN_CONFIG
 if [ "$ZFS" = yes ]; then
     echo "ZFS = yes" >> $KUBERDOCK_MAIN_CONFIG
 fi
@@ -895,7 +936,7 @@ do_and_log curl https://github.com/projectcalico/calico-containers/releases/down
 do_and_log chmod +x /opt/bin/calicoctl
 do_and_log curl https://github.com/projectcalico/k8s-policy/releases/download/v0.1.4/policy --create-dirs --location --output /opt/bin/policy --silent --show-error
 do_and_log chmod +x /opt/bin/policy
-ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl pool add 10.1.0.0/16 --ipip --nat-outgoing
+ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl pool add "$CALICO_NETWORK" --ipip --nat-outgoing
 
 do_and_log systemctl disable docker-storage-setup
 do_and_log systemctl mask docker-storage-setup
@@ -1133,7 +1174,7 @@ KD_NODES_FAILSAFE_POLICY='{
     "inbound_rules": [
         {"protocol": "icmp", "action": "allow"},
         {
-            "dst_net": "10.1.0.0/16",
+            "dst_net": "'$CALICO_NETWORK'",
             "src_net": "'$MASTER_TUNNEL_IP'/32",
             "action": "allow"
         },

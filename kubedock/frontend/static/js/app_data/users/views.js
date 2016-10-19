@@ -694,46 +694,30 @@ export const UserProfileView = Marionette.ItemView.extend({
     },
 
     ui: {
-        'users_page'          : 'div#users-page',
         'delete_user_btn'     : 'button#delete_user',
-        'user_cancel_btn'     : 'button#user-cancel-btn',
-        'login_this_user_btn' : 'button#login_this_user',
-        'edit_user'           : 'button#edit_user',
-        'logHistory'          : '.logHistory'
+        'login_this_user_btn' : 'button#login_this_user'
     },
 
     events: {
-        'click @ui.users_page'          : 'back',
         'click @ui.delete_user_btn'     : 'delete_user',
-        'click @ui.login_this_user_btn' : 'login_this_user',
-        'click @ui.edit_user'           : 'edit_user',
-        'click @ui.logHistory'          : 'logHistory'
+        'click @ui.login_this_user_btn' : 'login_this_user'
     },
 
     templateHelpers: function(){
-        var pods = this.model.get('pods'),
-            kubesCount = 0,
-            joinDate = this.model.get('join_date'),
-            lastLogin = this.model.get('last_login'),
-            lastActivity = this.model.get('last_activity'),
-            firstName = this.model.get('first_name'),
-            lastName = this.model.get('last_name');
-        _.each(pods, function(pod){
+        var kubesCount = 0;
+
+        _.each(this.model.get('pods'), function(pod) {
             var config = JSON.parse(pod.config);
-            _.each(config.containers, function(c){
+            _.each(config.containers, function(c) {
                 kubesCount += c.kubes;
             });
         });
+
         return {
-            first_name: firstName ? firstName : '',
-            last_name: lastName ? lastName : '',
-            join_date: joinDate ? App.currentUser.localizeDatetime(joinDate) : '',
-            last_login: lastLogin ? App.currentUser.localizeDatetime(lastLogin) : '',
-            last_activity: lastActivity ? App.currentUser.localizeDatetime(lastActivity) : '',
-            pods: pods ? pods : [],
             kubeTypes: this.kubeTypes,
             kubes: kubesCount,
             toHHMMSS: utils.toHHMMSS,
+            currentUser: App.currentUser
         };
     },
 
@@ -744,21 +728,9 @@ export const UserProfileView = Marionette.ItemView.extend({
     delete_user: function(){
         this.model.deleteUserConfirmDialog({
             success: function(){
-                App.navigate('users', {trigger: true});
+                App.controller.showUsers();
             },
         });
-    },
-
-    edit_user: function(){
-        App.navigate('users/edit/' + this.model.id, {trigger: true});
-    },
-
-    back: function(){
-       App.navigate('users', {trigger: true});
-    },
-
-    logHistory: function(){
-       App.navigate('users/profile/' + this.model.id + '/logHistory', {trigger: true});
     }
 });
 

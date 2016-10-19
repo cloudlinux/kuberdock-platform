@@ -442,6 +442,20 @@ label.custom{
     }
     &:hover{ cursor: default; }
 }
+#userGeneralTab .status {
+    .statuses();
+    &.active, &.locked, &.suspended{
+        padding-left: 20px;
+        &:first-letter{
+            text-transform: none;
+        }
+        &::before{
+            top: 0;
+            bottom: 0;
+            margin: auto;
+        }
+    }
+}
 #userGeneralTab .user{
     .mdi('person_outline',70px, @defaultIconColor, @defaultIconColor);
     &:hover{ cursor: default; }

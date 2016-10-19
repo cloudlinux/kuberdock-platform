@@ -211,7 +211,7 @@ def _update_00191_post_upgrade_nodes():
 
 # update 00176 stuff bellow (update 00175 absorbed by 00176)
 
-DOCKER_VERSION = '1.12.1-2.el7'
+DOCKER_VERSION = '1.12.1-4.el7'
 DOCKER = 'docker-{ver}'.format(ver=DOCKER_VERSION)
 SELINUX = 'docker-selinux-{ver}'.format(ver=DOCKER_VERSION)
 

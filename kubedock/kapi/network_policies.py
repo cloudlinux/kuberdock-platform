@@ -114,13 +114,6 @@ def get_rhost_policy(ip):
     :param ip:
     :return:
     """
-    calico_host, err = find_calico_host_by_ip(ip)
-    if err:
-        return None, err
-    remote_host_tunl_addr = get_calico_ip_tunnel_address(calico_host)
-    if not remote_host_tunl_addr:
-        # This is possibly a case when calico ipip tunnel is not ready yet
-        return None, None
     return {
         "id": ip,
         "order": 10,
@@ -129,18 +122,13 @@ def get_rhost_policy(ip):
                 "action": "allow",
                 "src_net": "{0}/32".format(ip)
             },
-            {
-                # Tested that we need this rule too
-                "action": "allow",
-                "src_net": "{0}/32".format(remote_host_tunl_addr)
-            },
             # {"action": "next-tier"} # TODO like for generic KD nodes?
         ],
         "outbound_rules": [{
             "action": "next-tier"
         }],
         "selector": "all()"
-    }, None
+    }
 
 
 def allow_public_ports_policy(ports, owner):

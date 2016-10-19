@@ -21,7 +21,7 @@ MASTER_SIZE=${MASTER_SIZE:-}
 NODE_SIZE=${NODE_SIZE:-}
 NUM_NODES=${NUM_NODES:-2}
 # Set to "yes" to use ZFS as a backend for local storage
-KD_USE_ZFS=${KD_USE_ZFS:-no}
+KD_USE_ZFS=${KD_USE_ZFS:-yes}
 
 # Dynamically set node sizes so that Heapster has enough space to run
 if [[ -z ${NODE_SIZE} ]]; then

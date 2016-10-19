@@ -226,11 +226,11 @@ class PrintOut(object):
         fmt = u''.join(
             [u'{{{0[0]}:<{0[1]}.{0[1]}}}'.format(i) for i in self.fields])
         try:
-            click.echo(fmt.format(**{k: _u(v) for k, v in data.items()}))
+            click.echo(fmt.format(**dict((k, _u(v)) for k, v in data.items())))
         except ValueError:
             fmt = u''.join(
                 [u'{{{0[0]}:<{0[1]}}}'.format(i) for i in self.fields])
-            click.echo(fmt.format(**{k: _u(v) for k, v in data.items()}))
+            click.echo(fmt.format(**dict((k, _u(v)) for k, v in data.items())))
 
 
 class RequestsLogger(object):

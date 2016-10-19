@@ -513,8 +513,8 @@ yum_wrapper -y install kdtools
 rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
 yum_wrapper -y install epel-release
 check_status
-# FIXME: move to kube-proxy or kuberdock dependencies
-yum_wrapper -y install conntrack
+# TODO AC-4871: move to kube-proxy dependencies
+yum_wrapper -y install conntrack-tools
 
 # 3. If amazon instance install additional packages from epel
 if [ "$AWS" = True ];then

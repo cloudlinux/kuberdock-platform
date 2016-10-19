@@ -794,7 +794,7 @@ class KDPod(RESTMixin):
         restart_policy = data['restartPolicy']
         this_pod_class = cls._get_pod_class(image)
         return this_pod_class(cluster, "", name, kube_type, "", True,
-                              restart_policy, "", owner)
+                              restart_policy, "", owner, "")
 
     @classmethod
     def _get_pod_class(cls, image):
@@ -1271,12 +1271,12 @@ class _MongodbPaPod(KDPAPod):
 
 class _OdooPaPod(KDPAPod):
     SRC = 'odoo.yaml'
- 
+
     def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
         # Though odoo also has ssl port 8071
         ports = ports or [80]
         self._wait_for_ports(ports, timeout)
- 
+
     def healthcheck(self):
         self._generic_healthcheck()
         page = self.do_GET(path='/web/database/selector')

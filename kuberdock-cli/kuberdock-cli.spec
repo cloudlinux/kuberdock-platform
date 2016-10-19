@@ -1,8 +1,8 @@
 %define python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; import sys; sys.stdout.write(get_python_lib())")
 
 Name: kuberdock-cli
-Version: 1.0
-Release: 6%{?dist}.cloudlinux
+Version: 1.1
+Release: 1%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
 License: CloudLinux Commercial License

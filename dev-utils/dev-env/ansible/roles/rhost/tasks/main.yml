@@ -14,7 +14,7 @@
   when: is_release_install
 
 - name: Deploy kcli on rhost
-  shell: echo "{{ admin_password }}" | bash kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" chdir="{{ rhost_deploy_path }}"
+  shell: echo "{{ admin_password }}" | bash kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" {{ add_testing_repo }} chdir="{{ rhost_deploy_path }}"
   tags:
       - deploy
   when: not is_release_install

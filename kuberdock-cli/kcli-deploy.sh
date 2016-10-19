@@ -257,8 +257,8 @@ echo -n "Registering host in KuberDock... "
 register_host
 
 yum_wrapper -y install kubernetes-proxy at
-# FIXME: move to kube-proxy or kuberdock dependencies
-yum_wrapper -y install conntrack
+# TODO AC-4871: move to kube-proxy dependencies
+yum_wrapper -y install conntrack-tools
 
 yum_wrapper -y install at
 

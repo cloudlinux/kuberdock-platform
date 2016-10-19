@@ -97,7 +97,7 @@ def delete_drive_by_id(drive_id):
     delete_persistent_drives_task.delay([drive_id], mark_only=False)
 
 
-@atomic(nested=False)
+@atomic()
 def update_pods_volumes(pd):
     """Replaces volume info in configs of existing pods with new one pd.
     Will change volumes with the same owner and the same public volume name,
@@ -586,7 +586,7 @@ class PersistentStorage(object):
         """
         return False
 
-    def resize_pv(self, persistent_disk_id, new_size):
+    def resize_pv(self, persistent_disk_id, new_size, dry_run=False):
         """Resizes persistent volume for specified size if current storage
         backend supports such operation.
         :return: tuple of success flag and list of and list of tuples
@@ -597,7 +597,8 @@ class PersistentStorage(object):
         if not self.is_pv_resizable():
             raise PVResizeIsNotSupportedError()
 
-        ok, changed_pods = self.do_pv_resize(persistent_disk_id, new_size)
+        ok, changed_pods = self.do_pv_resize(persistent_disk_id, new_size,
+                                             dry_run=dry_run)
         if ok:
             pd = PersistentDisk.get_all_query().filter(
                 PersistentDisk.id == persistent_disk_id
@@ -606,14 +607,13 @@ class PersistentStorage(object):
             self.start_stat(pd.size, pd.name, pd.owner_id)
         return ok, changed_pods
 
-    def do_pv_resize(self, persistent_disk_id, new_size):
+    def do_pv_resize(self, persistent_disk_id, new_size, dry_run=False):
         """Method should be implemented in nested class if the storage supports
         resizing of existing volumes.
         :return: must return tuple of success flag (bool) and list of pods
             identifiers which must be updated in kubernetes
         """
         raise NotImplementedError()
-
 
 def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False,
                 catch_exitcodes=None):
@@ -1594,8 +1594,8 @@ class LocalStorage(PersistentStorage):
         """
         return True
 
-    def do_pv_resize(self, persistent_disk_id, new_size):
-        with atomic(nested=False):
+    def do_pv_resize(self, persistent_disk_id, new_size, dry_run=False):
+        with atomic():
             pd = PersistentDisk.get_all_query().filter(
                 PersistentDisk.id == persistent_disk_id
             ).first()
@@ -1614,19 +1614,20 @@ class LocalStorage(PersistentStorage):
                 current_app.logger.debug(
                     u'Resizing local storage: %s, new size = %s',
                     drive_path, new_size)
-                res = self.run_on_pd_node(
-                    pd,
-                    NODE_STORAGE_MANAGE_CMD +
-                    ' resize-volume --path {} --new-quota {}'.format(
-                        drive_path, new_size),
-                    jsonresult=True
-                )
-                if res['status'] != 'OK':
-                    raise PVResizeFailed(
-                        u'Failed to resize PV: {}'.format(
-                            res['data']['message']
-                        )
+                if not dry_run:
+                    res = self.run_on_pd_node(
+                        pd,
+                        NODE_STORAGE_MANAGE_CMD +
+                        ' resize-volume --path {} --new-quota {}'.format(
+                            drive_path, new_size),
+                        jsonresult=True
                     )
+                    if res['status'] != 'OK':
+                        raise PVResizeFailed(
+                            u'Failed to resize PV: {}'.format(
+                                res['data']['message']
+                            )
+                        )
             except (NodeCommandWrongExitCode, KeyError):
                 current_app.logger.exception(
                     u'Failed to resize PV "{}", new size: {}'.format(

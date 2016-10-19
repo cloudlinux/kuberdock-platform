@@ -9,13 +9,16 @@ from numbers import Number
 from string import digits, lowercase
 from types import NoneType
 from kubedock.billing.models import Kube, Package
+from kubedock.core import db
 from kubedock.domains.models import PodDomain
+from kubedock.kapi.pstorage import STORAGE_CLASS
 from kubedock.predefined_apps.models import PredefinedApp as PredefinedAppModel
-from kubedock.exceptions import NotFound, PermissionDenied, PredefinedAppExc
-from kubedock.kapi.podcollection import PodCollection
+from kubedock.exceptions import NotFound, PermissionDenied, PredefinedAppExc, \
+    APIError
+from kubedock.kapi.podcollection import PodCollection, change_pv_size
 from kubedock.kd_celery import celery
 from kubedock.nodes.models import Node
-from kubedock.pods.models import Pod, IPPool
+from kubedock.pods.models import Pod, IPPool, PersistentDisk
 from kubedock.settings import KUBE_API_VERSION
 from kubedock.utils import send_event_to_user
 from kubedock.validation import V, predefined_app_schema
@@ -77,12 +80,12 @@ def on_update_error(self, uuid, pod, owner, orig_config, orig_kube_id):
 
 
 @celery.task(bind=True, ignore_result=True)
-def update_plan_async(self, pod, owner):
+def update_plan_async(self, *args, **kwargs):
     """
     Asynchronous pod updater
     :param self: obj -> celery task object
     """
-    PredefinedApp._update_and_restart(pod, owner)
+    PredefinedApp._update_and_restart(*args, **kwargs)
 
 
 class PredefinedApp(object):
@@ -402,10 +405,12 @@ class PredefinedApp(object):
         disks_size = {vol.get('name'): vol.get('persistentDisk')['pdSize']
                       for vol in pod_config.get('volumes_public', [])
                       if vol.get('persistentDisk')}
-        for plan in plans:  # TODO: remove after AC-4067 (resize PD: backend)
-            for pod in plan['pods']:
-                for pd in pod['persistentDisks']:
-                    if pd['name'] in disks_size:
+        resize_available = STORAGE_CLASS.is_pv_resizable()
+
+        for plan in plans:
+            for plan_pod in plan['pods']:
+                if not resize_available:
+                    for pd in plan_pod.get('persistentDisks', []):
                         pd['pdSize'] = disks_size[pd['name']]
             self._calculate_info(plan)
         return plans
@@ -489,6 +494,40 @@ class PredefinedApp(object):
         pod_collection.update(pod.id,
                               {'command': 'start', 'commandOptions': {}})
 
+    @staticmethod
+    def _update_pv_sizes(pod, new_pv_sizes=None, dry_run=False):
+        if new_pv_sizes:
+            # save old values
+            old_pv_sizes = pod.get_volumes_size()
+            shared_items = set(old_pv_sizes.items()) &\
+                           set(new_pv_sizes.items())
+            if not STORAGE_CLASS.is_pv_resizable() and \
+               len(shared_items) != len(old_pv_sizes):
+                raise APIError("Resize persistent disks not allowed")
+
+            pv_query = PersistentDisk.get_all_query().filter(
+                PersistentDisk.name.in_(new_pv_sizes.keys()))
+            pv_id_dict = {pv.name: pv.id for pv in pv_query}
+            try:
+                for (pv_name, new_size) in new_pv_sizes.iteritems():
+                    pv_id = pv_id_dict.get(pv_name)
+                    change_pv_size(pv_id, new_size, dry_run=dry_run)
+            except APIError as err:
+                send_event_to_user(
+                    'notify:error', {'message': "Error while resize "
+                                                "persistent storage"},
+                    pod.owner_id)
+                # revert resize volumes
+                for (pv_name, old_size) in old_pv_sizes.iteritems():
+                    pv_id = pv_id_dict.get(pv_name)
+                    change_pv_size(pv_id, old_size)
+                raise err
+        db_pod = Pod.query.get(pod.id)
+        pod_config = db_pod.get_dbconfig()
+        pod.volumes = pod_config['volumes']
+        return pod_config
+
+
     def _update_pod_config(self, pod, new_config, async=True, dry_run=False):
         """
         Updates existing pod config to switch to new plan
@@ -514,6 +553,23 @@ class PredefinedApp(object):
             raise PredefinedAppExc.AppPackageChangeImpossible(details={
                 'message': pod_config.get('forbidSwitchingAppPackage')})
 
+        new_pd_sizes = None
+        if STORAGE_CLASS.is_pv_resizable():
+            vol_sizes = {}
+            for vol in root.get('volumes', []):
+                if vol.get('persistentDisk'):
+                    new_size = vol['persistentDisk']['pdSize']
+                    vol_name = vol['name']
+                    vol_sizes[vol_name] = new_size
+            # merge with current volumes
+            new_pd_sizes = {pd['persistentDisk']['pdName']:
+                            vol_sizes[pd['name']]
+                            for pd in pod_config['volumes_public']
+                            if pd['name'] in vol_sizes and
+                            pd.get('persistentDisk')}
+
+        pod_config = self._update_pv_sizes(pod, new_pd_sizes,
+                                             dry_run=dry_run)
         self._update_kubes(root, pod_config)
         self._update_IPs(pod, root, pod_config, dry_run=dry_run)
         try:
@@ -532,7 +588,7 @@ class PredefinedApp(object):
             pod.config = orig_config
             pod.kube_id = orig_kube_id
             if not dry_run:
-                pod.save()
+                db.session.flush()
                 pod_collection = PodCollection(pod.owner)
                 pod_collection.update(pod.id, {
                     'command': 'start', 'commandOptions': {}})

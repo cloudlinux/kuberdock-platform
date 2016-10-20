@@ -41,8 +41,8 @@ define(['app_data/app',
         template    : podListItemTpl,
         tagName     : 'tr',
         className   : function(){
-            return 'pod-item ' + this.model.get('status')
-                 + (this.model.is_checked ? ' checked' : '');
+            return 'pod-item ' + this.model.get('status') +
+                (this.model.is_checked ? ' checked' : '');
         },
         attributes: function(){
             var attrs = {};
@@ -245,14 +245,14 @@ define(['app_data/app',
                                  function(pod){ return pod.ableTo('redeploy'); }),
                 many = items.length > 1,
                 successMsg = 'Pod' + (many ? 's' : '') + ' will be restarted soon',
-                title = 'Confirm restarting of ' + items.length
-                    + ' application' + (many ? 's' : '');
+                title = 'Confirm restarting of ' + items.length +
+                        ' application' + (many ? 's' : '');
             utils.modalDialog({
                 title: title,
-                body: 'You can wipe out all the data and redeploy the '
-                    + 'application' + (many ? 's' : '') + ' or you can just '
-                    + 'restart and save data in Persistent storages of your '
-                    + 'application' + (many ? 's' : '') + '.',
+                body: 'You can wipe out all the data and redeploy the ' +
+                      'application' + (many ? 's' : '') + ' or you can just ' +
+                      'restart and save data in Persistent storages of your ' +
+                      'application' + (many ? 's' : '') + '.',
                 small: true,
                 show: true,
                 footer: {
@@ -263,8 +263,8 @@ define(['app_data/app',
                     buttonCancel: function(){
                         utils.modalDialog({
                             title: title,
-                            body: 'Are you sure you want to delete all data? You will '
-                                + 'not be able to recover this data if you continue.',
+                            body: 'Are you sure you want to delete all data? You will ' +
+                                  'not be able to recover this data if you continue.',
                             small: true,
                             show: true,
                             footer: {

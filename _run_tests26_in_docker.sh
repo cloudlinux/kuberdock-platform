@@ -8,7 +8,8 @@ docker run -v $(pwd):/appcloud:ro -w /appcloud $IMAGE /bin/bash -c \
  pip install -r requirements-dev.txt;
  echo '######################## Run unit tests ########################';
  py.test -p no:cacheprovider -v \
-    kuberdock-cli kuberdock-manage"
+    kuberdock-cli"
 ret=$?
+# TODO AC-4879: add kuberdock-manage to py.test above
 
 exit $ret

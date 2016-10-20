@@ -631,8 +631,9 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         run_pod_mock.delay.assert_called_once_with(pod)
         self.assertEqual(pod.status, POD_STATUSES.preparing)
 
+    @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection.PodCollection, '_node_available_for_pod')
-    def test_start_pod_failure(self, node_available_mock):
+    def test_start_pod_failure(self, node_available_mock, db_pod_mock):
         """
         Test _start_pod with no available nodes
         :type post_: mock.Mock

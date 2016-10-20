@@ -1003,6 +1003,13 @@ class PodCollection(object):
     def _start_pod(self, pod, data=None):
         if data is None:
             data = {}
+
+        command_options = data.get('commandOptions', {})
+        db_pod = DBPod.query.get(pod.id)
+        db_config = db_pod.get_dbconfig()
+        if command_options.get('applyEdit'):
+            pod, db_config = self._apply_edit(pod, db_pod, db_config)
+
         async_pod_create = data.get('async-pod-create', True)
 
         if pod.status == POD_STATUSES.unpaid:
@@ -1026,13 +1033,6 @@ class PodCollection(object):
                 or pod.status == POD_STATUSES.failed:
             self._stop_pod(pod, block=True)
         self._make_namespace(pod.namespace)
-
-        command_options = (data or {}).get('commandOptions') or {}
-        db_pod = DBPod.query.get(pod.id)
-        db_config = db_pod.get_dbconfig()
-
-        if command_options.get('applyEdit'):
-            pod, db_config = self._apply_edit(pod, db_pod, db_config)
 
         pod.set_status(POD_STATUSES.preparing, send_update=True)
 

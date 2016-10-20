@@ -35,11 +35,13 @@ from kubedock.settings import (
     ETCD_NETWORK_POLICY_SERVICE,
     MASTER_IP, NODE_DATA_DIR, NODE_TOBIND_EXTERNAL_IPS
 )
+from kubedock import settings
 from kubedock.system_settings import keys
 from kubedock.system_settings.models import SystemSettings
 from kubedock.updates import helpers
 from kubedock.users.models import User
 from kubedock.utils import POD_STATUSES, Etcd, get_calico_ip_tunnel_address
+from kubedock.kapi import network_policies
 
 KUBERDOCK_MAIN_CONFIG = '/etc/sysconfig/kuberdock/kuberdock.conf'
 
@@ -854,6 +856,11 @@ def upgrade(upd, with_testing, *args, **kwargs):
         raise helpers.UpgradeError("Can't find suitable network for Calico")
     with open(KUBERDOCK_MAIN_CONFIG, 'a') as f:
         f.write("CALICO_NETWORK = {}\n".format(calico_network))
+    settings.CALICO_NETWORK = calico_network
+    # Monkey patch the module as soon as there is already imported this
+    # setting and it will be used when we call `complete_calico_node_config`
+    # function in post upgrade hook.
+    network_policies.CALICO_NETWORK = calico_network
     _update_00176_upgrade(upd)
     _update_00185_upgrade()
     _update_00186_upgrade()

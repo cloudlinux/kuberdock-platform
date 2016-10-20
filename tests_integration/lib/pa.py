@@ -1,7 +1,11 @@
 import json
-import redis
+import logging
+import sys
+
 import memcache
 import pymongo
+import redis
+
 
 from pg import DB
 
@@ -10,6 +14,10 @@ from tests_integration.lib.pod import DEFAULT_WAIT_POD_TIMEOUT
 from tests_integration.lib.integration_test_utils import \
     assert_eq, assert_in, kube_type_to_int, \
     kube_type_to_str
+
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+logging.getLogger("paramiko").setLevel(logging.WARNING)
+LOG = logging.getLogger(__name__)
 
 
 class KDPAPod(KDPod):
@@ -67,6 +75,7 @@ class _DokuwikiPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         assert_in("Welcome to your new DokuWiki",
                   self.do_GET(path='/doku.php?id=wiki:welcome'))
 
@@ -76,6 +85,7 @@ class _DrupalPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         # Change assertion string after fix AC-4487
         page = self.do_GET(path='/core/install.php')
         assert_in("Drupal", page)
@@ -97,6 +107,7 @@ class _RedminePaPods(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         assert_in("Redmine", self.do_GET())
 
 
@@ -105,6 +116,7 @@ class _JoomlaPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/installation/index.php')
         assert_in(u"Joomla! - Open Source Content Management", page)
 
@@ -127,6 +139,7 @@ class _Gallery3PaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/installer/')
         assert_in(u"Installing Gallery is easy.  "
                   "We just need a place to put your photos", page)
@@ -137,6 +150,7 @@ class _MagentoPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/index.php/install/')
         assert_in(u"Magento is a trademark of Magento Inc.", page)
 
@@ -146,6 +160,7 @@ class _MantisPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/admin/install.php')
         assert_in(u"Administration - Installation - MantisBT", page)
 
@@ -155,6 +170,7 @@ class _MybbPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/install/index.php')
         assert_in(u"MyBB Installation Wizard", page)
 
@@ -164,6 +180,7 @@ class _OpenCartPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/install/index.php')
         assert_in(u"Please read the OpenCart licence agreement", page)
 
@@ -173,6 +190,7 @@ class _LimesurveyPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/index.php?r=installer/welcome')
         assert_in(u"LimeSurvey installer", page)
 
@@ -182,6 +200,7 @@ class _KokenPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET()
         assert_in(u"Koken - Setup", page)
 
@@ -195,6 +214,7 @@ class _OwnCloudPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET()
         assert_in(u"ownCloud", page)
         assert_in(u"web services under your control", page)
@@ -205,6 +225,7 @@ class _PhpBBPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/install/index.php')
         assert_in(u"Welcome to phpBB3!", page)
 
@@ -214,6 +235,7 @@ class _WordpressPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/wp-admin/install.php')
         assert_in(u"WordPress &rsaquo; Installation", page)
 
@@ -227,6 +249,7 @@ class _PhpMyAdminPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/server_databases.php')
         assert_in(u"information_schema", page)
         assert_in(u"mydata", page)
@@ -241,6 +264,7 @@ class _SugarCrmPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/install.php')
         assert_in(u"Sugar Setup Wizard:", page)
         assert_in(u"Welcome to the SugarCRM", page)
@@ -286,6 +310,7 @@ class _OdooPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/web/database/selector')
         assert_in(u"Fill in this form to create an Odoo database.", page)
 
@@ -295,6 +320,7 @@ class _WordpressElasticPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/wp-admin/install.php')
         assert_in(u"WordPress &rsaquo; Installation", page)
 
@@ -304,5 +330,6 @@ class _WordpressBackupPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
+        self.wait_http_resp()
         page = self.do_GET(path='/wp-admin/install.php')
         assert_in(u"WordPress &rsaquo; Installation", page)

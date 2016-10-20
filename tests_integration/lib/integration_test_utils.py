@@ -541,3 +541,8 @@ def wait_for(func, tries=50, interval=10, fail_silently=False):
         time.sleep(interval)
     if not fail_silently:
         assert func_value
+
+
+def all_subclasses(c):
+    return c.__subclasses__() + [g for s in c.__subclasses__()
+                                 for g in all_subclasses(s)]

@@ -123,11 +123,11 @@ class TestParseConfig(unittest.TestCase):
                      "password = TrialUser"
 
     def setUp(self):
-        with NamedTemporaryFile('w', delete=False) as valid, \
-                NamedTemporaryFile('w', delete=False) as invalid:
-            valid.write(self.VALID_CONFIG)
-            invalid.write(self.INVALID_CONFIG)
-            self.invalid_path, self.valid_path = invalid.name, valid.name
+        with NamedTemporaryFile('w', delete=False) as valid:
+            with NamedTemporaryFile('w', delete=False) as invalid:
+                valid.write(self.VALID_CONFIG)
+                invalid.write(self.INVALID_CONFIG)
+                self.invalid_path, self.valid_path = invalid.name, valid.name
 
     def tearDown(self):
         os.unlink(self.invalid_path)
@@ -135,11 +135,10 @@ class TestParseConfig(unittest.TestCase):
 
     def test_parse_valid_config(self):
         data = helper.parse_config(self.valid_path)
-        self.assertIsInstance(data, dict)
+        self.assertTrue(isinstance(data, dict))
 
     def test_parse_invalid_config(self):
-        with self.assertRaises(SystemExit):
-            helper.parse_config(self.invalid_path)
+        self.assertRaises(SystemExit, helper.parse_config, self.invalid_path)
 
 
 @mock.patch.object(helper, 'PrintOut')

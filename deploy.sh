@@ -629,8 +629,8 @@ else
     yum_wrapper -y install kuberdock
 fi
 
-# FIXME: move to kube-proxy or kuberdock dependencies
-yum_wrapper -y install conntrack
+# TODO AC-4871: move to kube-proxy dependencies
+yum_wrapper -y install conntrack-tools
 
 #4.1 Fix package path bug
 mkdir /var/run/kubernetes || /bin/true

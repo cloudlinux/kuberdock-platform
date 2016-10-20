@@ -46,14 +46,14 @@
         <% } else if (typeof domain != 'undefined' && domain) {%>
             <div class="relative">
                 <span class="ellipsis-text">
-                    Public DNS name: <a href="http://<%- domain %>/" rel="noopener" target="_blank"><%- domain %></a>
+                    Service address: <a href="http://<%- domain %>/" rel="noopener" target="_blank"><%- domain %></a>
                 </span>
                 <i data-toggle="tooltip" data-placement="left" title="Copy link to clipboard" class="copy-link"></i>
             </div>
         <% } else if (publicName) { %>
             <div class="relative">
                 <span class="ellipsis-text">
-                    Public DNS name: <a href="http://<%- publicName %>/" rel="noopener" target="_blank"><%- publicName %></a>
+                    Service address: <a href="http://<%- publicName %>/" rel="noopener" target="_blank"><%- publicName %></a>
                 </span>
                 <i data-toggle="tooltip" data-placement="left" title="Copy link to clipboard" class="copy-link"></i>
             </div>

@@ -11,7 +11,7 @@
         <input id="public-access-type-domain" class="public-access-type"
                 value="domainName" type="radio" name="public-access-type"
                 <%= typeof domain == 'undefined' || domain == null ? '' : 'checked' %>>
-        <span></span><i>Domain name</i>
+        <span></span><i>Domain</i>
         <span class="help" data-toggle="tooltip" data-placement="right" title="Support only ports 80 and 443 at pod port"></span>
     </label>
 </div>

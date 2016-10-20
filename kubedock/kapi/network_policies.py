@@ -11,7 +11,7 @@ from .. import settings
 from ..settings import (
     ELASTICSEARCH_REST_PORT,
     ELASTICSEARCH_PUBLISH_PORT,
-    MASTER_IP, KD_NODE_HOST_ENDPOINT_ROLE
+    MASTER_IP, KD_NODE_HOST_ENDPOINT_ROLE, CALICO_NETWORK
 )
 
 PUBLIC_PORT_POLICY_NAME = 'public'
@@ -189,6 +189,7 @@ def get_node_host_endpoint_policy(node_hostname, node_ip):
         "inbound_rules": [
             {
                 "src_net": "{}/32".format(node_ip),
+                "dst_net": CALICO_NETWORK,
                 "action": "allow"
             },
         ],

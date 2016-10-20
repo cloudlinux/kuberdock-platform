@@ -293,6 +293,8 @@ DNS_CLIENT_CRT = os.path.join(ETCD_PKI, 'etcd-client.crt')
 DNS_CLIENT_KEY = os.path.join(ETCD_PKI, 'etcd-client.key')
 FIXED_IP_POOLS = False
 WITH_TESTING = False
+# Calico network (must be defined during deployment)
+CALICO_NETWORK = '10.1.0.0/16'
 
 # Import hoster settings in update case
 
@@ -336,6 +338,8 @@ if cp.read(KUBERDOCK_SETTINGS_FILE) and cp.has_section('main'):
         AWS_SECRET_ACCESS_KEY = cp.get('main', 'AWS_SECRET_ACCESS_KEY')
     if cp.has_option('main', 'AWS_EBS_DEFAULT_SIZE'):
         AWS_EBS_EXTEND_STEP = cp.get('main', 'AWS_EBS_DEFAULT_SIZE')
+    if cp.has_option('main', 'CALICO_NETWORK'):
+        CALICO_NETWORK = cp.get('main', 'CALICO_NETWORK')
 
 # Import local settings
 try:

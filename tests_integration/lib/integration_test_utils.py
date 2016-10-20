@@ -151,11 +151,18 @@ def assert_in(item, sequence):
 
 
 @contextmanager
-def assert_raises(expected_exc, text=".*"):
+def assert_raises(expected_exc, text=".*", ret_codes=()):
     try:
         yield
     except expected_exc as e:
         err_msg = str(e)
+        if any(ret_codes):
+            rc = getattr(e, 'ret_code', None)
+            if rc and rc not in ret_codes:
+                codes_str = ', '.join('{}'.format(r) for r in ret_codes)
+                raise AssertionError(
+                    "Exception ret_code '{}' is not found in expected "
+                    "ret_codes '{}'".format(rc, codes_str))
         if re.search(text, err_msg) is None:
             raise AssertionError("Given text '{}' is not found in error "
                                  "message: '{}'".format(text, err_msg))

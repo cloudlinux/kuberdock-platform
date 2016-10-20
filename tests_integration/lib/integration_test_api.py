@@ -632,7 +632,8 @@ class KDPod(RESTMixin):
     Port = namedtuple('Port', 'port proto')
 
     def __init__(self, cluster, image, name, kube_type, kubes,
-                 open_all_ports, restart_policy, pvs, owner, public_ports=None):
+                 open_all_ports, restart_policy, pvs, owner,
+                 public_ports=None):
         self.cluster = cluster
         self.name = name
         self.image = image

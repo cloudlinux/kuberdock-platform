@@ -16,6 +16,12 @@ LOG.setLevel(logging.DEBUG)
 
 HTTP_PORT = 80
 UDP_PORT = 2000
+HOST_UDP_CHECK_CMD = (
+    'python -c \'import socket as s; '
+    'udp = s.socket(s.AF_INET, s.SOCK_DGRAM); '
+    'udp.sendto("PING", ("{0}", {1})); '
+    'udp.settimeout(5); '
+    'print(udp.recv(1024))\'')
 
 
 class Check:
@@ -86,6 +92,17 @@ def udp_check(pod, container_id, host, port=2000):
         raise NonZeroRetCodeException('No PONG received')
 
 
+def port_check(pod, container_id, host, port=4194):
+    """
+    Check that pod has access to host via given port.
+    :param port: Port number. Defaults to 4194. By doing that we make sure that
+                 someone's listening on this port (cadvisor in this case).
+    :raises: NonZeroRetCodeException if pod doesn't have access to host via
+             given port.
+    """
+    pod.docker_exec(container_id, 'curl -m 5 -k {}:{}'.format(host, port))
+
+
 def container_udp_server(pod, container_id):
     sleep(3)
     pod.docker_exec(
@@ -100,7 +117,7 @@ def unregistered_host_port_check(pod_ip, port=80):
 
 
 def unregistered_host_udp_check(pod_ip, port=2000):
-    cmd = 'echo PING | nc -u -w1 {} {}'.format(pod_ip, port)
+    cmd = HOST_UDP_CHECK_CMD.format(pod_ip, port)
     _, out, _ = local_exec(cmd, shell=True)
 
     if out.strip() != 'PONG':
@@ -141,7 +158,7 @@ def unregistered_host_ssh_check(host):
         raise NonZeroRetCodeException('ssh failed. "/usr" not found in output')
 
 
-# Registered host/node checks
+# Registered host/node/master checks
 def host_icmp_check_pod(cluster, host, pod_ip):
     cluster.ssh_exec(host, 'ping -c 2 {}'.format(pod_ip))
 
@@ -155,7 +172,7 @@ def host_udp_server(cluster, host):
 
 
 def host_udp_check_pod(cluster, host, pod_ip, port=2000):
-    cmd = 'echo PING | nc -u -w1 {} {}'.format(pod_ip, port)
+    cmd = HOST_UDP_CHECK_CMD.format(pod_ip, port)
     _, out, _ = cluster.ssh_exec(host, cmd)
     if out != 'PONG':
         raise NonZeroRetCodeException('No PONG received')
@@ -248,6 +265,8 @@ def test_network_isolation(cluster):
     src, dst = 'iso2', 'iso1'
     data = [(specs[dst]['public_ip'], True), (container_ips[dst], True),
             (specs[dst]['podIP'], False)]
+    # Here we check that user1's pod has access to all public ports of
+    # user2's pod
     for host, do_ping in data:
         # ICMP check
         if do_ping:
@@ -267,6 +286,8 @@ def test_network_isolation(cluster):
     src, dst = 'iso1', 'iso2'
     data = [(specs[dst]['public_ip'], True), (container_ips[dst], True),
             (specs[dst]['podIP'], False)]
+    # Here we check that user1 pod has access to public ports (TCP:80)
+    # of user2's pod and doesn't have access to non-public ports (UDP:2000)
     for host, do_ping in data:
         # ICMP check
         if do_ping:
@@ -276,9 +297,9 @@ def test_network_isolation(cluster):
                 ping(pods[src], container_ids[src], host)
         # TCP check. port 80 is public
         http_check(pods[src], container_ids[src], host)
-        # UDP check. port 2000 is closed
+        # UDP check. port 2000 is not public
         container_udp_server(pods[dst], container_ids[dst])
-        with assert_raises(NonZeroRetCodeException):
+        with assert_raises(NonZeroRetCodeException, 'No PONG received'):
             udp_check(pods[src], container_ids[src], host)
 
     # alt_test_user: iso2 -> test_user: iso3
@@ -289,28 +310,28 @@ def test_network_isolation(cluster):
         # with assert_raises(NonZeroRetCodeException):
         #     ping(pods[src], container_ids[src], host)
         # TCP check. port 80 is closed
-        with assert_raises(NonZeroRetCodeException):
+        with assert_raises(NonZeroRetCodeException, ret_codes=(7, 28)):
             http_check(pods[src], container_ids[src], host)
         # UDP check. port 2000 is closed
         container_udp_server(pods[dst], container_ids[dst])
-        with assert_raises(NonZeroRetCodeException):
+        with assert_raises(NonZeroRetCodeException, 'No PONG received'):
             udp_check(pods[src], container_ids[src], host)
 
     # ----- Host isolation -----
     # Container can't access node's IP it's created on
     # ICMP check
+    host_ip = specs['iso1']['hostIP']
     with assert_raises(NonZeroRetCodeException, '100% packet loss'):
-        ping(pods['iso1'], container_ids['iso1'], specs['iso1']['hostIP'])
+        ping(pods['iso1'], container_ids['iso1'], host_ip)
 
     # TCP check
-    with assert_raises(NonZeroRetCodeException,
-                       '(Connection refused|Connection timed out)'):
-        http_check(
-            pods['iso1'], container_ids['iso1'], specs['iso1']['hostIP'])
+    with assert_raises(NonZeroRetCodeException, ret_codes=(7)):
+        # cadvisor port
+        port_check(pods['iso1'], container_ids['iso1'], host_ip, port=4194)
     # UDP check
     host_udp_server(cluster, pods['iso1'].info['host'])
-    with assert_raises(NonZeroRetCodeException):
-        udp_check(pods['iso1'], container_ids['iso1'], specs['iso1']['hostIP'])  # noqa
+    with assert_raises(NonZeroRetCodeException, 'No PONG received'):
+        udp_check(pods['iso1'], container_ids['iso1'], specs['iso1']['hostIP'])
 
     # Container can't access node's IP it was not created on
     # We do not know which node the pod will land on, so we can't tell in
@@ -318,28 +339,26 @@ def test_network_isolation(cluster):
     nodes, pod_node = cluster.node_names, pods['iso1'].info['host']
     nodes.remove(pod_node)
     another_node = nodes[0]
+    non_host_ip = cluster.get_host_ip(another_node)
 
-    node_ip = cluster.get_host_ip(another_node)
     # TCP check
-    with assert_raises(NonZeroRetCodeException, 'Connection refused'):
-        http_check(pods['iso1'], container_ids['iso1'], node_ip)
+    with assert_raises(NonZeroRetCodeException, ret_codes=(7)):
+        # cadvisor port
+        port_check(pods['iso1'], container_ids['iso1'], non_host_ip, port=4194)
     # UDP check
     host_udp_server(cluster, another_node)
-    with assert_raises(NonZeroRetCodeException):
-        udp_check(pods['iso1'], container_ids['iso1'], node_ip)
+    with assert_raises(NonZeroRetCodeException, 'No PONG received'):
+        udp_check(pods['iso1'], container_ids['iso1'], non_host_ip)
 
     # ------ Registered hosts tests ------
-    # Pods with public IP
-    pod_ip_list = [(pod, specs[name]['public_ip'], True)
-                   for name, pod in pods.items() if pod.public_ip]
-    # All Pod IPs
-    pod_ip_list.extend([(pod, container_ips[name], True)
-                        for name, pod in pods.items()])
-    # All Service IPs. Don't respond to pings
+    # Pod IPs
+    pod_ip_list = [(pod, container_ips[name], True)
+                   for name, pod in pods.items()]
+    # Service IPs. Don't respond to pings
     pod_ip_list.extend([(pod, specs[name]['podIP'], False)
                         for name, pod in pods.items()])
 
-    # Registered hosts have acces through all ports via public/pod/service IP
+    # Registered hosts have acces through all ports via pod/service IP
     for pod, target_host, do_ping in pod_ip_list:
         # ICMP check
         if do_ping:
@@ -350,9 +369,8 @@ def test_network_isolation(cluster):
         # TCP check
         host_http_check_pod(cluster, 'rhost1', target_host)
         # UDP check
-        # TODO: doesn't work. AC-4783
-        # container_udp_server(pod, container_ids[pod.name])
-        # host_udp_check_pod(cluster, 'rhost1', target_host)
+        container_udp_server(pod, container_ids[pod.name])
+        host_udp_check_pod(cluster, 'rhost1', target_host)
 
     # ---------- Master tests ---------
     for pod, target_host, do_ping in pod_ip_list:
@@ -365,22 +383,23 @@ def test_network_isolation(cluster):
         # TCP check
         host_http_check_pod(cluster, 'master', target_host)
         # UDP check
-        # TODO: doesn't work. AC-4783
-        # container_udp_server(pod, container_ids[pod.name])
-        # host_udp_check_pod(cluster, 'master', target_host)
+        container_udp_server(pod, container_ids[pod.name])
+        host_udp_check_pod(cluster, 'master', target_host)
 
     # ----------- Nodes tests ----------
-    # Node has access to public/service/pod IP of the pods it's hosting
+    # Node has access to (service/pod IP: any port) of the pods it's hosting
+    # Another node has access to (service/pod IP: public port) only.
     # iso2: public ports: TCP:80 closed port: UDP:2000
     target_pod = 'iso2'
     host_node = specs[target_pod]['host']
     another_node = [n for n in cluster.node_names if n != host_node][0]
     iso2_ip_list = [
-        (specs[target_pod]['public_ip'], True),
         (container_ips[target_pod], True),
         (specs[target_pod]['podIP'], False),
     ]
     for target_ip, do_ping in iso2_ip_list:
+        # Here we check that node hosting a pod has access to it via
+        # pod/service IP using all ports, i.e. public and non-public
         # Host node ICMP check
         if do_ping:
             host_icmp_check_pod(cluster, host_node, target_ip)
@@ -390,10 +409,12 @@ def test_network_isolation(cluster):
         # Host node TCP check
         host_http_check_pod(cluster, host_node, target_ip)
         # Host node UDP check
-        # NOTE: doesn't work. AC-4783
-        # container_udp_server(pods[target_pod], container_ids[target_pod])
-        # host_udp_check_pod(cluster, host_node, target_ip)
+        container_udp_server(pods[target_pod], container_ids[target_pod])
+        host_udp_check_pod(cluster, host_node, target_ip)
 
+        # Here we check that node not hosting a pod has access to it
+        # via pod/service IP using only public ports: TCP:80.
+        # NOTE: UDP:2000 non-public
         # Another node ICMP check
         if do_ping:
             host_icmp_check_pod(cluster, another_node, target_ip)
@@ -404,8 +425,7 @@ def test_network_isolation(cluster):
         host_http_check_pod(cluster, another_node, target_ip)
         # Another node UDP check. port 2000 is not public
         container_udp_server(pods[target_pod], container_ids[target_pod])
-        # NOTE: works now, need to be rechecked after AC-4783 is done.
-        with assert_raises(NonZeroRetCodeException):
+        with assert_raises(NonZeroRetCodeException, 'No PONG received'):
             host_udp_check_pod(cluster, another_node, target_ip)
 
     # ---------- Node has access to world -------------
@@ -427,21 +447,22 @@ def test_network_isolation(cluster):
                 unregistered_host_port_check(node_ip, rec[1])
 
     # Unregistered host can access public ports only
-    # iso1
+    # Here we check that unregistered hosts can access via public IP using
+    # public ports. In this example iso1 has 2 public ports: TCP:80 & UDP:2000
     # TCP http check
     unregistered_host_http_check(specs['iso1']['public_ip'])
     # UDP check
-    # TODO: doesn't work. AC-4783
-    # container_udp_server(pods['iso1'], container_ids['iso1'])
-    # unregistered_host_udp_check(specs['iso1']['public_ip'])
+    container_udp_server(pods['iso1'], container_ids['iso1'])
+    unregistered_host_udp_check(specs['iso1']['public_ip'])
 
-    # iso2
+    # Here we check that unregistered hosts can access via public IP using
+    # public ports only. In this example iso2 has public port TCP:80 and
+    # non-public port UDP:2000
     # TCP http check
     unregistered_host_http_check(specs['iso2']['public_ip'])
     # UDP check (port 2000 is closed)
-    # NOTE: works for now, but should be revised after AC-4783
     container_udp_server(pods['iso2'], container_ids['iso2'])
-    with assert_raises(NonZeroRetCodeException):
+    with assert_raises(NonZeroRetCodeException, 'No PONG received'):
         unregistered_host_udp_check(specs['iso2']['public_ip'], port=2000)
 
     # Containers inside a single pod have access to each other through

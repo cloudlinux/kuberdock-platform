@@ -39,7 +39,6 @@ describe('settings.views.GeneralView', function(){
                 });
             expect(view.validate()).to.be.equal(true);
             fakeCollection[_.random(1, fakeCollection.length - 1)].value = '';
-            console.log(fakeCollection);
             view.collection = new Model.SettingsCollection(fakeCollection);
             expect(view.validate()).to.be.equal(false);
             assert(notify.calledWith('All fields are required'));

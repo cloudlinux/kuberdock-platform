@@ -325,7 +325,8 @@ def test_network_isolation(cluster):
         ping(pods['iso1'], container_ids['iso1'], host_ip)
 
     # TCP check
-    with assert_raises(NonZeroRetCodeException, ret_codes=(7)):
+    # Here we have ret_code 7 because expected behavior is DROP or REJECT
+    with assert_raises(NonZeroRetCodeException, ret_codes=(7,)):
         # cadvisor port
         port_check(pods['iso1'], container_ids['iso1'], host_ip, port=4194)
     # UDP check
@@ -342,7 +343,8 @@ def test_network_isolation(cluster):
     non_host_ip = cluster.get_host_ip(another_node)
 
     # TCP check
-    with assert_raises(NonZeroRetCodeException, ret_codes=(7)):
+    # Here we have ret_code 7 because expected behavior is DROP or REJECT
+    with assert_raises(NonZeroRetCodeException, ret_codes=(7,)):
         # cadvisor port
         port_check(pods['iso1'], container_ids['iso1'], non_host_ip, port=4194)
     # UDP check

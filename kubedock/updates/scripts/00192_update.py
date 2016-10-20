@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import socket
 from StringIO import StringIO
 
@@ -217,8 +218,29 @@ SELINUX = 'docker-selinux-{ver}'.format(ver=DOCKER_VERSION)
 
 
 def _upgrade_docker(with_testing):
+    def alter_config(line):
+        if not re.match(r'OPTIONS=.*', line):
+            return line
+
+        to_remove = (r'\s*(--log-level=\w+)|(-l \w+)\s*',
+                     r'\s*(--log-driver=\w+)\s*')
+        for pattern in to_remove:
+            line = re.sub(pattern, '', line)
+
+        return re.sub(r"OPTIONS='(.*)'",
+                      r"OPTIONS='\1 --log-driver=json-file --log-level=error'",
+                      line)
+
     helpers.remote_install(SELINUX, with_testing)
     helpers.remote_install(DOCKER, with_testing)
+
+    docker_config = StringIO()
+    get('/etc/sysconfig/docker', docker_config)
+    current_config = docker_config.getvalue()
+    new_config = '\n'.join(alter_config(l) for l in current_config.splitlines())
+
+    run("cat << EOF > /etc/sysconfig/docker\n{}\nEOF".format(new_config))
+
     res = helpers.restart_service('docker')
     if res != 0:
         raise helpers.UpgradeError('Failed to restart docker. {}'.format(res))

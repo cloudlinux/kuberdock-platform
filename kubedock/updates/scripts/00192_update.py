@@ -566,7 +566,7 @@ def _master_network_policy():
                 "action": "allow"
             },
             {
-                "protocol": "tcp",
+                "protocol": "udp",
                 "dst_ports": master_public_udp_ports,
                 "action": "allow"
             },

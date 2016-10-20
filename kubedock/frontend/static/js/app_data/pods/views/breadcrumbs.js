@@ -37,10 +37,12 @@ define([
                         if (!newValue)
                             msg = 'Please, enter pod name.';
                         else if (newValue.length > 63)
-                            msg = 'The maximum length of the Pod name must be less than 63 characters.';
-                        else if (_.without(podCollection.where({name: newValue}), that.model).length)
-                            msg = 'Pod with name "' + newValue + '" already exists. Try another name.';
-
+                            msg = 'The maximum length of the Pod name must' +
+                                  ' be less than 64 characters.';
+                        else if (_.without(
+                            podCollection.where({name: newValue}), that.model).length)
+                            msg = 'Pod with name "' + newValue +
+                                  '" already exists. Try another name.';
                         if (msg){
                             // TODO: style for ieditable error messages
                             // (use it instead of notifyWindow)

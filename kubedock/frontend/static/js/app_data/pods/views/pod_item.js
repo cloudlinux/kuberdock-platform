@@ -85,7 +85,7 @@ define(['app_data/app', 'app_data/model',
                 pod: before ? before.getPod() : after.getPod().editOf(),
                 imagename: imagename,
                 imagetag: imagetag,
-                prettyState: before ? before.getPrettyStatus() : 'new',
+                prettyState: before ? before.getPrettyStatus() : 'new'
             };
         },
 

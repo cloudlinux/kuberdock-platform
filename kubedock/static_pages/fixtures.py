@@ -11,7 +11,7 @@ def get_menus(aws=False):
             items=[
                 dict(name="Pods", path="#pods", ordering=0,
                      roles=["User", "TrialUser", "LimitedUser"]),
-                dict(name="Public DNS names" if aws else "Public IPs",
+                dict(name="Access endpoints" if aws else "Public IPs",
                      path="#publicIPs", ordering=1,
                      roles=["User", "TrialUser", "LimitedUser"]),
                 dict(name="Persistent volumes", path="#persistent-volumes",
@@ -27,7 +27,7 @@ def get_menus(aws=False):
                     children=[
                         dict(name="Users", path="#users", ordering=0,
                              roles=["Admin"]),
-                        dict(name="DNS names" if aws else "IP pool",
+                        dict(name="Access endpoints" if aws else "IP pool",
                              path="#ippool", ordering=1, roles=["Admin"]),
                         dict(name="Domains control", path="#domains", ordering=2,
                              roles=["Admin"]),

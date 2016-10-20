@@ -2,6 +2,7 @@ from pytz import common_timezones
 from flask import Blueprint, request, jsonify, current_app
 from flask.views import MethodView
 
+from kubedock.kapi.pstorage import STORAGE_CLASS
 from ..exceptions import PermissionDenied
 from ..login import auth_required
 from ..rbac import check_permission
@@ -66,6 +67,7 @@ def get_setup_info():
         'FIXED_IP_POOLS': FIXED_IP_POOLS,
         'ZFS': ZFS,
         'CEPH': CEPH,
+        'isPvResizable': STORAGE_CLASS.is_pv_resizable()
     }
 
 

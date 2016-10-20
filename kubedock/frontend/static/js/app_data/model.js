@@ -127,17 +127,25 @@ define([
         },
     });
 
+    data.Volume = Backbone.AssociatedModel.extend({
+        idAttribute: 'name',
+    });
+
     data.VolumeMount = Backbone.AssociatedModel.extend({
         idAttribute: 'mountPath',
         defaults: function(){
-            return {name: this.generateName(this.get('mountPath')), mountPath: null};
+            return {
+                name: this.generateName(this.get('mountPath')),
+                mountPath: null,
+                persistentDisk: null,
+            };
         },
         generateName: function(){
             return _.map(_.range(10), function(){ return _.random(36).toString(36); }).join('');
         },
         getContainer: function(){ return getParentWithType(this.collection, data.Container); },
         getVolume: function(){
-            return _.findWhere(this.getContainer().getPod().get('volumes'),
+            return this.getContainer().getPod().get('volumes').findWhere(
                                {name: this.get('name')});
         },
     });
@@ -341,6 +349,11 @@ define([
             type: Backbone.One,
             key: 'edited_config',
             relatedModel: Backbone.Self,
+        },
+        {
+            type: Backbone.Many,
+            key: 'volumes',
+            relatedModel: data.Volume,
         }],
 
         resetSshAccess: function(){
@@ -503,10 +516,10 @@ define([
             var kubeTypes = App.userPackage.getKubeTypes();
             kubeTypes.map(function(kt){ kt.conflicts = new data.PersistentStorageCollection(); });
             if (this.persistentDrives){
-                _.each(this.get('volumes'), function(volume){
-                    if (volume.persistentDisk){
+                this.get('volumes').each(function(volume){
+                    if (volume.get('persistentDisk')){
                         var pd = this.persistentDrives
-                                .findWhere({name: volume.persistentDisk.pdName});
+                                .findWhere({name: volume.get('persistentDisk').pdName});
                         if (pd){
                             var kubeType = pd.get('kube_type');
                             if (kubeType != null){
@@ -588,7 +601,7 @@ define([
                     ' ' + kube.get('disk_space_units'),
             };
 
-            var allPersistentVolumes = _.filter(_.pluck(volumes, 'persistentDisk')),
+            var allPersistentVolumes = _.filter(volumes.pluck('persistentDisk')),
                 totalSize = _.reduce(allPersistentVolumes,
                     function(sum, v){ return sum + (v.pdSize || 1); }, 0),
                 totalPrice = 0;

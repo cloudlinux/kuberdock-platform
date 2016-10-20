@@ -57,45 +57,8 @@
                 <div>HDD: <span id="hdd_data"><%- limits.hdd %></span></div>
             </div>
             <div class="col-md-12 total-wrapper">
-                <table id="pod-payment-table">
-                    <thead>
-                       <tr>
-                           <th class="col-xs-5 no-padding">Container name</th>
-                           <th class="col-xs-4 no-padding">Number of Kubes</th>
-                           <th class="col-xs-2 no-padding">Price / <%- pkg.get('period') %></th>
-                           <th class="col-xs-1 no-padding"></th>
-                       </tr>
-                    </thead>
-                    <tbody class="wizard-containers-list"></tbody>
-                </table>
-                <% if (isPerSorage) { %>
-                    <table>
-                        <thead>
-                           <tr>
-                               <th class="col-xs-5 no-padding">Storage name</th>
-                               <th class="col-xs-4 no-padding">Size</th>
-                               <th class="col-xs-2 no-padding"></th>
-                               <th class="col-xs-1 no-padding"></th>
-                           </tr>
-                        </thead>
-                        <tbody>
-                            <% _.each(persistentDrives, function(pd){ %>
-                                <tr>
-                                    <td><b><%- pd.get('name') %></b></td>
-                                    <td><%- pd.get('size') %> GB</td>
-                                    <td>
-                                        <span class="pstorage_price"><%= formatPrice( pkg.get('price_pstorage') * pd.get('size')) %></span>
-                                    </td>
-                                    <td class="actions text-right">
-                                        <% if (pd.get('size') !== 1) { %>
-                                            <span class="help" data-toggle="tooltip" data-placement="left" title="<%= formatPrice( pkg.get('price_pstorage') ) %> per 1 GB"></span>
-                                        <% } %>
-                                    </td>
-                                </tr>
-                            <% }) %>
-                        </tbody>
-                    </table>
-                <% } %>
+                <div id="pod-payment-table-container"></div>
+                <div id="pod-storage-table-container"></div>
                 <% if (isPublic && (typeof domain == 'undefined' || domain == null)) { %>
                     <table>
                         <thead>

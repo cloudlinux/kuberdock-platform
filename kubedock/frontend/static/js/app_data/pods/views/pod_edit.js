@@ -21,6 +21,12 @@ import wizardContainerCollectionItemTpl from
     'app_data/pods/templates/wizard_container_collection_item.tpl';
 import wizardSetContainerCompleteTpl from
     'app_data/pods/templates/wizard_set_container_complete.tpl';
+import wizardImageCollection from
+    'app_data/pods/templates/wizard_image_collection.tpl'; 
+import wizardStorageCollection from 
+    'app_data/pods/templates/wizard_storage_collection.tpl';
+import wizardStorageCollectionItemTpl from 
+    'app_data/pods/templates/wizard_storage_collection_item.tpl';
 
 // search list
 import searchYamlItemTpl from 'app_data/pods/templates/search_lists/yaml/item.tpl';
@@ -59,6 +65,27 @@ export const ImageListItemView = Backbone.Marionette.ItemView.extend({
     tagName: 'div',
     className: 'item clearfix',
     triggers: { 'click .add-item': 'image:selected' }
+});
+
+export const StorageListItemView = Backbone.Marionette.ItemView.extend({
+    template: wizardStorageCollectionItemTpl,
+    tagName: 'tr',
+    className: 'item',
+    ui: {
+        lessPdBtn: '.pd-less',
+        morePdBtn: '.pd-more',
+        pd: '.pd',
+    },
+    events: {
+        'click @ui.lessPdBtn': 'removePd',
+        'click @ui.morePdBtn': 'addPd',
+    },
+    triggers: {
+        'change @ui.pd': 'container:pd:change',
+    },
+    addPd: function(){ this.ui.pd.val(+this.ui.pd.val() + 1).change(); },
+    removePd: function(){ this.ui.pd.val(+this.ui.pd.val() - 1).change(); },
+
 });
 
 export const AppListItemView = Backbone.Marionette.ItemView.extend({
@@ -108,7 +135,6 @@ export const ImageSearchView = Backbone.Marionette.CompositeView.extend({
         };
     }
 });
-
 
 export const GetImageView = Backbone.Marionette.LayoutView.extend({
     template: searchLayoutTpl,
@@ -502,11 +528,13 @@ export const VolumeMountListItem = Backbone.Marionette.ItemView.extend({
 
     templateHelpers(){
         return {
-            isPersistent: !!this.volume.persistentDisk,
+            isPersistent: !!this.volume.get('persistentDisk'),
             persistentDisk: this.getPDModel(),
             persistentDrives: this.pod.persistentDrives,
             pdSizeLimit: this.pod.pdSizeLimit,
             pod: this.pod,
+            isPvResizable: this.isPvResizable,
+            isNewPod: this.isNewPod,
         };
     },
 
@@ -514,17 +542,19 @@ export const VolumeMountListItem = Backbone.Marionette.ItemView.extend({
         this.container = this.model.getContainer();
         this.pod = this.container.getPod();
         var volumes = this.pod.get('volumes');
-        this.volume = _.findWhere(volumes, {name: this.model.get('name')});
+        this.volume = volumes.findWhere({name: this.model.get('name')});
         if (this.volume === undefined) {
-            this.volume = {name: this.model.get('name')};
+            this.volume = new Model.VolumeMount({name: this.model.get('name')});
             volumes.push(this.volume);
-        } else if (this.volume.persistentDisk){
+        } else if (this.volume.get('persistentDisk')){
             this.listenTo(this.pod.persistentDrives, 'refreshSelects', this.render);
         }
+        this.isPvResizable = options.isPvResizable;
+        this.isNewPod = this.pod.wizardState.flow === 'CREATE_POD';
     },
 
     getPDModel(name){
-        name = name || (this.volume.persistentDisk || {}).pdName;
+        name = name || (this.volume.get('persistentDisk') || {}).pdName;
         if (!name || !this.pod.persistentDrives) return;
         return this.pod.persistentDrives.findWhere({name: name});
     },
@@ -575,15 +605,15 @@ export const VolumeMountListItem = Backbone.Marionette.ItemView.extend({
 
         this.releasePersistentDisk();
         var pd = this.getPDModel(name);
-        this.ui.pdSize.prop('disabled', pd !== undefined);
+        this.ui.pdSize.prop('disabled', pd !== undefined && !this.isPvResizable);
         if (pd === undefined){  // new pd
             pd = new Model.PersistentStorageModel({name: name});
             pd.isNewPD = true;
             pd = this.pod.persistentDrives.add(pd);
         }
         pd.set('in_use', true);
-        this.volume.persistentDisk.pdName = name;
-        this.volume.persistentDisk.pdSize = pd.get('size');
+        this.volume.get('persistentDisk').pdName = name;
+        this.volume.get('persistentDisk').pdSize = pd.get('size');
         this.ui.pdSize.val(pd.get('size'));
 
         var conflicts = pd.conflictsWith(this.pod);
@@ -611,7 +641,7 @@ export const VolumeMountListItem = Backbone.Marionette.ItemView.extend({
         } else {
             this.ui.pdSize.removeClass('error');
             this.getPDModel().set('size', size);
-            this.volume.persistentDisk.pdSize = size;
+            this.volume.get('persistentDisk').pdSize = size;
         }
     },
 
@@ -623,40 +653,38 @@ export const VolumeMountListItem = Backbone.Marionette.ItemView.extend({
             utils.notifyWindow('Mount path must be set!');
             this.ui.mountPath.click();
             return false;
+        } else if (this.pod.persistentDrives === undefined) {
+            var persistentDrives = new Model.PersistentStorageCollection();
+            utils.preloader.show();
+            $.when(persistentDrives.fetch({wait: true}),
+                   App.getSystemSettingsCollection())
+                .always(utils.preloader.hide)
+                .fail(utils.notifyWindow)
+                .done(function(drives, settings){
+                    var conf = settings.byName('persitent_disk_max_size');
+                    that.pod.pdSizeLimit = conf == null
+                        ? 10 : parseInt(conf.get('value'), 10);
+                    that.pod.persistentDrives = persistentDrives;
+                    that.toggleVolumeEntry();
+                    that.render();
+                    that.ui.pdSelect.selectpicker('toggle');
+                });
         } else {
-            if (this.pod.persistentDrives === undefined) {
-                var persistentDrives = new Model.PersistentStorageCollection();
-                utils.preloader.show();
-                $.when(persistentDrives.fetch({wait: true}),
-                       App.getSystemSettingsCollection())
-                    .always(utils.preloader.hide)
-                    .fail(utils.notifyWindow)
-                    .done(function(drives, settings){
-                        var conf = settings.byName('persitent_disk_max_size');
-                        that.pod.pdSizeLimit = conf == null
-                            ? 10 : parseInt(conf.get('value'), 10);
-                        that.pod.persistentDrives = persistentDrives;
-                        that.toggleVolumeEntry();
-                        that.render();
-                        that.ui.pdSelect.selectpicker('toggle');
-                    });
-            } else {
-                that.toggleVolumeEntry();
-                that.render();
-                that.ui.pdSelect.selectpicker('toggle');
-            }
+            that.toggleVolumeEntry();
+            that.render();
+            that.ui.pdSelect.selectpicker('toggle');
         }
     },
 
     toggleVolumeEntry(){
-        if (this.volume.persistentDisk) {
+        if (this.volume.get('persistentDisk')) {
             this.releasePersistentDisk();
-            delete this.volume.persistentDisk;
+            delete this.volume.get('persistentDisk');
             this.stopListening(this.pod.persistentDrives, 'refreshSelects', this.render);
             this.pod.persistentDrives.trigger('refreshSelects');
         } else {
             this.listenTo(this.pod.persistentDrives, 'refreshSelects', this.render);
-            this.volume.persistentDisk = {pdName: null, pdSize: null};
+            this.volume.set('persistentDisk', {pdName: null, pdSize: null});
         }
     },
 
@@ -678,8 +706,8 @@ export const VolumeMountListItem = Backbone.Marionette.ItemView.extend({
         this.releasePersistentDisk();
         this.model.collection.remove(this.model);
         var volumes = this.pod.get('volumes');
-        volumes.splice(volumes.indexOf(this.volume), 1);
-        if (this.volume.persistentDisk)
+        volumes.remove(this.volume);
+        if (this.volume.get('persistentDisk'))
             this.pod.persistentDrives.trigger('refreshSelects');
     },
 
@@ -716,7 +744,7 @@ export const VolumeMountListItem = Backbone.Marionette.ItemView.extend({
             liveSearchPlaceholder: 'Enter the name',
             dropupAuto: false,
         });
-        this.ui.pdSelect.selectpicker('val', (this.volume.persistentDisk || {}).pdName);
+        this.ui.pdSelect.selectpicker('val', (this.volume.get('persistentDisk') || {}).pdName);
     }
 });
 
@@ -726,6 +754,11 @@ export const VolumeMountCollection = Backbone.Marionette.CompositeView.extend({
     className: 'row',
     childViewContainer: 'tbody',
     childView: VolumeMountListItem,
+    childViewOptions: function () {
+        return {
+            isPvResizable: App.setupInfo.isPvResizable,
+        };
+    },
     emptyView: Backbone.Marionette.ItemView.extend({
         template : volumeMountListEmptyTpl,
         tagName  : 'tr',
@@ -900,10 +933,10 @@ export const WizardPortsSubView = Backbone.Marionette.LayoutView.extend({
         for (var i = 0; i < vm.length; i++) {
             var volumeMount = vm.at(i),
                 name = volumeMount.get('name'),
-                vol = _.findWhere(volumes, {name: name});
+                vol = volumes.findWhere({name: name});
 
-            if (vol.hasOwnProperty('persistentDisk')) {
-                var pd = vol.persistentDisk;
+            var pd = vol.get('persistentDisk');
+            if (pd) {
                 if (!pd.pdSize || !pd.pdName) {
                     utils.notifyWindow('Persistent options must be set!');
                     return;
@@ -1226,6 +1259,7 @@ export const ContainerListItemView = Backbone.Marionette.ItemView.extend({
             kubesLimit: this.kubesLimit,
             showDelete: !this.model.getPod().editOf() ||  // it's a new pod or...
                         this.model.collection.length > 1,  // there is more then one container
+            isPvResizable: this.isPvResizable,
         };
     },
     onRender(){ this.ui.tooltip.tooltip(); },
@@ -1233,22 +1267,21 @@ export const ContainerListItemView = Backbone.Marionette.ItemView.extend({
     removeKube(){ this.ui.kubes.val(+this.ui.kubes.val() - 1).change(); },
 });
 
-export const WizardCompleteSubView = Backbone.Marionette.CompositeView.extend({
+export const WizardCompleteSubView = Backbone.Marionette.LayoutView.extend({
     template: wizardSetContainerCompleteTpl,
-    childView: ContainerListItemView,
-    childViewContainer: '.total-wrapper tbody.wizard-containers-list',
-    tagName: 'div',
     childViewOptions(){ return _.pick(this, 'pkg', 'kubesLimit'); },
 
     childEvents: {
         'container:edit': 'editContainer',
         'container:delete': 'deleteContainer',
         'container:kubes:change': 'changeContainerKubes',
+        'container:pd:change': 'changeContainerPd',
     },
 
     initialize(options){
         this.pkg = App.userPackage;
-        this.collection = this.model.get('containers');
+        this.images = this.model.get('containers');
+        this.persistentDrives = this.model.get('volumes');
         this.model.recalcInfo(this.pkg);
         if (this.model.editOf())
             this.model.editOf().recalcInfo(this.pkg);
@@ -1297,14 +1330,16 @@ export const WizardCompleteSubView = Backbone.Marionette.CompositeView.extend({
             restart_policy   : this.model.get('restartPolicy'),
             pkg              : this.pkg,
             hasBilling       : this.hasBilling,
-            persistentDrives : _.chain(this.model.get('volumes'))
-                .map(function(vol){
-                    return vol.persistentDisk && vol.persistentDisk.pdName &&
-                           this.model.persistentDrives.findWhere(
-                               {name: vol.persistentDisk.pdName}
-                           );
+            persistentDrives : _.chain(this.model.get('volumes').models)
+                .map(function (vol) {
+                    return vol.get('persistentDisk') &&
+                        vol.get('persistentDisk').pdName &&
+                        this.model.persistentDrives.findWhere(
+                            {name: vol.get('persistentDisk').pdName}
+                        );
                 }, this).filter(_.identity).value(),
-            payg             : this.payg    // Pay-As-You-Go billing method
+            payg             : this.payg,    // Pay-As-You-Go billing method
+            isPvResizable    : App.setupInfo.isPvResizable,
         };
     },
 
@@ -1317,6 +1352,11 @@ export const WizardCompleteSubView = Backbone.Marionette.CompositeView.extend({
         'editKubeTypeDescription' : '.edit-kube-type-description',
         'selectpicker'            : '.selectpicker',
         'tooltip'                 : '[data-toggle="tooltip"]'
+    },
+
+    regions: {
+        'containers': '.total-wrapper #pod-payment-table-container',
+        'storages': '.total-wrapper #pod-storage-table-container'
     },
 
     events: {
@@ -1386,6 +1426,13 @@ export const WizardCompleteSubView = Backbone.Marionette.CompositeView.extend({
         var kubes = Math.max(1, Math.min(this.kubesLimit, +childView.ui.kubes.val()));
         childView.ui.kubes.val(kubes);
         childView.model.set('kubes', kubes);
+        this.render();
+    },
+
+    changeContainerPd(childView){
+        var pdSize = Math.max(1, Math.min(100, +childView.ui.pd.val()));
+        childView.ui.pd.val(pdSize);
+        childView.model.get('persistentDisk').pdSize = pdSize;
         this.render();
     },
 
@@ -1474,6 +1521,7 @@ export const WizardCompleteSubView = Backbone.Marionette.CompositeView.extend({
     onRender() {
         var noAvailableKubeTypes = Model.KubeType.noAvailableKubeTypes;
 
+        var that = this;
         this.ui.selectpicker.selectpicker();
         this.ui.tooltip.tooltip();
         this.ui.kubeTypes.selectpicker({
@@ -1484,6 +1532,29 @@ export const WizardCompleteSubView = Backbone.Marionette.CompositeView.extend({
             this.ui.kubeTypes.val('').selectpicker('render');  // unselect
         else
             this.ui.kubeTypes.selectpicker('val', this.model.get('kube_type'));
+
+        this.containers.show(new Backbone.Marionette.CompositeView({
+            template: wizardImageCollection,
+            childView: ContainerListItemView,
+            collection: this.images,
+            childViewContainer: '.wizard-containers-list',
+            templateHelpers: _.bind(this.templateHelpers, this),
+        }));
+        if (this.model.isPerSorage){
+            this.storages.show(new Backbone.Marionette.CompositeView({
+                template: wizardStorageCollection,
+                childView: StorageListItemView,
+                collection: this.persistentDrives,
+                childViewContainer: 'tbody',
+                childViewOptions: function() {
+                    return {
+                        isPvResizable: App.setupInfo.isPvResizable,
+                        templateHelpers: _.bind(that.templateHelpers, that),
+                    };
+                },
+                templateHelpers: _.bind(this.templateHelpers, that),
+            }));
+        }
     },
 
     editPolicy(){

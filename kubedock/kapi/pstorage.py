@@ -406,6 +406,19 @@ class PersistentStorage(object):
         if drives:
             return drives[0]
 
+    def get_by_name(self, user, name):
+        """
+        Returns list of persistent drives of a certain user
+        :param user: object -> user object got from SQLAlchemy
+        :param name: string -> persistent disk name
+        :return: dict -> dict
+        """
+        devices = self.get_drives(user_id=user.id)
+        for device in devices:
+            if device['name'] == name:
+                return device
+        return None
+
     def get_user_unmapped_drives(self, user):
         """
         Returns unmapped drives of a user
@@ -596,7 +609,8 @@ class PersistentStorage(object):
         """
         return False
 
-    def resize_pv(self, persistent_disk_id, new_size, dry_run=False):
+    def resize_pv(self, persistent_disk_id, new_size, dry_run=False,
+                  update_stat=True):
         """Resizes persistent volume for specified size if current storage
         backend supports such operation.
         :return: tuple of success flag and list of and list of tuples
@@ -613,8 +627,9 @@ class PersistentStorage(object):
             pd = PersistentDisk.get_all_query().filter(
                 PersistentDisk.id == persistent_disk_id
             ).first()
-            self.end_stat(pd.name, pd.owner_id)
-            self.start_stat(pd.size, pd.name, pd.owner_id)
+            if update_stat:
+                self.end_stat(pd.name, pd.owner_id)
+                self.start_stat(pd.size, pd.name, pd.owner_id)
         return ok, changed_pods
 
     def do_pv_resize(self, persistent_disk_id, new_size, dry_run=False):
@@ -1659,6 +1674,7 @@ class LocalStorage(PersistentStorage):
                 )
                 raise PVResizeFailed(u'Unknown error during PV resize')
             pd.size = new_size
+        db.session.flush()
         changed_pod_ids = update_pods_volumes(pd)
         return True, [(pod_id, False) for pod_id in changed_pod_ids]
 

@@ -41,7 +41,9 @@
             <input type="number" class="pd-size" placeholder="Size"
                    value="<%- persistentDisk ? persistentDisk.get('size') : '' %>"
                    max="<%- pdSizeLimit %>" min="1"
-                   <%- persistentDisk && persistentDisk.isNewPD ? '' : 'disabled' %>>
+                   <%- persistentDisk && (persistentDisk.isNewPD ||
+        isPvResizable && !isNewPod) ? '' :
+        'disabled' %>>
         </div>
     </td>
 <% } else { %>

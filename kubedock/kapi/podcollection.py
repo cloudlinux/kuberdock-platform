@@ -58,7 +58,10 @@ from ..pods.models import (
 from ..system_settings import keys as settings_keys
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
-from ..utils import POD_STATUSES, NODE_STATUSES, nested_dict_utils
+from ..utils import POD_STATUSES, NODE_STATUSES, nested_dict_utils, \
+    send_event_to_user
+
+UNKNOWN_ADDRESS = 'Unknown'
 
 # We use only 30 because useradd limits name to 32, and ssh client limits
 # name only to 30 (may be this is configurable) so we use lowest possible
@@ -1266,14 +1269,63 @@ class PodCollection(object):
         new_config, _ = self._preprocess_new_pod(
             new_config, original_pod=old_pod)
 
+        # save old values
+        old_pv_sizes = old_pod.get_volumes_size()
+
+        # resize or abort operation
+        new_pv_sizes = {pd['persistentDisk']['pdName']:
+                        pd['persistentDisk']['pdSize']
+                        for pd in new_config.get('volumes_public', [])
+                        if pd.get('persistentDisk') and
+                        old_pv_sizes.get(pd['persistentDisk']['pdName']) and
+                        old_pv_sizes[pd['persistentDisk']['pdName']] !=
+                        pd['persistentDisk']['pdSize']}
+
+        # added exists PDs
+        new_pds = {pd['persistentDisk']['pdName']:
+                   pd['persistentDisk']['pdSize']
+                   for pd in new_config.get('volumes_public', [])
+                   if pd.get('persistentDisk') and
+                   not old_pv_sizes.get(pd['persistentDisk']['pdName'])}
+        if new_pds:
+            persistent_storage = pstorage.STORAGE_CLASS()
+            for pd_name, new_size in new_pds.iteritems():
+                old_pd = persistent_storage.get_by_name(db_pod.owner, pd_name)
+                if old_pd:
+                    new_pv_sizes[pd_name] = new_size
+                    old_pv_sizes = old_pd['size']
+
         pod = Pod(new_config)
         pod.id = db_pod.id
         pod.set_owner(db_pod.owner)
         update_service(pod)
         db_pod = self._save_pod(pod, db_pod=db_pod)
+        if new_pv_sizes:
+            pv_query = PersistentDisk.get_all_query().filter(
+                PersistentDisk.name.in_(new_pv_sizes.keys()),
+                PersistentDisk.owner_id == db_pod.owner_id
+            )
+            pv_id_dict = {pv.name: pv.id for pv in pv_query}
+            try:
+                for (pv_name, new_size) in new_pv_sizes.iteritems():
+                    change_pv_size(pv_id_dict[pv_name], new_size,
+                                   update_stat=False)
+            except APIError as err:
+                send_event_to_user(
+                    'notify:error', {'message': "Error while resize "
+                                                "persistent storage"},
+                    pod.owner_id)
+                # revert resize volumes
+                for (pv_name, old_size) in old_pv_sizes.iteritems():
+                    pv_id = pv_id_dict.get(pv_name)
+                    change_pv_size(pv_id, old_size, update_stat=False)
+                raise err
+
+        config = db_pod.get_dbconfig()
         pod.name = db_pod.name
         pod.kube_type = db_pod.kube_id
         pod.status = old_pod.status
+        pod.volumes = config.get('volumes')
         pod.forge_dockers()
         return pod, db_pod.get_dbconfig()
 
@@ -1472,9 +1524,10 @@ class PodCollection(object):
                 if notify_on_change and ip_address != utils.ip2int(desired_ip):
                     # send event 'IP changed'
                     msg = (
-                        CHANGE_IP_MESSAGE.format(pod_name=pod.name,
-                                                 old_ip=desired_ip,
-                                   new_ip=utils.int2ip(ip_address)))
+                        CHANGE_IP_MESSAGE.format(
+                            pod_name=pod.name,
+                            old_ip=desired_ip,
+                            new_ip=utils.int2ip(ip_address)))
                     utils.send_event_to_user(
                         event_name='notify:warning', data={'message': msg},
                         user_id=pod.owner.id)
@@ -2503,7 +2556,8 @@ def del_public_ports_policy(namespace):
     )
 
 
-def change_pv_size(persistent_disk_id, new_size, dry_run=False):
+def change_pv_size(persistent_disk_id, new_size, dry_run=False,
+                   update_stat=True):
     max_size = int(
         SystemSettings.get_by_name(settings_keys.PERSISTENT_DISK_MAX_SIZE)
         or 0
@@ -2514,7 +2568,8 @@ def change_pv_size(persistent_disk_id, new_size, dry_run=False):
         )
     storage = pstorage.STORAGE_CLASS()
     ok, changed_pod_ids = storage.resize_pv(persistent_disk_id, new_size,
-                                            dry_run=dry_run)
+                                            dry_run=dry_run,
+                                            update_stat=update_stat)
     if dry_run or not (ok and changed_pod_ids):
         return ok, changed_pod_ids
     pc = PodCollection()

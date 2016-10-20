@@ -98,8 +98,8 @@ define([
             var volumeBefore = volumeMount.get('before') && volumeMount.get('before').getVolume(),
                 volumeAfter = volumeMount.get('after') && volumeMount.get('after').getVolume();
             return {
-                pdBefore: volumeBefore && volumeBefore.persistentDisk,
-                pdAfter: volumeAfter && volumeAfter.persistentDisk,
+                pdBefore: volumeBefore && volumeBefore.get('persistentDisk'),
+                pdAfter: volumeAfter && volumeAfter.get('persistentDisk'),
             };
         },
     });

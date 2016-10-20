@@ -178,8 +178,8 @@ class IpState(BaseModelMixin, db.Model):
     def __repr__(self):
         return (
             "<IpState(pod_id='{0}', ip_address='{1}', start='{2}', end='{3}')>"
-                .format(self.pod_id, self.ip_address, self.start_time,
-                        self.end_time))
+            .format(self.pod_id, self.ip_address, self.start_time,
+                    self.end_time))
 
     @classmethod
     def start(cls, pod_id, ip_address):
@@ -221,7 +221,7 @@ class PersistentDiskState(BaseModelMixin, db.Model):
     def start(cls, user_id, pd_name, size):
         cls.end(user_id, pd_name)  # just to make sure
         db.session.add(cls(user_id=user_id, pd_name=pd_name,
-            start_time=datetime.utcnow(), size=size))
+                           start_time=datetime.utcnow(), size=size))
         db.session.flush()
 
     @classmethod

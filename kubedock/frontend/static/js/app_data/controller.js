@@ -920,7 +920,7 @@ define([
             $.when(
                 this.podWizardBase(options),
                 App.getPodCollection(),
-                App.getSystemSettingsCollection()
+                App.getSystemSettingsCollection(),
             ).done((base, podCollection, settingsCollection) => {
                 var options = base[0], Views = base[1];
 

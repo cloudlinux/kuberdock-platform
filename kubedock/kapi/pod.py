@@ -203,12 +203,18 @@ class Pod(object):
         ]
         volumes = getattr(self, 'volumes', [])
         p_vols = (vol for vol in volumes
-                  if 'name' in vol and 'hostPath' in vol
-                  and vol['hostPath']['path'] not in sys_vol)
+                  if 'name' in vol and 'hostPath' in vol and
+                  vol['hostPath']['path'] not in sys_vol)
         result = {vol['name']: vol['hostPath']['path'] for vol in p_vols}
         ceph_vols = (vol for vol in volumes if 'rbd' in vol)
         result.update({vol['name']: 'ceph' for vol in ceph_vols})
         return result
+
+    def get_volumes_size(self):
+        return {pd['persistentDisk']['pdName']:
+                pd['persistentDisk']['pdSize']
+                for pd in self.volumes_public or []
+                if pd.get('persistentDisk')}
 
     def get_secrets(self):
         """Retrieve secrets of type '.dockercfg' from kubernetes.
@@ -457,8 +463,7 @@ class Pod(object):
             v['name']
             for c in self.containers
             for v in c.get('volumeMounts', [])
-            if v.pop('kdCopyFromImage', False)
-            ]
+            if v.pop('kdCopyFromImage', False)]
 
     def _update_volume_path(self, name, vid):
         if vid is None:

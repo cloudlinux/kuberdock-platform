@@ -11,6 +11,7 @@ import mock
 import responses
 import re
 
+from kubedock.core import db
 from kubedock.testutils import create_app
 from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
 from kubedock.kapi import helpers
@@ -2224,7 +2225,6 @@ class TestPodCollectionEdit(DBTestCase, TestCaseMixin):
     @mock.patch.object(podcollection, 'update_service',
                        mock.Mock())
     def test_apply_edit(self):
-        self.maxDiff = None
         edited = dict(self.edited,
                       namespace='024ab4aa-8457-478d-8d4a-5007d70a2ff9')
         config = dict(
@@ -2274,6 +2274,125 @@ class TestPodCollectionEdit(DBTestCase, TestCaseMixin):
         self.assertEqual(len(new_config['containers']), len(self.edited[
             'containers']))
         self.assertTrue(pod.public_ip)
+
+    @mock.patch.object(podcollection.node_utils, 'get_nodes_collection',
+                       lambda: [])
+    @mock.patch.object(podcollection, 'update_service',
+                       mock.Mock())
+    @mock.patch('kubedock.kapi.images.Image._check_availability',
+                lambda *a, **b: {'Cmd': True})
+    @mock.patch.object(podcollection, 'change_pv_size')
+    def test_apply_edit_change_volume(self, change_pv_size):
+        volumes_public = [
+            {
+                'persistentDisk': {
+                    'pdName': 'mysql-persistent-storage',
+                    'pdSize': 2
+                },
+                'name': 'mysql-persistent-storage'
+
+            },
+            {
+                'persistentDisk': {
+                    'pdName': 'wordpress-persistent-storage',
+                    'pdSize': 1
+                },
+                'name': 'wordpress-persistent-storage'
+            }]
+
+        volumes = [
+            {
+                "name": "pd1",
+                "annotation": {
+                    "localStorage": {
+                        "path": "/var/lib/kuberdock/storage/3/pd1",
+                        "name": "mysql-persistent-storage",
+                        "size": 2
+                    }
+                }
+            },
+            {
+                "name": "pd2",
+                "annotation": {
+                    "localStorage": {
+                        "path": "/var/lib/kuberdock/storage/3/pd2",
+                        "name": "wordpress-persistent-storage",
+                        "size": 1
+                    }
+                }
+            }
+        ]
+
+        self.fixtures.persistent_disk(
+            name='mysql-persistent-storage',
+            drive_name='3/mysql-persistent-storage',
+            owner_id=self.db_pod.owner.id,
+            size=2
+        )
+
+        pd2 = self.fixtures.persistent_disk(
+            name='wordpress-persistent-storage',
+            drive_name='3/wordpress-persistent-storage',
+            owner_id=self.db_pod.owner.id,
+            size=1
+        )
+        pd3 = self.fixtures.persistent_disk(
+            name='added_exists_disk',
+            drive_name='3/added_exists_disk',
+            owner_id=self.db_pod.owner.id,
+            size=1
+        )
+
+        db.session.commit()
+
+        edited_volumes_public = copy.deepcopy(volumes_public)
+        edited_volumes = copy.deepcopy(volumes)
+
+        edited_volumes_public[1]['persistentDisk']['pdSize'] = 2
+        edited_volumes[1]["annotation"]["localStorage"]['size'] = 2
+
+        edited_volumes_public.append({
+            'persistentDisk': {
+                'pdName': 'added_exists_disk',
+                'pdSize': 3
+            },
+            'name': 'wordpress-persistent-storage'
+        })
+
+        edited_volumes.append({
+            "name": "pd1",
+            "annotation": {
+                "localStorage": {
+                    "path": "/var/lib/kuberdock/storage/3/pd3",
+                    "name": "added_exists_disk",
+                    "size": 3
+                }
+            }
+        })
+
+        edited = dict(self.edited,
+                      namespace='024ab4aa-8457-478d-8d4a-5007d70a2ff9',
+                      volumes=edited_volumes,
+                      volumes_public=edited_volumes_public)
+
+        config = dict(
+            self.db_pod.get_dbconfig(), id=self.db_pod.id,
+            name=self.db_pod.name, owner=self.db_pod.owner,
+            kube_type=self.db_pod.kube_id, edited_config=edited,
+            namespace='024ab4aa-8457-478d-8d4a-5007d70a2ff9',
+            volumes=volumes,
+            volumes_public=volumes_public,
+            status='running'
+        )
+
+        orig_pod = podcollection.Pod(config)
+        self.db_pod.set_dbconfig(config)
+        self.podcollection._apply_edit(orig_pod, self.db_pod, config)
+        self.assertEqual(change_pv_size.call_count, 2)
+        change_pv_size.assert_has_calls([
+            mock.call(pd2.id, 2, update_stat=False),
+            mock.call(pd3.id, 3, update_stat=False),
+        ])
 
 
 if __name__ == '__main__':

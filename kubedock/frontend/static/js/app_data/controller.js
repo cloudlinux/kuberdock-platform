@@ -1435,7 +1435,7 @@ define([
                                     {button: false});
                                 layoutView.breadcrumb.show(breadcrumbsLayout);
                                 breadcrumbsLayout.subnets.show(
-                                    new Breadcrumbs.Text({text: 'DNS names'}));
+                                    new Breadcrumbs.Text({text: 'Access endpoints'}));
                                 breadcrumbsLayout.controls.show(breadcrumbsControls);
                                 var networkModel = new Model.NetworkModel({id: 'aws'});
                                 networkModel.fetch().fail(utils.notifyWindow)
@@ -1534,7 +1534,7 @@ define([
                                                 ipPoolMode: ipPoolMode
                                             });
                                     layoutView.main.show(view);
-                                    
+
                                     layoutView.pager.show(new Pager.PaginatorView({view: view}));
                                 });
                         });

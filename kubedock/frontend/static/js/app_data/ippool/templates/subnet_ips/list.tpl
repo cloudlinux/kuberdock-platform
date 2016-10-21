@@ -9,7 +9,7 @@
     <thead>
         <tr>
             <% if (isAWS){ %>
-            <th>DNS names in use</th>
+            <th>Service address in use</th>
             <th>Username</th>
             <th>Pod</th>
             <% } else { %>

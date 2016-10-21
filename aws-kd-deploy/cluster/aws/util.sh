@@ -1037,6 +1037,7 @@ function kube-up {
     detect-nodes
     pre-deploy-hook
     deploy-master
+    pre-deploy-node-hook
     deploy-nodes
     post-deploy-hook
   fi
@@ -1076,6 +1077,25 @@ function post-deploy-hook(){
       exit 1
     fi
   fi
+}
+
+function pre-deploy-node-hook(){
+    local script=${PRE_NODE_DEPLOY_SCRIPT:-}
+    if [ -z $script ]; then
+      echo "No pre node deploy script defined"
+    else
+      for (( i=0; i<${#NODE_NAMES[@]}; i++)); do
+        NODE_HOSTNAME=$(ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" "${SSH_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" hostname -f)
+        echo "Upload and run post deploy script on ${NODE_HOSTNAME}"
+        scp -v -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" $script "${SSH_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}":~/
+        local run=$(basename $script)
+        ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "stty raw -echo; chmod +x ~/$run && ./$run | cat; test ${PIPESTATUS[0]} -eq 0" < <(cat) 2>"$LOG"
+        if [ $? -ne 0 ]; then
+          echo "ERROR: Post deploy script on ${NODE_HOSTNAME} finish with $? error code"
+          exit 1
+        fi
+      done
+    fi
 }
 
 function deploy-master(){

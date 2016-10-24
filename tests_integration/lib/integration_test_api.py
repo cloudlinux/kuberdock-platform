@@ -569,9 +569,6 @@ class PodList(object):
         if wait_ports:
             pod.wait_for_ports()
         if healthcheck:
-            LOG.info("Waiting 15 sec. Needed to starting application"
-                     " correctly")
-            time.sleep(15)
             pod.healthcheck()
 
         return pod

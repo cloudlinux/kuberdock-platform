@@ -13,7 +13,7 @@ from tests_integration.lib.exceptions import StatusWaitException, \
     IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
 from tests_integration.lib.integration_test_utils import \
     assert_eq, assert_in, kube_type_to_int, wait_net_port, \
-    retry, kube_type_to_str, get_rnd_low_string
+    retry, kube_type_to_str, get_rnd_low_string, all_subclasses
 
 DEFAULT_WAIT_POD_TIMEOUT = 10 * 60
 
@@ -27,16 +27,35 @@ class RESTMixin(object):
     # Expectations:
     # self.public_ip
 
-    def do_GET(self, scheme="http", path='/'):
-        url = '{0}://{1}{2}'.format(scheme, self.public_ip, path)
+    def do_GET(self, scheme="http", path='/', port=None, timeout=5):
+        if port:
+            url = '{0}://{1}:{2}{3}'.format(scheme, self.public_ip, port, path)
+        else:
+            url = '{0}://{1}{2}'.format(scheme, self.public_ip, path)
         LOG.debug("Issuing GET to {0}".format(url))
-        req = urllib2.urlopen(url)
+        req = urllib2.urlopen(url, timeout=timeout)
         res = unicode(req.read(), 'utf-8')
         LOG.debug(u"Response:\n{0}".format(res))
         return res
 
     def do_POST(self, path='/', headers=None, body=""):
         pass
+
+    def wait_http_resp(self, scheme="http", path='/', port=None, code=200,
+                       timeout=3, tries=60, internal=3):
+        if port:
+            url = '{0}://{1}:{2}{3}'.format(scheme, self.public_ip, port, path)
+        else:
+            url = '{0}://{1}{2}'.format(scheme, self.public_ip, path)
+        LOG.debug('Expecting for response code {code} on url {url}, '
+                  'total retries: {tries}'.format(
+                      code=code, url=url, tries=tries))
+
+        def check(*args, **kwargs):
+            req = urllib2.urlopen(url, timeout=timeout)
+            assert req.code == code
+
+        retry(check, tries=tries, internal=internal)
 
 
 class KDPod(RESTMixin):
@@ -69,8 +88,8 @@ class KDPod(RESTMixin):
     def ports(self):
         def _get_ports(containers):
             all_ports = itertools.chain.from_iterable(
-                  c['ports'] for c in containers if c.get('ports'))
-            return [port['containerPort']
+                c['ports'] for c in containers if c.get('ports'))
+            return [port.get('hostPort') or port.get('containerPort')
                     for port in all_ports if port.get('isPublic') is True]
 
         spec = self.get_spec()
@@ -207,7 +226,7 @@ class KDPod(RESTMixin):
 
     @classmethod
     def _get_pod_class(cls, image):
-        pod_classes = {c.SRC: c for c in cls.__subclasses__()}
+        pod_classes = {c.SRC: c for c in all_subclasses(cls)}
         return pod_classes.get(image, cls)
 
     def command(self, command):
@@ -249,7 +268,8 @@ class KDPod(RESTMixin):
         # Currently all ports can be open by setting open_all_ports, or some
         # ports can be open by setting ports_to_open while creating a pod
         if not (self.open_all_ports or self.ports):
-            raise Exception("Cannot wait for ports on a pod with no ports open")
+            raise Exception("Cannot wait for ports on a pod with no"
+                            " ports open")
         ports = ports or self.ports
         self._wait_for_ports(ports, timeout)
 

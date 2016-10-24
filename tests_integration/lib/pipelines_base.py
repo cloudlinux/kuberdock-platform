@@ -9,7 +9,8 @@ from tests_integration.lib.exceptions import PipelineNotFound, \
     NonZeroRetCodeException, ClusterUpgradeError, VmCreationError
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.integration_test_utils import NebulaIPPool, \
-    merge_dicts, get_test_full_name, center_text_message, suppress
+    merge_dicts, get_test_full_name, center_text_message, suppress, \
+    all_subclasses
 
 PIPELINES_PATH = '.pipelines/'
 INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
@@ -194,10 +195,6 @@ class Pipeline(object):
         Fabric method for creating a specific pipeline class instance
         depending on a given pipe's full name (name_threadID)
         """
-
-        def all_subclasses(c):
-            return c.__subclasses__() + \
-                   [g for s in c.__subclasses__() for g in all_subclasses(s)]
 
         available = {
             c.NAME: c for c in all_subclasses(cls) if hasattr(c, 'NAME')}

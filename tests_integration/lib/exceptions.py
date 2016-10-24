@@ -75,7 +75,7 @@ class ServicePodsNotReady(Exception):
     pass
 
 
-class VmCreationError(Exception):
+class VmCreateError(Exception):
     pass
 
 

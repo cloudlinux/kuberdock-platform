@@ -14,7 +14,7 @@ import vagrant
 from ipaddress import IPv4Network
 
 from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
-    VmCreationError, VmProvisionError
+    VmCreateError, VmProvisionError
 from tests_integration.lib.exceptions import DiskNotFound
 from tests_integration.lib.integration_test_utils import \
     ssh_exec, assert_eq, assert_in, merge_dicts, retry, \
@@ -174,18 +174,18 @@ class KDIntegrationTestAPI(object):
                       provider=provider, no_provision=True)
                 self.created_at = datetime.utcnow()
             except subprocess.CalledProcessError:
-                raise VmCreationError('Failed to create VMs')
+                raise VmCreateError('Failed to create VMs in OpenNebula')
 
             try:
                 self.vagrant.provision()
             except subprocess.CalledProcessError:
-                raise VmProvisionError('Failed to provision VMs')
+                raise VmProvisionError('Failed Ansible provision')
         else:
             try:
                 self.vagrant.up(provider=provider, no_provision=True)
                 self.created_at = datetime.utcnow()
             except subprocess.CalledProcessError:
-                raise VmCreationError(
+                raise VmCreateError(
                     'Failed either to create or provision VMs')
 
     def upgrade(self, upgrade_to='latest', use_testing=False,

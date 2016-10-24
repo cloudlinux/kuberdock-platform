@@ -332,10 +332,12 @@ def set_pod_status(pod_id, status, send_update=False):
     if db_pod.status == POD_STATUSES.deleted:
         raise APIError('Not allowed to change "deleted" status.',
                        type='NotAllowedToChangeDeletedStatus')
-    if db_pod.unpaid:
-        db_pod.status = 'unpaid'
-    else:
-        db_pod.status = status
+    if status == POD_STATUSES.unpaid:
+        db_pod.unpaid = True
+    elif db_pod.unpaid and status == POD_STATUSES.stopped:
+        status = POD_STATUSES.unpaid
+    db_pod.status = status
+    db.session.flush()
     if send_update:
         utils.send_pod_status_update(db_pod.status, db_pod, 'MODIFIED')
 

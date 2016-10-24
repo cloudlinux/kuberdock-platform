@@ -1626,21 +1626,35 @@ define([
             var that = this;
             require(['app_data/public_ips/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
-                that.listenTo(layoutView, 'show', function(){
-                    var ipCollection = new Model.UserAddressCollection();
-                    layoutView.nav.show(navbar);
-                    ipCollection.fetch({
-                        wait: true,
-                        success: function(collection, resp, opts){
-                            layoutView.main.show(new Views.PublicIPsView({collection: collection}));
-                        },
-                        error: function(model, response){
-                            utils.notifyWindow(response);
-                        },
+                    navbar = new Menu.NavList({collection: App.menuCollection}),
+                    breadcrumbsLayout = new Breadcrumbs.Layout(
+                        {points: ['name']}
+                    ),
+                    ipCollection = new Model.UserAddressCollection();
+
+                App.getSetupInfo().done(function(setupInfo){
+                    that.listenTo(layoutView, 'show', function(){
+                        layoutView.nav.show(navbar);
+                        layoutView.breadcrumbs.show(breadcrumbsLayout);
+                        breadcrumbsLayout.name.show(
+                            new Breadcrumbs.Text(
+                                {text: setupInfo.AWS ? 'Access endpoints' : 'Public IPs'}
+                            ));
+                        ipCollection.fetch({
+                            wait: true,
+                            success: function(collection, resp, opts){
+                                layoutView.main.show(
+                                    new Views.PublicIPsView({collection: collection})
+                                );
+                            },
+                            error: function(model, response){
+                                utils.notifyWindow(response);
+                            },
+                        });
                     });
+                    App.contents.show(layoutView);
                 });
-                App.contents.show(layoutView);
+
             });
         },
 

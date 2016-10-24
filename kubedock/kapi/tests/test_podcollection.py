@@ -860,7 +860,61 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         self.assertEqual(pod.containers[0]['state'], POD_STATUSES.running)
         self.assertEqual(res, pod.as_dict.return_value)
 
-    # TODO: "Pod is already stopped" test
+    @mock.patch.object(podcollection.PersistentDisk, 'free')
+    @mock.patch.object(podcollection, 'DBPod')
+    @mock.patch.object(podcollection, 'scale_replicationcontroller')
+    @mock.patch.object(podcollection, 'db')
+    @mock.patch.object(podcollection.PodCollection, '_get_by_id')
+    @mock.patch.object(podcollection, 'wait_pod_status')
+    def test_pod_stop_unpaid(self, wait_pod_status, _get_by_id, mock_db,
+                             scale_replicationcontroller,
+                             dbpod_mock, free_pd_mock):
+        """
+        Test stop_unpaid in usual case
+        """
+        pod = fake_pod(
+            id='119fd339-f12c-4be3-bfa1-2e82001d0811',
+            use_parents=(mock.Mock,),
+            status=POD_STATUSES.running,
+            namespace="user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094",
+            containers=[{
+                'name': '2dbgdc',
+                'state': POD_STATUSES.running,
+            }]
+        )
+        pod2 = fake_pod(
+            id='119fd339-f12c-4be3-bfa1-2e82001d0811',
+            use_parents=(mock.Mock,),
+            status=POD_STATUSES.stopped,
+            namespace="user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094",
+            containers=[{
+                'name': '2dbgdc',
+                'state': POD_STATUSES.stopped,
+            }]
+        )
+        _get_by_id.return_value = pod2
+
+        # Actual call
+        self.pod_collection.stop_unpaid(pod, block=True)
+
+        pod.set_status.assert_called_once_with(
+            POD_STATUSES.stopping, send_update=True)
+
+        pod2.set_status.assert_called_once_with(
+            POD_STATUSES.unpaid, send_update=True)
+
+        scale_replicationcontroller.assert_called_once_with(pod.id)
+
+        free_pd_mock.assert_called_once_with(pod.id)
+
+        wait_pod_status.assert_called_once_with(
+            pod.id, POD_STATUSES.stopped,
+            error_message=(
+                u'During restart, Pod "{0}" did not become '
+                u'stopped after a given timeout. It may become '
+                u'later.'.format(pod.name)))
+
+        # TODO: "Pod is already stopped" test
 
 
 class TestPodCollectionPreprocessNewPod(DBTestCase, TestCaseMixin):

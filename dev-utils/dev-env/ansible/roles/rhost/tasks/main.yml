@@ -7,6 +7,30 @@
   copy: src="{{ host_proj_root }}/kuberdock-cli/kcli-deploy.sh" dest="{{ rhost_deploy_path }}"
 
 - name: Deploy kcli on rhost
-  shell: echo "{{ admin_password }}" | bash kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" {{ add_testing_repo }} chdir="{{ rhost_deploy_path }}"
+  shell: KD_PASSWORD=admin KD_USER=admin bash {{ rhost_deploy_path }}/kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" {{ add_testing_repo }}
+  register: rhost_deploy_result
+  ignore_errors: True
   tags:
-      - deploy
+      - rhost-deploy
+
+- name: Fetching kcli-deploy log
+  fetch: src=/var/log/kuberdock_client_deploy.log dest=/tmp/kuberdock_client_deploy.log fail_on_missing=yes flat=yes
+  when: rhost_deploy_result|failed
+  tags:
+      - rhost-deploy
+
+- set_fact:
+    deploy_log: "{{ lookup('file', '/tmp/kuberdock_client_deploy.log').split('\n') }}"
+  when: rhost_deploy_result|failed
+  tags:
+      - rhost-deploy
+
+- debug: var=deploy_log
+  when: rhost_deploy_result|failed
+  tags:
+    - rhost-deploy
+
+- fail: msg="=== rhost deploy (kcli-deploy.sh) failed ==="
+  when: rhost_deploy_result|failed
+  tags:
+    - rhost-deploy

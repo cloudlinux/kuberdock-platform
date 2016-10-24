@@ -260,6 +260,7 @@ class Services(object):
 
 LOCAL_SVC_TYPE = 'local'
 
+
 class LocalService(Services):
 
     def __init__(self):
@@ -291,7 +292,7 @@ class LocalService(Services):
 
     def get_clusterIP_all(self):
         svc = self.get_all()
-        return [self.get_clusterIP(s) for s  in svc]
+        return [self.get_clusterIP(s) for s in svc]
 
     def get_clusterIP_by_pods(self, pods):
         svc = self.get_by_pods(pods)
@@ -320,6 +321,7 @@ def check_pod_name(name, owner=None):
                        status_code=409)
 
 
+@utils.atomic()
 def set_pod_status(pod_id, status, send_update=False):
     # TODO refactor to dbPod level + separate event send
     db_pod = db.session.query(Pod).get(pod_id)
@@ -330,10 +332,12 @@ def set_pod_status(pod_id, status, send_update=False):
     if db_pod.status == POD_STATUSES.deleted:
         raise APIError('Not allowed to change "deleted" status.',
                        type='NotAllowedToChangeDeletedStatus')
-    db_pod.status = status
-    db.session.commit()
+    if db_pod.unpaid:
+        db_pod.status = 'unpaid'
+    else:
+        db_pod.status = status
     if send_update:
-        utils.send_pod_status_update(status, db_pod, 'MODIFIED')
+        utils.send_pod_status_update(db_pod.status, db_pod, 'MODIFIED')
 
 
 def mark_pod_as_deleted(pod_id):

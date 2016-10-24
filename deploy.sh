@@ -1101,6 +1101,18 @@ KD_MASTER_ROLE=kdmaster
 
 MASTER_TUNNEL_IP=$(etcdctl get /calico/v1/host/$HOSTNAME/config/IpInIpTunnelAddr)
 
+
+# This next tier policy is needed for traffic that will come from pods
+# and is not match any deny rules. Those deny rule will be created for each
+# node when node is added.
+KD_NODES_NEXT_TIER_FOR_PODS='{
+    "id": "kd-nodes-dont-drop-pods-traffic",
+    "selector": "has(kuberdock-pod-uid)",
+    "order": 50,
+    "inbound_rules": [{"action": "next-tier"}],
+    "outbound_rules": [{"action": "next-tier"}]
+}'
+
 KD_NODES_POLICY='{
     "id": "kd-nodes-public",
     "selector": "role==\"'$KD_HOST_ROLE'\"",
@@ -1126,6 +1138,9 @@ KD_NODES_POLICY='{
 check_json "$KD_NODES_POLICY"
 do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-nodes/metadata '{"order": '$KD_NODES_POLICY_ORDER'}'
 do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-nodes/policy/kuberdock-nodes "$KD_NODES_POLICY"
+
+check_json "$KD_NODES_NEXT_TIER_FOR_PODS"
+do_and_log etcdctl_wpr set /calico/v1/policy/tier/kuberdock-nodes/policy/pods-next-tier "$KD_NODES_NEXT_TIER_FOR_PODS"
 
 # Master host isolation
 # 22 - ssh

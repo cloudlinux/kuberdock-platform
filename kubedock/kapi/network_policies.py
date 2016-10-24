@@ -11,7 +11,7 @@ from .. import settings
 from ..settings import (
     ELASTICSEARCH_REST_PORT,
     ELASTICSEARCH_PUBLISH_PORT,
-    MASTER_IP, KD_NODE_HOST_ENDPOINT_ROLE, CALICO_NETWORK
+    MASTER_IP, KD_NODE_HOST_ENDPOINT_ROLE
 )
 
 PUBLIC_PORT_POLICY_NAME = 'public'
@@ -179,20 +179,37 @@ def allow_public_ports_policy(ports, owner):
 
 
 def get_node_host_endpoint_policy(node_hostname, node_ip):
-    """Returns policy for a node's host endpoint.
-    Allows all traffic from this node_ip.
+    """Returns polices for a node's host endpoint.
+    Allows all traffic from this node_ip. Forbids all traffic from pods to
+    node ip.
     """
-    policy = {
+    # This deny rule will work only for one node, so all such policies
+    # for nodes must be checked. Also there must be next policy (next by
+    # order) to jump to next-tier for selector 'has(kuberdock-pod-uid)'.
+    # Without this rule traffic will be dropped by default in this tier.
+    pods_forbid_policy = {
+        "id": "isolate-from-pods-" + node_hostname,
+        "selector": 'has(kuberdock-pod-uid)',
+        "order": 10,
+        "inbound_rules": [
+        ],
+        "outbound_rules": [
+            {
+                "dst_net": "{}/32".format(node_ip),
+                "action": "deny"
+            }
+        ]
+    }
+    node_allow_policy = {
         "id": "kd-nodes-" + node_hostname,
         "selector": 'role=="{}"'.format(KD_NODE_HOST_ENDPOINT_ROLE),
         "order": 110,
         "inbound_rules": [
             {
                 "src_net": "{}/32".format(node_ip),
-                "dst_net": CALICO_NETWORK,
                 "action": "allow"
             },
         ],
         "outbound_rules": []
     }
-    return policy
+    return [pods_forbid_policy, node_allow_policy]

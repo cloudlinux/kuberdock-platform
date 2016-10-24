@@ -551,6 +551,14 @@ def _master_network_policy(calico_network):
     KD_HOST_ROLE = 'kdnode'
     MASTER_TUNNEL_IP = get_calico_ip_tunnel_address()
 
+    KD_NODES_NEXT_TIER_FOR_PODS = {
+        "id": "kd-nodes-dont-drop-pods-traffic",
+        "selector": "has(kuberdock-pod-uid)",
+        "order": 50,
+        "inbound_rules": [{"action": "next-tier"}],
+        "outbound_rules": [{"action": "next-tier"}]
+    }
+
     KD_NODES_POLICY = {
         "id": "kd-nodes-public",
         "selector": 'role=="{}"'.format(KD_HOST_ROLE),
@@ -576,6 +584,11 @@ def _master_network_policy(calico_network):
         "etcdctl set "
         "/calico/v1/policy/tier/kuberdock-nodes/policy/kuberdock-nodes '{}'"
         .format(json.dumps(KD_NODES_POLICY))
+    )
+    helpers.local(
+        "etcdctl set "
+        "/calico/v1/policy/tier/kuberdock-nodes/policy/pods-next-tier '{}'"
+        .format(json.dumps(KD_NODES_NEXT_TIER_FOR_PODS))
     )
 
     KD_MASTER_ROLE = 'kdmaster'
@@ -860,10 +873,6 @@ def upgrade(upd, with_testing, *args, **kwargs):
     with open(KUBERDOCK_MAIN_CONFIG, 'a') as f:
         f.write("CALICO_NETWORK = {}\n".format(calico_network))
     settings.CALICO_NETWORK = calico_network
-    # Monkey patch the module as soon as there is already imported this
-    # setting and it will be used when we call `complete_calico_node_config`
-    # function in post upgrade hook.
-    network_policies.CALICO_NETWORK = calico_network
     _update_00176_upgrade(upd)
     _update_00185_upgrade()
     _update_00186_upgrade()

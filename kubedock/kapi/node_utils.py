@@ -591,12 +591,21 @@ def drop_endpoint_traffic_to_node(node_hostname):
     )
 
 
+# Total number of nodes policies
+# Each node policy path is
+# ETCD_NETWORK_POLICY_NODES + <number> + '-' + <node name>
+NODES_POLICY_COUNT = 2
+
 def add_permissions_to_node_host_endpoint(node_hostname, node_ipv4):
     """Adds permissions to host endpoints.
     We allow here inbound traffic from host endpoint interface in KD cluster.
     """
-    policy = get_node_host_endpoint_policy(node_hostname, node_ipv4)
-    Etcd(ETCD_NETWORK_POLICY_NODES).put(node_hostname, value=policy)
+    policies = get_node_host_endpoint_policy(node_hostname, node_ipv4)
+    for i in range(NODES_POLICY_COUNT):
+        Etcd(ETCD_NETWORK_POLICY_NODES).put(
+            '{}-{}'.format(i, node_hostname),
+            value=policies[i]
+        )
 
 
 def complete_calico_node_config(node_hostname, node_ipv4):
@@ -614,4 +623,7 @@ def complete_calico_node_config(node_hostname, node_ipv4):
 def cleanup_node_network_policies(node_hostname):
     """Cleanup for calico node's policies after node deletion.
     """
-    Etcd(ETCD_NETWORK_POLICY_NODES).delete(node_hostname)
+    for i in range(NODES_POLICY_COUNT):
+        Etcd(ETCD_NETWORK_POLICY_NODES).delete(
+            '{}-{}'.format(i, node_hostname)
+        )

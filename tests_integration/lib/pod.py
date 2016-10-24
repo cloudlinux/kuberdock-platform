@@ -15,7 +15,7 @@ from tests_integration.lib.integration_test_utils import \
     assert_eq, assert_in, kube_type_to_int, wait_net_port, \
     retry, kube_type_to_str, get_rnd_low_string, all_subclasses
 
-DEFAULT_WAIT_POD_TIMEOUT = 10 * 60
+DEFAULT_WAIT_PORTS_TIMEOUT = 5 * 60
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -261,7 +261,7 @@ class KDPod(RESTMixin):
             u"pods update --name {} '{}'".format(
                 self.escaped_name, json.dumps(data), user=self.owner))
 
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_PORTS_TIMEOUT):
         # NOTE: we still don't know if this is in a routable network, so
         # open_all_ports does not exactly mean wait_for_ports pass.
         # But for sure it does not make sense to wait if no ports open.
@@ -421,7 +421,7 @@ class KDPod(RESTMixin):
 class _NginxPod(KDPod):
     SRC = "nginx"
 
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_PORTS_TIMEOUT):
         # Though nginx also has 443, it is not turned on in a clean image.
         ports = ports or [80]
         self._wait_for_ports(ports, timeout)

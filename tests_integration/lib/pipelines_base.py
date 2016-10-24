@@ -252,19 +252,6 @@ def _wrap_test_log(test):
 class UpgradedPipelineMixin(object):
     ENV = {
         'KD_INSTALL_TYPE': 'release',
-        # TODO: Remove ippool tag as soon as create-ip-pool manage.py
-        # command is updated in release
-        'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,ippool,route',
+        'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',
         'KD_LICENSE': '../../../../../../tests_integration/assets/fake_license.json',
     }
-
-    def post_create_hook(self):
-        super(UpgradedPipelineMixin, self).post_create_hook()
-        try:
-            self.cluster.upgrade('/tmp/prebuilt_rpms/kuberdock.rpm',
-                                 use_testing=True, skip_healthcheck=True)
-        except NonZeroRetCodeException:
-            raise ClusterUpgradeError('Could not upgrade cluster')
-        # TODO: This is needed because we skip IP pool creation during
-        # vagrant provisioning. See TODO in the ENV
-        self.cluster.recreate_routable_ip_pool()

@@ -1,3 +1,7 @@
+class VagrantIsAlreadyUpException(Exception):
+    pass
+
+
 class PublicPortWaitTimeoutException(Exception):
     pass
 
@@ -75,7 +79,7 @@ class ServicePodsNotReady(Exception):
     pass
 
 
-class VmCreationError(Exception):
+class VmCreateError(Exception):
     pass
 
 

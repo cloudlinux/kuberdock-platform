@@ -1,3 +1,4 @@
+import itertools
 import json
 import logging
 import os
@@ -6,29 +7,31 @@ import subprocess
 import sys
 import time
 import urllib2
-import itertools
-
 from collections import namedtuple
 from contextlib import contextmanager
 from datetime import datetime
 
-import paramiko
-import vagrant
-import redis
 import memcache
+import paramiko
+import redis
+import vagrant
 from ipaddress import IPv4Network
 
-# from pg import DB
-
 from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
-    VmCreationError, VmProvisionError
+    VmCreateError, VmProvisionError, NonZeroRetCodeException, \
+    ClusterUpgradeError
+from tests_integration.lib.exceptions import DiskNotFound, \
+    VagrantIsAlreadyUpException
 from tests_integration.lib.exceptions import StatusWaitException, \
-    UnexpectedKubectlResponse, DiskNotFound, PodIsNotRunning, \
+    UnexpectedKubectlResponse, PodIsNotRunning, \
     IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
 from tests_integration.lib.integration_test_utils import \
-    ssh_exec, assert_eq, assert_in, kube_type_to_int, wait_net_port, \
-    merge_dicts, retry, kube_type_to_str, escape_command_arg, log_dict, \
-    get_rnd_low_string
+    kube_type_to_int, wait_net_port, \
+    kube_type_to_str
+from tests_integration.lib.integration_test_utils import \
+    ssh_exec, assert_eq, assert_in, merge_dicts, retry, \
+    escape_command_arg, log_dict, get_rnd_low_string
+from tests_integration.lib.timing import log_timing, log_timing_ctx
 
 OPENNEBULA = "opennebula"
 VIRTUALBOX = "virtualbox"
@@ -53,45 +56,63 @@ class KDIntegrationTestAPI(object):
         API client for interaction with kuberdock cluster
 
         :param override_envs: a dictionary of environment variables values
-        to override. Useful when your integration test requires another
-        cluster setup
+        to override. Useful when your integration test requires additional
+        env variables or override ones taken from OS env.
         """
-        defaults = {
-            "VAGRANT_CWD": "dev-utils/dev-env/",
-            "KD_LICENSE": "patch",
-            "VAGRANT_NO_PARALLEL": "1"
-        }
-
-        env_vars = [
-            "DOCKER_TLS_VERIFY",
-            "DOCKER_HOST",
-            "DOCKER_CERT_PATH",
-            "DOCKER_MACHINE_NAME",
+        take_from_env = [
             "HOME",
             "PATH",
             "SSH_AUTH_SOCK",
+
+            "DOCKER_TLS_VERIFY",
+            "DOCKER_HOST",
+            "DOCKER_CERT_PATH",
+
+            "VAGRANT_CWD",
+            "VAGRANT_NO_PARALLEL",
             "VAGRANT_DOTFILE_PATH",
-            "KD_ONE_PRIVATE_KEY",
+
+            "ANSIBLE_CALLBACK_WHITELIST",
+
+            "KD_ONE_URL",
             "KD_ONE_USERNAME",
             "KD_ONE_PASSWORD",
+            "KD_ONE_PRIVATE_KEY",
+
+            "KD_MASTER_MEMORY",
+            "KD_MASTER_CPUS",
+            "KD_NODE_MEMORY",
+            "KD_NODE_CPUS",
+            "KD_NODES_COUNT",
+            "KD_NODE_TYPES",
+            "KD_NEBULA_TEMPLATE_ID",
+
+            "KD_RHOSTS_COUNT",
+            "KD_NEBULA_RHOST_TEMPLATE_ID",
+
             "KD_ONE_PUB_IPS",
+            "KD_LICENSE",
             "KD_INSTALL_TYPE",
+            "KD_TESTING_REPO",
+            "KD_FIXED_IP_POOLS",
+            "KD_TIMEZONE"
+
             "KD_CEPH",
             "KD_CEPH_USER",
             "KD_CEPH_CONFIG",
             "KD_CEPH_USER_KEYRING",
             "KD_PD_NAMESPACE",
-            "KD_FiXED_IP_POOLS",
-            "KD_NEBULA_TEMPLATE_ID",
-            "KD_NEBULA_RHOST_TEMPLATE_ID"
-            "KD_NODE_TYPES",
+
+            "KD_INSTALL_PLESK",
+            "KD_PLESK_LICENSE",
         ]
+        kd_env = {e: os.environ.get(e)
+                  for e in take_from_env if os.environ.get(e)}
 
         if override_envs is None:
             override_envs = {}
 
-        kd_env = {e: os.environ.get(e) for e in env_vars if os.environ.get(e)}
-        kd_env = merge_dicts(defaults, kd_env, override_envs)
+        kd_env = merge_dicts(kd_env, override_envs)
 
         self.kuberdock_root = '/var/opt/kuberdock'
         self.vagrant = vagrant.Vagrant(quiet_stdout=False, quiet_stderr=False,
@@ -134,10 +155,11 @@ class KDIntegrationTestAPI(object):
             # reason why docker+vbox is not supported
             key_file = self.vagrant.conf()["IdentityFile"]
 
-        ssh.connect(self.vagrant.hostname(host),
-                    port=int(self.vagrant.port(host)),
-                    username="root",
-                    key_filename=key_file)
+        with log_timing_ctx("ssh.connect({})".format(host)):
+            ssh.connect(self.vagrant.hostname(host),
+                        port=int(self.vagrant.port(host)),
+                        username="root",
+                        key_filename=key_file)
 
         self._ssh_connections[host] = ssh
         return ssh
@@ -179,24 +201,29 @@ class KDIntegrationTestAPI(object):
 
         if provider == OPENNEBULA:
             try:
-                retry(self.vagrant.up, tries=3, interval=15,
-                      provider=provider, no_provision=True)
+                with log_timing_ctx("vagrant up --no-provision"):
+                    retry(self.vagrant.up, tries=3, interval=15,
+                          provider=provider, no_provision=True)
                 self.created_at = datetime.utcnow()
+                self._log_vm_ips()
             except subprocess.CalledProcessError:
-                raise VmCreationError('Failed to create VMs')
+                raise VmCreateError('Failed to create VMs in OpenNebula')
 
             try:
-                self.vagrant.provision()
+                with log_timing_ctx("vagrant provision"):
+                    self.vagrant.provision()
             except subprocess.CalledProcessError:
-                raise VmProvisionError('Failed to provision VMs')
+                raise VmProvisionError('Failed Ansible provision')
         else:
             try:
-                self.vagrant.up(provider=provider, no_provision=True)
+                with log_timing_ctx("vagrant up (with provision)"):
+                    self.vagrant.up(provider=provider)
                 self.created_at = datetime.utcnow()
             except subprocess.CalledProcessError:
-                raise VmCreationError(
+                raise VmCreateError(
                     'Failed either to create or provision VMs')
 
+    @log_timing
     def upgrade(self, upgrade_to='latest', use_testing=False,
                 skip_healthcheck=False):
         args = ''
@@ -206,9 +233,16 @@ class KDIntegrationTestAPI(object):
             args += " --local {0}".format(upgrade_to)
         if skip_healthcheck:
             args += ' --skip-health-check'
-        self.ssh_exec(
-            "master", "yes | /usr/bin/kuberdock-upgrade {}".format(args))
+        try:
+            self.ssh_exec("master",
+                          "yes | /usr/bin/kuberdock-upgrade {}".format(args))
+        except NonZeroRetCodeException:
+            # This is needed because NonZeroRetCode will carry whole upgrade
+            # log in stdout, which is huge. We replace it with short message
+            # while full log is still printed by ssh_exec logging
+            raise ClusterUpgradeError('kuberdock-upgrade non-zero retcode')
 
+    @log_timing
     def destroy(self):
         self.vagrant.destroy()
 
@@ -226,11 +260,13 @@ class KDIntegrationTestAPI(object):
         finally:
             self.power_on(host)
 
+    @log_timing
     def power_off(self, host):
         vm_name = self.vm_names[host]
         LOG.debug("VM Power Off: '{}'".format(vm_name))
         self.vagrant.halt(vm_name=vm_name)
 
+    @log_timing
     def power_on(self, host):
         vm_name = self.vm_names[host]
         LOG.debug("VM Power On: '{}'".format(vm_name))
@@ -245,6 +281,7 @@ class KDIntegrationTestAPI(object):
     def assert_pods_number(self, number):
         assert_eq(len(self.pods.filter_by_owner()), number)
 
+    @log_timing
     def preload_docker_image(self, image, node=None):
         """
         Pulls given docker image in advance either for a specified node or
@@ -260,10 +297,12 @@ class KDIntegrationTestAPI(object):
         """
 
         nodes = node if node is not None else self.node_names
+        # TODO parallel execution on all nodes
         for node in nodes:
             retry(self.docker, interval=5, tries=3,
                   cmd='pull {}'.format(image), node=node)
 
+    @log_timing
     def wait_for_service_pods(self):
         def _check_service_pods():
             _, response, _ = self.kdctl(
@@ -274,6 +313,7 @@ class KDIntegrationTestAPI(object):
 
         retry(_check_service_pods, tries=40, interval=15)
 
+    @log_timing
     def healthcheck(self):
         # Not passing for now: AC-3199
         rc, _, _ = self.ssh_exec("master",
@@ -368,6 +408,12 @@ class KDIntegrationTestAPI(object):
 
     def _any_vm_is_running(self):
         return any(vm.state != "not_created" for vm in self.vagrant.status())
+
+    @log_timing
+    def _log_vm_ips(self):
+        for vm in self.vagrant.status():
+            LOG.debug("{} IP is: {}".format(
+                vm.name, self.vagrant.hostname(vm.name)))
 
     def _kcli_config_path(self, user):
         if user is not None:

@@ -90,7 +90,7 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # if set to “patch" - patched
 # if not set - not copied not patched
 # default: nothing
-# export KD_LICENSE=/path/to/your/license
+#export KD_LICENSE=/path/to/your/license
 
 # if set no wsgi will be started
 # default: 0

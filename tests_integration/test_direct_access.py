@@ -421,8 +421,13 @@ def _test_ssh_to_stopped_container(host, user, password):
 
     def _assert_container_stopped(cmd, password, container_id):
         out = _run_ssh_pexpect(cmd, password)
+        # Container is removed from docker after stopping. Sometimes this
+        # method is called before removing, sometimes - later. Therefore any
+        #  of messages "Container ... is not running" or "No such
+        # container..." is expected
         assert re.search(
-            r'Container {}.* is not running'.format(container_id), out)
+            r'(Container {0}.* is not running|'
+            r'No such container: {0})'.format(container_id), out)
 
     retry(_assert_container_stopped, cmd=cmd, password=password,
           container_id=user, tries=3, interval=1)

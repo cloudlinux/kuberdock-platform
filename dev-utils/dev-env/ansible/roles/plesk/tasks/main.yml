@@ -31,8 +31,8 @@
     - plesk bin license --install "{{ plesk_license_param }}" -not-check-limits 1
     - plesk bin license --retrieve
 
-- name: Download kcli deploy script
-  get_url: url="{{ kcli_deploy_script_url }}" dest=/tmp/kcli-deploy.sh
+- name: Copy kcli-deploy.sh to deploy directory on remote host (rhost)
+  copy: src="{{ host_proj_root }}/kuberdock-cli/kcli-deploy.sh" dest="{{ rhost_deploy_path }}"
 
 - name: Deploy kcli
   shell: KD_PASSWORD=admin KD_USER=admin bash /tmp/kcli-deploy.sh --testing --kuberdock "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}"

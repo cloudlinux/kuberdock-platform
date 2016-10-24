@@ -31,7 +31,6 @@ def setup_pv_test(cluster):
 
 
 @pipeline('pod_restore')
-@pipeline('pod_restore_upgraded')  # TODO: Drop in 1.4 release
 @hooks(setup=setup_non_pv_test)
 def test_restore_pod_from_cmd(cluster):
     """Test that pod can be restored from the cmd
@@ -48,7 +47,6 @@ def test_restore_pod_from_cmd(cluster):
 
 
 @pipeline('pod_restore')
-@pipeline('pod_restore_upgraded')  # TODO: Drop in 1.4 release
 @hooks(setup=setup_non_pv_test)
 def test_restore_from_file(cluster):
     """Test that pod without PVs can be restored from json-file.
@@ -61,9 +59,7 @@ def test_restore_from_file(cluster):
     cluster.assert_pods_number(1)
 
 
-# TODO FIXME AC-4715
-#@pipeline('pod_restore')
-#@pipeline('pod_restore_upgraded')  # TODO: Drop in 1.4 release
+@pipeline('pod_restore', skip_reason="FIXME in AC-4715")
 @hooks(setup=setup_pv_test)
 def test_pod_with_pv_restore(cluster):
     """Test that pod with PVs can be restored.

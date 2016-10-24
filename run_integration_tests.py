@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import threading
+import traceback
 from contextlib import closing
 from datetime import timedelta
 from threading import Thread
@@ -13,13 +14,13 @@ from colorama import Fore
 
 from tests_integration.lib import multilogger
 from tests_integration.lib.integration_test_runner import \
-    TestResultCollection, discover_integration_tests, format_exception, \
-    write_junit_xml
-from tests_integration.lib.integration_test_utils import get_test_full_name, \
+    TestResultCollection, discover_integration_tests, write_junit_xml
+from tests_integration.lib.integration_test_utils import get_func_fqn, \
     center_text_message, force_unicode
 from tests_integration.lib.pipelines import pipelines as \
     registered_pipelines
 from tests_integration.lib.pipelines_base import Pipeline
+from tests_integration.lib.timing import timing_ctx, stopwatch
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -52,32 +53,56 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         msg = force_unicode(msg)
         print_msg(u'{} -> {}\n'.format(pipeline_name, msg), color)
 
-    try:
-        pipeline = Pipeline.from_name(pipeline_name)
-        pipe_log('CREATING CLUSTER', Fore.MAGENTA)
-        pipeline.create()
-        pipe_log('CLUSTER CREATED', Fore.GREEN)
-    except Exception as e:
-        test_results.register_pipeline_error(pipeline_name, tests,
-                                             prettify_exception(e))
+    def pass_test(t):
+        test_name = get_func_fqn(t)
+        test_results.register_success(t, test_time, pipeline_name)
+        pipe_log(u'{} -> PASSED ({})'.format(test_name, test_time),
+                 Fore.GREEN)
 
-        msg = format_exception(sys.exc_info())
-        pipe_log(u'CLUSTER CREATION FAILED\n{}'.format(msg), Fore.RED)
+    def skip_test(t):
+        test_name = get_func_fqn(t)
+        reason = t.meta['skip_reason']
+        test_results.register_skip(t, pipeline_name, reason)
+        pipe_log(u'{} -> SKIPPED ({})'.format(test_name, reason),
+                 Fore.YELLOW)
+
+    def fail_test(t, error):
+        test_name = get_func_fqn(t)
+        test_results.register_failure(t, test_time, pipeline_name, error)
+        pipe_log(u'{} -> FAILED ({})\n{}'.format(test_name, test_time, error),
+                 Fore.RED)
+
+    if all(t.meta.get('skip_reason') for t in tests):
+        pipe_log('SKIPPING CLUSTER (has no active tests)', Fore.YELLOW)
+        for test in tests:
+            skip_test(test)
         return
 
-    for test in tests:
-        test_name = get_test_full_name(test)
-        pipe_log(u'{} -> STARTED'.format(test_name))
+    pipe_log('CREATING CLUSTER', Fore.MAGENTA)
+    pipeline = Pipeline.from_name(pipeline_name)
+    try:
+        with timing_ctx() as cluster_time:
+            pipeline.create()
+        pipe_log('CLUSTER CREATED ({})'.format(cluster_time), Fore.GREEN)
+    except Exception as e:
+        msg = prettify_exception(e)
+        test_results.register_pipeline_error(pipeline_name, tests, msg)
+        pipe_log(u'CLUSTER CREATION FAILED ({})\n{}'.format(cluster_time, msg),
+                 Fore.RED)
+        return
 
-        try:
-            pipeline.run_test(test)
-            test_results.register_success(test, pipeline_name)
-
-            pipe_log(u'{} -> PASSED'.format(test_name), Fore.GREEN)
-        except:
-            test_results.register_failure(test, pipeline_name)
-            msg = format_exception(sys.exc_info())
-            pipe_log(u'{} -> FAILED\n{}'.format(test_name, msg), Fore.RED)
+    with timing_ctx() as all_tests_time:
+        for test in tests:
+            if "skip_reason" in test.meta:
+                skip_test(test)
+                continue
+            pipe_log(u'{} -> STARTED'.format(get_func_fqn(test)))
+            try:
+                with timing_ctx() as test_time:
+                    pipeline.run_test(test)
+                pass_test(test)
+            except Exception as e:
+                fail_test(test, prettify_exception(e))
 
     if cluster_debug and test_results.has_any_failures(pipeline_name):
         add_debug_info(pipeline)
@@ -85,6 +110,9 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         pipeline.destroy()
 
     print_msg(test_results.pipeline_test_summary(pipeline_name))
+    print_msg("{} Cluster time: {}; Tests time: {};".format(pipeline_name,
+                                                            cluster_time,
+                                                            all_tests_time))
 
 
 def prettify_exception(exc):
@@ -136,7 +164,7 @@ def get_pipeline_logs(multilog):
     entries = {
         name: _format_log(name, log)
         for name, log in multilog.grouped_by_thread.items()
-        if test_results.has_any_failures(name)}
+        }
 
     try:
         url = os.environ['KD_PASTEBIN_URL']
@@ -144,14 +172,15 @@ def get_pipeline_logs(multilog):
         password = os.environ['KD_PASTEBIN_PASS']
 
         with PastebinClient(url, user, password) as c:
-            urls = ('{}: {}'.format(n, c.post(e)) for n, e in
-                    entries.items())
+            urls = (u'{}: {}'.format(n, c.post(e)) for n, e in entries.items())
             msg = '\n' + '\n'.join(urls)
     except Exception as e:
         # Fallback if pastebin isn't accessible
-        msg = u'\n!!! Could not upload logs to pastebin. Reason:\n{}\n' \
-              u'Falling back to console\n\n{}'
-        msg = msg.format(prettify_exception(e), u'\n'.join(entries.values()))
+        msg = u'\n!!! Could not upload logs to pastebin, ' \
+              u'falling back to console. Reason:\n{}\n\n{}'.format(
+                    u''.join(traceback.format_exception(*sys.exc_info())),
+                    u'\n'.join(entries.values())
+                )
 
     msg = center_text_message(
         'PIPELINE DETAILED LOGS', fill_char='=', color=Fore.MAGENTA) + msg
@@ -167,10 +196,10 @@ class PastebinClient(object):
     def post(self, log):
         log = self._prepare_log(log)
         response = self.ses.post(self.base_url, data=log)
-        return response.json()['uri'] + '/raw'
+        return response.json()['uri'] + '/ansi'
 
     def _prepare_log(self, data):
-        return re.sub(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]', '', data)
+        return data.encode(encoding="utf-8")
 
     def __enter__(self):
         return self
@@ -182,11 +211,11 @@ class PastebinClient(object):
 def _print_logs(handler, live_log):
     # If live log was enabled all the logs were already printed
     if not live_log:
-        print(get_pipeline_logs(handler))
-    print(test_results.get_tests_report())
+        click.echo(get_pipeline_logs(handler), color=True)
+    click.echo(test_results.get_test_report(), color=True)
     if debug_messages:
-        print(center_text_message('Debug messages'))
-        print('\n'.join(debug_messages))
+        click.echo(center_text_message('Debug messages'))
+        click.echo('\n'.join(debug_messages))
 
 
 def _filter_test_by_name(name, pipelines):
@@ -202,7 +231,7 @@ def _filter_pipelines(include, exclude):
     """
     Filters a global list of pipelines to use given include/exclude masks
     If both arguments aren't specified - all pipelines are used
-    By design can't be specified both
+    By design can't be specify both at the same time.
     :param include: a list of pipeline names to include
     :param exclude: a list of pipeline names to exclude
     :return: dictionary of pipelines

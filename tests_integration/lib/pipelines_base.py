@@ -1,21 +1,25 @@
 import logging
 import os
 import random
+import sys
 import time
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 
 from tests_integration.lib.exceptions import PipelineNotFound, \
-    NonZeroRetCodeException, ClusterUpgradeError, VmCreationError
+    NonZeroRetCodeException, ClusterUpgradeError
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.integration_test_utils import NebulaIPPool, \
-    merge_dicts, get_test_full_name, center_text_message, suppress
+from tests_integration.lib.integration_test_runner import format_exception
+from tests_integration.lib.integration_test_utils import merge_dicts, \
+    center_text_message, suppress, get_func_fqn
+from tests_integration.lib.nebula_ip_pool import NebulaIPPool
+from tests_integration.lib.timing import log_timing, log_timing_ctx
 
 PIPELINES_PATH = '.pipelines/'
 INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
 CLUSTER_CREATION_MAX_DELAY = 120
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.DEBUG)
 
 
 class Pipeline(object):
@@ -59,6 +63,7 @@ class Pipeline(object):
             'KD_NODES_COUNT': '2',
             'KD_NODE_CPUS': '2',
             'KD_NODE_MEMORY': '3048',
+            'KD_INSTALL_TYPE': 'qa',
             'KD_LICENSE': 'patch',
             'KD_TESTING_REPO': 'true',
             'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch',
@@ -87,20 +92,30 @@ class Pipeline(object):
         :param test: a callable which represents a test and accepts one a
             KDIntegrationAPI object as a first argument
         """
-        with _wrap_test_log(test):
-            self.set_up()
+        with wrap_test_log(test):
+            with log_timing_ctx("Pipeline {} set_up".format(self.name)):
+                self.set_up()
+            test_fqn = get_func_fqn(test)
             try:
-                test(self.cluster)
+                with log_timing_ctx("Test {}".format(test_fqn)):
+                    test(self.cluster)
+            except Exception:
+                trace = format_exception(sys.exc_info())
+                LOG.error("Test {} FAILED:\n{}".format(test_fqn, trace))
+                raise
             finally:
-                self.tear_down()
+                with log_timing_ctx("Pipeline {} tear_down".format(
+                        self.name)):
+                    self.tear_down()
 
     def post_create_hook(self):
         """
         This function will be called once cluster is created.
         You can pass change any default settings, if you need to.
         """
-        pass
+        self.cluster.preload_docker_image('nginx')
 
+    @log_timing
     def create(self):
         """
         Create a pipeline. Underneath creates a KD cluster and destroys it
@@ -120,21 +135,24 @@ class Pipeline(object):
         if not self.build_cluster:
             self.cluster = KDIntegrationTestAPI(
                 override_envs=self.settings, err_cm=cm, out_cm=cm)
-            logger.info('BUILD_CLUSTER flag not passed. Pipeline create '
-                        'call skipped.')
+            LOG.info('BUILD_CLUSTER flag not passed. Pipeline create '
+                     'call skipped.')
             return
 
-        # Prevent Nebula from being flooded by vm-create requests (AC-3914)
         delay = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
+        LOG.info("Sleep {}s to prevent Nebula from being flooded".format(delay))
         time.sleep(delay)
 
         try:
+            self._log_begin("IP reservation")
             # Reserve Pod IPs in Nebula so that they are not taken by other
             # VMs/Pods
             ips = self.routable_ip_pool.reserve_ips(
                 INTEGRATION_TESTS_VNET, self.routable_ip_count)
             # Tell reserved IPs to cluster so it creates appropriate IP Pool
             self._add_public_ips(ips)
+            self._log_end("IP reservation")
+            self._log_begin("Provision")
             # Create cluster
             self.cluster = KDIntegrationTestAPI(override_envs=self.settings,
                                                 err_cm=cm, out_cm=cm)
@@ -142,12 +160,21 @@ class Pipeline(object):
             # Write reserved IPs to master VM metadata for future GC
             master_ip = self.cluster.get_host_ip('master')
             self.routable_ip_pool.store_reserved_ips(master_ip)
-            self.post_create_hook()
+            self._log_end("Provision")
         except:
             self.destroy()
             raise
         finally:
             self._print_vagrant_log()
+
+        try:
+            self._log_begin("Post create hook")
+            with log_timing_ctx("'{}' post_create_hook".format(self.name)):
+                self.post_create_hook()
+            self._log_end("Post create hook")
+        except:
+            self.destroy()
+            raise
 
     def cleanup(self):
         """
@@ -163,14 +190,18 @@ class Pipeline(object):
         Destroys KD cluster
         """
         if not self.build_cluster:
-            logger.info('BUILD_CLUSTER flag not passed. Pipeline destroy '
-                        'call skipped')
+            LOG.info('BUILD_CLUSTER flag not passed. Pipeline destroy '
+                     'call skipped')
             return
 
         with suppress():
+            self._log_begin("IP release")
             self.routable_ip_pool.free_reserved_ips()
+            self._log_end("IP release")
         with suppress():
+            self._log_begin("Destroy")
             self.cluster.destroy()
+            self._log_end("Destroy")
 
     def set_up(self):
         """
@@ -178,7 +209,6 @@ class Pipeline(object):
         cluster cleanup
         """
         self.cleanup()
-        self.cluster.preload_docker_image('nginx')
 
     def tear_down(self):
         """
@@ -220,6 +250,14 @@ class Pipeline(object):
 
         self.settings['KD_ONE_PUB_IPS'] = ','.join(ip_list)
 
+    def _log_begin(self, op):
+        op = op.upper()
+        LOG.debug(center_text_message('BEGIN {} {}'.format(self.name, op)))
+
+    def _log_end(self, op):
+        op = op.upper()
+        LOG.debug(center_text_message('END {} {}'.format(self.name, op)))
+
     def _print_vagrant_log(self):
         """
         Sends logs produced by vagrant to the default logger
@@ -228,7 +266,7 @@ class Pipeline(object):
         log = self.vagrant_log.read() or '>>> EMPTY <<<'
 
         message = '\n\n{header}\n{log}\n{footer}\n\n'
-        logger.debug(
+        LOG.debug(
             message.format(
                 header=center_text_message(
                     'BEGIN {} VAGRANT LOGS'.format(self.name)),
@@ -240,34 +278,26 @@ class Pipeline(object):
 
 
 @contextmanager
-def _wrap_test_log(test):
+def wrap_test_log(test):
     """
     Wraps test log output with START/END markers
     """
-    test_name = get_test_full_name(test)
+    test_name = get_func_fqn(test)
     try:
-        logger.debug(center_text_message('{} START'.format(test_name)))
+        LOG.debug(center_text_message('{} START'.format(test_name)))
         yield
     finally:
-        logger.debug(center_text_message('{} END'.format(test_name)))
+        LOG.debug(center_text_message('{} END'.format(test_name)))
 
 
 class UpgradedPipelineMixin(object):
     ENV = {
         'KD_INSTALL_TYPE': 'release',
-        # TODO: Remove ippool tag as soon as create-ip-pool manage.py
-        # command is updated in release
-        'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,ippool,route',
-        'KD_LICENSE': '../../../../../../tests_integration/assets/fake_license.json',
+        'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',
+        'KD_LICENSE': '../../../../../../tests_integration/assets/fake_license.json',  # noqa
     }
 
     def post_create_hook(self):
+        self.cluster.upgrade('/tmp/prebuilt_rpms/kuberdock.rpm',
+                             use_testing=True, skip_healthcheck=True)
         super(UpgradedPipelineMixin, self).post_create_hook()
-        try:
-            self.cluster.upgrade('/tmp/prebuilt_rpms/kuberdock.rpm',
-                                 use_testing=True, skip_healthcheck=True)
-        except NonZeroRetCodeException:
-            raise ClusterUpgradeError('Could not upgrade cluster')
-        # TODO: This is needed because we skip IP pool creation during
-        # vagrant provisioning. See TODO in the ENV
-        self.cluster.recreate_routable_ip_pool()

@@ -900,9 +900,6 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         pod.set_status.assert_called_once_with(
             POD_STATUSES.stopping, send_update=True)
 
-        pod2.set_status.assert_called_once_with(
-            POD_STATUSES.unpaid, send_update=True)
-
         scale_replicationcontroller.assert_called_once_with(pod.id)
 
         free_pd_mock.assert_called_once_with(pod.id)

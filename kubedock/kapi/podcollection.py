@@ -48,7 +48,7 @@ from ..pods.models import (
 from ..system_settings.models import SystemSettings
 from ..system_settings import keys as settings_keys
 from ..usage.models import IpState
-from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils, send_event_to_role
+from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils
 
 UNKNOWN_ADDRESS = 'Unknown'
 
@@ -463,7 +463,7 @@ class PodCollection(object):
         if config is None:
             pod.set_dbconfig(conf, save=False)
 
-    @utils.atomic()
+    @utils.atomic(nested=False)
     def _set_entry(self, pod, data):
         """Immediately set fields "status", "name", "postDescription",
          "unpaid" in DB."""
@@ -1442,10 +1442,14 @@ class PodCollection(object):
 
     @classmethod
     def stop_unpaid(cls, pod, block=False):
-        if block:
-            pod_stop_and_unpaid(pod)
-        else:
-            pod_stop_and_unpaid_task.delay(pod)
+        DBPod.query.filter_by(id=pod.id).update({'unpaid': True})
+        if pod.status == POD_STATUSES.unpaid:
+            return
+        if pod.status == POD_STATUSES.stopped:
+            pod.set_status(POD_STATUSES.unpaid, send_update=True)
+            return
+        PodCollection._stop_pod(pod, raise_=False, block=block)
+        db.session.flush()
 
 
 def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
@@ -1455,10 +1459,11 @@ def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
     def check_status():
         # we need a fresh status
         db.session.expire(DBPod.query.get(pod_id), ['status'])
+        db_pod = db.session.query(DBPod).get(pod_id)
         pod = PodCollection()._get_by_id(pod_id)
         current_app.logger.debug(
-            'Current pod status: {}, wait for {}, pod_id: {}'.format(
-                pod.status, wait_status, pod_id))
+            'Current pod status: {}, {}, wait for {}, pod_id: {}'.format(
+                pod.status, db_pod.status, wait_status, pod_id))
         if pod.status == wait_status:
             return pod
 
@@ -2020,31 +2025,11 @@ def change_pv_size(persistent_disk_id, new_size):
     return ok, changed_pod_ids
 
 
-def pod_stop_and_unpaid(pod):
-    DBPod.query.filter_by(id=pod.id).update({'unpaid': True})
-    PodCollection._stop_pod(pod, raise_=False, block=True)
-    db.session.expire(DBPod.query.get(pod.id), ['status'])
-    pod = PodCollection()._get_by_id(pod.id)
-    if pod.status in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
-        pod.set_status(POD_STATUSES.unpaid, send_update=True)
-    else:
-        message = 'Cannot set "unpaid" status: pod is not stopped.'
-        admin_message = '{0} PodId is {1}'.format(message, pod.id)
-        send_event_to_role('notify:error',
-                           {'message': admin_message}, 'Admin')
-        raise APIError(message)
-
-
-@celery.task(ignore_results=True)
-def pod_stop_and_unpaid_task(*args, **kwargs):
-    pod_stop_and_unpaid(*args, **kwargs)
-
-
 @celery.task(ignore_result=True)
 def pod_set_unpaid_state_task():
     q = DBPod.query.filter(DBPod.unpaid.is_(True),
                            DBPod.status.notin_([POD_STATUSES.stopping,
                                                 POD_STATUSES.deleted,
                                                 POD_STATUSES.unpaid]))
-    for pod in q:
-        pod_stop_and_unpaid_task.delay(PodCollection()._get_by_id(pod.id))
+    for db_pod in q:
+        PodCollection.stop_unpaid(PodCollection()._get_by_id(db_pod.id))

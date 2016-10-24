@@ -389,7 +389,7 @@ class NebulaIPPool(object):
 
         LOG.debug("Getting free IP list from OpenNebula")
         ips = self.get_free_ip_list(network_name)
-        LOG.debug("Got the following IPs: {}".format(ips))
+        LOG.debug("Got {} IPs".format(len(ips)))
         if len(ips) < count:
             raise NotEnoughFreeIPs(
                 '{} net has {} free IPs but {} requested'.format(network_name,

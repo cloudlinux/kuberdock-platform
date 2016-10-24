@@ -130,13 +130,14 @@ def get_rhost_policy(ip):
                 "src_net": "{0}/32".format(ip)
             },
             {
+                # Tested that we need this rule too
                 "action": "allow",
                 "src_net": "{0}/32".format(remote_host_tunl_addr)
             },
             # {"action": "next-tier"} # TODO like for generic KD nodes?
         ],
         "outbound_rules": [{
-            "action": "allow"
+            "action": "next-tier"
         }],
         "selector": "all()"
     }, None

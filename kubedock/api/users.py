@@ -1,18 +1,18 @@
-from flask import Blueprint, request, current_app, session
+from flask import Blueprint, current_app, request, session
 from flask.views import MethodView
 
 from ..exceptions import APIError
+from ..kapi.users import UserCollection, UserNotFound
+from ..login import auth_required, current_user, login_user, logout_user
 from ..rbac import check_permission
 from ..rbac.models import Role
-from ..login import auth_required, login_user, current_user, logout_user
-from ..utils import KubeUtils, register_api
-from ..validation import extbool
 from ..users.models import User, UserActivity
 from ..users.signals import (user_logged_in_by_another,
-                             user_logged_out_by_another,
-                             user_logged_out)
-from ..kapi.users import UserCollection, UserNotFound
-
+                             user_logged_out,
+                             user_logged_out_by_another)
+from ..utils import KubeUtils, register_api
+from ..validation.schemas import boolean
+from .utils import use_kwargs
 
 users = Blueprint('users', __name__, url_prefix='/users')
 
@@ -74,9 +74,11 @@ def logout():
 @auth_required
 @check_permission('get', 'users')
 @KubeUtils.jsonwrap
-def get_usernames():
-    with_deleted = request.args.get('with-deleted', False)
-    return User.search_usernames(request.args.get('s'), with_deleted)
+@use_kwargs({'s': {'type': 'string', 'coerce': unicode, 'required': True},
+             'with-deleted': boolean}, allow_unknown=True)
+def get_usernames(**data):
+    with_deleted = data.get('with-deleted', False)
+    return User.search_usernames(data.get('s'), with_deleted)
 
 
 @users.route('/roles', methods=['GET'])
@@ -124,12 +126,13 @@ def get_online_users():
 class UsersAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, auth_required]
 
+    @use_kwargs({'short': boolean, 'with-deleted': boolean},
+                allow_unknown=True)
     @check_permission('get', 'users')
-    def get(self, uid=None):
-        full = not extbool(KubeUtils._get_params().get('short', False))
-        with_deleted = request.args.get('with-deleted')
+    def get(self, uid=None, **params):
+        with_deleted = params.get('with-deleted')
         return UserCollection(KubeUtils.get_current_user()).get(
-            user=uid, with_deleted=with_deleted, full=full)
+            user=uid, with_deleted=with_deleted, full=not params.get('short'))
 
     @check_permission('create', 'users')
     def post(self):
@@ -142,9 +145,9 @@ class UsersAPI(KubeUtils, MethodView):
         return UserCollection(KubeUtils.get_current_user()).update(uid, data)
     patch = put
 
+    @use_kwargs({'force': boolean}, allow_unknown=True)
     @check_permission('delete', 'users')
-    def delete(self, uid):
-        force = KubeUtils._get_params().get('force', False)
+    def delete(self, uid, force=False, **_):
         return UserCollection(KubeUtils.get_current_user()).delete(uid, force)
 register_api(users, UsersAPI, 'podapi', '/all/', 'uid')
 
@@ -162,9 +165,9 @@ def get_self():
 @users.route('/editself', methods=['PUT', 'PATCH'])
 @auth_required
 @KubeUtils.jsonwrap
-def edit_self():
+@use_kwargs({}, allow_unknown=True)
+def edit_self(**data):
     uid = KubeUtils.get_current_user().id
-    data = KubeUtils._get_params()
     doer = KubeUtils.get_current_user()
     return UserCollection(doer).update_profile(uid, data)
 

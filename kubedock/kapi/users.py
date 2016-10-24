@@ -101,7 +101,8 @@ class UserCollection(object):
         db.session.flush()
         if return_object:
             return user
-        return user.to_dict()
+        return dict(user.to_dict(full=True),
+                    actions=self._get_applicability(user))
 
     # temporarely removed `atomic`, because self._suspend_user isn't atomic.
     # TODO: AC-4557
@@ -261,7 +262,7 @@ class UserCollection(object):
         :param user_email: user email -> str
         :raises APIError: if user was not found
         """
-        user = User.query.filter(User.email.like(user_email+'%')).first()
+        user = User.query.filter(User.email.like(user_email + '%')).first()
         if user is None:
             raise UserNotFound('User email "{0}" does not exists'.format(
                 user_email))

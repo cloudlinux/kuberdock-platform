@@ -619,20 +619,14 @@ export const UserProfileLogHistory = Marionette.ItemView.extend({
     tagName  : 'div',
 
     ui: {
-        'generalTab'          : '.generalTab',
-        'users_page'          : 'div#users-page',
         'delete_user_btn'     : 'button#delete_user',
         'login_this_user_btn' : 'button#login_this_user',
-        'edit_user'           : 'button#edit_user',
         'tb'                  : '#user-profile-logs-table tbody'
     },
 
     events: {
-        'click @ui.generalTab'          : 'generalTab',
-        'click @ui.users_page'          : 'back',
         'click @ui.delete_user_btn'     : 'delete_user',
         'click @ui.login_this_user_btn' : 'login_this_user',
-        'click @ui.edit_user'           : 'edit_user'
     },
 
     onRender: function(e){
@@ -671,18 +665,6 @@ export const UserProfileLogHistory = Marionette.ItemView.extend({
             },
         });
     },
-
-    edit_user: function(){
-        App.navigate('users/edit/' + this.model.id, {trigger: true});
-    },
-
-    generalTab: function(){
-        App.navigate('users/profile/' + this.model.id + '/general', {trigger: true});
-    },
-
-    back: function(){
-        App.navigate('users', {trigger: true});
-    }
 });
 
 export const UserProfileView = Marionette.ItemView.extend({

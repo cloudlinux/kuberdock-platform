@@ -9,6 +9,9 @@ from .coerce import extbool, get_user
 
 PATH_LENGTH = 512
 
+
+boolean = {'type': 'boolean', 'coerce': extbool}
+
 container_image_name_schema = {
     'type': 'string',
     'empty': False,
@@ -176,16 +179,8 @@ user_schema = {
         'maxlength': 64,
         'package_exists': True,
     },
-    'active': {
-        'type': 'boolean',
-        'required': True,
-        'coerce': extbool,
-    },
-    'suspended': {
-        'type': 'boolean',
-        'required': False,
-        'coerce': extbool,
-    },
+    'active': dict(boolean, required=True),
+    'suspended': boolean,
     'timezone': {
         'type': 'string',
         'required': False,
@@ -586,7 +581,7 @@ package_schema = {
     'price_ip': positive_float_schema,
     'price_pstorage': positive_float_schema,
     'price_over_traffic': positive_float_schema,
-    'is_default': {'type': 'boolean', 'coerce': extbool, 'required': False},
+    'is_default': boolean,
     'count_type': {'type': 'string', 'maxlength': 5, 'required': False,
                    'allowed': ['payg', 'fixed']},
 }
@@ -605,7 +600,7 @@ kube_schema = {
                      'allowed': ['MB']},
     'disk_space_units': {'type': 'string', 'maxlength': 3, 'empty': False,
                          'allowed': ['GB']},
-    'is_default': {'type': 'boolean', 'coerce': extbool, 'required': False}
+    'is_default': boolean,
 }
 
 packagekube_schema = {
@@ -628,18 +623,12 @@ app_package_schema = {
         'required': True,
         'maxlength': 32,
     },
-    'recommended': {
-        'type': 'boolean',
-        'coerce': extbool,
-    },
+    'recommended': boolean,
     'goodFor': {
         'type': 'string',
         'maxlength': 64,
     },
-    'publicIP': {
-        'type': 'boolean',
-        'coerce': extbool,
-    },
+    'publicIP': boolean,
     'baseDomain': dict(domain_schema, domain_exists=True),
     'pods': {
         'type': 'list',

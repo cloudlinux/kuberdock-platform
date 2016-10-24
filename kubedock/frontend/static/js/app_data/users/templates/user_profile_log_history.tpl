@@ -2,7 +2,7 @@
     <div class="container breadcrumbs" id="breadcrumbs">
         <ul class="breadcrumb">
             <li>
-                <div id="users-page">Users</div>
+                <a href="#users">Users</a>
             </li>
             <li>
                 <% if( typeof username == "undefined" ) { %>
@@ -14,9 +14,11 @@
             <li class="active">Login history</li>
         </ul>
         <div class="control-group">
-            <button id="edit_user">Edit user</button>
+            <a href="#users/edit/<%= id %>" id="edit_user">Edit user</a>
             <button id="login_this_user">Login as this user</button>
-            <button id="delete_user">Delete</button>
+            <% if (actions.delete){ %>
+                <button id="delete_user">Delete</button>
+            <% } %>
         </div>
     </div>
 </div>
@@ -24,7 +26,7 @@
     <div class="row">
         <div class="col-xs-12 col-sm-12 col-md-2 sidebar">
             <ul class="nav nav-sidebar list-unstyled" role="tablist">
-                <li class="general generalTab"><span>General</span></li>
+                <li class="general generalTab"><a href="#users/profile/<%= id %>/general">General</a></li>
                 <li class="logHistory active"><span>Login history</span></li>
             </ul>
         </div>

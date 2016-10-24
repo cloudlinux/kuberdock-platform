@@ -74,8 +74,9 @@ class UserCRUDTestCase(APITestCase):
 
     # @unittest.skip('')
     @mock.patch('kubedock.kapi.users.license_valid', lambda *a, **kw: True)
-    @mock.patch('kubedock.kapi.users.UserCollection.get_client_id')
-    def test_post(self, uc):
+    @mock.patch('kubedock.kapi.users.UserCollection.get_client_id',
+                mock.MagicMock())
+    def test_post(self):
         data = dict(username='test_post_users',
                     first_name='', last_name='', middle_initials='',
                     password='p-0', email='test_user@test.test',
@@ -84,8 +85,10 @@ class UserCRUDTestCase(APITestCase):
         # add
         response = self.admin_open(method='POST', json=data)
         self.assert200(response)
-        self.assertEqual(User.get(data['username']).to_dict(),
-                         response.json['data'])
+        user = User.get(data['username']).to_dict(full=True)
+        user['join_date'] = user['join_date'].replace(
+            tzinfo=pytz.utc).isoformat()
+        self.assertEqual(dict(user, actions=mock.ANY), response.json['data'])
 
         # check conversion of extended boolean fields
         data['username'] += '1'
@@ -125,8 +128,8 @@ class UserCRUDTestCase(APITestCase):
         for field, value in data.iteritems():
             self.assertEqual(value, getattr(user, field))
 
-    @mock.patch.object(kapi_podcollection.KubeQuery, '_run')
-    def test_delete(self, PodCollection):
+    @mock.patch.object(kapi_podcollection.KubeQuery, '_run', mock.MagicMock())
+    def test_delete(self):
         user, _ = self.fixtures.user_fixtures()
         # delete
         self.assert200(self.admin_open(self.item_url(user.id), 'DELETE'))

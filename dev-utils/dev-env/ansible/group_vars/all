@@ -21,4 +21,5 @@ rpms_to_check:
     - kdctl
 admin_password: admin
 
+rhost_deploy_path: /rhost_deploy
 install_plesk: false

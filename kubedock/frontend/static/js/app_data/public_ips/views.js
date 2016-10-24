@@ -29,7 +29,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
 
         templateHelpers: function(){
             var hasIPs = !!this.collection.find(function(m){
-                    return /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:\/\d+)?/.test(m.id)
+                    return /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}(?:\/\d+)?/.test(m.id);
                 });
             return {
                 resourceName: hasIPs ? 'Public IP' : 'Public Name'
@@ -45,6 +45,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         template: publicIPsLayoutTpl,
         regions: {
             nav: 'div#nav',
+            breadcrumbs : '#breadcrumbs',
             main: 'div#details_content'
         },
 

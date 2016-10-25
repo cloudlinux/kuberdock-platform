@@ -1,7 +1,6 @@
 import os
 from collections import defaultdict
 from functools import wraps
-from ipaddress import IPv4Network
 from shutil import rmtree
 
 from tests_integration.lib.pipelines_base import Pipeline, \

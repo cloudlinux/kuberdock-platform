@@ -1,10 +1,13 @@
 import time
+import logging
 
-from tests_integration.lib.exceptions import NonZeroRetCodeException
+
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.integration_test_utils import \
-    NO_FREE_IPS_ERR_MSG, assert_raises, assert_eq, get_rnd_string
+    assert_eq, get_rnd_string
 from tests_integration.lib.pipelines import pipeline
+
+LOG = logging.getLogger(__name__)
 
 
 @pipeline('main')
@@ -116,25 +119,6 @@ def test_recreate_pod_with_real_ip(cluster):
                               start=True, wait_for_status='running')
     pod.healthcheck()
     pod.delete()
-
-
-@pipeline('networking')
-@pipeline('networking_upgraded')
-def test_pod_ip_resource(cluster):
-    # type: (KDIntegrationTestAPI) -> None
-    # It's not possible to create a POD with public IP with no IP pools
-    cluster.ip_pools.clear()
-    with assert_raises(NonZeroRetCodeException, NO_FREE_IPS_ERR_MSG):
-        cluster.pods.create("nginx", "test_nginx_pod_2",
-                            open_all_ports=True,
-                            start=True)
-
-    assert_eq(cluster.pods.filter_by_owner(), [])
-
-    # It's still possible to create a pod without a public IP
-    cluster.pods.create("nginx", "test_nginx_pod_3",
-                        start=True, open_all_ports=False,
-                        wait_for_status='running')
 
 
 @pipeline('main')

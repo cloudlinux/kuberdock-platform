@@ -555,15 +555,21 @@ class IPPoolList(object):
             cmd += ' --node {}'.format(hostname)
         cmd += ' -e "{}"'.format(excludes)
         cmd += ' -i "{}"'.format(includes)
-        self.cluster.manage(cmd)
+        return self.cluster.manage(cmd)
 
     def delete(self, pool):
-        self.cluster.manage('delete-ip-pool -s {}'.format(pool['network']))
+        return self.cluster.manage(
+            'delete-ip-pool -s {}'.format(pool['network']))
 
     def clear(self):
         for p in self:
             self.delete(p)
         self.cluster.pods.forget_all()
+
+    def get(self, network):
+        for p in self:
+            if p['network'] == network:
+                return p
 
     def __iter__(self):
         _, pools, _ = self.cluster.manage('list-ip-pools', out_as_dict=True)

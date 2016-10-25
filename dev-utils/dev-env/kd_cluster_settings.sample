@@ -129,3 +129,6 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # or
 #export KD_PLESK_LICENSE=/path/to/your/license.xml
 
+# Use ZFS
+# default: nothing
+#export USE_ZFS=1

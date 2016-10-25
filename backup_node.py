@@ -12,6 +12,9 @@ import argparse
 import subprocess
 import logging
 import tarfile
+import random
+import string
+from contextlib import contextmanager
 
 logger = logging.getLogger("kd_master_backup")
 logger.setLevel(logging.INFO)
@@ -65,6 +68,82 @@ class BackupError(Exception):
     pass
 
 
+class NonZFSException(Exception):
+    pass
+
+
+def get_zfs_mountpoints():
+    result_raw = subprocess.check_output(["zfs", "list", "-H",
+                                          "-o", "mountpoint,name"])
+    return dict(a.split('\t') for a in result_raw.split('\n') if a)
+
+
+def make_tar_backup(name, src, dst, skip_errors=False):
+    """ Make a backup by archiving all files in src
+    to tar.gz  located in dst
+    """
+    result = os.path.join(dst, "{0}.tar.gz".format(name))
+    tmp_result = result + '.incomplete'
+    logger.debug({"dst": result})
+
+    with tarfile.open(tmp_result, "w:gz") as tgzf:
+        for fn in iterate_src(src):
+            try:
+                logger.debug([fn, os.path.relpath(fn, src)])
+                tgzf.add(fn, arcname=os.path.relpath(fn, src))
+            except (IOError, OSError) as err:
+                if not skip_errors:
+                    if os.path.exists(tmp_result):
+                        os.remove(tmp_result)
+                    raise
+                logger.warning("File `{0}` backup skipped due to "
+                               "error `{1}`. Skipped".format(fn, err))
+    os.rename(tmp_result, result)
+    return result
+
+
+@contextmanager
+def mount_context(device):
+    if device is None:
+        yield None
+        return
+    mountpoint = os.environ.get('KD_CEPH_BACKUP_MOUNTPOINT', '/mnt')
+    if not os.path.exists(mountpoint):
+        os.makedirs(mountpoint)
+    if os.path.ismount(mountpoint):
+        raise BackupError("Mountpoint `{0}` already mounted. Please, "
+                          "release it or specify free mount point via"
+                          " KD_CEPH_BACKUP_MOUNTPOINT".format(mountpoint))
+    subprocess.check_call(['mount', '-t', 'zfs', device, mountpoint])
+    try:
+        yield mountpoint
+    finally:
+        subprocess.check_call(['umount', mountpoint])
+
+
+@contextmanager
+def zfs_snapshot(src):
+    try:
+        zfs_map = get_zfs_mountpoints()
+    except OSError:
+        raise NonZFSException("ZFS not installed")
+
+    logger.debug("zfs map: {}".format(zfs_map))
+    if src not in zfs_map:
+        raise NonZFSException("`src` is not ZFS volume")
+
+    name = zfs_map[src]
+    snap_id = ''.join(random.sample(string.ascii_letters + string.digits, 9))
+    snap_name = '@'.join([name, snap_id])
+    subprocess.check_call(["zfs", "snap", snap_name])
+    subprocess.check_call(["zfs", "hold", "-r", "keep", snap_name])
+    try:
+        yield snap_name
+    finally:
+        subprocess.check_call(["zfs", "release", "-r", "keep", snap_name])
+        subprocess.check_call(["zfs", "destroy", snap_name])
+
+
 @lock(LOCKFILE)
 def do_node_backup(backup_dir, callback, skip_errors, **kwargs):
 
@@ -85,26 +164,18 @@ def do_node_backup(backup_dir, callback, skip_errors, **kwargs):
             result_dir = os.path.join(dst, user_id)
             if not os.path.exists(result_dir):
                 os.makedirs(result_dir)
-            result = os.path.join(result_dir, "{0}.tar.gz".format(volume_id))
-            tmp_result = result + '.incomplete'
             logger.debug({"src": STORAGE_LOCATION, "user": user_id,
                           "volume_id": volume_id})
-            logger.debug({"dst": result})
-
-            with tarfile.open(tmp_result, "w:gz") as tgzf:
-                for fn in iterate_src(volume_dir):
-                    try:
-                        logger.debug([fn, os.path.relpath(fn, volume_dir)])
-                        tgzf.add(fn, arcname=os.path.relpath(fn, volume_dir))
-                    except (IOError, OSError) as err:
-                        if not skip_errors:
-                            if os.path.exists(tmp_result):
-                                os.remove(tmp_result)
-                            raise
-                        logger.warning("File `{0}` backup skipped due to "
-                                       "error `{1}`. Skipped".format(fn, err))
-
-            os.rename(tmp_result, result)
+            try:
+                with zfs_snapshot(volume_dir) as snap_name:
+                    with mount_context(snap_name) as mountpoint:
+                        result = make_tar_backup(volume_id, mountpoint,
+                                                 result_dir, skip_errors)
+            except NonZFSException as err:
+                logging.warning("Possible inconsistent backup "
+                                "creation: {}".format(err))
+                result = make_tar_backup(volume_id, volume_dir,
+                                         result_dir, skip_errors)
             logger.info('Backup created: {0}'.format(result))
     if callback:
         handle(callback, dst)

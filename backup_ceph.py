@@ -88,14 +88,6 @@ def lock(lockfile):
     return decorator
 
 
-def mountpoint_is_busy(mountpoint):
-    try:
-        subprocess.check_call(['mountpoint', '-q', mountpoint])
-    except subprocess.CalledProcessError:
-        return False
-    return True
-
-
 def get_local_keyring_path(keyring):
     # Don't blame me for this hardcode. There 26 more of them scattered
     # all over the project. So
@@ -105,14 +97,15 @@ def get_local_keyring_path(keyring):
     return os.path.join(CONF_PATH, basename)
 
 
-def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors, callback,
-                   **kwargs):
+def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors,
+                   callback, **kwargs):
     """ Backup all CEPH drives for pool
     """
     try:
         from kubedock import ceph_settings, settings
         if any([pool, monitors, keyring, auth_user]):
-            logger.warning('Ceph settings found. Some of passed parameters may be overriten.')
+            logger.warning('Ceph settings found. Some of passed parameters'
+                           ' may be overriten.')
         auth_user = getattr(ceph_settings, 'CEPH_CLIENT_USER', auth_user)
         monitors = getattr(ceph_settings, 'MONITORS', monitors)
         keyring_path = getattr(ceph_settings, 'CEPH_KEYRING_PATH', None)
@@ -127,13 +120,11 @@ def do_ceph_backup(backup_dir, pool, monitors, keyring, auth_user, skip_errors, 
 
     mountpoint = os.environ.get('KD_CEPH_BACKUP_MOUNTPOINT', '/mnt')
     if not os.path.exists(mountpoint):
-        raise BackupError("Mountpoint `{0}` not exists. Please, "
-                              "create it or specify free mount point via"
-                              " KD_CEPH_BACKUP_MOUNTPOINT".format(mountpoint))
-    if mountpoint_is_busy(mountpoint):
+        os.makedirs(mountpoint)
+    if os.path.ismount(mountpoint):
         raise BackupError("Mountpoint `{0}` already mounted. Please, "
-                              "release it or specify free mount point via"
-                              " KD_CEPH_BACKUP_MOUNTPOINT".format(mountpoint))
+                          "release it or specify free mount point via"
+                          " KD_CEPH_BACKUP_MOUNTPOINT".format(mountpoint))
 
     if not all([pool, monitors, keyring, auth_user]):
         raise BackupError("Insufficient ceph parameters")

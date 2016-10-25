@@ -1,0 +1,7 @@
+
+
+- set_fact:
+    zfs_params: "--zfs"
+  tags:
+      - zfs
+

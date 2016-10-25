@@ -17,4 +17,7 @@
 - name: Set enforce for SELinux
   command: setenforce 1
 
+- include: zfs.yml
+  when: use_zfs
+
 - include: deploy.yml

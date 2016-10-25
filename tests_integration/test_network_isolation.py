@@ -16,6 +16,15 @@ LOG.setLevel(logging.DEBUG)
 
 HTTP_PORT = 80
 UDP_PORT = 2000
+CADVISOR_PORT = 4194
+
+CURL_RET_CODE_CONNECTION_FAILED = 7
+CURL_RET_CODE_TIMED_OUT = 28
+
+CURL_CONNECTION_ERRORS = (
+    CURL_RET_CODE_CONNECTION_FAILED,
+    CURL_RET_CODE_TIMED_OUT)
+
 HOST_UDP_CHECK_CMD = (
     'python -c \'import socket as s; '
     'udp = s.socket(s.AF_INET, s.SOCK_DGRAM); '
@@ -85,20 +94,21 @@ def https_check(pod, container_id, host):
     pod.docker_exec(container_id, 'curl -m 5 -k https://{}'.format(host))
 
 
-def udp_check(pod, container_id, host, port=2000):
+def udp_check(pod, container_id, host, port=UDP_PORT):
     cmd = 'echo PING | nc -u -w1 {} {}'.format(host, port)
     _, out, _ = pod.docker_exec(container_id, cmd)
     if out != 'PONG':
         raise NonZeroRetCodeException('No PONG received')
 
 
-def port_check(pod, container_id, host, port=4194):
+def pod_check_node_tcp_port(pod, container_id, host, port=CADVISOR_PORT):
     """
-    Check that pod has access to host via given port.
-    :param port: Port number. Defaults to 4194. By doing that we make sure that
-                 someone's listening on this port (cadvisor in this case).
+    Check that pod has access to node via given TCP port.
+    :param port: Port number. Defaults to CADVISOR_PORT. By doing that we make
+                 sure that someone's listening on this port
+                 (cadvisor in this case).
     :raises: NonZeroRetCodeException if pod doesn't have access to host via
-             given port.
+             given TCP port.
     """
     pod.docker_exec(container_id, 'curl -m 5 -k {}:{}'.format(host, port))
 
@@ -112,11 +122,11 @@ def container_udp_server(pod, container_id):
 
 # Unregistered host checks.
 # NOTE: Jenkins will take a role of an unregistered host.
-def unregistered_host_port_check(pod_ip, port=80):
+def unregistered_host_port_check(pod_ip, port=HTTP_PORT):
     local_exec('curl -m 5 -k {}:{}'.format(pod_ip, port), shell=True)
 
 
-def unregistered_host_udp_check(pod_ip, port=2000):
+def unregistered_host_udp_check(pod_ip, port=UDP_PORT):
     cmd = HOST_UDP_CHECK_CMD.format(pod_ip, port)
     _, out, _ = local_exec(cmd, shell=True)
 
@@ -171,7 +181,7 @@ def host_udp_server(cluster, host):
     cluster.ssh_exec(host, 'netcat -lp 2000  -u -c \'/bin/echo PONG\' &')
 
 
-def host_udp_check_pod(cluster, host, pod_ip, port=2000):
+def host_udp_check_pod(cluster, host, pod_ip, port=UDP_PORT):
     cmd = HOST_UDP_CHECK_CMD.format(pod_ip, port)
     _, out, _ = cluster.ssh_exec(host, cmd)
     if out != 'PONG':
@@ -311,8 +321,10 @@ def test_network_isolation(cluster):
         #     ping(pods[src], container_ids[src], host)
         # TCP check. port 80 is closed
         # Here we expect EXIT_CODE to be:
-        # 7 (Failed to connect) or 25 (Connection timed out)
-        with assert_raises(NonZeroRetCodeException, ret_codes=(7, 28)):
+        # 7 (Failed to connect) or 28 (Connection timed out)
+        with assert_raises(
+                NonZeroRetCodeException,
+                expected_ret_codes=CURL_CONNECTION_ERRORS):
             http_check(pods[src], container_ids[src], host)
         # UDP check. port 2000 is closed
         container_udp_server(pods[dst], container_ids[dst])
@@ -320,41 +332,51 @@ def test_network_isolation(cluster):
             udp_check(pods[src], container_ids[src], host)
 
     # ----- Host isolation -----
-    # Container can't access node's IP it's created on
-    # ICMP check
-    host_ip = specs['iso1']['hostIP']
-    with assert_raises(NonZeroRetCodeException, '100% packet loss'):
-        ping(pods['iso1'], container_ids['iso1'], host_ip)
+    for name, pod in pods.items():
+        # Container can't access node's IP it's created on
+        host_ip = specs[name]['hostIP']
+        # ICMP check
+        # with assert_raises(NonZeroRetCodeException, '100% packet loss'):
+        #     ping(pods[name], container_ids[name], host_ip)
 
-    # TCP check
-    # Here we expect EXIT_CODE to be:
-    # 7 (Failed to connect) or 25 (Connection timed out)
-    with assert_raises(NonZeroRetCodeException, ret_codes=(7, 28)):
-        # cadvisor port
-        port_check(pods['iso1'], container_ids['iso1'], host_ip, port=4194)
-    # UDP check
-    host_udp_server(cluster, pods['iso1'].info['host'])
-    with assert_raises(NonZeroRetCodeException, 'No PONG received'):
-        udp_check(pods['iso1'], container_ids['iso1'], specs['iso1']['hostIP'])
+        # TCP check
+        # Here we expect EXIT_CODE to be:
+        # 7 (Failed to connect) or 28 (Connection timed out)
+        with assert_raises(
+                NonZeroRetCodeException,
+                expected_ret_codes=CURL_CONNECTION_ERRORS):
+            # cadvisor port
+            pod_check_node_tcp_port(
+                pods[name], container_ids[name], host_ip, port=CADVISOR_PORT)
 
-    # Container can't access node's IP it was not created on
-    # We do not know which node the pod will land on, so we can't tell in
-    # advance what the "other nodes" are. Should find this out
-    nodes, pod_node = cluster.node_names, pods['iso1'].info['host']
-    nodes.remove(pod_node)
-    another_node = nodes[0]
-    non_host_ip = cluster.get_host_ip(another_node)
+        # UDP check
+        host_udp_server(cluster, pods[name].info['host'])
+        with assert_raises(NonZeroRetCodeException, 'No PONG received'):
+            udp_check(pods[name], container_ids[name], specs[name]['hostIP'])
 
-    # TCP check
-    # Here we expect EXIT_CODE to be:
-    # 7 (Failed to connect) or 25 (Connection timed out)
-    with assert_raises(NonZeroRetCodeException, ret_codes=(7, 28)):
-        # cadvisor port
-        port_check(pods['iso1'], container_ids['iso1'], non_host_ip, port=4194)
-    # UDP check
-    host_udp_server(cluster, another_node)
-    with assert_raises(NonZeroRetCodeException, 'No PONG received'):
-        udp_check(pods['iso1'], container_ids['iso1'], non_host_ip)
+        # Container can't access node's IP it was not created on
+        # We do not know which node the pod will land on, so we can't tell in
+        # advance what the "other nodes" are. Should find this out
+        nodes, pod_node = cluster.node_names, pods[name].info['host']
+        nodes.remove(pod_node)
+        another_node = nodes[0]
+        non_host_ip = cluster.get_host_ip(another_node)
+
+        # TCP check
+        # Here we expect EXIT_CODE to be:
+        # 7 (Failed to connect) or 28 (Connection timed out)
+        with assert_raises(
+                NonZeroRetCodeException,
+                expected_ret_codes=CURL_CONNECTION_ERRORS):
+            # cadvisor port
+            pod_check_node_tcp_port(
+                pods[name], container_ids[name], non_host_ip,
+                port=CADVISOR_PORT)
+
+        # UDP check
+        host_udp_server(cluster, another_node)
+        with assert_raises(NonZeroRetCodeException, 'No PONG received'):
+            udp_check(pods[name], container_ids[name], non_host_ip)
 
     # ------ Registered hosts tests ------
     # Pod IPs
@@ -469,22 +491,28 @@ def test_network_isolation(cluster):
     # UDP check (port 2000 is closed)
     container_udp_server(pods['iso2'], container_ids['iso2'])
     with assert_raises(NonZeroRetCodeException):
-        unregistered_host_udp_check(specs['iso2']['public_ip'], port=2000)
+        unregistered_host_udp_check(specs['iso2']['public_ip'], port=UDP_PORT)
 
     # Containers inside a single pod have access to each other through
     # localhost
-    # wp_pa = cluster.pods.create_pa('wordpress.yaml', wait_ports=True,
-    #                                wait_for_status='running',
-    #                                healthcheck=False)
-    # containers = wp_pa.containers
-    # mysql = [c for c in containers if c['name'] == 'mysql'][0]
-    # wordpress = [c for c in containers if c['name'] == 'wordpress'][0]
+    # NOTE: Can be uncommented once AC-4448 is complete. Some logic might
+    #       change as well.
+    # nginx_redis_pod = cluster.pods.create(
+    #     'hub.kuberdock.com/nginx', 'nginx_redis_pod')
+    # nginx_redis_pod.add_container('anmaxvl/redis')
+    # nginx_redis_pod.wait_for_status('running')
     #
-    # mysql_port = mysql['ports'][0]['containerPort']
-    # NOTE: doesn't work, because of non utf8 characters in the output.
-    # Need a better way to communicate with mysql container
-    # http_check(wp_pa, wordpress['containerID'],
-    #            'localhost:{}'.format(mysql_port))
+    # containers = nginx_redis_pod.containers
+    # nginx_id = [c for c in containers
+    #             if c['image'] == 'hub.kuberdock.com/nginx'][0]['containerID']
+    # redis_id = [c for c in containers
+    #             if c['image'] == 'anmaxvl/redis'][0]['containerID']
+    #
+    # _, out, _ = pod.docker_exec(nginx_id,
+    #                             '(printf "PING"\r\n) | nc -w1 localhost 6379') # noqa
+    # assert out == '+PONG'
+    #
+    # pod.docker_exec(redis_id, 'curl -k -m5 http://localhost')
 
 
 def _get_node_ports(cluster, node_name):

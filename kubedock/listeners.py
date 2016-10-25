@@ -220,17 +220,17 @@ def process_nodes_event(data, app):
                     curr_state = 'DELETED'
                     must_send_event = False
                 # Must be already fixed in updated libcalico
-                #try:
-                    ## Workaround for
-                    ## https://github.com/projectcalico/calico-containers/
-                    ## issues/1190
-                    #drop_endpoint_traffic_to_node(hostname)
-                #except:
-                    #current_app.logger.exception(
-                        #'Failed to change node ({}) setting in etcd'.format(
-                            #hostname
-                        #)
-                    #)
+                # try:
+                #     # Workaround for
+                #     # https://github.com/projectcalico/calico-containers/
+                #     # issues/1190
+                #     drop_endpoint_traffic_to_node(hostname)
+                # except:
+                #     current_app.logger.exception(
+                #         'Failed to change node ({}) setting in etcd'.format(
+                #             hostname
+                #         )
+                #     )
 
             current_app.logger.debug('Node event: save new state: %s, %s',
                                      key_, curr_state)

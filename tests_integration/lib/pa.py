@@ -81,6 +81,10 @@ class _RedisPaPod(KDPAPod):
         assert_eq(r.get('foo'), 'bar')
 
 
+class _RedisPaPod(_RedisPaPod):
+    SRC = 'custom_redis.yaml'
+
+
 class _DokuwikiPaPod(KDPAPod):
     SRC = 'dokuwiki.yaml'
 

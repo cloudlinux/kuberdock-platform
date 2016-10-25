@@ -156,7 +156,7 @@ def assert_raises(expected_exc, text=".*", expected_ret_codes=()):
                                  "message: '{}'".format(text, err_msg))
         if not any(expected_ret_codes):
             return
-        rc = getattr(e, 'ret_code')
+        rc = getattr(e, 'ret_code', None)
         if rc and rc not in expected_ret_codes:
             codes_str = ', '.join(str(r) for r in expected_ret_codes)
             raise AssertionError(

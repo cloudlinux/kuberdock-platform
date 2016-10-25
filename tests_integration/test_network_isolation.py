@@ -331,48 +331,51 @@ def test_network_isolation(cluster):
             udp_check(pods[src], container_ids[src], host)
 
     # ----- Host isolation -----
-    # Container can't access node's IP it's created on
-    # ICMP check
-    host_ip = specs['iso1']['hostIP']
-    with assert_raises(NonZeroRetCodeException, '100% packet loss'):
-        ping(pods['iso1'], container_ids['iso1'], host_ip)
+    for name, pod in pods.items():
+        # Container can't access node's IP it's created on
+        host_ip = specs[name]['hostIP']
+        # ICMP check
+        # with assert_raises(NonZeroRetCodeException, '100% packet loss'):
+        #     ping(pods[name], container_ids[name], host_ip)
 
-    # TCP check
-    # Here we expect EXIT_CODE to be:
-    # 7 (Failed to connect) or 28 (Connection timed out)
-    with assert_raises(
-            NonZeroRetCodeException,
-            expected_ret_codes=CURL_CONNECTION_ERRORS):
-        # cadvisor port
-        pod_check_node_tcp_port(
-            pods['iso1'], container_ids['iso1'], host_ip, port=CADVISOR_PORT)
-    # UDP check
-    host_udp_server(cluster, pods['iso1'].info['host'])
-    with assert_raises(NonZeroRetCodeException, 'No PONG received'):
-        udp_check(pods['iso1'], container_ids['iso1'], specs['iso1']['hostIP'])
+        # TCP check
+        # Here we expect EXIT_CODE to be:
+        # 7 (Failed to connect) or 28 (Connection timed out)
+        with assert_raises(
+                NonZeroRetCodeException,
+                expected_ret_codes=CURL_CONNECTION_ERRORS):
+            # cadvisor port
+            pod_check_node_tcp_port(
+                pods[name], container_ids[name], host_ip, port=CADVISOR_PORT)
 
-    # Container can't access node's IP it was not created on
-    # We do not know which node the pod will land on, so we can't tell in
-    # advance what the "other nodes" are. Should find this out
-    nodes, pod_node = cluster.node_names, pods['iso1'].info['host']
-    nodes.remove(pod_node)
-    another_node = nodes[0]
-    non_host_ip = cluster.get_host_ip(another_node)
+        # UDP check
+        host_udp_server(cluster, pods[name].info['host'])
+        with assert_raises(NonZeroRetCodeException, 'No PONG received'):
+            udp_check(pods[name], container_ids[name], specs[name]['hostIP'])
 
-    # TCP check
-    # Here we expect EXIT_CODE to be:
-    # 7 (Failed to connect) or 28 (Connection timed out)
-    with assert_raises(
-            NonZeroRetCodeException,
-            expected_ret_codes=CURL_CONNECTION_ERRORS):
-        # cadvisor port
-        pod_check_node_tcp_port(
-            pods['iso1'], container_ids['iso1'], non_host_ip,
-            port=CADVISOR_PORT)
-    # UDP check
-    host_udp_server(cluster, another_node)
-    with assert_raises(NonZeroRetCodeException, 'No PONG received'):
-        udp_check(pods['iso1'], container_ids['iso1'], non_host_ip)
+        # Container can't access node's IP it was not created on
+        # We do not know which node the pod will land on, so we can't tell in
+        # advance what the "other nodes" are. Should find this out
+        nodes, pod_node = cluster.node_names, pods[name].info['host']
+        nodes.remove(pod_node)
+        another_node = nodes[0]
+        non_host_ip = cluster.get_host_ip(another_node)
+
+        # TCP check
+        # Here we expect EXIT_CODE to be:
+        # 7 (Failed to connect) or 28 (Connection timed out)
+        with assert_raises(
+                NonZeroRetCodeException,
+                expected_ret_codes=CURL_CONNECTION_ERRORS):
+            # cadvisor port
+            pod_check_node_tcp_port(
+                pods[name], container_ids[name], non_host_ip,
+                port=CADVISOR_PORT)
+
+        # UDP check
+        host_udp_server(cluster, another_node)
+        with assert_raises(NonZeroRetCodeException, 'No PONG received'):
+            udp_check(pods[name], container_ids[name], non_host_ip)
 
     # ------ Registered hosts tests ------
     # Pod IPs

@@ -26,6 +26,7 @@ resources = {
     'pricing': ('create', 'get', 'edit', 'delete', 'get_own'),
     'timezone': ('get',),
     'domains': ('create', 'get', 'edit', 'delete'),
+    'allowed-ports': ('get', 'create', 'delete'),
 }
 
 permissions_base = {
@@ -83,6 +84,9 @@ permissions = {
         ('domains', 'edit'): True,
         ('domains', 'delete'): True,
         ('yaml_pods', 'create_non_owned'): True,
+        ('allowed-ports', 'get'): True,
+        ('allowed-ports', 'create'): True,
+        ('allowed-ports', 'delete'): True,
     }),
     'User': dict(permissions_base, **{
         ('pods', 'own'): True,

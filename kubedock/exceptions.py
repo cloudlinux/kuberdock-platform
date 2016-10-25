@@ -235,3 +235,12 @@ class PVResizeFailed(APIError):
     must be provided in message.
     """
     status_code = 400
+
+
+class AllowedPortsException(object):
+
+    class OpenPortError(APIError):
+        message_template = 'Error opening port: {message}'
+
+    class ClosePortError(APIError):
+        message_template = 'Error closing port: {message}'

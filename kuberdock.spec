@@ -72,6 +72,7 @@ Requires: python-elasticsearch >= 1.0
 Requires: pytz >= 2012d
 Requires: PyYAML
 Requires: python-cloudflare
+Requires: python-etcd
 
 # AutoReq: 0
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)

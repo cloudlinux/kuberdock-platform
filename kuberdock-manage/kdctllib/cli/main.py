@@ -3,8 +3,18 @@ import kdclick
 from io import IO
 from kdclick.access import ALL
 from kdctl import KDCtl
-from subs import (images, ippool, nodes, pods, predefined_apps, pricing,
-                  pstorage, system_settings, users)
+from subs import (
+    allowed_ports,
+    images,
+    ippool,
+    nodes,
+    pods,
+    predefined_apps,
+    pricing,
+    pstorage,
+    system_settings,
+    users,
+)
 from utils.misc import ContextObj
 from ..api_client import APIError, UnknownAnswer
 
@@ -103,6 +113,7 @@ def set(obj, key, value):
     return obj.kdctl.config
 
 
+main.add_command(allowed_ports.ap)
 main.add_command(images.images)
 main.add_command(ippool.ippool)
 main.add_command(nodes.nodes)

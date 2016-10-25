@@ -202,3 +202,25 @@ def get_node_host_endpoint_policy(node_hostname, node_ip):
         "outbound_rules": []
     }
     return [pods_forbid_policy, node_allow_policy]
+
+
+def get_node_allowed_ports_policy(rules):
+    return {
+        "id": "kd-nodes-allowed-ports",
+        "order": 105,
+        "selector": "role==\"kdnode\"",
+        "inbound_rules": rules,
+        "outbound_rules": [
+            {
+                "action": "allow",
+            }
+        ],
+    }
+
+
+def get_node_allowed_ports_rule(ports, protocol):
+    return {
+        "action": "allow",
+        "dst_ports": ports,
+        "protocol": protocol,
+    }

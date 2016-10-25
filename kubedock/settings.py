@@ -267,25 +267,34 @@ PD_NAMESPACE = ''
 
 NODE_CEPH_AWARE_KUBERDOCK_LABEL = 'kuberdock-ceph-enabled'
 
-ETCD_BASE_URL = 'http://127.0.0.1:4001/v2/keys'
+ETCD_HOST = '127.0.0.1'
+ETCD_PORT = 4001
+ETCD_BASE_URL = 'http://{0}:{1}/v2/keys'.format(ETCD_HOST, ETCD_PORT)
 
 ETCD_REGISTERED_HOSTS = \
     ETCD_BASE_URL + '/kuberdock/network/plugin/registered_hosts'
 # Some calico config paths, see
 # 'https://github.com/projectcalico/libcalico/blob/master/calico_containers/
 #   pycalico/datastore.py'
-ETCD_CALICO_V_PATH = ETCD_BASE_URL + '/calico/v1'
+ETCD_CALICO_V_PATH = '/calico/v1'
+ETCD_CALICO_URL = ETCD_BASE_URL + ETCD_CALICO_V_PATH
 ETCD_NETWORK_POLICY_SERVICE = \
-    ETCD_CALICO_V_PATH + '/policy/tier/kuberdock-service/policy'
+    ETCD_CALICO_URL + '/policy/tier/kuberdock-service/policy'
 ETCD_NETWORK_POLICY_HOSTS = \
-    ETCD_CALICO_V_PATH + '/policy/tier/kuberdock-hosts/policy'
-ETCD_NETWORK_POLICY_NODES = \
+    ETCD_CALICO_URL + '/policy/tier/kuberdock-hosts/policy'
+ETCD_NETWORK_POLICY_NODES_KEY = \
     ETCD_CALICO_V_PATH + '/policy/tier/kuberdock-nodes/policy'
-ETCD_CALICO_HOST_KEY_PATH_TEMPLATE = ETCD_CALICO_V_PATH + '/host/{hostname}'
+ETCD_NETWORK_POLICY_NODES = ETCD_BASE_URL + ETCD_NETWORK_POLICY_NODES_KEY
+ETCD_CALICO_HOST_KEY_PATH_TEMPLATE = ETCD_CALICO_URL + '/host/{hostname}'
 ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE = \
     ETCD_CALICO_HOST_KEY_PATH_TEMPLATE + '/config'
 ETCD_CALICO_HOST_ENDPOINT_KEY_PATH_TEMPLATE = \
     ETCD_CALICO_HOST_KEY_PATH_TEMPLATE + '/endpoint/{hostname}'
+
+# Allowed ports
+ETCD_ALLOWED_PORT_PREFIX = '/kuberdock-allowed-ports'
+ETCD_ALLOWED_PORT_KEY_PATH = ETCD_NETWORK_POLICY_NODES_KEY + \
+                             ETCD_ALLOWED_PORT_PREFIX
 
 # Role label for nodes calico host endpoints
 KD_NODE_HOST_ENDPOINT_ROLE = 'kdnode'

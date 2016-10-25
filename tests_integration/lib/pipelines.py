@@ -136,11 +136,6 @@ class PodRestorePipeline(Pipeline):
         self.cluster.recreate_routable_ip_pool()
 
 
-# TODO: Drop in 1.4 release
-class PodRestoreUpgradedPipeline(UpgradedPipelineMixin, PodRestorePipeline):
-    NAME = 'pod_restore_upgraded'
-
-
 class MasterRestorePipeline(Pipeline):
     NAME = 'master_backup_restore'
     ROUTABLE_IP_COUNT = 2
@@ -155,25 +150,12 @@ class MasterRestorePipeline(Pipeline):
 
 class ReleaseUpdatePipeline(Pipeline):
     NAME = 'release_update'
-    ROUTABLE_IP_COUNT = 1
+    ROUTABLE_IP_COUNT = 3
     ENV = {
         'KD_NODES_COUNT': '1',
-        'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,ippool',
+        'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch',
         'KD_INSTALL_TYPE': 'release',
     }
-
-    # TODO: Delete when 1.4.0 released
-    def post_create_hook(self):
-        super(ReleaseUpdatePipeline, self).post_create_hook()
-        cmd = """
-        MAIN_INTERFACE=$(ip route get 8.8.8.8 | egrep 'dev\s+.+?\s+src' -o | awk '{print $2}');  # noqa
-        ip addr show dev $MAIN_INTERFACE | awk 'NR==3 { print $2 }'
-        """
-        _, main_ip, _ = self.cluster.ssh_exec('master', cmd)
-
-        ip_pool = str(IPv4Network(unicode(main_ip), strict=False))
-        cmd = 'create-ip-pool -s {}'.format(ip_pool)
-        self.cluster.manage(cmd)
 
 
 class WebUIPipeline(Pipeline):

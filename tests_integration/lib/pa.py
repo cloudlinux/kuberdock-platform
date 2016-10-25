@@ -11,7 +11,7 @@ from pg import DB
 
 from tests_integration.lib.exceptions import WrongCLICommand
 from tests_integration.lib.pod import KDPod
-from tests_integration.lib.pod import DEFAULT_WAIT_POD_TIMEOUT
+from tests_integration.lib.pod import DEFAULT_WAIT_PORTS_TIMEOUT
 from tests_integration.lib.integration_test_utils import \
     assert_eq, assert_in, kube_type_to_int, \
     kube_type_to_str
@@ -219,7 +219,7 @@ class _KokenPaPod(KDPAPod):
 class _OwnCloudPaPod(KDPAPod):
     SRC = 'owncloud.yaml'
 
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_PORTS_TIMEOUT):
         ports = ports or [80]
         self._wait_for_ports(ports, timeout)
 
@@ -254,7 +254,7 @@ class _WordpressPaPod(KDPAPod):
 class _PhpMyAdminPaPod(KDPAPod):
     SRC = 'phpmyadmin.yaml'
 
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_PORTS_TIMEOUT):
         ports = ports or [80]
         self._wait_for_ports(ports, timeout)
 
@@ -269,7 +269,7 @@ class _PhpMyAdminPaPod(KDPAPod):
 class _SugarCrmPaPod(KDPAPod):
     SRC = 'sugarcrm.yaml'
 
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_PORTS_TIMEOUT):
         ports = ports or [80]
         self._wait_for_ports(ports, timeout)
 
@@ -314,7 +314,7 @@ class _MongodbPaPod(KDPAPod):
 class _OdooPaPod(KDPAPod):
     SRC = 'odoo.yaml'
 
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
+    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_PORTS_TIMEOUT):
         # Though odoo also has ssl port 8071
         ports = ports or [80]
         self._wait_for_ports(ports, timeout)

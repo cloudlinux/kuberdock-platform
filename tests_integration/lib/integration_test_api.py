@@ -1,26 +1,27 @@
-import json
-import logging
 import os
-import pipes
-import subprocess
 import sys
 import time
-
-from contextlib import contextmanager
 from datetime import datetime
 
+import json
+import logging
 import paramiko
+import pipes
+import subprocess
 import vagrant
+from contextlib import contextmanager
 from ipaddress import IPv4Network
 
 from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
     VmCreateError, VmProvisionError
-from tests_integration.lib.exceptions import DiskNotFound
+from tests_integration.lib.exceptions import DiskNotFound, \
+    VagrantIsAlreadyUpException
 from tests_integration.lib.integration_test_utils import \
     ssh_exec, assert_eq, assert_in, merge_dicts, retry, \
     escape_command_arg, log_dict, get_rnd_low_string
-from tests_integration.lib.pod import KDPod
 from tests_integration.lib.pa import KDPAPod
+from tests_integration.lib.pod import KDPod
+from tests_integration.lib.timing import log_timing, log_timing_ctx
 
 OPENNEBULA = "opennebula"
 VIRTUALBOX = "virtualbox"
@@ -125,10 +126,11 @@ class KDIntegrationTestAPI(object):
             # reason why docker+vbox is not supported
             key_file = self.vagrant.conf()["IdentityFile"]
 
-        ssh.connect(self.vagrant.hostname(host),
-                    port=int(self.vagrant.port(host)),
-                    username="root",
-                    key_filename=key_file)
+        with log_timing_ctx("ssh.connect({})".format(host)):
+            ssh.connect(self.vagrant.hostname(host),
+                        port=int(self.vagrant.port(host)),
+                        username="root",
+                        key_filename=key_file)
 
         self._ssh_connections[host] = ssh
         return ssh
@@ -170,24 +172,28 @@ class KDIntegrationTestAPI(object):
 
         if provider == OPENNEBULA:
             try:
-                retry(self.vagrant.up, tries=3, interval=15,
-                      provider=provider, no_provision=True)
+                with log_timing_ctx("vagrant up --no-provision"):
+                    retry(self.vagrant.up, tries=3, interval=15,
+                          provider=provider, no_provision=True)
                 self.created_at = datetime.utcnow()
             except subprocess.CalledProcessError:
                 raise VmCreateError('Failed to create VMs in OpenNebula')
 
             try:
-                self.vagrant.provision()
+                with log_timing_ctx("vagrant provision"):
+                    self.vagrant.provision()
             except subprocess.CalledProcessError:
                 raise VmProvisionError('Failed Ansible provision')
         else:
             try:
-                self.vagrant.up(provider=provider, no_provision=True)
+                with log_timing_ctx("vagrant up (with provision)"):
+                    self.vagrant.up(provider=provider)
                 self.created_at = datetime.utcnow()
             except subprocess.CalledProcessError:
                 raise VmCreateError(
                     'Failed either to create or provision VMs')
 
+    @log_timing
     def upgrade(self, upgrade_to='latest', use_testing=False,
                 skip_healthcheck=False):
         args = ''
@@ -200,6 +206,7 @@ class KDIntegrationTestAPI(object):
         self.ssh_exec(
             "master", "yes | /usr/bin/kuberdock-upgrade {}".format(args))
 
+    @log_timing
     def destroy(self):
         self.vagrant.destroy()
 
@@ -217,11 +224,13 @@ class KDIntegrationTestAPI(object):
         finally:
             self.power_on(host)
 
+    @log_timing
     def power_off(self, host):
         vm_name = self.vm_names[host]
         LOG.debug("VM Power Off: '{}'".format(vm_name))
         self.vagrant.halt(vm_name=vm_name)
 
+    @log_timing
     def power_on(self, host):
         vm_name = self.vm_names[host]
         LOG.debug("VM Power On: '{}'".format(vm_name))
@@ -236,6 +245,7 @@ class KDIntegrationTestAPI(object):
     def assert_pods_number(self, number):
         assert_eq(len(self.pods.filter_by_owner()), number)
 
+    @log_timing
     def preload_docker_image(self, image, node=None):
         """
         Pulls given docker image in advance either for a specified node or
@@ -251,10 +261,12 @@ class KDIntegrationTestAPI(object):
         """
 
         nodes = node if node is not None else self.node_names
+        # TODO parallel execution on all nodes
         for node in nodes:
             retry(self.docker, interval=5, tries=3,
                   cmd='pull {}'.format(image), node=node)
 
+    @log_timing
     def wait_for_service_pods(self):
         def _check_service_pods():
             _, response, _ = self.kdctl(
@@ -265,6 +277,7 @@ class KDIntegrationTestAPI(object):
 
         retry(_check_service_pods, tries=40, interval=15)
 
+    @log_timing
     def healthcheck(self):
         # Not passing for now: AC-3199
         rc, _, _ = self.ssh_exec("master",
@@ -611,10 +624,6 @@ class PodList(object):
             for pod in self.cluster.pods.filter_by_owner(user):
                 name = escape_command_arg(pod['name'])
                 self.cluster.kcli(u'delete {}'.format(name), user=user)
-
-
-class VagrantIsAlreadyUpException(Exception):
-    pass
 
 
 class PV(object):

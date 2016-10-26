@@ -1,22 +1,24 @@
 import logging
 import os
+import sys
 import random
 import time
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 
-from tests_integration.lib.exceptions import PipelineNotFound, \
-    NonZeroRetCodeException, ClusterUpgradeError
+from tests_integration.lib.exceptions import PipelineNotFound
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.integration_test_utils import NebulaIPPool, \
-    merge_dicts, get_test_full_name, center_text_message, suppress, \
-    all_subclasses
+from tests_integration.lib.integration_test_runner import format_exception
+from tests_integration.lib.integration_test_utils import merge_dicts, \
+    center_text_message, suppress, all_subclasses, get_func_fqn
+from tests_integration.lib.nebula_ip_pool import NebulaIPPool
+from tests_integration.lib.timing import log_timing, log_timing_ctx
 
 PIPELINES_PATH = '.pipelines/'
 INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
 CLUSTER_CREATION_MAX_DELAY = 120
-logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+LOG = logging.getLogger()
+LOG.setLevel(logging.DEBUG)
 
 
 class Pipeline(object):
@@ -89,11 +91,20 @@ class Pipeline(object):
             KDIntegrationAPI object as a first argument
         """
         with _wrap_test_log(test):
-            self.set_up()
+            with log_timing_ctx("Pipeline {} set_up".format(self.name)):
+                self.set_up()
+            test_fqn = get_func_fqn(test)
             try:
-                test(self.cluster)
+                with log_timing_ctx("Test {}".format(test_fqn)):
+                    test(self.cluster)
+            except Exception:
+                trace = format_exception(sys.exc_info())
+                LOG.error("Test {} FAILED:\n{}".format(test_fqn, trace))
+                raise
             finally:
-                self.tear_down()
+                with log_timing_ctx("Pipeline {} tear_down".format(
+                        self.name)):
+                    self.tear_down()
 
     def post_create_hook(self):
         """
@@ -102,6 +113,7 @@ class Pipeline(object):
         """
         pass
 
+    @log_timing
     def create(self):
         """
         Create a pipeline. Underneath creates a KD cluster and destroys it
@@ -121,12 +133,12 @@ class Pipeline(object):
         if not self.build_cluster:
             self.cluster = KDIntegrationTestAPI(
                 override_envs=self.settings, err_cm=cm, out_cm=cm)
-            logger.info('BUILD_CLUSTER flag not passed. Pipeline create '
+            LOG.info('BUILD_CLUSTER flag not passed. Pipeline create '
                         'call skipped.')
             return
 
-        # Prevent Nebula from being flooded by vm-create requests (AC-3914)
         delay = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
+        LOG.info("Sleeping {}s to prevent Nebula from being flooded")
         time.sleep(delay)
 
         try:
@@ -143,7 +155,8 @@ class Pipeline(object):
             # Write reserved IPs to master VM metadata for future GC
             master_ip = self.cluster.get_host_ip('master')
             self.routable_ip_pool.store_reserved_ips(master_ip)
-            self.post_create_hook()
+            with log_timing_ctx("'{}' post_create_hook".format(self.name)):
+                self.post_create_hook()
         except:
             self.destroy()
             raise
@@ -164,7 +177,7 @@ class Pipeline(object):
         Destroys KD cluster
         """
         if not self.build_cluster:
-            logger.info('BUILD_CLUSTER flag not passed. Pipeline destroy '
+            LOG.info('BUILD_CLUSTER flag not passed. Pipeline destroy '
                         'call skipped')
             return
 
@@ -225,7 +238,7 @@ class Pipeline(object):
         log = self.vagrant_log.read() or '>>> EMPTY <<<'
 
         message = '\n\n{header}\n{log}\n{footer}\n\n'
-        logger.debug(
+        LOG.debug(
             message.format(
                 header=center_text_message(
                     'BEGIN {} VAGRANT LOGS'.format(self.name)),
@@ -241,12 +254,12 @@ def _wrap_test_log(test):
     """
     Wraps test log output with START/END markers
     """
-    test_name = get_test_full_name(test)
+    test_name = get_func_fqn(test)
     try:
-        logger.debug(center_text_message('{} START'.format(test_name)))
+        LOG.debug(center_text_message('{} START'.format(test_name)))
         yield
     finally:
-        logger.debug(center_text_message('{} END'.format(test_name)))
+        LOG.debug(center_text_message('{} END'.format(test_name)))
 
 
 class UpgradedPipelineMixin(object):

@@ -14,13 +14,13 @@ from colorama import Fore
 
 from tests_integration.lib import multilogger
 from tests_integration.lib.integration_test_runner import \
-    TestResultCollection, discover_integration_tests, format_exception, \
-    write_junit_xml
-from tests_integration.lib.integration_test_utils import get_test_full_name, \
+    TestResultCollection, discover_integration_tests, write_junit_xml
+from tests_integration.lib.integration_test_utils import get_func_fqn, \
     center_text_message, force_unicode
 from tests_integration.lib.pipelines import pipelines as \
     registered_pipelines
 from tests_integration.lib.pipelines_base import Pipeline
+from tests_integration.lib.timing import timing_ctx, stopwatch
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
@@ -55,32 +55,36 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         msg = force_unicode(msg)
         print_msg(u'{} -> {}\n'.format(pipeline_name, msg), color)
 
+    pipeline = Pipeline.from_name(pipeline_name)
+    pipe_log('CREATING CLUSTER', Fore.MAGENTA)
     try:
-        pipeline = Pipeline.from_name(pipeline_name)
-        pipe_log('CREATING CLUSTER', Fore.MAGENTA)
-        pipeline.create()
-        pipe_log('CLUSTER CREATED', Fore.GREEN)
+        with timing_ctx() as clus_time:
+            pipeline.create()
+        pipe_log('CLUSTER CREATED ({})'.format(clus_time), Fore.GREEN)
     except Exception as e:
-        test_results.register_pipeline_error(pipeline_name, tests,
-                                             prettify_exception(e))
-
-        msg = format_exception(sys.exc_info())
-        pipe_log(u'CLUSTER CREATION FAILED\n{}'.format(msg), Fore.RED)
+        msg = prettify_exception(e)
+        test_results.register_pipeline_error(pipeline_name, tests, msg)
+        pipe_log(u'CLUSTER CREATION FAILED ({})\n{}'.format(clus_time, msg),
+                 Fore.RED)
         return
 
+    sw = stopwatch()
     for test in tests:
-        test_name = get_test_full_name(test)
+        test_name = get_func_fqn(test)
         pipe_log(u'{} -> STARTED'.format(test_name))
 
         try:
-            pipeline.run_test(test)
-            test_results.register_success(test, pipeline_name)
-
-            pipe_log(u'{} -> PASSED'.format(test_name), Fore.GREEN)
-        except:
-            test_results.register_failure(test, pipeline_name)
-            msg = format_exception(sys.exc_info())
-            pipe_log(u'{} -> FAILED\n{}'.format(test_name, msg), Fore.RED)
+            with timing_ctx() as test_time:
+                pipeline.run_test(test)
+            test_results.register_success(test, test_time, pipeline_name)
+            pipe_log(u'{} -> PASSED ({})'.format(test_name, test_time),
+                     Fore.GREEN)
+        except Exception as e:
+            msg = prettify_exception(e)
+            test_results.register_failure(test, test_time, pipeline_name, msg)
+            pipe_log(u'{} -> FAILED ({})\n{}'.format(test_name, test_time, msg),
+                     Fore.RED)
+    all_tests_time = next(sw)
 
     if cluster_debug and test_results.has_any_failures(pipeline_name):
         add_debug_info(pipeline)
@@ -88,6 +92,9 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         pipeline.destroy()
 
     print_msg(test_results.pipeline_test_summary(pipeline_name))
+    print_msg("{} Cluster time: {}; Tests time: {};".format(pipeline_name,
+                                                            clus_time,
+                                                            all_tests_time))
 
 
 def prettify_exception(exc):
@@ -189,7 +196,7 @@ def _print_logs(handler, live_log):
     # If live log was enabled all the logs were already printed
     if not live_log:
         click.echo(get_pipeline_logs(handler), color=True)
-    click.echo(test_results.get_tests_report(), color=True)
+    click.echo(test_results.get_test_report(), color=True)
     if debug_messages:
         click.echo(center_text_message('Debug messages'), color=True)
         click.echo('\n'.join(debug_messages), color=True)

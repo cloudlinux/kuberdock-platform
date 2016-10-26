@@ -28,11 +28,13 @@ NGINX_CONFIG = {
     u'Cmd': [u'nginx', u'-g', u'daemon off;'],
     u'Domainname': u'',
     u'Entrypoint': None,
-    u'Env': [u'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+    u'Env': [(u'PATH=/usr/local/sbin:/usr/local/bin:'
+              u'/usr/sbin:/usr/bin:/sbin:/bin'),
              u'NGINX_VERSION=1.9.5-1~jessie'],
     u'ExposedPorts': {u'443/tcp': {}, u'80/tcp': {}},
     u'Hostname': u'7b840bf4fc5e',
-    u'Image': u'd8a70839d9617b3104ac0e564137fd794fab7c71900f6347e99fba7f3fe71a30',
+    u'Image': (u'd8a70839d9617b3104ac0e564137fd79'
+               u'4fab7c71900f6347e99fba7f3fe71a30'),
     u'Labels': {},
     u'MacAddress': u'',
     u'NetworkDisabled': False,
@@ -155,7 +157,7 @@ class TestImagesAuth(DBTestCase):
         #       service="registry.docker.io",
         #       scope="repository:nginx:pull"
         # 2. GET token via parameters in 'www-authenticate'
-        #   GET https://auth.docker.io/token?scope=repository%3Anginx%3Apull&service=registry.docker.io
+        #   GET https://auth.docker.io/token?scope=repository%3Anginx%3Apull&service=registry.docker.io  # noqa
         #   with optional auth params
         #   response will contains json with 'token' field
         # 3. GET original url
@@ -164,8 +166,8 @@ class TestImagesAuth(DBTestCase):
         # Will return requested image manifest with 'history' field containing
         # list of items with 'v1Compatibility' field representing V1 API
         # compatible image description.
-        v2_request_url = registry.rstrip('/') + '/v2/' + repo + '/manifests/' +\
-            tag
+        v2_request_url = (
+            registry.rstrip('/') + '/v2/' + repo + '/manifests/' + tag)
         realm = 'https://auth.docker.io/token'
         token_params = {
             'scope': 'repository:nginx:pull',
@@ -174,7 +176,8 @@ class TestImagesAuth(DBTestCase):
         token = 'qwerty'
 
         def config_request_callback(request):
-            if not request.headers.get('Authorization', '').startswith('Bearer '):
+            auth_header = request.headers.get('Authorization', '')
+            if not auth_header.startswith('Bearer '):
                 headers = {
                     'www-authenticate': 'Bearer {}'.format(
                         ','.join('{}="{}"'.format(key, value) for key, value
@@ -276,9 +279,11 @@ class TestImages(unittest.TestCase):
             'quay.io/some_user/some_repo:4': ('https://quay.io', 'quay.io',
                                               'some_user/some_repo', '4'),
             '45.55.52.203:5000/some_repo': ('https://45.55.52.203:5000',
-                                            '45.55.52.203:5000', 'some_repo', 'latest'),
+                                            '45.55.52.203:5000',
+                                            'some_repo', 'latest'),
             '45.55.52.203:5000/some_repo:4': ('https://45.55.52.203:5000',
-                                              '45.55.52.203:5000', 'some_repo', '4')
+                                              '45.55.52.203:5000',
+                                              'some_repo', '4')
         }
         for image_name, result in test_pairs.iteritems():
             self.assertEqual(Image(image_name), result)
@@ -289,11 +294,13 @@ class TestImages(unittest.TestCase):
             'docker.io/nginx': (True, True, 'hub.docker.com/_/nginx'),
             'docker.io/library/nginx': (True, True, 'hub.docker.com/_/nginx'),
             'wncm/nginx': (True, False, 'hub.docker.com/r/wncm/nginx'),
-            'docker.io/wncm/nginx': (True, False, 'hub.docker.com/r/wncm/nginx'),
+            'docker.io/wncm/nginx': (True, False,
+                                     'hub.docker.com/r/wncm/nginx'),
             'quay.io/nginx': (False, False, 'quay.io/nginx'),
             'quay.io/wncm/nginx': (False, False, 'quay.io/wncm/nginx'),
         }
-        for image_name, (is_dockerhub, is_official, source_url) in test_pairs.iteritems():
+        for image_name, (is_dockerhub, is_official,
+                         source_url) in test_pairs.iteritems():
             self.assertEqual(Image(image_name).is_dockerhub, is_dockerhub)
             self.assertEqual(Image(image_name).is_official, is_official)
             self.assertEqual(Image(image_name).source_url, source_url)
@@ -378,7 +385,8 @@ class TestImages(unittest.TestCase):
         )
         v1_mock.assert_any_call(
             Image('quay.io/quay/redis'), None, just_check=True)
-        v1_mock.assert_any_call(Image('u1/test_private'), None, just_check=True)
+        v1_mock.assert_any_call(
+            Image('u1/test_private'), None, just_check=True)
 
         # CMD and ENTRYPOINT check
         v1_mock.reset_mock()
@@ -400,7 +408,8 @@ class TestImages(unittest.TestCase):
         with self.assertRaises(CommandIsMissing):
             Image.check_containers(
                 [dict(container, image='alpine', command=[], args=[])], [])
-        v1_mock.assert_called_once_with(Image('alpine'), None, just_check=False)
+        v1_mock.assert_called_once_with(
+            Image('alpine'), None, just_check=False)
         v2_mock.assert_called_once_with(
             Image('alpine'), None, just_check=False, raise_=True)
 
@@ -464,12 +473,14 @@ class TestCheckRegistryStatus(unittest.TestCase):
                 'https://{0}/v2/'.format(registry))
 
     def _get_err_cases(self, registry):
-        err_msg_template = ('It seems that the registry {0} is not available now '
-                            '({1}). Try again later or contact your administrator '
-                            'for support.')
+        err_msg_template = ('It seems that the registry {0} is not available '
+                            'now ({1}). Try again later or contact your '
+                            'administrator for support.')
         err_msg_timeout = err_msg_template.format(registry, 'timeout error')
-        err_msg_connection = err_msg_template.format(registry, 'connection error')
-        err_msg_502 = err_msg_template.format(registry, '502 Server Error: BAD GATEWAY')
+        err_msg_connection = err_msg_template.format(
+            registry, 'connection error')
+        err_msg_502 = err_msg_template.format(
+            registry, '502 Server Error: BAD GATEWAY')
 
         return ((ConnectTimeout(), err_msg_timeout),
                 (ReadTimeout(), err_msg_timeout),

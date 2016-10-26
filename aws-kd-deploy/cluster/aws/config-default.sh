@@ -71,7 +71,7 @@ INSTANCE_PREFIX="${KUBE_AWS_INSTANCE_PREFIX:-kuberdock}"
 CLUSTER_ID=${INSTANCE_PREFIX}
 AWS_SSH_KEY=${AWS_SSH_KEY:-$HOME/.ssh/kube_aws_rsa}
 IAM_PROFILE_MASTER="kubernetes-master"
-IAM_PROFILE_NODE="kubernetes-node"
+IAM_PROFILE_NODE="kubernetes-minion"
 
 LOG="/dev/null"
 

@@ -3,6 +3,7 @@ import os
 import re
 import sys
 import threading
+import traceback
 from contextlib import closing
 from datetime import timedelta
 from threading import Thread
@@ -151,9 +152,11 @@ def get_pipeline_logs(multilog):
             msg = '\n' + '\n'.join(urls)
     except Exception as e:
         # Fallback if pastebin isn't accessible
-        msg = u'\n!!! Could not upload logs to pastebin. Reason:\n{}\n' \
-              u'Falling back to console\n\n{}'
-        msg = msg.format(prettify_exception(e), u'\n'.join(entries.values()))
+        msg = u'\n!!! Could not upload logs to pastebin, ' \
+              u'falling back to console. Reason:\n{}\n\n{}'.format(
+            u''.join(traceback.format_exception(*sys.exc_info())),
+            u'\n'.join(entries.values())
+        )
 
     msg = center_text_message(
         'PIPELINE DETAILED LOGS', fill_char='=', color=Fore.MAGENTA) + msg
@@ -172,7 +175,8 @@ class PastebinClient(object):
         return response.json()['uri'] + '/raw'
 
     def _prepare_log(self, data):
-        return re.sub(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]', '', data)
+        return re.sub(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]', '', data).encode(
+            encoding="utf-8")
 
     def __enter__(self):
         return self

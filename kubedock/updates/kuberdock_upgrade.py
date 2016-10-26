@@ -640,29 +640,29 @@ if __name__ == '__main__':
                 pass
 
             err = do_cycle_updates(args.use_testing)
-            post_upgrade(for_successful=not err)
-            if not args.local:
+            post_upgrade(for_successful=not bool(err))
+            if not args.local and not bool(err):
                 print 'Restarting upgrade script to check next new package...'
                 os.execv(__file__, sys.argv)
-            sys.exit(0)     # if local install case
+            sys.exit(bool(err))     # if local install case
 
         if args.command == CLI_COMMANDS.resume_upgrade:
             if pre_upgrade():
                 sys.exit(3)
             err = do_cycle_updates(args.use_testing)
-            post_upgrade(for_successful=not err)
-            sys.exit(0)
+            post_upgrade(for_successful=not bool(err))
+            sys.exit(bool(err))
 
         if args.command == CLI_COMMANDS.apply_one:
             if not os.path.exists(os.path.join(settings.UPDATES_PATH,
                                                args.script_file)):
                 print 'There is no such upgrade script in scripts directory'
-                sys.exit(0)
+                sys.exit(1)
             if pre_upgrade():
                 sys.exit(3)
             ok = run_script(args.script_file, args.use_testing)
             post_upgrade(for_successful=ok)
-            sys.exit(0)
+            sys.exit(not bool(ok))
 
         if args.command == CLI_COMMANDS.upgrade:
             if args.use_testing:

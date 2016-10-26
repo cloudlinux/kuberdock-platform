@@ -70,7 +70,10 @@ class TestNodeUtils(DBTestCase):
         ip3 = '192.168.1.4'
         host3 = 'host3'
         kube_type = Kube.get_default_kube_type()
-        node3 = Node(ip=ip3, hostname=host3, kube_id=kube_type, state=NODE_STATUSES.pending)
+        node3 = Node(
+            ip=ip3, hostname=host3, kube_id=kube_type,
+            state=NODE_STATUSES.pending
+        )
         db.session.add(node3)
         db.session.commit()
         get_all_nodes_mock.return_value = [
@@ -93,7 +96,8 @@ class TestNodeUtils(DBTestCase):
         # AC-3349 Fix. Not needed due to fix in 'get_nodes_collection'.
         # fix_missed_nodes_mock.assert_called_once_with(
         #     [node1, node2, node3],
-        #     {x['metadata']['name']: x for x in get_all_nodes_mock.return_value})
+        #     {x['metadata']['name']: x
+        #      for x in get_all_nodes_mock.return_value})
         self.assertEqual(len(res), 3)
         self.assertEqual(
             res[0],
@@ -232,6 +236,67 @@ class TestNodeUtils(DBTestCase):
             }
         }
         self.assertTrue(node_utils._node_is_active(valid_status))
+
+
+class TestNodeUtilsFunctions(unittest.TestCase):
+    """Tests for utilities which is independent from DB or other
+    infrastructure.
+    """
+
+    @mock.patch.object(node_utils, '_exec_on_host')
+    def test_get_block_device_list(self, exec_on_host_mock):
+        name1 = 'sda'
+        size1 = 424242
+        type1 = 'disk'
+        mp1 = ''
+        name2 = 'sda1'
+        size2 = 5353
+        type2 = 'part'
+        mp2 = '/boot\\ with\\ spaces'
+        name3 = 'centos-root'
+        size3 = 646464
+        type3 = 'lvm'
+        mp3 = '/'
+        lsblk_result = (
+            'NAME="{}" MAJ:MIN="8:0" RM="0" SIZE="{}" RO="0" TYPE="{}" '
+            'MOUNTPOINT="{}"\n'
+            'NAME="{}" MAJ:MIN="8:0" RM="0" SIZE="{}" RO="0" TYPE="{}" '
+            'MOUNTPOINT="{}"\n'
+            'NAME="{}" MAJ:MIN="253:0" RM="0" SIZE="{}" RO="0" TYPE="{}" '
+            'MOUNTPOINT="{}"\n'
+        ).format(
+            name1, size1, type1, mp1,
+            name2, size2, type2, mp2,
+            name3, size3, type3, mp3,
+        )
+
+        exec_on_host_mock.return_value = lsblk_result
+        hostname = 'qwerty'
+        devices = node_utils.get_block_device_list(hostname)
+        self.assertEqual({name1, name2}, set(devices))
+        dev = devices[name1]
+        self.assertEqual(
+            dev,
+            {
+                'NAME': name1,
+                'SIZE': size1,
+                'TYPE': type1,
+                'MOUNTPOINT': mp1,
+                'DEVICE': '/dev/' + name1,
+            }
+        )
+        dev = devices[name2]
+        self.assertEqual(
+            dev,
+            {
+                'NAME': name2,
+                'SIZE': size2,
+                'TYPE': type2,
+                'MOUNTPOINT': mp2,
+                'DEVICE': '/dev/' + name2,
+            }
+        )
+        self.assertEqual(exec_on_host_mock.call_count, 1)
 
 
 if __name__ == '__main__':

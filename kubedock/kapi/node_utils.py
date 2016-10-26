@@ -2,6 +2,7 @@ import socket
 import requests
 import json
 import uuid
+import re
 
 from flask import current_app
 
@@ -538,23 +539,105 @@ def remove_ls_storage(hostname, raise_on_error=True):
     return error_message
 
 
-def get_ls_info(hostname, raise_on_error=False):
-    """Retrieves information about locastorage status on the node."""
+def _exec_on_host(hostname, command, err_message_prefix):
     ssh, connect_error = ssh_connect(hostname)
-    msg = 'Failed to get information about node LS: {}'
     if connect_error:
-        error_message = msg.format(connect_error)
-        if raise_on_error:
-            raise APIError(error_message)
-        return error_message
+        error_message = u'{}: {}'.format(err_message_prefix, connect_error)
+        raise APIError(error_message)
 
-    cmd = NODE_STORAGE_MANAGE_CMD + ' get-info'
-    _, o, e = ssh.exec_command(cmd)
+    _, o, e = ssh.exec_command(command)
     if o.channel.recv_exit_status():
-        error_message = msg.format(e.read())
-        if raise_on_error:
-            raise APIError(error_message)
-    return json.loads(o.read())
+        error_message = u'{}: {}'.format(err_message_prefix, e.read())
+        raise APIError(error_message)
+    return o.read()
+
+
+def get_ls_info(hostname):
+    """Retrieves information about locastorage status on the node."""
+    msg = u'Failed to get information about node LS on "{}"'.format(hostname)
+    cmd = NODE_STORAGE_MANAGE_CMD + ' get-info'
+    result = _exec_on_host(hostname, cmd, msg)
+    return json.loads(result)
+
+
+def get_block_device_list(hostname):
+    """Retrieves list of block devices available on the given host.
+    :return: a dict. Keys are - block device names, values are dicts with
+    block device info:
+        NAME - block device name
+        SIZE - block device size in bytes
+        TYPE - block device type (disk or part)
+        MOUNTPOINT - mounpoint of the device if it is already mounted
+        DEVICE - path to the device in form of /dev/<device name>
+    """
+    cmd = 'lsblk -P -b'
+    result = _exec_on_host(
+        hostname,
+        cmd,
+        'Failed to get information about block devices on "{}"'.format(
+            hostname)
+    )
+    # We will get a string for each device in form of
+    # NAME="sda" MAJ:MIN="8:0" RM="0" SIZE="16106127360" RO="0" TYPE="disk"
+    #   -> MOUNTPOINT=""
+    # or
+    # NAME="sda2" MAJ:MIN="8:2" RM="0" SIZE="15580790784" RO="0" TYPE="part"
+    # MOUNTPOINT=""
+    # So we have to split the whole output by lines and extract for each line
+    # the next keys
+    NAME = 'NAME'
+    SIZE = 'SIZE'
+    TYPE = 'TYPE'
+    MOUNTPOINT = 'MOUNTPOINT'
+    use_keys = {NAME, SIZE, TYPE, MOUNTPOINT}
+    # Additional output key where will be written device path with '/dev'
+    # prefix
+    DEVICE = 'DEVICE'
+
+    # Also we list only block devices of the following types
+    ACCEPTABLE_BLK_TYPES = ['disk', 'part']
+
+    # Try to split the line to 'key="value"' parts.
+    # FIXME: we will fail in cases when value contains escaped doublequotes.
+    key_value_pattern = re.compile(r'([A-Z]+="[^"]*")\s?')
+
+    devices = {}
+    for line in result.splitlines():
+        parts = key_value_pattern.findall(line)
+        if len(parts) < len(use_keys):
+            continue
+        device = {}
+        for keyvalue in parts:
+            try:
+                key, value = keyvalue.split('=', 1)
+            except ValueError:
+                continue
+            if key not in use_keys:
+                continue
+            device[key] = value.strip('"')
+
+        if not use_keys.issubset(device):
+            current_app.logger.warning(
+                u"Unknown output of lsblk. host = '{}', value = '{}'".format(
+                    hostname, line
+                )
+            )
+            continue
+        if device[TYPE] not in ACCEPTABLE_BLK_TYPES:
+            continue
+        try:
+            device[SIZE] = int(device[SIZE])
+        except (KeyError, TypeError, ValueError):
+            device[SIZE] = 0
+
+        device[DEVICE] = u'/dev/{}'.format(device[NAME])
+        # It would be very nice to set a flag pointed that device is in use -
+        # So we may avoid adding devices in-use to (for example) zpool.
+        # But actually it is not trivial, a nice explanation is here:
+        # http://unix.stackexchange.com/a/111791
+        # device['BUSY'] = bool(device.get(MOUNTPOINT))
+        devices[device[NAME]] = device
+    return devices
 
 
 def create_calico_host_endpoint(node_hostname, node_ipv4):
@@ -595,6 +678,7 @@ def drop_endpoint_traffic_to_node(node_hostname):
 # Each node policy path is
 # ETCD_NETWORK_POLICY_NODES + <number> + '-' + <node name>
 NODES_POLICY_COUNT = 2
+
 
 def add_permissions_to_node_host_endpoint(node_hostname, node_ipv4):
     """Adds permissions to host endpoints.

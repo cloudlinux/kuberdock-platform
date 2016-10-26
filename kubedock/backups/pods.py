@@ -85,13 +85,14 @@ class _PodRestoreCommand(object):
         # may be it will be changed later.
         pv_restore_needed = bool(persistent_volumes)  # if pv list is not empty
         if pv_restore_needed:
-            if not self.pv_backups_location:
+            if (not self.pv_backups_location and
+                any(vol != 'ceph' for vol in volumes_map.values())):
                 raise APIError('POD spec contains persistent volumes '
                                'but backups location was not specified')
             self._extend_pv_specs_with_backup_info(persistent_volumes,
                                                    volumes_map)
 
-        self._check_for_conflicts(pod_data)
+        self._check_for_conflicts(pod_data, volumes_map)
 
         restored_pod_dict = self._restore_pod(pod_dump)
         restored_pod_dict = self._start_pod_if_needed(restored_pod_dict)
@@ -101,10 +102,12 @@ class _PodRestoreCommand(object):
         for pv_spec in pv_specs:
             pd_name = nested_dict_utils.get(pv_spec, 'name')
             pd_path = volumes_map[pd_name]
+            if pd_path == 'ceph':
+                return
             backup_url = self.backup_url_factory.get_url(pd_name, pd_path)
             nested_dict_utils.set(pv_spec, 'annotation.backupUrl', backup_url)
 
-    def _check_for_conflicts(self, pod_data):
+    def _check_for_conflicts(self, pod_data, volumes_map):
         errors = []
         pod_name = nested_dict_utils.get(pod_data, 'name')
         e = self._check_pod_name(pod_name)
@@ -114,9 +117,10 @@ class _PodRestoreCommand(object):
         vols = _filter_persistent_volumes(pod_data)
         for vol in vols:
             volume_name = nested_dict_utils.get(vol, 'persistentDisk.pdName')
-            e = self._check_volume_name(volume_name)
-            if e:
-                errors.append(e)
+            if volumes_map.get(vol.get('name')) != 'ceph':
+                e = self._check_volume_name(volume_name)
+                if e:
+                    errors.append(e)
         if errors:
             if len(errors) == 1:
                 raise errors[0]

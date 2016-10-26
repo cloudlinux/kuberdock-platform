@@ -270,7 +270,7 @@ class PodCollection(object):
 
         pod_data, secrets = self._preprocess_pod_dump(dump, skip_check)
 
-        return self._add_pod(pod_data, secrets, skip_check, reuse_pv=False)
+        return self._add_pod(pod_data, secrets, skip_check, reuse_pv=True)
 
     def _save_k8s_secrets(self, secrets, namespace):
         """Save secrets to k8s.

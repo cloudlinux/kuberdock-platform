@@ -2,6 +2,7 @@
 
 - name: Get predefined apps
   git: repo="{{ predefined_apps_repo }}"
+       version="{{ predefined_apps_branch }}"
        dest="{{ predefined_apps_dest }}"
   tags:
   - predefined_apps

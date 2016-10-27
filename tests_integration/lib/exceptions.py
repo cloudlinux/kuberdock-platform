@@ -1,3 +1,7 @@
+class VagrantIsAlreadyUpException(Exception):
+    pass
+
+
 class PublicPortWaitTimeoutException(Exception):
     pass
 

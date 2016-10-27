@@ -1,29 +1,24 @@
-import logging
-import operator
 import os
+import re
+import time
+from itertools import count, islice
+
+import logging
 import pipes
 import random
-import re
 import socket
 import string
 import subprocess
-import time
-from collections import defaultdict
+from colorama import Fore, Style
 from contextlib import contextmanager
 from functools import wraps
-from itertools import count, islice
-from xmlrpclib import ProtocolError
 from paramiko import SSHClient, AutoAddPolicy
+from paramiko.sftp import CMD_EXTENDED
 from paramiko.ssh_exception import AuthenticationException
 
-import oca
-from colorama import Fore, Style
-from ipaddress import IPv4Address
-from oca import OpenNebulaException
-from paramiko.sftp import CMD_EXTENDED
-
 from tests_integration.lib.exceptions import PublicPortWaitTimeoutException, \
-    NonZeroRetCodeException, NotEnoughFreeIPs, OpenNebulaError
+    NonZeroRetCodeException
+from tests_integration.lib.timing import log_timing_ctx
 
 NO_FREE_IPS_ERR_MSG = 'no free public IP-addresses'
 LOG = logging.getLogger(__name__)
@@ -223,7 +218,9 @@ def hooks(setup=None, teardown=None):
         def wrapper(*args, **kwargs):
             if setup:
                 try:
-                    setup(*args, **kwargs)
+                    with log_timing_ctx("'{}' setup".format(
+                            get_func_fqn(f))):
+                        setup(*args, **kwargs)
                 except Exception as e:
                     msg = "=== Error in test linked setup: ===\n{}"
                     LOG.error(msg.format(repr(e)))
@@ -233,7 +230,9 @@ def hooks(setup=None, teardown=None):
             finally:
                 if teardown:
                     try:
-                        teardown(*args, **kwargs)
+                        with log_timing_ctx("'{}' teardown".format(
+                                get_func_fqn(f))):
+                            teardown(*args, **kwargs)
                     except Exception as e:
                         msg = "=== Error in test linked teardown: ===\n{}"
                         LOG.error(msg.format(repr(e)))
@@ -309,154 +308,6 @@ def retry(f, tries=3, interval=1, _raise=True, *f_args, **f_kwargs):
                     raise
 
 
-class NebulaIPPool(object):
-    def __init__(self, client):
-        self.client = client
-        self.reserved = defaultdict(set)
-
-    @property
-    def pool(self):
-        try:
-            p = oca.VirtualNetworkPool(self.client, preload_info=True)
-            # Filter flag possible values:
-            # -3: Connected user's resources
-            # -2: All resources
-            # -1: Connected user's and his group's resources
-            p.info(filter=-2, range_start=-1, range_end=-1)
-            return p
-        except ProtocolError:
-            raise OpenNebulaError('Could not retrieve info from OpenNebula')
-
-    def get_free_ip_list(self, network_name):
-        """
-        Returns the set of free IP addresses in the given network
-
-        :param network_name: the name of a network in OpenNebula
-        :return: a set of IPv4 addresses
-        """
-        net = self.pool.get_by_name(network_name)
-        ip_list, used_ip_list = set(), set()
-
-        for r in net.address_ranges:
-            start_ip = int(IPv4Address(unicode(r.ip)))
-            end_ip = start_ip + r.size
-
-            for ip in range(start_ip, end_ip):
-                ip_list.add(str(IPv4Address(ip)))
-            for lease in r.leases:
-                used_ip_list.add(lease.ip)
-
-        free_ips = list(ip_list - used_ip_list)
-        random.shuffle(free_ips)
-        return free_ips
-
-    def reserve_ips(self, network_name, count):
-        # type: (str, int) -> list[str]
-        """
-        Tries to hold the given amount of given IP addresses of a network
-        Automatically retries if IP were concurrently taken. Raises if there
-        are not enough IP addresses
-
-        :param network_name: the name of a network in OpenNebula
-        :param count: number of IPs to hold
-        :return: a set of reserved IPv4 addresses
-        """
-
-        def reserve_ip(ips, net):
-            """
-            Tries to reserve a random free IP. Retries if any OpenNebula
-            related problem occurs. If ips set is empty or became empty
-            during the while loop consider there is not enough IPs
-
-            :return: reserved IP
-            """
-            while ips:
-                ip = ips.pop()
-                LOG.debug("Trying to hold IP: {}".format(ip))
-                try:
-                    net.hold(ip)
-                    return ip
-                except (OpenNebulaException, ProtocolError) as e:
-                    # It's not possible to distinguish if that was an
-                    # arbitrary API error or the IP was concurrently
-                    # reserved. We'll consider it's always the latter case
-                    LOG.debug("Trouble while holding IP {}:\n{}\nTrying the "
-                              "next available IP.".format(ip, repr(e)))
-
-            raise NotEnoughFreeIPs(
-                'The number of free IPs became less than requested during '
-                'reservation')
-
-        LOG.debug("Getting free IP list from OpenNebula")
-        ips = self.get_free_ip_list(network_name)
-        LOG.debug("Got {} IPs".format(len(ips)))
-        if len(ips) < count:
-            raise NotEnoughFreeIPs(
-                '{} net has {} free IPs but {} requested'.format(network_name,
-                                                                 len(ips),
-                                                                 count))
-
-        net = self.pool.get_by_name(network_name)
-
-        LOG.debug("Starting reservation of {} IP addresses.".format(count))
-        for _ in range(count):
-            ip = reserve_ip(ips, net)
-            self.reserved[network_name].add(ip)
-
-        LOG.debug("Done reservation of {} IP addresses: {}".format(
-            count, self.reserved[network_name]))
-
-        return self.reserved[network_name]
-
-    def free_reserved_ips(self):
-        """
-        Tries to release all IPs reserved within this class object instance
-        """
-        LOG.debug("Starting release of IP addresses: {}".format(self.reserved))
-        for net_name, ip_set in self.reserved.items():
-            net = self.pool.get_by_name(net_name)
-            for ip in ip_set:
-                LOG.debug("Trying to release IP: {}".format(ip))
-                try:
-                    net.release(ip)
-                except (OpenNebulaException, ProtocolError) as e:
-                    LOG.debug("Trouble while releasing IP {}:\n{}\nTrying the "
-                              "next one".format(ip, repr(e)))
-        LOG.debug("Done release of IP addresses.")
-
-    @property
-    def reserved_ips(self):
-        return reduce(operator.or_, self.reserved.values())
-
-    @classmethod
-    def factory(cls, url, username, password):
-        # type: (str, str, str) -> NebulaIPPool
-        client = oca.Client('{}:{}'.format(username, password), url)
-        return cls(client)
-
-    def store_reserved_ips(self, ip):
-        """
-        Store information about reserved IPs by a VM given it's IP
-
-        This information is needed for a GC script, which removes old VMs.
-        The script should also release IPs which were reserved in this
-        class. It will use this info saved here to extract a list of IPs
-        it should release
-        """
-        vm = self._get_vm_by_ip(ip)
-        reserved_ips = ','.join(self.reserved_ips)
-        vm.update('RESERVED_IPS="{}"'.format(reserved_ips))
-
-    def _get_vm_by_ip(self, ip):
-        # type: (str) -> oca.VirtualMachine
-        vm_pool = oca.VirtualMachinePool(self.client)
-        vm_pool.info()
-        for vm in vm_pool:
-            if ip in (n.ip for n in vm.template.nics):
-                return vm
-        raise OpenNebulaException('VM {} not found'.format(ip))
-
-
 def get_rnd_string(length=10, prefix=""):
     return prefix + ''.join(random.SystemRandom().choice(
         string.ascii_uppercase + string.digits) for _ in range(length))
@@ -479,10 +330,6 @@ def suppress(exc=Exception):
         yield
     except exc:
         pass
-
-
-def get_test_full_name(test):
-    return '{}::{}'.format(test.__module__, test.__name__)
 
 
 def http_share(cluster, host, shared_dir):
@@ -554,3 +401,11 @@ def wait_for(func, tries=50, interval=10, fail_silently=False):
 def all_subclasses(c):
     return c.__subclasses__() + [g for s in c.__subclasses__()
                                  for g in all_subclasses(s)]
+
+
+def get_func_fqn(f):
+    if hasattr(f, "im_class"):
+        # func defined in a class
+        return ".".join([f.im_class, f.__name__])
+    # func defined in a module
+    return ".".join([f.__module__, f.__name__])

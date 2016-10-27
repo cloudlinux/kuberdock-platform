@@ -55,36 +55,56 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         msg = force_unicode(msg)
         print_msg(u'{} -> {}\n'.format(pipeline_name, msg), color)
 
-    pipeline = Pipeline.from_name(pipeline_name)
+    def pass_test(t):
+        test_name = get_func_fqn(t)
+        test_results.register_success(t, test_time, pipeline_name)
+        pipe_log(u'{} -> PASSED ({})'.format(test_name, test_time),
+                 Fore.GREEN)
+
+    def skip_test(t):
+        test_name = get_func_fqn(t)
+        reason = t.meta['skip_reason']
+        test_results.register_skip(t, pipeline_name, reason)
+        pipe_log(u'{} -> SKIPPED ({})'.format(test_name, reason),
+                 Fore.YELLOW)
+
+    def fail_test(t, error):
+        test_name = get_func_fqn(t)
+        test_results.register_failure(t, test_time, pipeline_name, error)
+        pipe_log(u'{} -> FAILED ({})\n{}'.format(test_name, test_time, error),
+                 Fore.RED)
+
+    if all(t.meta.get('skip_reason') for t in tests):
+        pipe_log('SKIPPING CLUSTER (has no active tests)', Fore.YELLOW)
+        for test in tests:
+            skip_test(test)
+        return
+
     pipe_log('CREATING CLUSTER', Fore.MAGENTA)
+    pipeline = Pipeline.from_name(pipeline_name)
     try:
-        with timing_ctx() as clus_time:
+        with timing_ctx() as cluster_time:
             pipeline.create()
-        pipe_log('CLUSTER CREATED ({})'.format(clus_time), Fore.GREEN)
+        pipe_log('CLUSTER CREATED ({})'.format(cluster_time), Fore.GREEN)
     except Exception as e:
         msg = prettify_exception(e)
         test_results.register_pipeline_error(pipeline_name, tests, msg)
-        pipe_log(u'CLUSTER CREATION FAILED ({})\n{}'.format(clus_time, msg),
+        pipe_log(u'CLUSTER CREATION FAILED ({})\n{}'.format(cluster_time, msg),
                  Fore.RED)
         return
 
-    sw = stopwatch()
-    for test in tests:
-        test_name = get_func_fqn(test)
-        pipe_log(u'{} -> STARTED'.format(test_name))
-
-        try:
-            with timing_ctx() as test_time:
-                pipeline.run_test(test)
-            test_results.register_success(test, test_time, pipeline_name)
-            pipe_log(u'{} -> PASSED ({})'.format(test_name, test_time),
-                     Fore.GREEN)
-        except Exception as e:
-            msg = prettify_exception(e)
-            test_results.register_failure(test, test_time, pipeline_name, msg)
-            pipe_log(u'{} -> FAILED ({})\n{}'.format(test_name, test_time, msg),
-                     Fore.RED)
-    all_tests_time = next(sw)
+    with timing_ctx() as all_tests_time:
+        for test in tests:
+            if "skip_reason" in test.meta:
+                skip_test(test)
+                continue
+            pipe_log(u'{} -> STARTED'.format(get_func_fqn(test)))
+            try:
+                with timing_ctx() as test_time:
+                    pipeline.run_test(test)
+                pass_test(test)
+            except Exception as e:
+                fail_test(test, prettify_exception(e))
 
     if cluster_debug and test_results.has_any_failures(pipeline_name):
         add_debug_info(pipeline)
@@ -93,7 +113,7 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
 
     print_msg(test_results.pipeline_test_summary(pipeline_name))
     print_msg("{} Cluster time: {}; Tests time: {};".format(pipeline_name,
-                                                            clus_time,
+                                                            cluster_time,
                                                             all_tests_time))
 
 
@@ -215,7 +235,7 @@ def _filter_pipelines(include, exclude):
     """
     Filters a global list of pipelines to use given include/exclude masks
     If both arguments aren't specified - all pipelines are used
-    By design can't be specified both
+    By design can't be specify both at the same time.
     :param include: a list of pipeline names to include
     :param exclude: a list of pipeline names to exclude
     :return: dictionary of pipelines

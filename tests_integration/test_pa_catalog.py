@@ -188,8 +188,7 @@ def test_validate_yaml(cluster):
     assert_eq(templates[0]["name"], name)
 
 
-# TODO: uncomment next line after merging fix for AC-4743
-# @pipeline("PA_catalog")
+@pipeline("PA_catalog", skip_reason="FIXME in AC-4743")
 @hooks(setup=_clear_pa_catalog)
 def get_only_yaml_part_of_pa_template(cluster):
     _, template, _ = cluster.ssh_exec("master", "cat {}".format(
@@ -261,8 +260,7 @@ def test_listing_pa_templates(cluster):
     _check_list_output("kcli2")
 
 
-# TODO: uncomment next line after merging fix for AC-4743:
-# @pipeline("PA_catalog")
+@pipeline("PA_catalog", skip_reason="FIXME in AC-4743")
 @hooks(setup=_clear_pa_catalog)
 def test_update_pa_template_by_name(cluster):
     """Check that PA template can be updated.
@@ -281,8 +279,7 @@ def test_update_pa_template_by_name(cluster):
     assert_eq(template, yaml)
 
 
-# TODO: uncomment next line after merging fix for AC-4743:
-# @pipeline("PA_catalog")
+@pipeline("PA_catalog", skip_reason="FIXME in AC-4743")
 @hooks(setup=_clear_pa_catalog)
 def test_update_pa_template_by_id(cluster):
     """Check that PA template can be updated.
@@ -303,8 +300,7 @@ def test_update_pa_template_by_id(cluster):
     assert_eq(template, yaml)
 
 
-# TODO: uncomment next line after merging fix for AC-4743:
-# @pipeline("PA_catalog")
+@pipeline("PA_catalog", skip_reason="FIXME in AC-4743")
 @hooks(setup=_clear_pa_catalog)
 def test_validating_yaml_before_updating_pa_template(cluster):
     name = "my pa"
@@ -323,8 +319,7 @@ def test_validating_yaml_before_updating_pa_template(cluster):
     assert_eq(template, correct_yaml)
 
 
-# TODO: uncomment next line after merging fix for AC-4907
-# @pipeline("PA_catalog")
+@pipeline("PA_catalog", skip_reason="FIXME in AC-4907")
 @hooks(setup=_clear_pa_catalog)
 def test_add_and_run_pa(cluster):
     name = "dokuwiki.yaml"

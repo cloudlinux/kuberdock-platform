@@ -268,7 +268,7 @@ class PACatalogPipeline(Pipeline):
 pipelines = defaultdict(list)
 
 
-def pipeline(name, thread=1):
+def pipeline(name, thread=1, skip_reason=""):
     """
     Register that a test should be executed in a pipeline with a given name
     in a specified thread. Decorator can be used multiple times which means
@@ -284,15 +284,20 @@ def pipeline(name, thread=1):
         Eg. If you decorate one test with pipeline('main', thread=1) and
         another with pipeline('main', thread=2) then a runner will create 2
         main clusters and run each test on its own cluster
+    :param skip_reason: Ticket number - why the test is skipped.
     """
 
-    def wrap(f):
-        pipelines[(name, thread)].append(f)
-
+    def decorator(f):
         @wraps(f)
-        def wrapped(*args, **kwargs):
+        def wrapper(*args, **kwargs):
             return f(*args, **kwargs)
 
-        return wrapped
+        wrapper.meta = {}
+        if skip_reason:
+            wrapper.meta['skip_reason'] = skip_reason
 
-    return wrap
+        pipelines[(name, thread)].append(wrapper)
+        # Return original f so that next @pipeline does not create nested wrap
+        return f
+
+    return decorator

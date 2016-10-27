@@ -27,8 +27,7 @@ def test_elasticsearch_pa(cluster):
     check_pa(cluster, 'elasticsearch.yaml')
 
 
-# Uncomment after AC-4745
-# @pipeline('predefined_apps')
+@pipeline('predefined_apps', skip_reason="FIXME in AC-4745")
 def test_redmine_pa(cluster):
     check_pa(cluster, 'redmine.yaml')
 

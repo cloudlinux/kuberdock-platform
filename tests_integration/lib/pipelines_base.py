@@ -134,7 +134,7 @@ class Pipeline(object):
             self.cluster = KDIntegrationTestAPI(
                 override_envs=self.settings, err_cm=cm, out_cm=cm)
             LOG.info('BUILD_CLUSTER flag not passed. Pipeline create '
-                        'call skipped.')
+                     'call skipped.')
             return
 
         delay = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
@@ -178,7 +178,7 @@ class Pipeline(object):
         """
         if not self.build_cluster:
             LOG.info('BUILD_CLUSTER flag not passed. Pipeline destroy '
-                        'call skipped')
+                     'call skipped')
             return
 
         with suppress():

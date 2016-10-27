@@ -188,8 +188,7 @@ def host_udp_check_pod(cluster, host, pod_ip, port=UDP_PORT):
         raise NonZeroRetCodeException('No PONG received')
 
 
-# Should be fixed in AC-4158
-# @pipeline('networking_rhost_cent6')
+@pipeline('networking_rhost_cent6', skip_reason="FIXME in AC-4158")
 @pipeline('networking')
 @pipeline('networking_upgraded')
 def test_network_isolation(cluster):

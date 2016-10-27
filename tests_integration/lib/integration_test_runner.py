@@ -51,6 +51,14 @@ class TestResultCollection(object):
         self._results.append(self._make_test_result(pipeline, test, 'passed',
                                                     elapsed_time))
 
+    def register_skip(self, test, pipeline, msg):
+        # type: (function, str, unicode) -> None
+        """
+        Adds a test to the collection and marks it as a skipped one
+        """
+        self._results.append(self._make_test_result(pipeline, test, 'skipped',
+                                                    error_message=msg))
+
     def register_pipeline_error(self, pipeline, tests, error_message=None):
         # type: (str, list, unicode) -> None
         """
@@ -71,9 +79,9 @@ class TestResultCollection(object):
         :return: pipeline report
         """
         c = Counter(r.status for r in self._results if r.pipeline == name)
-        failed, passed = c['failed'], c['passed']
-        return '{} -> TEST RESULTS: {} failed, {} passed'.format(
-            name, failed, passed)
+        failed, skipped, passed = c['failed'], c['skipped'], c['passed']
+        return '{} -> TEST RESULTS: {} failed, {} skipped, {} passed'.format(
+            name, failed, skipped, passed)
 
     def get_test_report(self):
         """
@@ -90,9 +98,11 @@ class TestResultCollection(object):
             color = self._color_from_status(test.status)
             err_msg = '({})'.format(_short_err_msg(test.error_message)) if \
                 test.error_message else ''
-            return '{} {} {}{} ({}) {}{}'.format(
+            elapsed = ' ({})'.format(test.elapsed_time) if \
+                test.elapsed_time else ''
+            return '{} {} {}{}{} {}{}'.format(
                 test.pipeline, test.name, color, test.status.upper(),
-                test.elapsed_time, err_msg, Fore.RESET)
+                elapsed, err_msg, Fore.RESET)
 
         results = sorted(self._results, key=attrgetter('pipeline'))
         entries = (_make_report_entry(t) for t in results)
@@ -122,6 +132,7 @@ class TestResultCollection(object):
     def _color_from_status(self, status):
         mapping = {
             'failed': Fore.RED,
+            'skipped': Fore.YELLOW,
             'passed': Fore.GREEN,
             'pipeline_error': Fore.RED
         }
@@ -206,6 +217,8 @@ def write_junit_xml(fp, results):
             case = TestCase(r.name, '{}.{}'.format(pipeline, r.module))
             if r.status == 'failed':
                 case.add_failure_info('Test failed', output=r.error_message)
+            elif r.status == 'skipped':
+                case.add_skipped_info('Test skipped', output=r.error_message)
             elif r.status == 'pipeline_error':
                 case.add_error_info('Failed to create a pipeline',
                                     output=r.error_message)

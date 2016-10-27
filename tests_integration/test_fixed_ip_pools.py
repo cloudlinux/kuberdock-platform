@@ -56,8 +56,8 @@ def test_cannot_add_pod_if_no_free_ips_available(cluster):
     assert_eq(pod_count, expected_pod_count + 1)
 
 
-# NOTE: Uncomment with new k8s version which includes rename to fixed-ip-pools
-# @pipeline('fixed_ip_pools')
+@pipeline('fixed_ip_pools', skip_reason="Turn on with new k8s version which "
+                                        "includes rename to fixed-ip-pools")
 def test_pods_are_not_created_on_node_without_free_ips(cluster):
     # 2 IP addresses in a network
     cluster.ip_pools.add('192.168.0.0/30', 'node1')

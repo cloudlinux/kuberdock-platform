@@ -176,6 +176,7 @@ class KDIntegrationTestAPI(object):
                     retry(self.vagrant.up, tries=3, interval=15,
                           provider=provider, no_provision=True)
                 self.created_at = datetime.utcnow()
+                self._log_vm_ips()
             except subprocess.CalledProcessError:
                 raise VmCreateError('Failed to create VMs in OpenNebula')
 
@@ -372,6 +373,12 @@ class KDIntegrationTestAPI(object):
 
     def _any_vm_is_running(self):
         return any(vm.state != "not_created" for vm in self.vagrant.status())
+
+    @log_timing
+    def _log_vm_ips(self):
+        for vm in self.vagrant.status():
+            LOG.debug("{} IP is: {}".format(
+                vm.name, self.vagrant.hostname(vm.name)))
 
     def _kcli_config_path(self, user):
         if user is not None:

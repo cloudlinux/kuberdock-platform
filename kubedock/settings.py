@@ -197,6 +197,7 @@ SSE_POLL_INTERVAL = 0.5
 ID_PATH = '/var/lib/kuberdock/installation-id'
 STAT_URL = 'https://cln.cloudlinux.com/api/kd/validate.json'
 
+PUBLIC_ACCESS_ASSIGNING_TIMEOUT = 10
 
 CELERYBEAT_SCHEDULE = {
     'process-node-actions': {

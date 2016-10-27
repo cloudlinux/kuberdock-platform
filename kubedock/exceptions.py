@@ -131,6 +131,11 @@ class DomainNotFound(NotFound):
     message_template = 'Domain not found'
 
 
+class PodDomainExists(ResourceExists):
+    resource_type = 'PodDomain'
+    message = 'Pod Domain already exists'
+
+
 class PDNotFound(NotFound):
     message = 'Persistent disk not found.'
 
@@ -140,8 +145,8 @@ class NoFreeIPs(APIError):
                         'KuberDock administrator')
 
 
-class PublicIPAssigningError(APIError):
-    message_template = "Can't assign Public IP to the Pod: {message}"
+class PublicAccessAssigningError(APIError):
+    message_template = 'Error public access assigning: {message}'
 
 
 class NoSuitableNode(APIError):

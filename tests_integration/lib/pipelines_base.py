@@ -17,7 +17,7 @@ from tests_integration.lib.timing import log_timing, log_timing_ctx
 PIPELINES_PATH = '.pipelines/'
 INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
 CLUSTER_CREATION_MAX_DELAY = 120
-LOG = logging.getLogger()
+LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
 
 
@@ -138,7 +138,7 @@ class Pipeline(object):
             return
 
         delay = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
-        LOG.info("Sleeping {}s to prevent Nebula from being flooded")
+        LOG.info("Sleep {}s to prevent Nebula from being flooded".format(delay))
         time.sleep(delay)
 
         try:

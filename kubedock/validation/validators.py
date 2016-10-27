@@ -1,4 +1,6 @@
+import re
 import socket
+from urlparse import urlparse
 
 import cerberus
 from ipaddress import ip_network
@@ -8,12 +10,19 @@ from kubedock.billing.models import Kube, Package
 from kubedock.domains.models import BaseDomain
 from kubedock.predefined_apps.models import PredefinedApp
 from kubedock.rbac.models import Role
-from kubedock.settings import KUBERDOCK_INTERNAL_USER, AWS, CEPH
+from kubedock.settings import AWS, CEPH, KUBERDOCK_INTERNAL_USER
 from kubedock.system_settings.models import SystemSettings
+from kubedock.users.models import User
 from kubedock.users.utils import strip_offset_from_timezone
 from kubedock.utils import get_timezone
+
 from .exceptions import APIError, ValidationError
-from .schemas import *
+from .schemas import (command_pod_schema, cpu_multiplier_schema,
+                      email_domain_regex, email_literal_regex,
+                      email_local_regex, hostname_schema, image_request_schema,
+                      image_search_schema, memory_multiplier_schema,
+                      new_pod_schema, node_schema, pod_dump_schema,
+                      positive_non_zero_integer_schema, user_schema)
 
 
 class V(cerberus.Validator):
@@ -126,7 +135,7 @@ class V(cerberus.Validator):
     def _validate_kube_type_in_user_package(self, exists, field, value):
         if exists and self.user:
             if self.user == KUBERDOCK_INTERNAL_USER and \
-                            value == Kube.get_internal_service_kube_type():
+                    value == Kube.get_internal_service_kube_type():
                 return
             package = User.get(self.user).package
             if value not in [k.kube_id for k in package.kubes]:
@@ -210,9 +219,13 @@ class V(cerberus.Validator):
 
     def _validate_domain_exists(self, exists, field, value):
         if (exists and
-                    BaseDomain.filter(
-                            BaseDomain.name == value).first() is None):
+                BaseDomain.filter(BaseDomain.name == value).first() is None):
             self._error(field, 'Domain "{0}" doesn\'t exists'.format(value))
+
+    def _validate_url_with_schema(self, should_be_with_schema, field, value):
+        if should_be_with_schema and not urlparse(value).scheme:
+            self._error(field, ('Schema is missing. Please, specify URL '
+                                'with "http[s]://".'))
 
 
 def check_int_id(id):
@@ -274,7 +287,7 @@ def check_change_pod_data(data):
         'commandOptions': data.get('commandOptions') or {},
         'containers': [{'name': c.get('name'), 'kubes': c.get('kubes')}
                        for c in data.get('containers') or []]
-        }
+    }
 
 
 def check_new_pod_data(data, user=None, **kwargs):
@@ -358,6 +371,12 @@ def check_system_settings(data):
         if not validator.validate({'value': value},
                                   {'value': {'type': 'email'}}):
             raise APIError('Incorrect value for email')
+    elif name == 'billing_url':
+        if not validator.validate({'value': value},
+                                  {'value': {'type': 'string',
+                                             'url_with_schema': True}}):
+            raise APIError('Incorrect value for billing URL: {}'.format(
+                validator.errors['value']))
 
 
 class UserValidator(V):

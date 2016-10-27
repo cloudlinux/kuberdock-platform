@@ -76,6 +76,8 @@ class InternalAPIError(APIError):
         if self.exc_info:
             self.details['excType'] = exc_info[0].__name__
             self.details['excValue'] = exc_info[1].message
+            if self.details.get('message') is None:
+                self.details['message'] = self.details['excValue']
 
     @classmethod
     def from_exc(cls, exc_type, exc_value, traceback):
@@ -203,7 +205,7 @@ class BillingExc(object):
         message_template = 'Billing could not process request'
 
     class InternalBillingError(InternalAPIError):
-        message_template = 'An internal error occurred: {message}'
+        message_template = 'An internal error occurred (billing): {message}'
 
 
 class AlreadyExistsError(APIError):

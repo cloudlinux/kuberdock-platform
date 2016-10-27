@@ -38,7 +38,7 @@ from ..exceptions import (
     APIError,
     InsufficientData,
     PodStartFailure,
-    PublicIPAssigningError,
+    PublicAccessAssigningError,
     PVResizeFailed
 )
 from ..kd_celery import celery
@@ -60,7 +60,6 @@ DIRECT_SSH_USERNAME_LEN = 30
 DIRECT_SSH_ERROR = "Error retrieving ssh access, please contact administrator"
 
 
-PUBLIC_IP_ASSIGNING_TIMEOUT = 10
 
 
 def _check_license():
@@ -456,10 +455,9 @@ class PodCollection(object):
                         u'DNS management system is misconfigured. '
                         u'Please, contact administrator.')
                 )
-            domain = pod_domains.check_domain(domain_name)
-            pod_domain = pod_domains.set_pod_domain(pod, domain.id)
-            conf['domain'] = pod.domain = u'{}.{}'.format(
-                pod_domain.name, domain.name)
+            with db.session.begin_nested():
+                pod_domain = pod_domains.set_pod_domain(pod, domain_name)
+            conf['domain'] = pod.domain = str(pod_domain)
         if config is None:
             pod.set_dbconfig(conf, save=False)
 
@@ -1084,9 +1082,10 @@ class PodCollection(object):
             """
             with ExclusiveLockContextManager(
                     'PodCollection._assing_public_ip',
-                    blocking=True, ttl=PUBLIC_IP_ASSIGNING_TIMEOUT) as lock:
+                    blocking=True,
+                    ttl=settings.PUBLIC_ACCESS_ASSIGNING_TIMEOUT) as lock:
                 if not lock:
-                    raise PublicIPAssigningError(details={
+                    raise PublicAccessAssigningError(details={
                         'message': 'Timeout getting Public IP'
                     })
 
@@ -1141,7 +1140,7 @@ class PodCollection(object):
 
             return rv
 
-        except (NoFreeIPs, PublicIPAssigningError):
+        except (NoFreeIPs, PublicAccessAssigningError):
             pod.set_status(POD_STATUSES.stopped, send_update=True)
             raise
         except Exception:

@@ -1204,7 +1204,9 @@ def process_pod(pod, rc, service, template_id=None):
             'resolve', []),
     }
 
-    if plan.get('baseDomain'):
+    if spec_body.get('domain'):
+        new_pod['domain'] = spec_body.get('domain')
+    elif plan.get('baseDomain'):
         new_pod['domain'] = plan.get('baseDomain')
 
     if 'containers' in spec_body:

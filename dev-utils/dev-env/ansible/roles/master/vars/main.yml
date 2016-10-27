@@ -3,6 +3,7 @@ pub_key: /var/lib/nginx/.ssh/id_rsa.pub
 copy_license_to: '/var/opt/kuberdock/.license'
 master_rpms_dir: /tmp/master_rpms
 predefined_apps_repo: https://github.com/cloudlinux/kuberdock_predefined_apps.git
+predefined_apps_branch: 1.5.0-beta
 predefined_apps_dest: /tmp/kuberdock_predefined_apps
 
 ceph_config_dest: "/tmp/ceph.conf"

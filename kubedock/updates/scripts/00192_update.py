@@ -46,7 +46,7 @@ from kubedock.kapi import network_policies
 KUBERDOCK_MAIN_CONFIG = '/etc/sysconfig/kuberdock/kuberdock.conf'
 
 # update 00174
-K8S_VERSION = '1.2.4-4'
+K8S_VERSION = '1.2.4-6'
 K8S = 'kubernetes-{name}-{version}.el7.cloudlinux'
 K8S_NODE = K8S.format(name='node', version=K8S_VERSION)
 

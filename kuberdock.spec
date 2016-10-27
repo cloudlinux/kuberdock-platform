@@ -18,8 +18,8 @@ Requires: redis
 Requires: postgresql-server
 Requires: fabric >= 1.10.2
 Requires: etcd == 1:2.2.5
-Requires: kubernetes-master == 1:1.2.4-4.el7.cloudlinux
-Requires: kubernetes-node == 1:1.2.4-4.el7.cloudlinux
+Requires: kubernetes-master == 1:1.2.4-6.el7.cloudlinux
+Requires: kubernetes-node == 1:1.2.4-6.el7.cloudlinux
 Requires: docker == 1:1.12.1-4.el7
 Requires: docker-selinux == 1:1.12.1-4.el7
 

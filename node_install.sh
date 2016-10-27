@@ -838,6 +838,11 @@ else
         echo 'zfs' > "$ZFS_MODULES_LOAD_CONF"
 
         /sbin/modprobe zfs
+        check_status
+
+        systemctl enable zfs.target
+        systemctl enable zfs-import-cache
+        systemctl enable zfs-mount
     else
         # If it is not CEPH-enabled installation, then manage persistent storage
         # via LVM.

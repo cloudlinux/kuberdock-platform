@@ -319,7 +319,7 @@ def test_validating_yaml_before_updating_pa_template(cluster):
     assert_eq(template, correct_yaml)
 
 
-@pipeline("PA_catalog", skip_reason="FIXME in AC-4907")
+@pipeline("PA_catalog")
 @hooks(setup=_clear_pa_catalog)
 def test_add_and_run_pa(cluster):
     name = "dokuwiki.yaml"

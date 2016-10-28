@@ -1,12 +1,16 @@
 import itertools
-import pexpect
 import logging
-
+import pexpect
+import SocketServer
+import threading
+from contextlib import contextmanager
 from time import sleep
+
 from colorama import Style, Fore
 
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.utils import assert_raises, local_exec
+from tests_integration.lib.utils import (
+    assert_raises, local_exec, assert_eq, wait_net_port)
 from tests_integration.lib.pipelines import pipeline
 
 
@@ -17,6 +21,7 @@ HTTP_PORT = 80
 UDP_PORT = 2000
 CADVISOR_PORT = 4194
 ES_PORT = 9200
+
 
 CURL_RET_CODE_CONNECTION_FAILED = 7
 CURL_RET_CODE_TIMED_OUT = 28
@@ -188,10 +193,86 @@ def host_udp_check_pod(cluster, host, pod_ip, port=UDP_PORT):
         raise NonZeroRetCodeException('No PONG received')
 
 
-@pipeline('networking_rhost_cent6', skip_reason="FIXME in AC-4158")
+@contextmanager
+def jenkins_accept_connections(sock_server, handler, bind_ip='0.0.0.0',
+                               port=12347):
+    """
+    Creates a simple TCP/UDP server in a different thread, recieves one packet
+    and stops.
+    :param sock_server: SocketServer.BaseServer class
+    :param handler: SocketServer.BaseRequestHandler subclass
+    :param bind_ip: Interface to bind a given server to. Defaults to '0.0.0.0',
+                    i.e. listen to all interfaces
+    :param port: port to listen to
+    """
+    sock_server.allow_reuse_address = True
+    server = sock_server((bind_ip, port), handler)
+    server.connection_list = []
+    server_thread = threading.Thread(target=server.serve_forever)
+    try:
+        server_thread.start()
+        if isinstance(sock_server, SocketServer.TCPServer):
+            wait_net_port(bind_ip, port)
+        LOG.debug('{}Starting SocketServer in a new thread{}'.format(
+            Fore.CYAN, Style.RESET_ALL))
+        yield server.connection_list
+    finally:
+        LOG.debug('{}Shutting down SocketServer{}'.format(
+            Fore.CYAN, Style.RESET_ALL))
+        server.shutdown()
+        server.server_close()
+
+
+class MyRequestHandler(SocketServer.ThreadingMixIn,
+                       SocketServer.BaseRequestHandler):
+    def handle(self):
+        self.server.connection_list.append(self.client_address[0])
+        try:
+            # For TCP connections
+            data = self.request.recv(1024).strip()
+        except AttributeError:
+            # For UDP connections
+            data = self.request[0].strip()
+        LOG.debug('{}Client: {}\ndata: {}{}'.format(
+            Fore.YELLOW, self.client_address[0], data, Style.RESET_ALL))
+
+
+def _check_visible_ip(pod, specs, connection_list):
+    if pod.public_ip:
+        LOG.debug(
+            '{}Check if pod IP is visible as public IP for pod with '
+            'public IP\nExpected: {} Actual: {}{}'.format(
+                Fore.CYAN, pod.public_ip, connection_list[-1],
+                Style.RESET_ALL))
+        assert_eq(connection_list[-1], pod.public_ip)
+    else:
+        LOG.debug(
+            '{}Check if pod IP is visible as node IP for pod without '
+            'public IP\nExpected: {} Actual: {}{}'.format(
+                Fore.CYAN, specs[pod.name]['hostIP'], connection_list[-1],
+                Style.RESET_ALL))
+        assert_eq(connection_list[-1], specs[pod.name]['hostIP'])
+
+
+def _get_node_ports(cluster, node_name):
+    _, out, _ = cluster.ssh_exec(node_name, 'netstat -ltunp')
+    out_lines = out.strip().split('\n')
+    # Match strings are 'tcp ' and 'udp ' in order to exclude ipv6 addresses
+    tcp_udp_only = [rec for rec in out_lines if 'tcp ' in rec or 'udp ' in rec]
+
+    def _make_port_rec(rec):
+        cols = [c for c in rec.strip().split() if len(c) > 0]
+        return (
+            cols[0],
+            int(cols[3].strip().split(':')[-1])
+        )
+
+    return {_make_port_rec(rec) for rec in tcp_udp_only}
+
+
 @pipeline('networking')
 @pipeline('networking_upgraded')
-def test_network_isolation(cluster):
+def test_network_isolation_for_user_pods(cluster):
     # type: (KDIntegrationTestAPI) -> None
     user1_pods = ['iso1', 'iso3', 'iso4']
     # user2_pods = ['iso2']
@@ -330,7 +411,14 @@ def test_network_isolation(cluster):
         with assert_raises(NonZeroRetCodeException, 'No PONG received'):
             udp_check(pods[src], container_ids[src], host)
 
-    # ----- Host isolation -----
+
+@pipeline('networking')
+@pipeline('networking_upgraded')
+def test_network_isolation_nodes_from_pods(cluster):
+    container_ids, container_ips, pods, specs = setup_pods(cluster)
+    # ----- Node isolation -----
+    LOG_MSG_HEAD = "Pod: '{}' public IP: '{}' host node: '{}'"
+    LOG_MSG_TAIL = "accessing node: '{}' port: '{}' proto: '{}'"
     for name, pod in pods.items():
         # Container can't access node's IP it's created on
         host_ip = specs[name]['hostIP']
@@ -338,9 +426,15 @@ def test_network_isolation(cluster):
         # with assert_raises(NonZeroRetCodeException, '100% packet loss'):
         #     ping(pods[name], container_ids[name], host_ip)
 
+        msg_head = LOG_MSG_HEAD.format(
+            name, pod.public_ip, specs[name]['host'])
         # TCP check
         # Here we expect EXIT_CODE to be:
         # 7 (Failed to connect) or 28 (Connection timed out)
+        msg_tail = LOG_MSG_TAIL.format(
+            specs[name]['host'], CADVISOR_PORT, 'TCP')
+        LOG.debug('{}{} {}{}'.format(Fore.CYAN, msg_head, msg_tail,
+                                     Style.RESET_ALL))
         with assert_raises(
                 NonZeroRetCodeException,
                 expected_ret_codes=CURL_CONNECTION_ERRORS):
@@ -349,6 +443,9 @@ def test_network_isolation(cluster):
                 pods[name], container_ids[name], host_ip, port=CADVISOR_PORT)
 
         # UDP check
+        msg_tail = LOG_MSG_TAIL.format(specs[name]['host'], UDP_PORT, 'UDP')
+        LOG.debug('{}{} {}{}'.format(
+            Fore.CYAN, msg_head, msg_tail, Style.RESET_ALL))
         host_udp_server(cluster, pods[name].info['host'])
         with assert_raises(NonZeroRetCodeException, 'No PONG received'):
             udp_check(pods[name], container_ids[name], specs[name]['hostIP'])
@@ -361,9 +458,12 @@ def test_network_isolation(cluster):
         another_node = nodes[0]
         non_host_ip = cluster.get_host_ip(another_node)
 
+        msg_tail = LOG_MSG_TAIL.format(another_node, CADVISOR_PORT, 'TCP')
         # TCP check
         # Here we expect EXIT_CODE to be:
         # 7 (Failed to connect) or 28 (Connection timed out)
+        LOG.debug('{}{} {}{}'.format(
+            Fore.CYAN, msg_head, msg_tail, Style.RESET_ALL))
         with assert_raises(
                 NonZeroRetCodeException,
                 expected_ret_codes=CURL_CONNECTION_ERRORS):
@@ -373,10 +473,19 @@ def test_network_isolation(cluster):
                 port=CADVISOR_PORT)
 
         # UDP check
+        msg_tail = LOG_MSG_TAIL.format(another_node, UDP_PORT, 'UDP')
         host_udp_server(cluster, another_node)
+        LOG.debug('{}{} {}{}'.format(
+            Fore.CYAN, msg_head, msg_tail, Style.RESET_ALL))
         with assert_raises(NonZeroRetCodeException, 'No PONG received'):
             udp_check(pods[name], container_ids[name], non_host_ip)
 
+
+@pipeline('networking_rhost_cent6', skip_reason="FIXME in AC-4158")
+@pipeline('networking')
+@pipeline('networking_upgraded')
+def test_network_isolation_pods_from_cluster(cluster):
+    container_ids, container_ips, pods, specs = setup_pods(cluster)
     # ------ Registered hosts tests ------
     # Pod IPs
     pod_ip_list = [(pod, container_ips[name], True)
@@ -504,7 +613,12 @@ def test_intercontainer_communication(cluster):
         es_container_id = [
             c['containerID'] for c in containers if c['name'] == 'elastic'][0]
 
-        # Wordpress container has access to elasticsearch container through
+        # Wordpress container has access to itself via localhost
+        LOG.debug('{}"Wordpress" container can access to itself via localhost '
+                  '"localhost:80"{}'.format(Fore.CYAN, Style.RESET_ALL))
+        pa.docker_exec(wp_container_id, 'curl -k -m5 -v http://localhost')
+
+        # Wordpress container has access to elasticsearch container via
         # localhost
         LOG.debug('{}"Wordpress" container can access "Elasticsearch" '
                   'container: "localhost:9200"{}'.format(Fore.CYAN,
@@ -512,7 +626,13 @@ def test_intercontainer_communication(cluster):
         pa.docker_exec(
             wp_container_id, 'curl -k -m5 -XGET localhost:{}'.format(ES_PORT))
 
-        # Elasticsearch container has access to wordpress container through
+        # Elasticsearch container has access to itself via localhost
+        LOG.debug('{}"Elasticsearch" container can itself via localhost '
+                  '"localhost:9200"{}'.format(Fore.CYAN, Style.RESET_ALL))
+        pa.docker_exec(
+            es_container_id, 'curl -k -m5 -XGET localhost:{}'.format(ES_PORT))
+
+        # Elasticsearch container has access to wordpress container via
         # localhost
         LOG.debug('{}"Elasticsearch" container can access "Wordpress" '
                   'container: "localhost:80"{}'.format(Fore.CYAN,
@@ -520,15 +640,12 @@ def test_intercontainer_communication(cluster):
         pa.docker_exec(es_container_id, 'curl -k -m5 -v http://localhost')
 
     # ----- Containers inside one pod can communicate through localhost -----
+
     # Create a predefined application, because AC-4974 isn't fixed yet
     # and AC-4448 can't be tested without it
-    LOG.debug('{}Check inter-container communication via localhost '
-              'STARTED{}'.format(Fore.CYAN, Style.RESET_ALL))
-
     # We are going to create 'wordpress_elasticsearch' PA, because both
     # elasticsearch and wordpress containers have 'curl' and we can check
     # inter-container communication
-
     LOG.debug('{}Create PA on node1{}'.format(Fore.CYAN, Style.RESET_ALL))
     # By setting 'plan_id==1' we ensure that pod lands on 'node1'
     pa_node1 = cluster.pods.create_pa(
@@ -544,21 +661,46 @@ def test_intercontainer_communication(cluster):
         wait_ports=True, plan_id=0)
     _check_access_through_localhost(pa_node1)
 
-    LOG.debug('{}Check inter-container communication via localhost '
-              'FINISHED{}'.format(Fore.CYAN, Style.RESET_ALL))
 
+@pipeline('fixed_ip_pools',
+          skip_reason='Once AC-5042 is done, test will be reworked')
+@pipeline('networking')
+@pipeline('networking_upgraded')
+def test_SNAT_rules(cluster):
+    container_ids, container_ips, pods, specs = setup_pods(cluster)
+    # --------- Test that SNAT rules are applied correctly --------
+    _, jenkins_ip, _ = cluster.ssh_exec(
+        'master', cmd='bash -c "echo \$SSH_CONNECTION" | cut -d " " -f 1')
 
-def _get_node_ports(cluster, node_name):
-    _, out, _ = cluster.ssh_exec(node_name, 'netstat -ltunp')
-    out_lines = out.strip().split('\n')
-    # Match strings are 'tcp ' and 'udp ' in order to exclude ipv6 addresses
-    tcp_udp_only = [rec for rec in out_lines if 'tcp ' in rec or 'udp ' in rec]
+    LOG.debug('{}Test that SNAT rules work properly{}'.format(
+        Fore.CYAN, Style.RESET_ALL))
+    LOG_MSG = "Check SNAT rules for pod '{}' public IP: '{}' host node: '{}'"
 
-    def _make_port_rec(rec):
-        cols = [c for c in rec.strip().split() if len(c) > 0]
-        return (
-            cols[0],
-            int(cols[3].strip().split(':')[-1])
-        )
+    TCP_SERVER_PORT = 12345
+    UDP_SERVER_PORT = 12346
+    BIND_IP = '0.0.0.0'
 
-    return {_make_port_rec(rec) for rec in tcp_udp_only}
+    POD_TCP_CMD = 'nc -z -v {} {}'.format(jenkins_ip, TCP_SERVER_PORT)
+    POD_UDP_CMD = 'nc -u -z -v {} {}'.format(jenkins_ip, UDP_SERVER_PORT)
+
+    for name, pod in pods.items():
+        msg = LOG_MSG.format(name, pod.public_ip, specs[name]['host'])
+
+        # Check if pod can ping jenkins
+        ping(pod, container_ids[name], jenkins_ip)
+
+        LOG.debug('{}TCP check {}{}'.format(Style.DIM, msg, Style.RESET_ALL))
+        # Check if SNAT rules work properly for TCP connections
+        with jenkins_accept_connections(
+                SocketServer.TCPServer, MyRequestHandler, BIND_IP,
+                TCP_SERVER_PORT) as connection_list:
+            pod.docker_exec(container_ids[name], POD_TCP_CMD)
+            _check_visible_ip(pod, specs, connection_list)
+
+        LOG.debug('{}UDP check {}{}'.format(Style.DIM, msg, Style.RESET_ALL))
+        # Check if SNAT rules work properly for UDP connections
+        with jenkins_accept_connections(
+                SocketServer.UDPServer, MyRequestHandler, BIND_IP,
+                UDP_SERVER_PORT) as connection_list:
+            pod.docker_exec(container_ids[name], POD_UDP_CMD)
+            _check_visible_ip(pod, specs, connection_list)

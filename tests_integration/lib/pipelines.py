@@ -40,6 +40,10 @@ class NetworkingPipeline(Pipeline):
 
     def set_up(self):
         super(NetworkingPipeline, self).set_up()
+        self.cluster.recreate_routable_ip_pool()
+
+    def post_create_hook(self):
+        super(NetworkingPipeline, self).post_create_hook()
         self.cluster.preload_docker_image('nginx')
         # NOTE: Preload these imaeges so that wordpress_elasticsearch PA
         # starts quicker. Remove 'wordpress', 'mysql' and 'elasticsearch'
@@ -47,7 +51,6 @@ class NetworkingPipeline(Pipeline):
         self.cluster.preload_docker_image('wordpress:4')
         self.cluster.preload_docker_image('kuberdock/mysql:5.7')
         self.cluster.preload_docker_image('elasticsearch:1.7.3')
-        self.cluster.recreate_routable_ip_pool()
         self.cluster.wait_for_service_pods()
 
 
@@ -58,6 +61,9 @@ class NetworkingUpgradedPipeline(UpgradedPipelineMixin, NetworkingPipeline):
         # Once AC-4448 is complete, this can be removed and test reworked.
         'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
     }
+
+    def post_create_hook(self):
+        super(NetworkingPipeline, self).post_create_hook()
 
 
 class NetworkingRhostCent6Pipeline(NetworkingPipeline):

@@ -77,12 +77,9 @@
                                 <% if (pods.length != 0) { %>
                                     <% _.each(pods, function(pod){ %>
                                         <tr>
-                                            <%
-                                                var podConfig = JSON.parse(pod.config),
-                                                    kubeType = kubeTypes.get(podConfig.kube_type);
-                                            %>
+                                            <% var kubeType = kubeTypes.get(pod.kube_id); %>
                                             <td><%- pod.name %></td>
-                                            <td><%- kubeType ? kubeType.get('name') : '' %></td>
+                                            <td><%= kubeType.get('name') %></td>
                                             <td><%- pod.kubes %></td>
                                         </tr>
                                     <% }) %>

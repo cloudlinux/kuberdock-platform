@@ -27,7 +27,7 @@ def test_elasticsearch_pa(cluster):
     check_pa(cluster, 'elasticsearch.yaml')
 
 
-@pipeline('predefined_apps', skip_reason="FIXME in AC-4745")
+@pipeline('predefined_apps', skip_reason="FIXME in AC-4994")
 def test_redmine_pa(cluster):
     check_pa(cluster, 'redmine.yaml')
 
@@ -112,7 +112,7 @@ def test_mongodb_pa(cluster):
     check_pa(cluster, 'mongodb.yaml')
 
 
-@pipeline('predefined_apps', thread=2)
+@pipeline('predefined_apps', thread=2, skip_reason="FIXME in AC-4988")
 def test_odoo_pa(cluster):
     check_pa(cluster, 'odoo.yaml')
 

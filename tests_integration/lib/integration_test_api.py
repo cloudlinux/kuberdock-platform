@@ -13,7 +13,8 @@ from contextlib import contextmanager
 from ipaddress import IPv4Network
 
 from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
-    VmCreateError, VmProvisionError
+    VmCreateError, VmProvisionError, NonZeroRetCodeException, \
+    ClusterUpgradeError
 from tests_integration.lib.exceptions import DiskNotFound, \
     VagrantIsAlreadyUpException
 from tests_integration.lib.integration_test_utils import \
@@ -193,8 +194,14 @@ class KDIntegrationTestAPI(object):
             args += " --local {0}".format(upgrade_to)
         if skip_healthcheck:
             args += ' --skip-health-check'
-        self.ssh_exec(
-            "master", "yes | /usr/bin/kuberdock-upgrade {}".format(args))
+        try:
+            self.ssh_exec("master",
+                          "yes | /usr/bin/kuberdock-upgrade {}".format(args))
+        except NonZeroRetCodeException:
+            # This is needed because NonZeroRetCode will carry whole upgrade
+            # log in stdout, which is huge. We replace it with short message
+            # while full log is still printed by ssh_exec logging
+            raise ClusterUpgradeError('kuberdock-upgrade non-zero retcode')
 
     @log_timing
     def destroy(self):

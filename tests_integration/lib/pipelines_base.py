@@ -6,7 +6,8 @@ import time
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 
-from tests_integration.lib.exceptions import PipelineNotFound
+from tests_integration.lib.exceptions import PipelineNotFound, \
+    NonZeroRetCodeException, ClusterUpgradeError
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.integration_test_runner import format_exception
 from tests_integration.lib.integration_test_utils import merge_dicts, \
@@ -266,5 +267,10 @@ class UpgradedPipelineMixin(object):
     ENV = {
         'KD_INSTALL_TYPE': 'release',
         'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',
-        'KD_LICENSE': '../../../../../../tests_integration/assets/fake_license.json',
+        'KD_LICENSE': '../../../../../../tests_integration/assets/fake_license.json',  # noqa
     }
+
+    def post_create_hook(self):
+        self.cluster.upgrade('/tmp/prebuilt_rpms/kuberdock.rpm',
+                             use_testing=True, skip_healthcheck=True)
+        super(UpgradedPipelineMixin, self).post_create_hook()

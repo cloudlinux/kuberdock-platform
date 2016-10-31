@@ -41,6 +41,7 @@ class Pipeline(object):
     DerivedPipelineClass.ENV <- BasePipelineClass.defaults <- environment
     variables
     """
+    skip_reason = ""
 
     def __init__(self, name):
         # type: (str) -> None
@@ -287,6 +288,7 @@ def wrap_test_log(test):
 
 
 class UpgradedPipelineMixin(object):
+    skip_reason = "Disabled until 1.5.0 Beta becomes Release"
     ENV = {
         'KD_INSTALL_TYPE': 'release',
         'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',

@@ -158,6 +158,7 @@ class MasterRestorePipeline(Pipeline):
 
 
 class ReleaseUpdatePipeline(Pipeline):
+    skip_reason = "Disabled until 1.5.0 Beta becomes Release"
     NAME = 'release_update'
     ROUTABLE_IP_COUNT = 3
     ENV = {

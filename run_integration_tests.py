@@ -61,9 +61,9 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         pipe_log(u'{} -> PASSED ({})'.format(test_name, test_time),
                  Fore.GREEN)
 
-    def skip_test(t):
+    def skip_test(t, reason=""):
         test_name = get_func_fqn(t)
-        reason = t.meta['skip_reason']
+        reason = t.meta.get('skip_reason', reason)
         test_results.register_skip(t, pipeline_name, reason)
         pipe_log(u'{} -> SKIPPED ({})'.format(test_name, reason),
                  Fore.YELLOW)
@@ -74,6 +74,14 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         pipe_log(u'{} -> FAILED ({})\n{}'.format(test_name, test_time, error),
                  Fore.RED)
 
+    pipeline = Pipeline.from_name(pipeline_name)
+    if pipeline.skip_reason:
+        pipe_log('SKIPPING CLUSTER ({})'.format(pipeline.skip_reason),
+                 Fore.YELLOW)
+        for test in tests:
+            skip_test(test, pipeline.skip_reason)
+        return
+
     if all(t.meta.get('skip_reason') for t in tests):
         pipe_log('SKIPPING CLUSTER (has no active tests)', Fore.YELLOW)
         for test in tests:
@@ -81,7 +89,6 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         return
 
     pipe_log('CREATING CLUSTER', Fore.MAGENTA)
-    pipeline = Pipeline.from_name(pipeline_name)
     try:
         with timing_ctx() as cluster_time:
             pipeline.create()

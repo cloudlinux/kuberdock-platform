@@ -199,11 +199,10 @@ class PastebinClient(object):
     def post(self, log):
         log = self._prepare_log(log)
         response = self.ses.post(self.base_url, data=log)
-        return response.json()['uri'] + '/raw'
+        return response.json()['uri'] + '/ansi'
 
     def _prepare_log(self, data):
-        return re.sub(r'(\x9B|\x1B\[)[0-?]*[ -\/]*[@-~]', '', data).encode(
-            encoding="utf-8")
+        return data.encode(encoding="utf-8")
 
     def __enter__(self):
         return self

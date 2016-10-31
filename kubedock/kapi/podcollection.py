@@ -39,12 +39,14 @@ from ..exceptions import (
     InsufficientData,
     PodStartFailure,
     PublicIPAssigningError,
+    PVResizeFailed
 )
 from ..kd_celery import celery
 from ..nodes.models import Node
 from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
 from ..system_settings.models import SystemSettings
+from ..system_settings import keys as settings_keys
 from ..usage.models import IpState
 from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils, send_event_to_role
 
@@ -198,7 +200,8 @@ class PodCollection(object):
             Image.check_containers(containers, secrets)
 
     def _check_status(self, pod_data):
-        billing_type = SystemSettings.get_by_name('billing_type').lower()
+        billing_type = SystemSettings.get_by_name(
+            settings_keys.BILLING_TYPE).lower()
         if billing_type != 'no billing' and self.owner.fix_price:
             # All pods created by fixed-price users initially must have
             # status "unpaid". Status may be changed later (using command
@@ -1394,7 +1397,8 @@ class PodCollection(object):
             user_kubes = sum([pod.kubes for pod in pods_collection
                               if not pod.is_deleted])
             max_kubes_trial_user = int(
-                SystemSettings.get_by_name('max_kubes_trial_user') or 0
+                SystemSettings.get_by_name(settings_keys.MAX_KUBES_TRIAL_USER)
+                or 0
             )
             kubes_left = max_kubes_trial_user - user_kubes
             pod_kubes = sum(c['kubes'] for c in containers)
@@ -1974,6 +1978,14 @@ def del_public_ports_policy(namespace):
 
 
 def change_pv_size(persistent_disk_id, new_size):
+    max_size = int(
+        SystemSettings.get_by_name(settings_keys.PERSISTENT_DISK_MAX_SIZE)
+        or 0
+    )
+    if max_size and max_size < new_size:
+        raise PVResizeFailed(
+            'Volume size can not be greater than {} Gb'.format(max_size)
+        )
     storage = pstorage.STORAGE_CLASS()
     ok, changed_pod_ids = storage.resize_pv(persistent_disk_id, new_size)
     if not (ok and changed_pod_ids):

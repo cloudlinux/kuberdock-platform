@@ -97,11 +97,20 @@ class CephUpgradedPipeline(UpgradedPipelineMixin, CephPipeline):
 
 class KubeTypePipeline(Pipeline):
     NAME = 'kubetype'
-    ROUTABLE_IP_COUNT = 2
+    ROUTABLE_IP_COUNT = 3
     ENV = {
-        'KD_NODES_COUNT': '2',
-        'KD_NODE_TYPES': 'node1=standard,node2=tiny'
+        'KD_NODES_COUNT': '3',
+        'KD_NODE_TYPES': 'node1=Standard,node2=Tiny,node3=High memory',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
     }
+
+    def post_create_hook(self):
+        super(KubeTypePipeline, self).post_create_hook()
+        self.cluster.wait_for_service_pods()
+        sftp = self.cluster.get_sftp('master')
+        sftp.put('tests_integration/assets/custom_redis.yaml',
+                 '/root/custom_redis.yaml')
+        self.cluster.pas.add('custom_redis.yaml', '/root/custom_redis.yaml')
 
 
 class MovePodsPipeline(Pipeline):

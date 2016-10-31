@@ -37,6 +37,7 @@ class KDIntegrationTestAPI(object):
         "master": "kd_master",
         "node1": "kd_node1",
         "node2": "kd_node2",
+        "node3": "kd_node3",
         "rhost1": "kd_rhost1",
     }
 

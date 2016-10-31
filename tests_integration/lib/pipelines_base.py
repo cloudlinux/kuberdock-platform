@@ -111,7 +111,7 @@ class Pipeline(object):
         This function will be called once cluster is created.
         You can pass change any default settings, if you need to.
         """
-        pass
+        self.cluster.preload_docker_image('nginx')
 
     @log_timing
     def create(self):
@@ -192,7 +192,6 @@ class Pipeline(object):
         cluster cleanup
         """
         self.cleanup()
-        self.cluster.preload_docker_image('nginx')
 
     def tear_down(self):
         """

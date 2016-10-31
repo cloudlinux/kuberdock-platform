@@ -968,7 +968,7 @@ define([
                         breadcrumbsLayout.create.show(
                             new Breadcrumbs.Text({text: 'Add node'}));
                         view = new Views.NodeAddStep({
-                                model: new Backbone.Model(),
+                                model: new Model.NodeModel(),
                                 setupInfo: setupInfo
                             });
                         layoutView.main.show(view);

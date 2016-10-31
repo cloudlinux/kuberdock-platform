@@ -92,7 +92,7 @@ class Pipeline(object):
         :param test: a callable which represents a test and accepts one a
             KDIntegrationAPI object as a first argument
         """
-        with _wrap_test_log(test):
+        with wrap_test_log(test):
             with log_timing_ctx("Pipeline {} set_up".format(self.name)):
                 self.set_up()
             test_fqn = get_func_fqn(test)
@@ -144,12 +144,15 @@ class Pipeline(object):
         time.sleep(delay)
 
         try:
+            self._log_begin("IP reservation")
             # Reserve Pod IPs in Nebula so that they are not taken by other
             # VMs/Pods
             ips = self.routable_ip_pool.reserve_ips(
                 INTEGRATION_TESTS_VNET, self.routable_ip_count)
             # Tell reserved IPs to cluster so it creates appropriate IP Pool
             self._add_public_ips(ips)
+            self._log_end("IP reservation")
+            self._log_begin("Provision")
             # Create cluster
             self.cluster = KDIntegrationTestAPI(override_envs=self.settings,
                                                 err_cm=cm, out_cm=cm)
@@ -157,13 +160,21 @@ class Pipeline(object):
             # Write reserved IPs to master VM metadata for future GC
             master_ip = self.cluster.get_host_ip('master')
             self.routable_ip_pool.store_reserved_ips(master_ip)
-            with log_timing_ctx("'{}' post_create_hook".format(self.name)):
-                self.post_create_hook()
+            self._log_end("Provision")
         except:
             self.destroy()
             raise
         finally:
             self._print_vagrant_log()
+
+        try:
+            self._log_begin("Post create hook")
+            with log_timing_ctx("'{}' post_create_hook".format(self.name)):
+                self.post_create_hook()
+            self._log_end("Post create hook")
+        except:
+            self.destroy()
+            raise
 
     def cleanup(self):
         """
@@ -184,9 +195,13 @@ class Pipeline(object):
             return
 
         with suppress():
+            self._log_begin("IP release")
             self.routable_ip_pool.free_reserved_ips()
+            self._log_end("IP release")
         with suppress():
+            self._log_begin("Destroy")
             self.cluster.destroy()
+            self._log_end("Destroy")
 
     def set_up(self):
         """
@@ -231,6 +246,14 @@ class Pipeline(object):
 
         self.settings['KD_ONE_PUB_IPS'] = ','.join(ip_list)
 
+    def _log_begin(self, op):
+        op = op.upper()
+        LOG.debug(center_text_message('BEGIN {} {}'.format(self.name, op)))
+
+    def _log_end(self, op):
+        op = op.upper()
+        LOG.debug(center_text_message('END {} {}'.format(self.name, op)))
+
     def _print_vagrant_log(self):
         """
         Sends logs produced by vagrant to the default logger
@@ -251,7 +274,7 @@ class Pipeline(object):
 
 
 @contextmanager
-def _wrap_test_log(test):
+def wrap_test_log(test):
     """
     Wraps test log output with START/END markers
     """

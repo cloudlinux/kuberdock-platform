@@ -27,14 +27,14 @@ fi
 
 pass_env=$(cat dev-utils/dev-env/kd_cluster_settings.sample | fgrep export | sed 's/^.*export //' | awk -F'=' '{print $1}')
 pass_env+="
+VAGRANT_DOTFILE_PATH
+VAGRANT_NO_PARALLEL
+ANSIBLE_CALLBACK_WHITELIST
+ANSIBLE_LOG_PATH
 BUILD_CLUSTER
 KD_DEPLOY_SKIP
 KD_RETRY_FROM_LAST_FAIL
 KD_DEPLOY_DEBUG
-ANSIBLE_LOG_PATH
-VAGRANT_DOTFILE_PATH
-VAGRANT_NO_PARALLEL
-KD_NODE_TYPES
 KD_ONE_URL
 "
 

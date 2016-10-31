@@ -46,45 +46,33 @@ class KDIntegrationTestAPI(object):
         API client for interaction with kuberdock cluster
 
         :param override_envs: a dictionary of environment variables values
-        to override. Useful when your integration test requires another
-        cluster setup
+        to override. Useful when your integration test requires additional
+        env variables or override ones taken from OS env.
         """
-        defaults = {
-            "VAGRANT_CWD": "dev-utils/dev-env/",
-            "KD_LICENSE": "patch",
-            "VAGRANT_NO_PARALLEL": "1"
-        }
-
-        env_vars = [
-            "DOCKER_TLS_VERIFY",
-            "DOCKER_HOST",
-            "DOCKER_CERT_PATH",
-            "DOCKER_MACHINE_NAME",
+        take_from_env = [
             "HOME",
             "PATH",
             "SSH_AUTH_SOCK",
-            "VAGRANT_DOTFILE_PATH",
-            "KD_ONE_PRIVATE_KEY",
+            "DOCKER_TLS_VERIFY",
+            "DOCKER_HOST",
+            "DOCKER_CERT_PATH",
+            "VAGRANT_CWD",
+            "VAGRANT_NO_PARALLEL",
+            "ANSIBLE_CALLBACK_WHITELIST",
+            "KD_ONE_URL",
             "KD_ONE_USERNAME",
             "KD_ONE_PASSWORD",
-            "KD_ONE_PUB_IPS",
-            "KD_INSTALL_TYPE",
-            "KD_CEPH",
-            "KD_CEPH_USER",
-            "KD_CEPH_CONFIG",
-            "KD_CEPH_USER_KEYRING",
-            "KD_PD_NAMESPACE",
-            "KD_FiXED_IP_POOLS",
+            "KD_ONE_PRIVATE_KEY",
             "KD_NEBULA_TEMPLATE_ID",
-            "KD_NEBULA_RHOST_TEMPLATE_ID"
-            "KD_NODE_TYPES",
+            "KD_NEBULA_RHOST_TEMPLATE_ID",
         ]
+        kd_env = {e: os.environ.get(e)
+                  for e in take_from_env if os.environ.get(e)}
 
         if override_envs is None:
             override_envs = {}
 
-        kd_env = {e: os.environ.get(e) for e in env_vars if os.environ.get(e)}
-        kd_env = merge_dicts(defaults, kd_env, override_envs)
+        kd_env = merge_dicts(kd_env, override_envs)
 
         self.kuberdock_root = '/var/opt/kuberdock'
         self.vagrant = vagrant.Vagrant(quiet_stdout=False, quiet_stderr=False,

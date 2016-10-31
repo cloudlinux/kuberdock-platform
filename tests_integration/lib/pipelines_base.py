@@ -62,6 +62,7 @@ class Pipeline(object):
             'KD_NODES_COUNT': '2',
             'KD_NODE_CPUS': '2',
             'KD_NODE_MEMORY': '3048',
+            'KD_INSTALL_TYPE': 'qa',
             'KD_LICENSE': 'patch',
             'KD_TESTING_REPO': 'true',
             'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch',

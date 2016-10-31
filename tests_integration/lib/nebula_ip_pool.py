@@ -29,7 +29,6 @@ class NebulaIPPool(object):
             # -3: Connected user's resources
             # -2: All resources
             # -1: Connected user's and his group's resources
-            #with log_timing_ctx("VirtualNetworkPool.info()"):
             p.info(filter=-2, range_start=-1, range_end=-1)
             return p
         except ProtocolError:
@@ -97,9 +96,8 @@ class NebulaIPPool(object):
                 'The number of free IPs became less than requested during '
                 'reservation')
 
-        net = self.pool.get_by_name(network_name)
-
         LOG.debug("Getting free IP list from OpenNebula")
+        net = self.pool.get_by_name(network_name)
         ips = self.get_free_ip_list(net)
         LOG.debug("Got {} IPs".format(len(ips)))
         if len(ips) < count:

@@ -166,7 +166,7 @@ def get_pipeline_logs(multilog):
     entries = {
         name: _format_log(name, log)
         for name, log in multilog.grouped_by_thread.items()
-        if test_results.has_any_failures(name)}
+        }
 
     try:
         url = os.environ['KD_PASTEBIN_URL']
@@ -174,16 +174,15 @@ def get_pipeline_logs(multilog):
         password = os.environ['KD_PASTEBIN_PASS']
 
         with PastebinClient(url, user, password) as c:
-            urls = (u'{}: {}'.format(n, c.post(e)) for n, e in
-                    entries.items())
+            urls = (u'{}: {}'.format(n, c.post(e)) for n, e in entries.items())
             msg = '\n' + '\n'.join(urls)
     except Exception as e:
         # Fallback if pastebin isn't accessible
         msg = u'\n!!! Could not upload logs to pastebin, ' \
               u'falling back to console. Reason:\n{}\n\n{}'.format(
-            u''.join(traceback.format_exception(*sys.exc_info())),
-            u'\n'.join(entries.values())
-        )
+                    u''.join(traceback.format_exception(*sys.exc_info())),
+                    u'\n'.join(entries.values())
+                )
 
     msg = center_text_message(
         'PIPELINE DETAILED LOGS', fill_char='=', color=Fore.MAGENTA) + msg

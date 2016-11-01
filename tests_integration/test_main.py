@@ -137,8 +137,8 @@ def test_pod_ip_resource(cluster):
                         wait_for_status='running')
 
 
-@pipeline('main')
-@pipeline('main_upgraded')
+@pipeline('main', skip_reason="FIXME in AC-4974")
+@pipeline('main_upgraded', skip_reason="FIXME in AC-4974")
 def test_nginx_kublet_resize(cluster):
     # type: (KDIntegrationTestAPI) -> None
     pod = cluster.pods.create("nginx", "test_nginx_pod_1",

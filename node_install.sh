@@ -159,6 +159,8 @@ clean_node(){
         yum -y remove docker
         yum -y remove docker-selinux
         yum -y remove kuberdock-cadvisor  # obsolete package
+        yum -y remove calicoctl
+        yum -y remove calico-cni
     } &> /dev/null
     remove_unneeded python-requests
     remove_unneeded python-ipaddress
@@ -221,9 +223,7 @@ clean_node(){
 
     del_existed /etc/ntpd.conf*
 
-    del_existed /opt/bin/calicoctl
     del_existed /etc/cni
-    del_existed /opt/cni
     del_existed /var/log/calico
     del_existed /var/run/calico
 
@@ -636,8 +636,7 @@ check_status
 
 # 6a. configure Calico CNI plugin
 echo "Enabling Calico CNI plugin ..."
-curl https://github.com/cloudlinux/calico-cni/releases/download/1.3.1-kd/calico --create-dirs --location --output /opt/cni/bin/calico --silent --show-error
-chmod +x /opt/cni/bin/calico
+yum_wrapper -y install calico-cni-1.3.1-3.el7
 
 echo >> $KUBERNETES_CONF_DIR/config
 echo "# Calico etcd authority" >> $KUBERNETES_CONF_DIR/config
@@ -884,9 +883,7 @@ fi
 # 16. Run Docker and Calico node
 echo "Starting Calico node..."
 systemctl restart docker
-curl https://github.com/projectcalico/calico-containers/releases/download/v0.22.0/calicoctl --create-dirs --location --output /opt/bin/calicoctl --silent --show-error
-chmod +x /opt/bin/calicoctl
-check_status
+yum_wrapper -y install calicoctl-0.22.0-3.el7
 
 # Separate pull command helps to prevent timeout bugs in calicoctl (AC-4679)
 # during deploy process under heavy IO (slow dev clusters).

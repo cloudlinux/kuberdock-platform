@@ -110,6 +110,14 @@ def check_host(hostname=''):
     return jsonify({'status': 'OK'})
 
 
+@nodes.route('/lsblk/<hostname>', methods=['GET'])
+@auth_required
+@check_permission('get', 'nodes')
+def list_host_block_devices(hostname):
+    data = node_utils.get_block_device_list(hostname)
+    return jsonify({'status': 'OK', 'data': data})
+
+
 # FIXME: why GET?
 # @nodes.route('/redeploy/<node_id>', methods=['GET'])
 # @auth_required

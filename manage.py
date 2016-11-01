@@ -37,7 +37,8 @@ from kubedock.kapi import licensing
 from kubedock.kapi.pstorage import check_namespace_exists, STORAGE_CLASS
 from kubedock.kapi import ippool
 from kubedock.kapi.node_utils import (
-    get_one_node, extend_ls_volume, get_ls_info)
+    get_one_node, extend_ls_volume, get_ls_info,
+    get_block_device_list)
 from kubedock.kapi.podcollection import change_pv_size
 
 from flask.ext.script import Manager, Shell, Command, Option, prompt_pass
@@ -517,14 +518,29 @@ class NodeLSGetInfo(Command):
 
     def run(self, hostname):
         try:
-            result = get_ls_info(hostname, raise_on_error=True)
+            result = get_ls_info(hostname)
         except APIError as err:
             raise InvalidCommand(str(err))
         print json.dumps(result)
 
 
+class NodeLSListBlockDevices(Command):
+    """Prints out information of available block devices on a given host."""
+    option_list = [
+        Option('--hostname', dest='hostname', required=True),
+    ]
+
+    def run(self, hostname):
+        try:
+            result = get_block_device_list(hostname)
+        except APIError as err:
+            raise InvalidCommand(str(err))
+        print json.dumps(result, indent=2)
+
+
 node_ls_manager.add_command('add-volume', NodeLSAddVolume)
 node_ls_manager.add_command('get-info', NodeLSGetInfo)
+node_ls_manager.add_command('list-block-devices', NodeLSListBlockDevices)
 
 
 pv_manager = Manager()

@@ -113,7 +113,7 @@ def test_mongodb_pa(cluster):
     check_pa(cluster, 'mongodb.yaml')
 
 
-@pipeline('predefined_apps', thread=2, skip_reason="FIXME in AC-4988")
+@pipeline('predefined_apps', thread=2)
 def test_odoo_pa(cluster):
     check_pa(cluster, 'odoo.yaml')
 

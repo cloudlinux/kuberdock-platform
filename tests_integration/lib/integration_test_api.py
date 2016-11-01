@@ -54,18 +54,48 @@ class KDIntegrationTestAPI(object):
             "HOME",
             "PATH",
             "SSH_AUTH_SOCK",
+
             "DOCKER_TLS_VERIFY",
             "DOCKER_HOST",
             "DOCKER_CERT_PATH",
+
             "VAGRANT_CWD",
             "VAGRANT_NO_PARALLEL",
+            "VAGRANT_DOTFILE_PATH",
+
             "ANSIBLE_CALLBACK_WHITELIST",
+
             "KD_ONE_URL",
             "KD_ONE_USERNAME",
             "KD_ONE_PASSWORD",
             "KD_ONE_PRIVATE_KEY",
+
+            "KD_MASTER_MEMORY",
+            "KD_MASTER_CPUS",
+            "KD_NODE_MEMORY",
+            "KD_NODE_CPUS",
+            "KD_NODES_COUNT",
+            "KD_NODE_TYPES",
             "KD_NEBULA_TEMPLATE_ID",
+
+            "KD_RHOSTS_COUNT",
             "KD_NEBULA_RHOST_TEMPLATE_ID",
+
+            "KD_ONE_PUB_IPS",
+            "KD_LICENSE",
+            "KD_INSTALL_TYPE",
+            "KD_TESTING_REPO",
+            "KD_FIXED_IP_POOLS",
+            "KD_TIMEZONE"
+
+            "KD_CEPH",
+            "KD_CEPH_USER",
+            "KD_CEPH_CONFIG",
+            "KD_CEPH_USER_KEYRING",
+            "KD_PD_NAMESPACE",
+
+            "KD_INSTALL_PLESK",
+            "KD_PLESK_LICENSE",
         ]
         kd_env = {e: os.environ.get(e)
                   for e in take_from_env if os.environ.get(e)}

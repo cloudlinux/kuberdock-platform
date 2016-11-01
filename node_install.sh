@@ -830,6 +830,16 @@ else
         # fstab records, but this is disabled by default in most
         # cases (e.g. AWS case) so enable this:
         echo 'options zfs zfs_autoimport_disable=0' > "$ZFS_POOLS_LOAD_CONF"
+        # Set Adaptive replacement cache size to 1/3 of available memory.
+        # We want to tune storage for DB better performance, there is built-in
+        # tools for caching. Also zfs is not the only FS on a node, so some
+        # memory should be available for native kernel cache tools.
+        total_memory=$(free -b | awk '/^Mem:/{print $2}')
+        zfs_arc_max=$(($total_memory / 3))
+        echo "options zfs zfs_arc_max=$zfs_arc_max" >> "$ZFS_POOLS_LOAD_CONF"
+        # Disable prefetch for zfs because we assume random reads as general
+        # load for persistent volumes.
+        echo 'options zfs zfs_prefetch_disable=1' >> "$ZFS_POOLS_LOAD_CONF"
 
         # Kernel will load zfs modules automatically only in case when zfs is
         # detected on any block device attached to the node. But we should load

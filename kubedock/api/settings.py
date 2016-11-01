@@ -22,10 +22,10 @@ def enrich_with_plugin_list(data):
     plugins = ['No billing'] + \
         current_app.billing_factory.list_billing_plugins()
     dns_backends = [
-        'No provider',
-        'cpanel_dnsonly',
-        'aws_route53',
-        'cloudflare',
+        ('No provider', 'No provider'),
+        ('cpanel_dnsonly', 'cPanel'),
+        ('aws_route53', 'AWS Route 53'),
+        ('cloudflare', 'Cloudflare'),
     ]
     if isinstance(data, list):
         btype = [i for i in data if i.get('name') == 'billing_type']
@@ -33,12 +33,12 @@ def enrich_with_plugin_list(data):
             btype[0]['options'] = plugins
         dns = [i for i in data if i.get('name') == 'dns_management_system']
         if dns:
-            dns[0]['options'] = dns_backends
+            dns[0]['options'], dns[0]['optionNames'] = zip(*dns_backends)
     elif isinstance(data, dict):
         if data.get('name') == 'billing_type':
             data['options'] = plugins
         if data.get('name') == 'dns_management_system':
-            data['options'] = dns_backends
+            data['options'], data['optionNames'] = zip(*dns_backends)
     return data
 
 

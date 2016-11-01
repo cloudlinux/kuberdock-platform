@@ -2,7 +2,7 @@
 <% if (options) { %>
     <select id="<%= name %>" class="settings-item selectpicker">
         <% _.each(options, function(option, i){ %>
-        <option value="<%- i %>"><%- option %></option>
+        <option value="<%- i %>"><%- typeof optionNames == 'object' ? optionNames[i] : option %></option>
         <% }) %>
     </select>
 <% } else { %>

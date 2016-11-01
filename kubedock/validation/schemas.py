@@ -253,7 +253,19 @@ volume_name_schema = {'type': 'string', 'coerce': str, 'empty': False,
                       'maxlength': 255}
 restart_policy_schema = {'type': 'string',
                          'allowed': ['Always', 'OnFailure', 'Never']}
-pod_resolve_schema = {'type': 'list', 'schema': {'type': 'string'}}
+pod_resolve_schema = {
+    'type': 'list',
+    'schema': {
+        'type': 'string',
+        'empty': False,
+        'required': False,
+        'maxlength': 63,
+        'regex' : {
+            'regex': "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]))+$",
+            'message': 'invalid resolve name'
+        },
+    }
+}
 
 edited_pod_config_schema = {
     'podIP': {

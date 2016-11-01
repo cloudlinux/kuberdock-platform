@@ -968,10 +968,6 @@ do_and_log systemctl restart redis
 
 
 log_it echo "Setuping Calico..."
-do_and_log curl https://github.com/projectcalico/calico-containers/releases/download/v0.22.0/calicoctl --create-dirs --location --output /opt/bin/calicoctl --silent --show-error
-do_and_log chmod +x /opt/bin/calicoctl
-do_and_log curl https://github.com/projectcalico/k8s-policy/releases/download/v0.1.4/policy --create-dirs --location --output /opt/bin/policy --silent --show-error
-do_and_log chmod +x /opt/bin/policy
 ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl pool add "$CALICO_NETWORK" --ipip --nat-outgoing
 
 do_and_log systemctl disable docker-storage-setup

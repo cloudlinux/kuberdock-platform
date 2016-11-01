@@ -220,10 +220,10 @@ def _update_00191_upgrade(calico_network):
     _master_service_update()
 
 
-def _update_00191_upgrade_node(env, **kwargs):
+def _update_00191_upgrade_node(with_testing, env, **kwargs):
     _node_kube_proxy()
     _node_flannel()
-    _node_calico(node_name=env.host_string, node_ip=kwargs['node_ip'])
+    _node_calico(with_testing, env.host_string, kwargs['node_ip'])
     _node_policy_agent(env.host_string)
     _node_move_config()
 
@@ -458,6 +458,9 @@ _NODE_CNI_CONF = '''\
     }}
 }}'''
 
+CALICO_CNI = 'calico-cni-1.3.1-3.el7'
+CALICOCTL = 'calicoctl-0.22.0-3.el7'
+
 
 def _master_shared_etcd():
     helpers.local(
@@ -504,18 +507,6 @@ def _master_k8s_node():
 
 
 def _master_calico(calico_network):
-    helpers.local(
-        'curl https://github.com/projectcalico/calico-containers/releases/'
-        'download/v0.22.0/calicoctl --create-dirs --location '
-        '--output /opt/bin/calicoctl --silent --show-error'
-    )
-    helpers.local('chmod +x /opt/bin/calicoctl')
-    helpers.local(
-        'curl https://github.com/projectcalico/k8s-policy/releases/download/'
-        'v0.1.4/policy --create-dirs --location --output /opt/bin/policy '
-        '--silent --show-error'
-    )
-    helpers.local('chmod +x /opt/bin/policy')
     helpers.local(
         'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl pool add '
         '{} --ipip --nat-outgoing'.format(calico_network)
@@ -759,19 +750,10 @@ def _node_flannel():
     helpers.remote_install('ipset', action='remove')
 
 
-def _node_calico(node_name, node_ip):
-    run(
-        'curl https://github.com/cloudlinux/calico-cni/releases/download/'
-        '1.3.1-kd/calico --create-dirs --location --output /opt/cni/bin/calico '
-        '--silent --show-error'
-    )
-    run('chmod +x /opt/cni/bin/calico')
-    run(
-        'curl https://github.com/projectcalico/calico-containers/releases/'
-        'download/v0.22.0/calicoctl --create-dirs --location '
-        '--output /opt/bin/calicoctl --silent --show-error'
-    )
-    run('chmod +x /opt/bin/calicoctl')
+def _node_calico(with_testing, node_name, node_ip):
+    helpers.remote_install(CALICO_CNI, with_testing)
+    helpers.remote_install(CALICOCTL, with_testing)
+
     etcd_conf = _NODE_ETCD_CONF.format(MASTER_IP)
     run('echo "{0}" >> /etc/kubernetes/config'.format(etcd_conf))
 
@@ -916,7 +898,7 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     _update_00176_upgrade_node(with_testing)
     _update_00179_upgrade_node(env)
     _update_00188_upgrade_node()
-    _update_00191_upgrade_node(env, **kwargs)
+    _update_00191_upgrade_node(with_testing, env, **kwargs)
     helpers.reboot_node(upd)
 
 

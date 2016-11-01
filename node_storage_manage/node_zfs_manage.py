@@ -50,6 +50,17 @@ def init_kd_zpool(devices):
          KD_ZPOOL_NAME]
     )
     raise_cmd_error(err_code, output)
+    # Default recordsize is 128k. It is too large for supposed load type.
+    # We want provide best performance for DB engines. Most of the apps use
+    # mysql with Innodb engine which have 16k page size. MyIsam and Postgresql
+    # have 8k page size which is also closer to 16k, than to 128k.
+    # Above DB page sizes (16k, 8k) are default values.
+    # More flexible (but more complicated) way - set recordsize for each PV,
+    # depending of particular application.
+    err_code, output = get_subprocess_result(
+        ['zfs', 'set', 'recordsize=16k', KD_ZPOOL_NAME]
+    )
+    raise_cmd_error(err_code, output)
 
 
 def extend_kd_zpool(devices):

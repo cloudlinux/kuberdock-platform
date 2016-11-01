@@ -414,7 +414,7 @@ def setup_node_storage(ssh, node_id, devices=None, ebs_volume=None,
         'setup_node_storage: res = {}, message = {}'.format(res, message))
     if not res:
         raise NodeInstallException(
-            'Failed to setup LVM on the node: {}'.format(message))
+            'Failed to setup storage on the node: {}'.format(message))
 
 
 @celery.task()

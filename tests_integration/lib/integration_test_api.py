@@ -624,10 +624,11 @@ class PodList(object):
         return pod
 
     def create_pa(self, template_name, plan_id=1, wait_ports=False,
-                  healthcheck=False, wait_for_status=None,
-                  owner='test_user'):
-        pod = KDPAPod.create(self.cluster, template_name, plan_id, owner)
-
+                  healthcheck=False, wait_for_status=None, owner='test_user',
+                  rnd_str='test_data_'):
+        pod = KDPAPod.create(
+            self.cluster, template_name, plan_id, owner,
+            rnd_str=get_rnd_low_string(prefix=rnd_str, length=5))
         if wait_for_status:
             pod.wait_for_status(wait_for_status)
         if wait_ports:

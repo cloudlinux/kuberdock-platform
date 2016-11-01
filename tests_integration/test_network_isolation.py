@@ -17,6 +17,7 @@ LOG.setLevel(logging.DEBUG)
 HTTP_PORT = 80
 UDP_PORT = 2000
 CADVISOR_PORT = 4194
+ES_PORT = 9200
 
 CURL_RET_CODE_CONNECTION_FAILED = 7
 CURL_RET_CODE_TIMED_OUT = 28
@@ -492,26 +493,60 @@ def test_network_isolation(cluster):
     with assert_raises(NonZeroRetCodeException):
         unregistered_host_udp_check(specs['iso2']['public_ip'], port=UDP_PORT)
 
-    # Containers inside a single pod have access to each other through
-    # localhost
-    # NOTE: Can be uncommented once AC-4448 is complete. Some logic might
-    #       change as well.
-    # nginx_redis_pod = cluster.pods.create(
-    #     'hub.kuberdock.com/nginx', 'nginx_redis_pod')
-    # nginx_redis_pod.add_container('anmaxvl/redis')
-    # nginx_redis_pod.wait_for_status('running')
-    #
-    # containers = nginx_redis_pod.containers
-    # nginx_id = [c for c in containers
-    #             if c['image'] == 'hub.kuberdock.com/nginx'][0]['containerID']
-    # redis_id = [c for c in containers
-    #             if c['image'] == 'anmaxvl/redis'][0]['containerID']
-    #
-    # _, out, _ = pod.docker_exec(nginx_id,
-    #                             '(printf "PING"\r\n) | nc -w1 localhost 6379') # noqa
-    # assert out == '+PONG'
-    #
-    # pod.docker_exec(redis_id, 'curl -k -m5 http://localhost')
+
+@pipeline('networking')
+@pipeline('networking_upgraded')
+def test_intercontainer_communication(cluster):
+    def _check_access_through_localhost(pa):
+        containers = pa.containers
+        wp_container_id = [
+            c['containerID'] for c in containers
+            if c['name'] == 'wordpress'][0]
+        es_container_id = [
+            c['containerID'] for c in containers if c['name'] == 'elastic'][0]
+
+        # Wordpress container has access to elasticsearch container through
+        # localhost
+        LOG.debug('{}"Wordpress" container can access "Elasticsearch" '
+                  'container: "localhost:9200"{}'.format(Fore.CYAN,
+                                                         Style.RESET_ALL))
+        pa.docker_exec(
+            wp_container_id, 'curl -k -m5 -XGET localhost:{}'.format(ES_PORT))
+
+        # Elasticsearch container has access to wordpress container through
+        # localhost
+        LOG.debug('{}"Elasticsearch" container can access "Wordpress" '
+                  'container: "localhost:80"{}'.format(Fore.CYAN,
+                                                       Style.RESET_ALL))
+        pa.docker_exec(es_container_id, 'curl -k -m5 -v http://localhost')
+
+    # ----- Containers inside one pod can communicate through localhost -----
+    # Create a predefined application, because AC-4974 isn't fixed yet
+    # and AC-4448 can't be tested without it
+    LOG.debug('{}Check inter-container communication via localhost '
+              'STARTED{}'.format(Fore.CYAN, Style.RESET_ALL))
+
+    # We are going to create 'wordpress_elasticsearch' PA, because both
+    # elasticsearch and wordpress containers have 'curl' and we can check
+    # inter-container communication
+
+    LOG.debug('{}Create PA on node1{}'.format(Fore.CYAN, Style.RESET_ALL))
+    # By setting 'plan_id==1' we ensure that pod lands on 'node1'
+    pa_node1 = cluster.pods.create_pa(
+        'wordpress_elasticsearch.yaml', wait_for_status='running',
+        wait_ports=True, plan_id=1)
+    _check_access_through_localhost(pa_node1)
+    pa_node1.delete()
+
+    LOG.debug('{}Create PA on node2{}'.format(Fore.CYAN, Style.RESET_ALL))
+    # By setting 'plan_id==0' we ensure that pod lands on 'node2'
+    pa_node1 = cluster.pods.create_pa(
+        'wordpress_elasticsearch.yaml', wait_for_status='running',
+        wait_ports=True, plan_id=0)
+    _check_access_through_localhost(pa_node1)
+
+    LOG.debug('{}Check inter-container communication via localhost '
+              'FINISHED{}'.format(Fore.CYAN, Style.RESET_ALL))
 
 
 def _get_node_ports(cluster, node_name):

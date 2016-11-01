@@ -613,7 +613,7 @@ class PodList(object):
 
     def create_pa(self, template_name, plan_id=1, wait_ports=False,
                   healthcheck=False, wait_for_status=None, owner='test_user',
-                  command="kcli2", rnd_str='test_data_random'):
+                  command="kcli2", rnd_str='test_data_'):
         """Create new pod with predefined application in the Kuberdock.
 
         :param rnd_str: string which will be applied to the name of
@@ -621,8 +621,9 @@ class PodList(object):
         :return: object via which Kuberdock pod can be managed
 
         """
-        pod = KDPAPod.create(self.cluster, template_name, plan_id, owner,
-                             command, rnd_str=rnd_str)
+        pod = KDPAPod.create(
+            self.cluster, template_name, plan_id, owner, command,
+            rnd_str=get_rnd_low_string(prefix=rnd_str, length=5))
 
         if wait_for_status:
             pod.wait_for_status(wait_for_status)

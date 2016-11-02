@@ -28,9 +28,9 @@ def _proceed_exec_result(out, err, ret_code, check_retcode):
     err, out = force_unicode(err), force_unicode(out)
 
     msg_parts = [
-        (Fore.GREEN, 'RetCode: ', str(ret_code)),
-        (Fore.YELLOW, '=== StdOut ===\n', out),
-        (Fore.RED, '=== StdErr ===\n', err)]
+        (Fore.RED if ret_code else Fore.GREEN, 'RetCode: ', str(ret_code)),
+        (Fore.BLUE, '=== StdOut ===\n', out),
+        (Fore.RED if err else Fore.GREEN, '=== StdErr ===\n', err)]
     msg = '\n'.join(u'{}{}{}'.format(c, n, v) for c, n, v in msg_parts if v)
 
     LOG.debug(msg + Style.RESET_ALL)

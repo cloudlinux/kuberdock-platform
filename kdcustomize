@@ -21,7 +21,7 @@ LOGINPAGE_PATH = INDEX_PATH
 PREPARED_PATH = os.path.join(COMMON_PREFIX, 'static/prepared.js')
 GZIP_PREPARED_PATH = os.path.join(COMMON_PREFIX, 'static/prepared.js.gz')
 LOGO_FILE_PATH = os.path.join(COMMON_PREFIX,
-                              'static/js/app_data/menu/templates/nav_list.tpl')
+                              'static/js/app_data/menu/templates/list.tpl')
 STYLES_PATH = os.path.join(COMMON_PREFIX, 'static/css')
 IMG_PATH = os.path.join(COMMON_PREFIX, 'static/img')
 WEB_SERVER_USER = 'nginx'

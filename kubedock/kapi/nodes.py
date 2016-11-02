@@ -188,7 +188,7 @@ def create_dns_pod(hostname, owner):
             dns_config = get_dns_pod_config()
             check_internal_pod_data(dns_config, owner)
             dns_pod = PodCollection(owner).add(dns_config, skip_check=True)
-            PodCollection(owner).update(dns_pod['id'], {'command': 'start'})
+            PodCollection(owner).update(dns_pod['id'], {'command': 'synchronous_start'})
             if CALICO:
                 dns_policy = get_dns_policy_config(owner.id, dns_pod['id'])
                 Etcd(ETCD_NETWORK_POLICY_SERVICE).put(
@@ -595,7 +595,7 @@ def get_dns_pod_config(domain='kuberdock', ip=DNS_SERVICE_IP):
                     "--kube-master-url=https://10.254.0.1",
                 ],
                 "kubes": 1,
-                "image": "gcr.io/google_containers/kube2sky:1.14",
+                "image": "kuberdock/kube2sky:1.2",
                 "env": [],
                 "ports": [],
                 "volumeMounts": [
@@ -665,116 +665,6 @@ def get_dns_pod_config(domain='kuberdock', ip=DNS_SERVICE_IP):
                     "protocol": "TCP",
                     "containerPort": 8080
                 }]
-            }
-        ]
-    }
-
-
-def get_dns_pod_config_pre_k8s_1_2(domain='kuberdock', ip=DNS_SERVICE_IP):
-    """Returns config of k8s DNS service pod."""
-    # Old DNS pod config used before k8s 1.2 series. Left for
-    # backward migrations only.
-    # TODO AC-3377: migrate on yaml-based templates
-    return {
-        "name": KUBERDOCK_DNS_POD_NAME,
-        "podIP": ip,
-        "replicas": 1,
-        "kube_type": Kube.get_internal_service_kube_type(),
-        "node": None,
-        "restartPolicy": "Always",
-        "volumes": [
-            {
-                "name": "kubernetes-config",
-                # path is allowed only for kuberdock-internal
-                "localStorage": {"path": "/etc/kubernetes"}
-            },
-            {
-                "name": "etcd-pki",
-                # path is allowed only for kuberdock-internal
-                "localStorage": {"path": "/etc/pki/etcd"}
-            }
-        ],
-        "containers": [
-            {
-                "command": [
-                    "/usr/local/bin/etcd",
-                    "-data-dir",
-                    "/var/etcd/data",
-                    "-listen-client-urls",
-                    "https://0.0.0.0:2379,http://127.0.0.1:4001",
-                    "-advertise-client-urls",
-                    "https://0.0.0.0:2379,http://127.0.0.1:4001",
-                    "-initial-cluster-token",
-                    "skydns-etcd",
-                    "--ca-file",
-                    ETCD_CACERT,
-                    "--cert-file",
-                    "/etc/pki/etcd/etcd-dns.crt",
-                    "--key-file",
-                    "/etc/pki/etcd/etcd-dns.key"
-                ],
-                "kubes": 1,
-                "image": "gcr.io/google_containers/etcd:2.0.9",
-                "name": "etcd",
-                "env": [],
-                "ports": [
-                    {
-                        "isPublic": False,
-                        "protocol": "TCP",
-                        "containerPort": 2379
-                    }
-                ],
-                "volumeMounts": [
-                    {
-                        "name": "etcd-pki",
-                        "mountPath": "/etc/pki/etcd"
-                    }
-                ],
-                "workingDir": "",
-                "terminationMessagePath": None
-            },
-            {
-                "command": [
-                    "/kube2sky",
-                    "-domain={0}".format(domain),
-                    "-kubecfg_file=/etc/kubernetes/configfile",
-                    "-kube_master_url=https://10.254.0.1",
-                ],
-                "kubes": 1,
-                "image": "gcr.io/google_containers/kube2sky:1.11",
-                "name": "kube2sky",
-                "env": [],
-                "ports": [],
-                "volumeMounts": [
-                    {
-                        "name": "kubernetes-config",
-                        "mountPath": "/etc/kubernetes"
-                    }
-                ],
-                "workingDir": "",
-                "terminationMessagePath": None
-            },
-            {
-                "command": [
-                    "/skydns",
-                    "-machines=http://127.0.0.1:4001",
-                    "-addr=0.0.0.0:53",
-                    "-domain={0}.".format(domain)
-                ],
-                "kubes": 1,
-                "image": "gcr.io/google_containers/skydns:2015-03-11-001",
-                "name": "skydns",
-                "env": [],
-                "ports": [
-                    {
-                        "isPublic": False,
-                        "protocol": "UDP",
-                        "containerPort": 53
-                    }
-                ],
-                "volumeMounts": [],
-                "workingDir": "",
-                "terminationMessagePath": None
             }
         ]
     }

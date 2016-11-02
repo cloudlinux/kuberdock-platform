@@ -42,6 +42,7 @@ class Pod(BaseModelMixin, db.Model):
     config = db.Column(db.Text)
     direct_access = db.Column(db.Text, nullable=True)
     status = db.Column(db.String(length=32), default='unknown')
+    unpaid = db.Column(db.Boolean, default=False)
 
     def __repr__(self):
         return "<Pod(id='{}', name='{}', owner_id='{}', kubes='{}', " \

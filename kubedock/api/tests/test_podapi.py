@@ -146,7 +146,10 @@ class TestPodAPI(APITestCase):
         pod = self.fixtures.pod(status='succeeded', owner=self.user)
 
         data = {
-            'command': 'stop-unpaid',
+            'command': 'set',
+            'commandOptions': {
+                'unpaid': True,
+            }
         }
         response = self.open(PodAPIUrl.put(pod.id), 'PUT', data,
                              auth=self.adminauth)

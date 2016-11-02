@@ -223,7 +223,11 @@ CELERYBEAT_SCHEDULE = {
         'task': 'kubedock.kapi.pstorage.'
                 'unmap_temporary_mapped_ceph_drives_task',
         'schedule': crontab(minute='*')
-    }
+    },
+    'update-unpaid-state': {
+        'task': 'kubedock.kapi.podcollection.pod_set_unpaid_state_task',
+        'schedule': timedelta(minutes=5)
+    },
 }
 CELERY_IMPORTS = ('kubedock.kapi.podcollection', )
 # Do not store results too long. Default is 1 day.

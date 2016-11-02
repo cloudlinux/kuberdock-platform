@@ -16,11 +16,11 @@ def add_system_settings():
                          'predefined application request processing script'),
             setting_group='billing'),
         SystemSettings(
-            name=keys.BILLING_USERNAME, label='billing admin username',
+            name=keys.BILLING_USERNAME, label='Billing admin username',
             placeholder='admin',
             setting_group='billing'),
         SystemSettings(
-            name=keys.BILLING_PASSWORD, label='billing admin password',
+            name=keys.BILLING_PASSWORD, label='Billing admin password',
             placeholder='password',
             setting_group='billing'),
         SystemSettings(
@@ -72,7 +72,7 @@ def add_system_settings():
         SystemSettings(
             name=keys.DNS_MANAGEMENT_SYSTEM,
             label='Select your DNS management system',
-            value='cpanel_dnsonly',
+            value='No provider',
             setting_group='domain'),
         SystemSettings(
             name=keys.DNS_MANAGEMENT_CPANEL_HOST,

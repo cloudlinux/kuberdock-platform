@@ -66,6 +66,12 @@ NODE_STORAGE_MANAGE_DIR = 'node_storage_manage'
 KD_INSTALL_DIR = '/var/opt/kuberdock'
 
 
+
+def _update_00196_upgrade(upd):
+    upd.print_log('Upgrading db...')
+    helpers.upgrade_db(revision='3149fa6dc22b')
+
+
 def _update_00174_upgrade_node(upd, with_testing):
     upd.print_log("Upgrading kubernetes")
     helpers.remote_install(K8S_NODE, with_testing)
@@ -866,6 +872,7 @@ def get_calico_network(host_nets):
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
+    _update_00196_upgrade(upd)  # db migration
     nets = helpers.local("ip -o -4 addr | grep -vP '\slo\s' | awk '{print $4}'")
     calico_network = get_calico_network(nets)
     if not calico_network:

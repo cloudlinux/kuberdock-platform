@@ -107,6 +107,8 @@ class Pipeline(object):
 
             "KD_INSTALL_PLESK",
             "KD_PLESK_LICENSE",
+
+            "KD_ADD_TIMESTAMPS"
         ]
         os_env = {e: os.environ.get(e)
                   for e in take_from_os if os.environ.get(e)}

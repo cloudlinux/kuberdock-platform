@@ -34,7 +34,19 @@
   when: is_release_install
 
 - name: Running cleanup (deploy.sh --cleanup)
-  shell: echo "yes" | bash deploy.sh --cleanup chdir="{{ master_rpms_dir }}"
+  shell: echo "yes" | bash deploy.sh --cleanup chdir="{{ master_rpms_dir }}" | while IFS= read -r line; do echo "$(date) $line"; done
+  register: cleanup_result
+  tags:
+      - cleanup
+
+- set_fact:
+    cleanup_log: "{{ cleanup_result.stdout.split('\n') }}"
+  when: add_timestamps
+  tags:
+      - cleanup
+
+- debug: var=cleanup_log
+  when: add_timestamps
   tags:
       - cleanup
 

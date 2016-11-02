@@ -1,14 +1,14 @@
 """Add kube_id field to PodState
 
 Revision ID: 50e4a32fa6c3
-Revises: 8d3aed3e74c
+Revises: 3149fa6dc22b
 Create Date: 2016-10-14 15:48:59.602985
 
 """
 
 # revision identifiers, used by Alembic.
 revision = '50e4a32fa6c3'
-down_revision = '8d3aed3e74c'
+down_revision = '3149fa6dc22b'
 
 from alembic import op
 import sqlalchemy as sa

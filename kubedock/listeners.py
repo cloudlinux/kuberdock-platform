@@ -339,12 +339,15 @@ def process_events_event(data, app):
                 if node is None:
                     reason = 'There are no suitable nodes for the pod'
                 else:
-                    reason = (
-                        'Unable to access Persistent volume(s): {0}'.format(
-                            ', '.join('"{0}"'.format(d.name) for d in
-                                      pod.persistent_disks)
+                    if 'failed to fit in any node' in message:
+                        reason = 'Suitable node is not ready'
+                    else:
+                        reason = (
+                            'Unable to access Persistent volume(s): {0}'.format(
+                                ', '.join('"{0}"'.format(d.name) for d in
+                                          pod.persistent_disks)
+                            )
                         )
-                    )
             else:
                 return
 

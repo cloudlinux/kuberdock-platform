@@ -659,31 +659,39 @@ def process_records(app, nodes):
         # but there are no need to send old events to frontend,
         # just need to save them to db. Need to have separate method
         # or filter old events by time.
-        key = node['key']
-        for _ in range(MAX_ATTEMPTS):
-            try:
+        try:
+            key = node['key']
+            for _ in range(MAX_ATTEMPTS):
                 _, ts = key.rsplit('/', 1)
                 obj = node['value']
                 k8s_obj = json.loads(obj, object_hook=k8s_json_object_hook)
                 k8s_obj = filter_event(k8s_obj, app)
+                event_time = datetime.fromtimestamp(float(ts))
                 if k8s_obj is not None:
-                    event_time = datetime.fromtimestamp(float(ts))
-                    process_pods_event(k8s_obj, app, event_time, live=True)
-                break
-            except Exception:
+                    try:
+                        process_pods_event(k8s_obj, app, event_time, live=True)
+                        break
+                    except Exception:
+                        current_app.logger.warning(
+                            "Error while process event {}".format(node),
+                            exc_info=True)
+
+            else:
+                # max_attempts exceeded, we skip event
+                send_event_to_role(
+                    'notify:error', {'message': LISTENER_PROBLEM_MSG}, 'Admin')
+                current_app.logger.error(
+                    'skip event {}'.format(node), exc_info=True)
+        except:
+            current_app.logger.exception(
+                "Error while parse event {}".format(node))
+        finally:
+            # at the end we remove node anyway
+            r = requests.delete(ETCD_URL.format(key))
+            # don't know what we can do more, just log it
+            if not r.ok:
                 current_app.logger.warning(
-                    "Error while process event {}".format(node), exc_info=True)
-        else:
-            # max_attempts exceeded, we skip event
-            send_event_to_role(
-                'notify:error', {'message': LISTENER_PROBLEM_MSG}, 'Admin')
-            current_app.logger.error(
-                'skip event {}'.format(node), exc_info=True)
-        # at the end we remove node anyway
-        r = requests.delete(ETCD_URL.format(key))
-        # don't know what we can do more, just log it
-        if not r.ok:
-            current_app.logger.warning("error while delete:{}".format(r.text))
+                    "error while delete:{}".format(r.text))
 
 
 listen_pods = listen_fabric(

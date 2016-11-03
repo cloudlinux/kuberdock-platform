@@ -669,6 +669,13 @@ else
     yum_wrapper -y install kuberdock
 fi
 
+if [ "$HAS_CEPH" = yes ]; then
+    # Ensure nginx user has access to ceph config.
+    # Do it after kuberdock because we need existing nginx user
+    # (nginx installed)
+    chown -R $WEBAPP_USER $CEPH_CONF_DIR
+fi
+
 # TODO AC-4871: move to kube-proxy dependencies
 yum_wrapper -y install conntrack-tools
 

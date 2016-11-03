@@ -816,7 +816,9 @@ if [ ! -z "$CEPH_CONF" ]; then
 
     install_ceph_client
 
-    cp $CEPH_CONF/* /etc/ceph/
+    chmod 600 $CEPH_CONF/*
+    chmod 644 $CEPH_CONF/ceph.conf
+    mv $CEPH_CONF/* /etc/ceph/
     check_status
 
 else

@@ -92,7 +92,8 @@ class CephPipeline(Pipeline):
     NAME = 'ceph'
     ROUTABLE_IP_COUNT = 2
     ENV = {
-        'KD_NODES_COUNT': '1',
+        'KD_NODES_COUNT': '3',
+        'KD_NODE_TYPES': 'node1=Standard,node2=Tiny,node3=High memory',
         'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',
         'KD_CEPH': '1',
         'KD_CEPH_USER': 'jenkins',

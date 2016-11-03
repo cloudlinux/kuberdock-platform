@@ -332,6 +332,10 @@ def get_rnd_low_string(length=10, prefix=""):
         string.ascii_lowercase + string.digits) for _ in range(length))
 
 
+def gen_rnd_ceph_pv_name():
+    return get_rnd_string(prefix="integr_test_disk_")
+
+
 @contextmanager
 def suppress(exc=Exception):
     """

@@ -164,3 +164,14 @@ def test_nginx_kublet_resize(cluster):
     pod.wait_for_ports()
     time.sleep(15)
     pod.healthcheck()
+
+@pipeline("main")
+@pipeline("main_aws")
+def test_start_pod_and_reboot_node(cluster):
+    node = cluster.nodes.get_node("node1")
+    pod = cluster.pods.create("nginx", "nginx_pod", ports_to_open=[80],
+                              wait_ports=True, healthcheck=True)
+
+    node.reboot()
+    pod.wait_for_status("running")
+    pod.healthcheck()

@@ -14,6 +14,7 @@ from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
     NonZeroRetCodeException, ClusterUpgradeError
 from tests_integration.lib.exceptions import DiskNotFound
 from tests_integration.lib.infra_providers import InfraProvider
+from tests_integration.lib.node import KDNode
 from tests_integration.lib.pa import KDPAPod
 from tests_integration.lib.pod import KDPod
 from tests_integration.lib.timing import log_timing, log_timing_ctx
@@ -377,36 +378,22 @@ class NodeList(object):
         # type: (KDIntegrationTestAPI) -> None
         self.cluster = cluster
 
-    def delete(self, node_name, timeout=60):
-        self.cluster.kdctl('nodes delete --hostname {}'.format(node_name))
-        end = time.time() + timeout
-        while time.time() < end:
-            if not self.node_exists(node_name):
-                return
-        raise NodeWasNotRemoved("Node {} failed to be removed in past {} "
-                                "seconds".format(node_name, timeout))
-
     def add(self, node_name, kube_type="Standard"):
-        docker_options = \
-            '--insecure-registry=192.168.115.165:5001' \
-            '--registry-mirror=http://192.168.115.165:5001' \
-            '' \
-            ''
+        """Add new node to the cluster
+        :return: instance of KDNode object
+        """
+        return KDNode.add(self.cluster, node_name, kube_type)
 
-        add_cmd = 'add-node --hostname {} --kube-type "{}" --do-deploy -t ' \
-                  '--docker-options="{}"'.format(node_name, kube_type,
-                                                 docker_options)
+    def get_node(self, node_name):
+        """Get existing node from the cluster
+        :return: instance of KDNode object
+        """
+        return KDNode(self.cluster, self.get_node_data(node_name))
 
-        self.cluster.manage(add_cmd)
-        self.cluster.manage("wait-for-nodes --nodes {}".format(node_name))
-
-    def node_exists(self, hostname):
-        _, out, _ = self.cluster.kdctl("nodes list", out_as_dict=True)
-        data = out['data']
-        for node in data:
-            if node['hostname'] == hostname:
-                return True
-        return False
+    def get_node_data(self, name):
+        _, out, _ = self.cluster.kdctl("nodes get --hostname {}".format(name),
+                                       out_as_dict=True)
+        return out["data"]
 
     def get_node_info(self, name):
         # type: (str) -> dict

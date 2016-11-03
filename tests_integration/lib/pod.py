@@ -8,12 +8,14 @@ import urllib2
 
 from collections import namedtuple
 
-from tests_integration.lib.exceptions import StatusWaitException, \
-    UnexpectedKubectlResponse, PodIsNotRunning, \
-    IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
-from tests_integration.lib.utils import \
-    assert_eq, assert_in, kube_type_to_int, wait_net_port, \
-    retry, kube_type_to_str, get_rnd_low_string, all_subclasses, log_debug
+from tests_integration.lib.exceptions import \
+    CannotRestorePodWithMoreThanOneContainer, IncorrectPodDescription, \
+    PodIsNotRunning, UnexpectedKubectlResponse
+
+from tests_integration.lib.utils import assert_eq, assert_in, all_subclasses, \
+    get_rnd_low_string, kube_type_to_int, kube_type_to_str, retry,\
+    wait_for_status, wait_net_port
+
 
 DEFAULT_WAIT_PORTS_TIMEOUT = 5 * 60
 
@@ -90,12 +92,7 @@ class KDPod(RESTMixin):
     @property
     def domain(self):
         spec = self.get_spec()
-        domain = spec.get('domain')
-
-        # There is no domain in aws case
-        if domain is None:
-            domain = spec.get('public_aws')
-        return domain
+        return spec.get('domain') or spec.get('public_aws')
 
     @property
     def host(self):
@@ -314,25 +311,7 @@ class KDPod(RESTMixin):
             wait_net_port(self.host, p, timeout)
 
     def wait_for_status(self, status, tries=50, interval=5, delay=0):
-        """
-        Wait till POD's status changes to the given one
-
-        :param status: the desired status to wait for
-        :param tries: number of tries to check the status for
-        :param interval: delay between the tries in seconds
-        :param delay: the initial delay before a first check
-        """
-        time.sleep(delay)
-        for _ in range(tries):
-            st = self.status
-            spec = self.get_spec()
-            log_debug(
-                "Pod status: '{}' host: '{}' wait for status: '{}'".format(
-                    st, spec.get('host'), status), LOG)
-            if st == status:
-                return
-            time.sleep(interval)
-        raise StatusWaitException()
+        wait_for_status(self, status, tries, interval, delay)
 
     @property
     def node(self):

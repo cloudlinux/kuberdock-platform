@@ -219,6 +219,7 @@ class Pipeline(object):
         self.cluster.pods.clear()
         self.cluster.pods.forget_all()
         self.cluster.pvs.clear()
+        self.cluster.login_to_kcli2("test_user")
 
     def destroy(self):
         """

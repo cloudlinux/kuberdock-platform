@@ -22,7 +22,7 @@ from pygments.formatters.terminal256 import Terminal256Formatter
 from pygments.lexers.python import PythonTracebackLexer
 
 from tests_integration.lib.exceptions import PublicPortWaitTimeoutException, \
-    NonZeroRetCodeException
+    NonZeroRetCodeException, StatusWaitException
 from tests_integration.lib.timing import log_timing_ctx
 from tests_integration.lib.vendor.paramiko_expect import SSHClientInteraction
 
@@ -486,6 +486,46 @@ def highlight_code(code):
     """
     return highlight(code, PythonTracebackLexer(),
                      Terminal256Formatter(style='manni'))
+
+
+def wait_for_status(obj, status, tries=50, interval=5, delay=0):
+    """
+    Wait till pod's or node's status changes to the given one
+
+    :param status: the desired status to wait for
+    :param tries: number of tries to check the status for
+    :param interval: delay between the tries in seconds
+    :param delay: the initial delay before a first check
+    """
+    time.sleep(delay)
+    for _ in range(tries):
+        st = obj.status
+        log_debug(
+            "Status: '{}', waiting for status: '{}'".format(
+                st, status), LOG)
+
+        if st == status:
+            return
+        time.sleep(interval)
+    raise StatusWaitException()
+
+
+def wait_for_status_not_equal(obj, status, tries=50, interval=5, delay=0):
+    """
+    Wait till pod's or node's status changes to from given one to some else
+
+    :param status: the desired status to wait for
+    :param tries: number of tries to check the status for
+    :param interval: delay between the tries in seconds
+    :param delay: the initial delay before a first check
+    :return:
+    """
+    time.sleep(delay)
+    for _ in range(tries):
+        if obj.status != status:
+            return
+        time.sleep(interval)
+    raise StatusWaitException()
 
 
 def log_debug(msg, logger=LOG, color=Fore.CYAN):

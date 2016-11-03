@@ -53,7 +53,7 @@ def _clear_master(cluster):
     cluster.pods.clear()
     cluster.pvs.clear()
     cluster.pas.delete_all()
-    cluster.nodes.delete("node1")
+    cluster.nodes.get_node("node1").delete()
     cluster.set_system_setting(DEFAULT_SETTING_VALUE, name=SETTING_NAME)
 
 

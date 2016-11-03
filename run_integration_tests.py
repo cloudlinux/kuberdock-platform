@@ -1,6 +1,5 @@
 import logging
 import os
-import re
 import sys
 import threading
 import traceback
@@ -13,14 +12,14 @@ import requests
 from colorama import Fore
 
 from tests_integration.lib import multilogger
-from tests_integration.lib.integration_test_runner import \
+from tests_integration.lib.test_runner import \
     TestResultCollection, discover_integration_tests, write_junit_xml
-from tests_integration.lib.integration_test_utils import get_func_fqn, \
-    center_text_message, force_unicode
+from tests_integration.lib.utils import get_func_fqn, center_text_message, \
+    force_unicode
 from tests_integration.lib.pipelines import pipelines as \
     registered_pipelines
 from tests_integration.lib.pipelines_base import Pipeline
-from tests_integration.lib.timing import timing_ctx, stopwatch
+from tests_integration.lib.timing import timing_ctx
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)

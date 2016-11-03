@@ -12,7 +12,7 @@ from pg import DB
 from tests_integration.lib.exceptions import WrongCLICommand
 from tests_integration.lib.pod import KDPod
 from tests_integration.lib.pod import DEFAULT_WAIT_PORTS_TIMEOUT
-from tests_integration.lib.integration_test_utils import \
+from tests_integration.lib.utils import \
     assert_eq, assert_in, kube_type_to_int, \
     kube_type_to_str
 

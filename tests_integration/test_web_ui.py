@@ -1,5 +1,5 @@
 from tests_integration.lib.pipelines import pipeline
-from tests_integration.lib.integration_test_utils import local_exec
+from tests_integration.lib.utils import local_exec
 
 
 @pipeline('web_ui')

@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import traceback
 from itertools import count, islice
 
 import logging
@@ -15,6 +16,9 @@ from functools import wraps
 from paramiko import SSHClient, AutoAddPolicy
 from paramiko.sftp import CMD_EXTENDED
 from paramiko.ssh_exception import AuthenticationException
+from pygments import highlight
+from pygments.formatters.terminal256 import Terminal256Formatter
+from pygments.lexers.python import PythonTracebackLexer
 
 from tests_integration.lib.exceptions import PublicPortWaitTimeoutException, \
     NonZeroRetCodeException
@@ -409,3 +413,21 @@ def get_func_fqn(f):
         return ".".join([f.im_class, f.__name__])
     # func defined in a module
     return ".".join([f.__module__, f.__name__])
+
+
+def format_exception(exc_info):
+    # TODO: Probably include the context/source code caused the exception
+    trace = ''.join(traceback.format_exception(*exc_info))
+    message = highlight_code(trace)
+    return message
+
+
+def highlight_code(code):
+    """
+    Returns highlighted via pygments version of a given source code
+
+    :param code: string containing a source code
+    :return: colorized string
+    """
+    return highlight(code, PythonTracebackLexer(),
+                     Terminal256Formatter(style='manni'))

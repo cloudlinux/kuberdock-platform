@@ -1,6 +1,5 @@
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.integration_test_utils import assert_eq, \
-    kube_type_to_int
+from tests_integration.lib.utils import assert_eq, kube_type_to_int
 from tests_integration.lib.pipelines import pipeline
 
 

@@ -6,12 +6,11 @@ import time
 from contextlib import contextmanager
 from tempfile import NamedTemporaryFile
 
-from tests_integration.lib.exceptions import PipelineNotFound, \
-    NonZeroRetCodeException, ClusterUpgradeError
+from tests_integration.lib.exceptions import PipelineNotFound
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.integration_test_runner import format_exception
-from tests_integration.lib.integration_test_utils import merge_dicts, \
-    center_text_message, suppress, all_subclasses, get_func_fqn
+from tests_integration.lib.utils import merge_dicts, \
+    center_text_message, suppress, all_subclasses, get_func_fqn, \
+    format_exception
 from tests_integration.lib.nebula_ip_pool import NebulaIPPool
 from tests_integration.lib.timing import log_timing, log_timing_ctx
 
@@ -41,6 +40,8 @@ class Pipeline(object):
     DerivedPipelineClass.ENV <- BasePipelineClass.defaults <- environment
     variables
     """
+    INFRA_PROVIDER = "opennebula"
+    ROUTABLE_IP_COUNT = 0
     skip_reason = ""
 
     def __init__(self, name):
@@ -49,7 +50,7 @@ class Pipeline(object):
         self.settings = self._get_settings()
         self.cluster = None
 
-        self.routable_ip_count = getattr(self, 'ROUTABLE_IP_COUNT', 0)
+        self.routable_ip_count = self.ROUTABLE_IP_COUNT
         self.vagrant_log = NamedTemporaryFile(delete=False)
 
         self.routable_ip_pool = NebulaIPPool.factory(
@@ -134,8 +135,9 @@ class Pipeline(object):
 
         # Do not reserve IPs and do not create cluster if wasn't requested
         if not self.build_cluster:
-            self.cluster = KDIntegrationTestAPI(
-                override_envs=self.settings, err_cm=cm, out_cm=cm)
+            self.cluster = KDIntegrationTestAPI(self.INFRA_PROVIDER,
+                                                override_envs=self.settings,
+                                                err_cm=cm, out_cm=cm)
             LOG.info('BUILD_CLUSTER flag not passed. Pipeline create '
                      'call skipped.')
             return
@@ -155,7 +157,8 @@ class Pipeline(object):
             self._log_end("IP reservation")
             self._log_begin("Provision")
             # Create cluster
-            self.cluster = KDIntegrationTestAPI(override_envs=self.settings,
+            self.cluster = KDIntegrationTestAPI(self.INFRA_PROVIDER,
+                                                override_envs=self.settings,
                                                 err_cm=cm, out_cm=cm)
             self.cluster.start()
             # Write reserved IPs to master VM metadata for future GC

@@ -1,32 +1,25 @@
 import os
 import sys
 import time
-from datetime import datetime
 
 import json
 import logging
 import paramiko
 import pipes
-import subprocess
-import vagrant
 from contextlib import contextmanager
 from ipaddress import IPv4Network
 
 from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
-    VmCreateError, VmProvisionError, NonZeroRetCodeException, \
-    ClusterUpgradeError
+    NonZeroRetCodeException, ClusterUpgradeError
 from tests_integration.lib.exceptions import DiskNotFound, \
-    VagrantIsAlreadyUpException
-from tests_integration.lib.integration_test_utils import \
+    ClusterAlreadyCreated
+from tests_integration.lib.infra_providers import InfraProvider
+from tests_integration.lib.utils import \
     ssh_exec, assert_eq, assert_in, merge_dicts, retry, \
     escape_command_arg, log_dict, get_rnd_low_string
 from tests_integration.lib.pa import KDPAPod
 from tests_integration.lib.pod import KDPod
 from tests_integration.lib.timing import log_timing, log_timing_ctx
-
-OPENNEBULA = "opennebula"
-VIRTUALBOX = "virtualbox"
-PROVIDER = OPENNEBULA
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger("paramiko").setLevel(logging.WARNING)
@@ -34,15 +27,7 @@ LOG = logging.getLogger(__name__)
 
 
 class KDIntegrationTestAPI(object):
-    vm_names = {
-        "master": "kd_master",
-        "node1": "kd_node1",
-        "node2": "kd_node2",
-        "node3": "kd_node3",
-        "rhost1": "kd_rhost1",
-    }
-
-    def __init__(self, override_envs=None, out_cm=None, err_cm=None):
+    def __init__(self, provider, override_envs=None, out_cm=None, err_cm=None):
         """
         API client for interaction with kuberdock cluster
 
@@ -105,10 +90,11 @@ class KDIntegrationTestAPI(object):
 
         kd_env = merge_dicts(kd_env, override_envs)
 
+        self.provider = InfraProvider.create(
+            provider_name=provider, env=kd_env,
+            provider_args={"out_cm": out_cm, "err_cm": err_cm}
+        )
         self.kuberdock_root = '/var/opt/kuberdock'
-        self.vagrant = vagrant.Vagrant(quiet_stdout=False, quiet_stderr=False,
-                                       env=kd_env, out_cm=out_cm,
-                                       err_cm=err_cm)
         self.kd_env = kd_env
         self.ip_pools = IPPoolList(self)
         self.pods = PodList(self)
@@ -118,39 +104,33 @@ class KDIntegrationTestAPI(object):
         self.users = UserList(self)
         self.created_at, self._ssh_connections = None, {}
 
-    @staticmethod
-    def _cut_vm_name_prefix(name):
-        return name.replace('kd_', '')
-
     @property
     def node_names(self):
-        names = (n.name for n in self.vagrant.status() if '_node' in n.name)
-        return [self._cut_vm_name_prefix(n) for n in names]
+        return self.provider.node_names
+
+    def _any_vm_exists(self):
+        return self.provider.any_vm_exists
+
+    @log_timing
+    def _log_vm_ips(self):
+        self.provider.log_vm_ips()
 
     def get_host_ip(self, hostname):
-        return self.vagrant.hostname('kd_{}'.format(hostname))
+        return self.provider.get_host_ip(hostname)
 
     def get_ssh(self, host):
-        host = self.vm_names[host]
+        host = self.provider.vm_names[host]
         if host in self._ssh_connections:
             return self._ssh_connections[host]
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        if PROVIDER == OPENNEBULA:
-            def_key = "".join([os.environ.get("HOME"), "/.ssh/id_rsa"])
-            key_file = os.environ.get("KD_ONE_PRIVATE_KEY", def_key)
-        else:
-            # NOTE: this won't give proper results inside docker, another
-            # reason why docker+vbox is not supported
-            key_file = self.vagrant.conf()["IdentityFile"]
-
         with log_timing_ctx("ssh.connect({})".format(host)):
-            ssh.connect(self.vagrant.hostname(host),
-                        port=int(self.vagrant.port(host)),
-                        username="root",
-                        key_filename=key_file)
+            ssh.connect(self.provider.get_hostname(host),
+                        port=self.provider.get_host_ssh_port(host),
+                        username=self.provider.ssh_user,
+                        key_filename=self.provider.ssh_key)
 
         self._ssh_connections[host] = ssh
         return ssh
@@ -180,39 +160,16 @@ class KDIntegrationTestAPI(object):
         ip_pool = str(IPv4Network(unicode(main_ip), strict=False))
         self.ip_pools.add(ip_pool, includes=self.kd_env['KD_ONE_PUB_IPS'])
 
-    def start(self, provider=PROVIDER):
-        if self._any_vm_is_running():
-            raise VagrantIsAlreadyUpException(
-                "Vagrant is already up. Either perform \"vagrant destroy\" "
-                "if you want to run tests on new cluster, or make sure you do "
-                "not pass BUILD_CLUSTER env variable if you want run tests on "
-                "the existing one.")
+    def start(self):
+        if self._any_vm_exists():
+            raise ClusterAlreadyCreated(
+                "Cluster is already up. Either perform \"vagrant destroy\" "
+                "(or provider alternative) if you want to run tests on new "
+                "cluster, or make sure you do not pass BUILD_CLUSTER env "
+                "variable if you want run tests on the existing one.")
 
         log_dict(self.kd_env, "Cluster settings:", hidden=('KD_ONE_PASSWORD',))
-
-        if provider == OPENNEBULA:
-            try:
-                with log_timing_ctx("vagrant up --no-provision"):
-                    retry(self.vagrant.up, tries=3, interval=15,
-                          provider=provider, no_provision=True)
-                self.created_at = datetime.utcnow()
-                self._log_vm_ips()
-            except subprocess.CalledProcessError:
-                raise VmCreateError('Failed to create VMs in OpenNebula')
-
-            try:
-                with log_timing_ctx("vagrant provision"):
-                    self.vagrant.provision()
-            except subprocess.CalledProcessError:
-                raise VmProvisionError('Failed Ansible provision')
-        else:
-            try:
-                with log_timing_ctx("vagrant up (with provision)"):
-                    self.vagrant.up(provider=provider)
-                self.created_at = datetime.utcnow()
-            except subprocess.CalledProcessError:
-                raise VmCreateError(
-                    'Failed either to create or provision VMs')
+        self.provider.start()
 
     @log_timing
     def upgrade(self, upgrade_to='latest', use_testing=False,
@@ -235,7 +192,7 @@ class KDIntegrationTestAPI(object):
 
     @log_timing
     def destroy(self):
-        self.vagrant.destroy()
+        self.provider.destroy()
 
     @contextmanager
     def temporary_stop_host(self, host):
@@ -253,15 +210,11 @@ class KDIntegrationTestAPI(object):
 
     @log_timing
     def power_off(self, host):
-        vm_name = self.vm_names[host]
-        LOG.debug("VM Power Off: '{}'".format(vm_name))
-        self.vagrant.halt(vm_name=vm_name)
+        self.provider.power_off(host)
 
     @log_timing
     def power_on(self, host):
-        vm_name = self.vm_names[host]
-        LOG.debug("VM Power On: '{}'".format(vm_name))
-        retry(self.vagrant.up, tries=3, vm_name=vm_name)
+        self.provider.power_on(host)
 
     def get_host_status(self, host):
         _, out, _ = self.kdctl("nodes list", out_as_dict=True)
@@ -380,6 +333,7 @@ class KDIntegrationTestAPI(object):
         cmd = '. /etc/profile; ' + cmd
         return ssh_exec(ssh, cmd, check_retcode=check_retcode)
 
+    # TODO move to cluster.settings
     def set_system_setting(self, value, setting_id=None, name=None):
         cmd = "system-settings update "
         if setting_id:
@@ -396,15 +350,6 @@ class KDIntegrationTestAPI(object):
             cmd += u"--name {}".format(name)
         _, data, _ = self.kdctl(cmd, out_as_dict=True)
         return data['data']['value']
-
-    def _any_vm_is_running(self):
-        return any(vm.state != "not_created" for vm in self.vagrant.status())
-
-    @log_timing
-    def _log_vm_ips(self):
-        for vm in self.vagrant.status():
-            LOG.debug("{} IP is: {}".format(
-                vm.name, self.vagrant.hostname(vm.name)))
 
     def _kcli_config_path(self, user):
         if user is not None:

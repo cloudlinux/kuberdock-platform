@@ -3,8 +3,7 @@ import logging
 
 
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.integration_test_utils import \
-    assert_eq, get_rnd_string
+from tests_integration.lib.utils import assert_eq, get_rnd_string
 from tests_integration.lib.pipelines import pipeline
 
 LOG = logging.getLogger(__name__)

@@ -2,9 +2,7 @@ import json
 import pipes
 
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.integration_test_utils import assert_raises, \
-    assert_eq, hooks
+from tests_integration.lib.utils import assert_raises, assert_eq, hooks
 from tests_integration.lib.pipelines import pipeline
 
 PREDEFINED_APPLICATION_FILES = {

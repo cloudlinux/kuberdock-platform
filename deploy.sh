@@ -250,7 +250,7 @@ while [[ $# -gt 0 ]];do
         --zfs)
         ZFS=yes
         ;;
-        --calico-network)
+        --pod-ip-network)
         CALICO_NETWORK="$2"
         shift
         ;;
@@ -470,6 +470,8 @@ setup_ntpd ()
     fi
 }
 
+SERVICE_NETWORK="10.254.0.0/16"
+
 ##########
 # Deploy #
 ##########
@@ -480,10 +482,12 @@ do_deploy()
 
 check_amazon
 
-if [ -z "$CALICO_NETWORK" ]; then
-    NETS=`ip -o -4 addr | grep -vP '\slo\s' | awk '{print $4}'`
-    CALICO_NETWORK=`python - << EOF
+NETS=`ip -o -4 addr | grep -vP '\slo\s' | awk '{print $4}'`
+CALICO_NETWORK=`python - << EOF
 from itertools import chain
+import socket
+import sys
+base_net = '10.0.0.0/8'
 def overlaps(net1, net2):
     nets = []
     for net in (net1, net2):
@@ -497,24 +501,48 @@ def overlaps(net1, net2):
             (nets[0][0] <= nets[1][0] <= nets[0][1] or
              nets[0][0] <= nets[1][1] <= nets[0][1]))
 
-def get_calico_network(host_nets):
-    nets = host_nets.splitlines()
-    base_net = '10.0.0.0/8'
-    filtered = [ip_net for ip_net in nets if overlaps(ip_net, base_net)]
+calico_network = """$CALICO_NETWORK"""
+service_network = """$SERVICE_NETWORK"""
+nets = """$NETS"""
+nets = nets.splitlines()
+filtered = [ip_net for ip_net in nets if overlaps(ip_net, base_net)]
+filtered.append(service_network)
+def get_calico_network():
     # just create sequence 127,126,128,125,129,124,130,123,131,122,132...
-    addrs = list(chain(*zip(range(127, 254), reversed(range(0, 127)))))
+    addrs = list(chain(*zip(range(127, 255), reversed(range(0, 127)))))
     for addr in addrs:
         net = '10.{}.0.0/16'.format(addr)
         if not any(overlaps(host_net, net) for host_net in filtered):
             return str(net)
-print get_calico_network("""$NETS""")
-EOF`
-fi
 
-if [ "$CALICO_NETWORK" = "None" ]; then
-    log_it echo "Can't find suitable network for Calico"
+if calico_network:
+    ip, bits = calico_network.split('/')
+    try:
+        socket.inet_pton(socket.AF_INET, ip)
+    except:
+        print "Pod network validation error. Network must be in format: '10.0.0.0/16'"
+        sys.exit(1)
+    if overlaps(calico_network, service_network):
+        print "Pod network can't overlaps with service network"
+        sys.exit(1)
+    elif any(overlaps(calico_network, net) for net in filtered):
+        print "Pod network overlaps with some of already existing network"
+        sys.exit(1)
+    print calico_network
+else:
+    calico_network = get_calico_network()
+    if calico_network:
+        print calico_network
+    else:
+        print "Can't find suitable network for pods"
+        sys.exit(1)
+EOF`
+
+if [ $? -ne 0 ];then
+    log_it echo $CALICO_NETWORK
     exit 1
 fi
+
 
 # Get number of interfaces up
 IFACE_NUM=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;}}'|wc -l)

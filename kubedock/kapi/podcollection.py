@@ -1663,23 +1663,6 @@ def prepare_and_run_pod(pod):
             # TODO: create CONTAINER_STATUSES
             container['state'] = POD_STATUSES.pending
 
-        hosts = getattr(pod, 'kuberdock_resolve', [])
-        if hosts:
-            url = '{}/{}'.format(settings.DNS_URL.rstrip('/'), pod.namespace)
-            verify = settings.ETCD_CACERT
-            cert = (settings.DNS_CLIENT_CRT, settings.DNS_CLIENT_KEY)
-            etcd = utils.Etcd(url, verify=verify, cert=cert)
-            value = {"host": "127.0.0.1", "priority": 10,
-                     "weight": 10, "ttl": 30, "targetstrip": 0}
-            try:
-                for host in hosts:
-                    etcd.put(host, value)
-            except IOError:
-                # TODO: We are not interrupt running pod here, maybe it can
-                # work without resolve? Maybe need to change this behavior
-                current_app.logger.exception(
-                    'Failed to add resolve records for pod: %s', pod)
-
         if hasattr(pod, 'domain'):
             ok, message = dns_management.create_or_update_type_A_record(
                 pod.domain)
@@ -1787,6 +1770,7 @@ def run_service(pod):
         or None if service allready exist on not needed
 
     """
+    resolve = getattr(pod, 'kuberdock_resolve', [])
     ports, public_ports = get_ports(pod)
     publicIP = getattr(pod, 'public_ip', None)
     if publicIP == 'true':
@@ -1794,11 +1778,13 @@ def run_service(pod):
     public_svc = ingress_public_ports(pod.id, pod.namespace,
                                       public_ports, pod.owner, publicIP)
     cluster_ip = getattr(pod, 'podIP', None)
-    local_svc = ingress_local_ports(pod.id, pod.namespace, ports, cluster_ip)
+    local_svc = ingress_local_ports(pod.id, pod.namespace, ports,
+                                    resolve, cluster_ip)
     return local_svc, public_svc
 
 
-def ingress_local_ports(pod_id, namespace, ports, cluster_ip=None):
+def ingress_local_ports(pod_id, namespace, ports,
+                        resolve=None, cluster_ip=None):
     """Ingress local ports to service
     :param: pod_id: pod id
     :param: namespace: pod namespace
@@ -1809,7 +1795,7 @@ def ingress_local_ports(pod_id, namespace, ports, cluster_ip=None):
     local_svc = LocalService()
     services = local_svc.get_by_pods(pod_id)
     if not services and ports:
-        service = local_svc.get_template(pod_id, ports)
+        service = local_svc.get_template(pod_id, ports, resolve)
         service = local_svc.set_clusterIP(service, cluster_ip)
         rv = local_svc.post(service, namespace)
         podutils.raise_if_failure(rv, "Could not ingress local ports")

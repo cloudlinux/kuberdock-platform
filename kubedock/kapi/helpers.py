@@ -266,9 +266,13 @@ class LocalService(Services):
     def __init__(self):
         super(LocalService, self).__init__(LOCAL_SVC_TYPE)
 
-    def get_template(self, pod_id, ports):
+    def get_template(self, pod_id, ports, resolve=None):
         template = super(LocalService, self).get_template(pod_id, ports)
         template['metadata']['labels']['name'] = pod_id[:54] + '-service'
+        if resolve:
+            annotations = template['metadata'].setdefault('annotations', {})
+            annotations['kuberdock-resolve'] = json.dumps(resolve)
+
         return template
 
     def get_clusterIP(self, service):

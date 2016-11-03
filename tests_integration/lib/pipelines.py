@@ -5,10 +5,8 @@ from shutil import rmtree
 
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
-from tests_integration.lib.integration_test_utils import set_eviction_timeout
+from tests_integration.lib.utils import set_eviction_timeout, get_rnd_string
 from tempfile import NamedTemporaryFile, mkdtemp
-
-from tests_integration.lib.integration_test_utils import get_rnd_string
 
 
 class MainPipeline(Pipeline):

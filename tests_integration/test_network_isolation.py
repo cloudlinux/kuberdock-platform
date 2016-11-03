@@ -6,8 +6,7 @@ from time import sleep
 from colorama import Style, Fore
 
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.integration_test_utils import (
-    assert_raises, local_exec)
+from tests_integration.lib.utils import assert_raises, local_exec
 from tests_integration.lib.pipelines import pipeline
 
 

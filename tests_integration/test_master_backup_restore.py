@@ -3,7 +3,7 @@ import pipes
 from collections import defaultdict
 
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.integration_test_utils import hooks
+from tests_integration.lib.utils import hooks
 from tests_integration.lib.pipelines import pipeline
 
 BACKUP_FOLDER = "/root/backups"

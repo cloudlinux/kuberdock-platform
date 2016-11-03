@@ -1,4 +1,4 @@
-class VagrantIsAlreadyUpException(Exception):
+class ClusterAlreadyCreated(Exception):
     pass
 
 

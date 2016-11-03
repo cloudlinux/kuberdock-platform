@@ -11,7 +11,7 @@ from collections import namedtuple
 from tests_integration.lib.exceptions import StatusWaitException, \
     UnexpectedKubectlResponse, PodIsNotRunning, \
     IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
-from tests_integration.lib.integration_test_utils import \
+from tests_integration.lib.utils import \
     assert_eq, assert_in, kube_type_to_int, wait_net_port, \
     retry, kube_type_to_str, get_rnd_low_string, all_subclasses
 

@@ -1,4 +1,4 @@
-from tests_integration.lib.integration_test_utils import assert_eq
+from tests_integration.lib.utils import assert_eq
 from tests_integration.lib.pipelines import pipeline
 
 

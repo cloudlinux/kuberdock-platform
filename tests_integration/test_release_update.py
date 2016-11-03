@@ -5,6 +5,7 @@ from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 
 
 @pipeline('release_update')
+@pipeline('release_update_aws')
 def test_release_update(cluster):
     # type: (KDIntegrationTestAPI) -> None
     """Check pods became running after upgrade

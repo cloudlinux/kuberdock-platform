@@ -53,13 +53,19 @@ class Pipeline(object):
         default_env = {
             'KD_MASTER_CPUS': '2',
             'KD_MASTER_MEMORY': '4096',
-            'KD_NODES_COUNT': '2',
+            'KD_NODES_COUNT': '1',
             'KD_NODE_CPUS': '2',
             'KD_NODE_MEMORY': '3048',
             'KD_INSTALL_TYPE': 'qa',
             'KD_LICENSE': 'patch',
             'KD_TESTING_REPO': 'true',
             'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch',
+
+            'MASTER_SIZE': 'm3.medium',
+            'NODE_SIZE': 'm3.medium',
+            'NUM_NODES': '1',
+            'AWS_EBS_DEFAULT_SIZE': '5',
+            'KUBE_AWS_INSTANCE_PREFIX': 'jenkins-kd-',
         }
         take_from_os = [
             "HOME",
@@ -107,6 +113,16 @@ class Pipeline(object):
 
             "KD_INSTALL_PLESK",
             "KD_PLESK_LICENSE",
+
+            "KUBE_AWS_ZONE",
+            "AWS_S3_REGION",
+            "MASTER_SIZE",
+            "NODE_SIZE",
+            "AWS_EBS_DEFAULT_SIZE",
+            "KUBE_AWS_INSTANCE_PREFIX",
+            "AWS_SSH_KEY",
+            "AWS_ACCESS_KEY_ID",
+            "AWS_SECRET_ACCESS_KEY",
 
             "KD_ADD_TIMESTAMPS"
         ]

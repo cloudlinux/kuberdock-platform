@@ -2,6 +2,7 @@ from tests_integration.lib.pipelines import pipeline
 
 
 @pipeline('predefined_apps')
+@pipeline('predefined_apps_aws')
 def test_add_run_delete_pa(cluster):
     """
     Testing workflow of PA's

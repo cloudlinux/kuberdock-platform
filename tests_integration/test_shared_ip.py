@@ -36,6 +36,7 @@ def _remove_domain(cluster):
 
 
 @pipeline("main")
+@pipeline("main_aws")
 @hooks(setup=_add_domain, teardown=_remove_domain)
 def test_pod_with_domain_name(cluster):
     suffix = get_rnd_low_string(length=5)

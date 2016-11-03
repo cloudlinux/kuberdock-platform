@@ -1,9 +1,15 @@
 ---
 - name: Calculate network
   set_fact:
-    network: "{{ ansible_default_ipv4.network }}/{{ansible_default_ipv4.netmask}}"
+    network: "{{ [ansible_default_ipv4.network, ansible_default_ipv4.netmask]|join('/')|ipaddr('net')}}"
+
+- name: Get existing networks
+  become_user: postgres
+  command: psql -d kuberdock -t -c "select network from ippool;"
+  register: networks_stdout
 
 - name: Create IP pool
-  shell: python "{{ master_kd_src_path }}/manage.py" create-ip-pool -s "{{ network | ipaddr('net') }}" -i {{ public_ips }}
+  shell: python "{{ master_kd_src_path }}/manage.py" create-ip-pool -s "{{ network }}" -i {{ public_ips }}
+  when: network not in "{{ networks_stdout.stdout.split('\n') }}'"
   tags:
     - ippool

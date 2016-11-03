@@ -76,7 +76,7 @@ class _RedisPaPod(KDPAPod):
         spec = self._generic_healthcheck()
         assert_eq(len(spec['containers']), 1)
         assert_eq(spec['containers'][0]['image'], 'redis:3')
-        r = redis.StrictRedis(host=self.public_ip, port=6379, db=0)
+        r = redis.StrictRedis(host=self.host, port=6379, db=0)
         r.set('foo', 'bar')
         assert_eq(r.get('foo'), 'bar')
 
@@ -144,7 +144,7 @@ class _MemcachedPaPod(KDPAPod):
         spec = self._generic_healthcheck()
         assert_eq(len(spec['containers']), 1)
         assert_eq(spec['containers'][0]['image'], 'memcached:1')
-        mc = memcache.Client(['{host}:11211'.format(host=self.public_ip)],
+        mc = memcache.Client(['{host}:11211'.format(host=self.host)],
                              debug=0)
         mc.set("foo", "bar")
         assert_eq(mc.get("foo"), "bar")
@@ -299,7 +299,7 @@ class _PostgresPaPod(KDPAPod):
         env = {e['name']: e['value'] for e in spec['containers'][0]['env']}
         user = env['POSTGRES_USER']
         passwd = env['POSTGRES_PASSWORD']
-        db = DB(dbname=user, host=self.public_ip, port=5432,
+        db = DB(dbname=user, host=self.host, port=5432,
                 user=user, passwd=passwd)
         sql = "create table test_table(id serial primary key, name varchar)"
         db.query(sql)
@@ -311,7 +311,7 @@ class _MongodbPaPod(KDPAPod):
 
     def healthcheck(self):
         self._generic_healthcheck()
-        mongo = pymongo.MongoClient(self.public_ip, 27017)
+        mongo = pymongo.MongoClient(self.host, 27017)
         test_db = mongo.test_db
         assert_eq(u'test_db', test_db.name)
         obj_id = test_db.test_collection.insert_one({"x": 1}).inserted_id

@@ -12,11 +12,13 @@
    - kdctl
 
 - name: Login by kdctl
+  become: false
   command: kdctl login --username admin --password admin
   tags:
    - kdctl
 
 - name: Login by kcli2
+  become: false
   command: kcli2 login --username test_user --password test_user
   tags:
    - kdctl

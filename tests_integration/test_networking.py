@@ -7,6 +7,7 @@ from tests_integration.lib.pipelines import pipeline
 
 @pipeline('networking')
 @pipeline('networking_upgraded')
+@pipeline('networking_aws')
 def test_pod_ip_resource(cluster):
     # type: (KDIntegrationTestAPI) -> None
     # It's not possible to create a POD with public IP with no IP pools
@@ -25,6 +26,7 @@ def test_pod_ip_resource(cluster):
 
 
 @pipeline('networking')
+@pipeline('networking_aws')
 @pipeline('networking_upgraded')
 def test_create_delete_ippool(cluster):
     nginx1 = cluster.pods.create("nginx", "test_nginx_pod_1",

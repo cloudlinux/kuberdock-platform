@@ -20,6 +20,7 @@ logger.setLevel(logging.DEBUG)
 
 
 @pipeline('ssh_feature')
+@pipeline('ssh_feature_aws')
 def test_ssh_feature(cluster):
     pod = cluster.pods.create('nginx', 'ssh_test_nginx_pod', start=True,
                               wait_for_status='running')

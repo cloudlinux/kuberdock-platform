@@ -5,6 +5,7 @@ from tests_integration.lib.pipelines import pipeline
 
 
 @pipeline('kubetype')
+@pipeline('kubetype_aws')
 def test_pod_lands_on_correct_node_given_a_kubetype(cluster):
     # type: (KDIntegrationTestAPI) -> None
     # Ensure nodes have expected kube types
@@ -31,6 +32,7 @@ def test_pod_lands_on_correct_node_given_a_kubetype(cluster):
 
 
 @pipeline('kubetype')
+@pipeline('kubetype_aws')
 def test_pod_lands_on_correct_node_after_change_kubetype(cluster):
     for node, kube_type in [
             ('node1', 'Standard'),
@@ -60,6 +62,7 @@ def test_pod_lands_on_correct_node_after_change_kubetype(cluster):
 
 @pipeline('ceph')
 @pipeline('ceph_upgraded')
+@pipeline('kubetype_aws')
 def test_pod_migrate_on_correct_node_after_change_kubetype(cluster):
     for node, kube_type in [
             ('node1', 'Standard'),

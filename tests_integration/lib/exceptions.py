@@ -87,6 +87,10 @@ class VmProvisionError(Exception):
     pass
 
 
+class VmNotFoundError(Exception):
+    pass
+
+
 class ClusterUpgradeError(Exception):
     pass
 

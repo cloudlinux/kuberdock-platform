@@ -5,7 +5,7 @@
   register: deploy_result
   ignore_errors: True
   tags:
-      - deploy
+    - deploy
 
 - set_fact:
     deploy_log: "{{ deploy_result.stdout.split('\n') }}"

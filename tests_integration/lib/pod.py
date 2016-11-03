@@ -397,22 +397,32 @@ class KDPod(RESTMixin):
         assert_eq(spec['status'], "running")
         return spec
 
-    def change_kubes(self, kubes, container_name=None, container_image=None):
+    def __get_edit_data(self):
         pod_spec = self.get_spec()
         edit_data = {
             "command": "edit",
             "commandOptions": {},
             "edited_config": {
-                "containers": pod_spec['containers'],
-                "kube_type": pod_spec["kube_type"],
-                "name": "",
-                "node": None,
+                "name": "Nameless",
+                "volumes": pod_spec['volumes'],
                 "replicas": pod_spec["replicas"],
                 "restartPolicy": pod_spec['restartPolicy'],
-                "status": pod_spec['status'],
-                "volumes": pod_spec['volumes']
+                "kube_type": pod_spec["kube_type"],
+                "node": None,
+                "status": 'stopped',
+                "containers": pod_spec['containers'],
             }
         }
+        return edit_data
+
+    def change_kubes(self, kubes=None, kube_type=None,
+                     container_name=None, container_image=None):
+        edit_data = self.__get_edit_data()
+
+        if not (kubes is None) ^ (kube_type is None):
+            raise ValueError('You need to specify either the kube'
+                             ' or kube type')
+
         if not (container_name is None) ^ (container_image is None):
             raise ValueError('You need to specify either the container_name'
                              ' or container image')
@@ -440,6 +450,17 @@ class KDPod(RESTMixin):
         LOG.debug("Pod {} updated".format(out))
         self.redeploy(applyEdit=True)
         self.kubes = kubes
+
+    def change_kubetype(self, kube_type):
+        edit_data = self.__get_edit_data()
+        edit_data['edited_config']['kube_type'] = kube_type
+        _, out, _ = self.cluster.kcli2(
+            "pods update --name '{}' '{}'".format(self.name,
+                                                  json.dumps(edit_data)),
+            out_as_dict=True, user=self.owner)
+        LOG.debug("Pod {} updated".format(out))
+        self.redeploy(applyEdit=True)
+        self.kube_type = kube_type_to_str(kube_type)
 
 
 class _NginxPod(KDPod):

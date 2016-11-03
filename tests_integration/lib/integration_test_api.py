@@ -1,25 +1,24 @@
-import os
-import sys
-import time
-
 import json
 import logging
-import paramiko
+import os
 import pipes
+import sys
+import time
 from contextlib import contextmanager
+
+import paramiko
 from ipaddress import IPv4Network
 
 from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
     NonZeroRetCodeException, ClusterUpgradeError
-from tests_integration.lib.exceptions import DiskNotFound, \
-    ClusterAlreadyCreated
+from tests_integration.lib.exceptions import DiskNotFound
 from tests_integration.lib.infra_providers import InfraProvider
-from tests_integration.lib.utils import \
-    ssh_exec, assert_eq, assert_in, merge_dicts, retry, \
-    escape_command_arg, log_dict, get_rnd_low_string
 from tests_integration.lib.pa import KDPAPod
 from tests_integration.lib.pod import KDPod
 from tests_integration.lib.timing import log_timing, log_timing_ctx
+from tests_integration.lib.utils import \
+    ssh_exec, assert_eq, assert_in, retry, \
+    escape_command_arg, get_rnd_low_string
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger("paramiko").setLevel(logging.WARNING)
@@ -27,99 +26,39 @@ LOG = logging.getLogger(__name__)
 
 
 class KDIntegrationTestAPI(object):
-    def __init__(self, provider, override_envs=None, out_cm=None, err_cm=None):
+    def __init__(self, provider):
+        # type: (InfraProvider) -> KDIntegrationTestAPI
         """
         API client for interaction with kuberdock cluster
-
-        :param override_envs: a dictionary of environment variables values
-        to override. Useful when your integration test requires additional
-        env variables or override ones taken from OS env.
         """
-        take_from_env = [
-            "HOME",
-            "PATH",
-            "SSH_AUTH_SOCK",
 
-            "DOCKER_TLS_VERIFY",
-            "DOCKER_HOST",
-            "DOCKER_CERT_PATH",
-
-            "VAGRANT_CWD",
-            "VAGRANT_NO_PARALLEL",
-            "VAGRANT_DOTFILE_PATH",
-
-            "ANSIBLE_CALLBACK_WHITELIST",
-
-            "KD_ONE_URL",
-            "KD_ONE_USERNAME",
-            "KD_ONE_PASSWORD",
-            "KD_ONE_PRIVATE_KEY",
-
-            "KD_MASTER_MEMORY",
-            "KD_MASTER_CPUS",
-            "KD_NODE_MEMORY",
-            "KD_NODE_CPUS",
-            "KD_NODES_COUNT",
-            "KD_NODE_TYPES",
-            "KD_NEBULA_TEMPLATE_ID",
-
-            "KD_RHOSTS_COUNT",
-            "KD_NEBULA_RHOST_TEMPLATE_ID",
-
-            "KD_ONE_PUB_IPS",
-            "KD_LICENSE",
-            "KD_INSTALL_TYPE",
-            "KD_TESTING_REPO",
-            "KD_FIXED_IP_POOLS",
-            "KD_TIMEZONE"
-
-            "KD_CEPH",
-            "KD_CEPH_USER",
-            "KD_CEPH_CONFIG",
-            "KD_CEPH_USER_KEYRING",
-            "KD_PD_NAMESPACE",
-
-            "KD_INSTALL_PLESK",
-            "KD_PLESK_LICENSE",
-        ]
-        kd_env = {e: os.environ.get(e)
-                  for e in take_from_env if os.environ.get(e)}
-
-        if override_envs is None:
-            override_envs = {}
-
-        kd_env = merge_dicts(kd_env, override_envs)
-
-        self.provider = InfraProvider.create(
-            provider_name=provider, env=kd_env,
-            provider_args={"out_cm": out_cm, "err_cm": err_cm}
-        )
+        self._provider = provider
         self.kuberdock_root = '/var/opt/kuberdock'
-        self.kd_env = kd_env
         self.ip_pools = IPPoolList(self)
         self.pods = PodList(self)
         self.pas = PAList(self)
         self.nodes = NodeList(self)
         self.pvs = PVList(self)
         self.users = UserList(self)
-        self.created_at, self._ssh_connections = None, {}
+        self._ssh_connections = {}
+
+    @property
+    def env(self):
+        return self._provider.env
+
+    @property
+    def created_at(self):
+        return self._provider.created_at
 
     @property
     def node_names(self):
-        return self.provider.node_names
-
-    def _any_vm_exists(self):
-        return self.provider.any_vm_exists
-
-    @log_timing
-    def _log_vm_ips(self):
-        self.provider.log_vm_ips()
+        return self._provider.node_names
 
     def get_host_ip(self, hostname):
-        return self.provider.get_host_ip(hostname)
+        return self._provider.get_host_ip(hostname)
 
     def get_ssh(self, host):
-        host = self.provider.vm_names[host]
+        host = self._provider.vm_names[host]
         if host in self._ssh_connections:
             return self._ssh_connections[host]
 
@@ -127,10 +66,10 @@ class KDIntegrationTestAPI(object):
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
         with log_timing_ctx("ssh.connect({})".format(host)):
-            ssh.connect(self.provider.get_hostname(host),
-                        port=self.provider.get_host_ssh_port(host),
-                        username=self.provider.ssh_user,
-                        key_filename=self.provider.ssh_key)
+            ssh.connect(self._provider.get_hostname(host),
+                        port=self._provider.get_host_ssh_port(host),
+                        username=self._provider.ssh_user,
+                        key_filename=self._provider.ssh_key)
 
         self._ssh_connections[host] = ssh
         return ssh
@@ -158,18 +97,7 @@ class KDIntegrationTestAPI(object):
         _, main_ip, _ = self.ssh_exec('master', cmd)
 
         ip_pool = str(IPv4Network(unicode(main_ip), strict=False))
-        self.ip_pools.add(ip_pool, includes=self.kd_env['KD_ONE_PUB_IPS'])
-
-    def start(self):
-        if self._any_vm_exists():
-            raise ClusterAlreadyCreated(
-                "Cluster is already up. Either perform \"vagrant destroy\" "
-                "(or provider alternative) if you want to run tests on new "
-                "cluster, or make sure you do not pass BUILD_CLUSTER env "
-                "variable if you want run tests on the existing one.")
-
-        log_dict(self.kd_env, "Cluster settings:", hidden=('KD_ONE_PASSWORD',))
-        self.provider.start()
+        self.ip_pools.add(ip_pool, includes=self.env['KD_ONE_PUB_IPS'])
 
     @log_timing
     def upgrade(self, upgrade_to='latest', use_testing=False,
@@ -190,10 +118,6 @@ class KDIntegrationTestAPI(object):
             # while full log is still printed by ssh_exec logging
             raise ClusterUpgradeError('kuberdock-upgrade non-zero retcode')
 
-    @log_timing
-    def destroy(self):
-        self.provider.destroy()
-
     @contextmanager
     def temporary_stop_host(self, host):
         """
@@ -210,11 +134,11 @@ class KDIntegrationTestAPI(object):
 
     @log_timing
     def power_off(self, host):
-        self.provider.power_off(host)
+        self._provider.power_off(host)
 
     @log_timing
     def power_on(self, host):
-        self.provider.power_on(host)
+        self._provider.power_on(host)
 
     def get_host_status(self, host):
         _, out, _ = self.kdctl("nodes list", out_as_dict=True)

@@ -286,6 +286,16 @@ def center_text_message(message, width=120, fill_char='-', color=''):
         color, fill_char, width, Fore.RESET).format(message)
 
 
+def log_begin(operation, context=""):
+    operation = operation.upper()
+    LOG.debug(center_text_message('BEGIN {} {}'.format(context, operation)))
+
+
+def log_end(operation, context=""):
+    operation = operation.upper()
+    LOG.debug(center_text_message('END {} {}'.format(context, operation)))
+
+
 def retry(f, tries=3, interval=1, _raise=True, *f_args, **f_kwargs):
     """
     Retries given func call specified n times

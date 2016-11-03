@@ -3,6 +3,8 @@ nose
 paramiko
 pyyaml
 python-vagrant==0.5.11
+awscli==1.11.12
+boto3==1.4.1
 colorama==0.3.7
 pytest==3.0.1
 pytest-instafail==0.3.0

@@ -33,10 +33,9 @@ class TestSetPodDomain(TestCase):
         )
 
     @mock.patch.object(pod_domains, '_get_unique_domain_name')
-    @mock.patch.object(pod_domains, 'db')
     @mock.patch.object(pod_domains, 'PodDomain')
     @mock.patch.object(pod_domains, 'BaseDomain')
-    def test_set_pod_name(self, base_domain_mock, pod_domain_mock, db_mock,
+    def test_set_pod_name(self, base_domain_mock, pod_domain_mock,
                           get_unique_domain_name_mock):
         base_domain = Domain(1234, self.base_domain_name)
         base_domain_mock.query.filter_by.return_value.first.return_value = \
@@ -47,7 +46,8 @@ class TestSetPodDomain(TestCase):
         get_unique_domain_name_mock.side_effect = lambda basename, _: basename
 
         # non unique domain
-        rv1 = pod_domains.set_pod_domain(self.pod, self.base_domain_name)
+        rv1 = pod_domains.get_or_create_pod_domain(self.pod,
+                                                   self.base_domain_name)
         pod_domain_mock.assert_called_once_with(
             name=self.pod_domain_name,
             base_domain=base_domain,
@@ -58,22 +58,33 @@ class TestSetPodDomain(TestCase):
 
         # unique domain
         pod_domain_mock.query.filter_by.return_value.first.return_value = None
-        rv2 = pod_domains.set_pod_domain(self.pod, self.base_domain_name)
+        rv2 = pod_domains.get_or_create_pod_domain(self.pod,
+                                                   self.base_domain_name)
 
         pod_domain_mock.assert_called_once_with(
             name=self.pod_domain_name,
             base_domain=base_domain,
             pod_id=self.pod.id
         )
-        self.assertEqual((rv1, rv2), (pod_domain, pod_domain))
+        self.assertEqual((rv1, rv2), ((pod_domain, True), (pod_domain, True)))
 
         pod_domain_mock.reset_mock()
+
+        # pod domain exists
+        pod_domain_mock.query.filter_by.return_value.first.return_value = \
+            pod_domain
+        rv3 = pod_domains.get_or_create_pod_domain(self.pod,
+                                                   self.base_domain_name)
+        self.assertEqual(rv3, (pod_domain, False))
 
         # subdomain is free
         base_domain_mock.query.filter_by.return_value.first.side_effect = (
             None, base_domain
         )
-        pod_domains.set_pod_domain(self.pod, self.full_domain_name)
+        pod_domain_mock.query.filter.return_value.first.return_value = None
+        pod_domain_mock.query.filter_by.return_value.first.return_value = None
+
+        pod_domains.get_or_create_pod_domain(self.pod, self.full_domain_name)
 
         pod_domain_mock.assert_called_once_with(
             name=self.sub_domain_name,
@@ -85,24 +96,28 @@ class TestSetPodDomain(TestCase):
         base_domain_mock.query.filter_by.return_value.first.side_effect = (
             None, base_domain
         )
-        pod_domain_mock.query.filter_by.return_value.first.return_value = \
+        pod_domain_mock.query.filter.return_value.first.return_value = \
             pod_domain
         with self.assertRaises(PodDomainExists):
-            pod_domains.set_pod_domain(self.pod, self.full_domain_name)
+            pod_domains.get_or_create_pod_domain(self.pod,
+                                                 self.full_domain_name)
 
         # edit subdomain
         base_domain_mock.query.filter_by.return_value.first.side_effect = (
             None, base_domain
         )
         pod_domain.name = 'old'
-        pod_domain_mock.query.filter_by.return_value.first.side_effect = (
-            None, pod_domain
+        pod_domain_mock.query.filter.return_value.first.return_value = \
+            None
+        pod_domain_mock.query.filter_by.return_value.first.return_value = \
+            pod_domain
+
+        rv4 = pod_domains.get_or_create_pod_domain(self.pod,
+                                                   self.full_domain_name)
+        self.assertEqual(
+            (rv4, rv4[0].name),
+            ((pod_domain, False), self.sub_domain_name)
         )
-
-        rv3 = pod_domains.set_pod_domain(self.pod, self.full_domain_name)
-        self.assertEqual((rv3, rv3.name), (pod_domain, self.sub_domain_name))
-
-        self.assertEqual(db_mock.session.add.call_count, 3)
 
     @mock.patch.object(pod_domains, 'randstr')
     @mock.patch.object(pod_domains, 'PodDomain')

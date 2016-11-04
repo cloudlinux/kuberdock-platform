@@ -1,6 +1,6 @@
 import string
 
-from ..core import ExclusiveLockContextManager, db
+from ..core import ExclusiveLockContextManager
 from ..domains.models import PodDomain, BaseDomain
 from ..exceptions import (
     DomainNotFound,
@@ -12,7 +12,7 @@ from ..settings import PUBLIC_ACCESS_ASSIGNING_TIMEOUT
 from ..utils import domainize, randstr
 
 
-def set_pod_domain(pod, domain_name):
+def get_or_create_pod_domain(pod, domain_name):
     """
     Generate new or return existing domain name for IP sharing
     New domain name will be generated as
@@ -32,8 +32,9 @@ def set_pod_domain(pod, domain_name):
       should exists in hoster added Domains and 'mypod' should be free
       in this domain zone)
     :type domain_name: string
-    :return: instance of PodDomain model
-    :rtype: kubedock.domains.models.PodDomain
+    :return: tuple of (kubedock.domains.models.PodDomain, created) where created
+     is a boolean specifying whether a new PodDomain was created
+    :rtype: tuple
 
     """
     with ExclusiveLockContextManager(
@@ -53,14 +54,14 @@ def set_pod_domain(pod, domain_name):
             pod_domain, sub_domain_part, base_domain = \
                 _exact_subdomain(pod, domain_name)
 
+        created = not bool(pod_domain)  # True if pod_domain is None else False
+
         if pod_domain is None:
             pod_domain = PodDomain(name=sub_domain_part,
                                    base_domain=base_domain,
                                    pod_id=pod.id)
-            db.session.add(pod_domain)
-            db.session.commit()
 
-        return pod_domain
+        return pod_domain, created
 
 
 def _autogen_subdomain(pod, base_domain):
@@ -114,9 +115,11 @@ def _exact_subdomain(pod, domain_name):
                 domain_name
             )
         )
-    if PodDomain.query.filter_by(name=sub_domain_part,
-                                 domain_id=base_domain.id).first():
-        raise PodDomainExists()
+    if PodDomain.query.filter(PodDomain.name == sub_domain_part,
+                              PodDomain.domain_id == base_domain.id,
+                              PodDomain.pod_id != pod.id).first():
+        raise PodDomainExists('Domain name {0} already assigned to '
+                              'existing Pod'.format(domain_name))
     pod_domain = PodDomain.query.filter_by(domain_id=base_domain.id,
                                            pod_id=pod.id).first()
     if pod_domain:

@@ -595,4 +595,5 @@ if __name__ == '__main__':
         manager.run()
     except InvalidCommand as err:
         sys.stderr.write(str(err))
+        sys.stderr.write('\n')
         sys.exit(1)

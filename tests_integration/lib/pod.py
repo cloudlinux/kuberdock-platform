@@ -25,13 +25,13 @@ LOG = logging.getLogger(__name__)
 
 class RESTMixin(object):
     # Expectations:
-    # self.public_ip
+    # self.host
 
     def do_GET(self, scheme="http", path='/', port=None, timeout=5):
         if port:
-            url = '{0}://{1}:{2}{3}'.format(scheme, self.public_ip, port, path)
+            url = '{0}://{1}:{2}{3}'.format(scheme, self.host, port, path)
         else:
-            url = '{0}://{1}{2}'.format(scheme, self.public_ip, path)
+            url = '{0}://{1}{2}'.format(scheme, self.host, path)
         LOG.debug("Issuing GET to {0}".format(url))
         req = urllib2.urlopen(url, timeout=timeout)
         res = unicode(req.read(), 'utf-8')
@@ -44,9 +44,9 @@ class RESTMixin(object):
     def wait_http_resp(self, scheme="http", path='/', port=None, code=200,
                        timeout=3, tries=60, internal=3):
         if port:
-            url = '{0}://{1}:{2}{3}'.format(scheme, self.public_ip, port, path)
+            url = '{0}://{1}:{2}{3}'.format(scheme, self.host, port, path)
         else:
-            url = '{0}://{1}{2}'.format(scheme, self.public_ip, path)
+            url = '{0}://{1}{2}'.format(scheme, self.host, path)
         LOG.debug('Expecting for response code {code} on url {url}, '
                   'total retries: {tries}'.format(
                       code=code, url=url, tries=tries))
@@ -86,6 +86,15 @@ class KDPod(RESTMixin):
         return spec.get('public_ip')
 
     @property
+    def domain(self):
+        spec = self.get_spec()
+        return spec.get('domain')
+
+    @property
+    def host(self):
+        return self.public_ip or self.domain
+
+    @property
     def ports(self):
         def _get_ports(containers):
             all_ports = itertools.chain.from_iterable(
@@ -98,7 +107,7 @@ class KDPod(RESTMixin):
 
     @classmethod
     def create(cls, cluster, image, name, kube_type, kubes, open_all_ports,
-               restart_policy, pvs, owner, password, ports_to_open):
+               restart_policy, pvs, owner, password, ports_to_open, domain):
         """
         Create new pod in kuberdock
         :param open_all_ports: if true, open all ports of image (does not mean
@@ -147,6 +156,8 @@ class KDPod(RESTMixin):
             container.update(volumeMounts=[pv.volume_mount_dict for pv in pvs])
             pod_spec.update(volumes=[pv.volume_dict for pv in pvs])
         pod_spec.update(containers=[container])
+        if domain:
+            pod_spec["domain"] = domain
         pod_spec = json.dumps(pod_spec, ensure_ascii=False)
 
         _, out, _ = cluster.kcli2(u"pods create '{}'".format(pod_spec),
@@ -226,6 +237,22 @@ class KDPod(RESTMixin):
                               restart_policy, "", owner)
 
     @classmethod
+    def get_internal_pod(cls, cluster, pod_name):
+        """Get pod from kuberdock
+        Create KDPod object modeling pod, which is already created in the
+        Kuberdock. Will be used for finding and tracking pods of
+        kuberdock-internal user
+        :return: KDPod object modeling already existing pod
+        """
+        escaped_pod_name = pipes.quote(pod_name)
+        cmd = u"pods get --name {} --owner kuberdock-internal".\
+              format(escaped_pod_name)
+        _, out, _ = cluster.kdctl(cmd, out_as_dict=True)
+        spec = out["data"]
+        return KDPod(cluster, None, pod_name, None, None, False,
+                     spec["restartPolicy"], [], "kuberdock-internal")
+
+    @classmethod
     def _get_pod_class(cls, image):
         pod_classes = {c.SRC: c for c in all_subclasses(cls)}
         return pod_classes.get(image, cls)
@@ -277,7 +304,7 @@ class KDPod(RESTMixin):
 
     def _wait_for_ports(self, ports, timeout):
         for p in ports:
-            wait_net_port(self.public_ip, p, timeout)
+            wait_net_port(self.host, p, timeout)
 
     def wait_for_status(self, status, tries=50, interval=5, delay=0):
         """
@@ -287,7 +314,6 @@ class KDPod(RESTMixin):
         :param tries: number of tries to check the status for
         :param interval: delay between the tries in seconds
         :param delay: the initial delay before a first check
-        :return:
         """
         time.sleep(delay)
         for _ in range(tries):
@@ -308,7 +334,19 @@ class KDPod(RESTMixin):
 
     @property
     def status(self):
-        return self.info['status']
+        """Calculate web-UI status of the pod
+        Calculate the same status of the pod which would be displayed in the
+        web-ui for user (see kubedock/frontend/static/js/app_data/model.js
+        data.Pod.getPrettyStatus), this status distinguishes from what is
+        returned in "status" field by podapi
+
+        :return: pod's status calculated by front-end rules
+        """
+        spec = self.get_spec()
+        status = spec['status']
+        if status == "running" and not spec['ready']:
+            return "pending"
+        return status
 
     @property
     def escaped_name(self):
@@ -359,10 +397,10 @@ class KDPod(RESTMixin):
         return container['containerID']
 
     def get_spec(self):
-        _, out, _ = self.cluster.kubectl(
-            u"describe pods {}".format(self.escaped_name), out_as_dict=True,
-            user=self.owner)
-        return out
+        cmd = u"pods get --name {} --owner {}".\
+              format(self.escaped_name, self.owner)
+        _, out, _ = self.cluster.kdctl(cmd, out_as_dict=True)
+        return out["data"]
 
     def get_dump(self):
         cmd = u"pods dump {pod_id}".format(pod_id=self.pod_id)
@@ -478,4 +516,7 @@ class _NginxPod(KDPod):
             raise Exception(
                 "Cannot perform nginx healthcheck without public IP")
         self._generic_healthcheck()
+        # if shared IP is used, 404 is returned in a response to GET on
+        # pod's domain name for up to 40 seconds after pod is started
+        retry(self.do_GET, tries=5, interval=10)
         assert_in("Welcome to nginx!", self.do_GET())

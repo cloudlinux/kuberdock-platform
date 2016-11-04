@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import pipes
+import requests
 import sys
 import time
 from contextlib import contextmanager
@@ -40,6 +41,7 @@ class KDIntegrationTestAPI(object):
         self.nodes = NodeList(self)
         self.pvs = PVList(self)
         self.users = UserList(self)
+        self.domains = DomainList(self)
         self._ssh_connections = {}
 
     @property
@@ -79,6 +81,16 @@ class KDIntegrationTestAPI(object):
         sftp = ssh.open_sftp()
         sftp.get_channel().settimeout(timeout)
         return sftp
+
+    def get_admin_token(self):
+        master_ip = self.get_host_ip("master")
+
+        resp = requests.post("https://{}/api/auth/token2".format(master_ip),
+                             headers={"Content-Type": "application/json"},
+                             data='{"username": "admin", "password": "admin"}',
+                             verify=False
+                             )
+        return resp.json()["token"]
 
     def recreate_routable_ip_pool(self):
         self.ip_pools.clear()
@@ -455,7 +467,7 @@ class PodList(object):
                open_all_ports=False, ports_to_open=(),
                restart_policy="Always", pvs=None, start=True, wait_ports=False,
                healthcheck=False, wait_for_status=None, owner='test_user',
-               password=None):
+               password=None, domain=None):
         """
         Create new pod in kuberdock
         :param open_all_ports: if true, open all ports of image (does not mean
@@ -469,7 +481,7 @@ class PodList(object):
 
         pod = KDPod.create(self.cluster, image, name, kube_type, kubes,
                            open_all_ports, restart_policy, pvs, owner,
-                           owner or password, ports_to_open)
+                           owner or password, ports_to_open, domain)
         if start:
             pod.start()
         if wait_for_status:
@@ -533,6 +545,31 @@ class PodList(object):
             for pod in self.cluster.pods.filter_by_owner(user):
                 name = escape_command_arg(pod['name'])
                 self.cluster.kcli(u'delete {}'.format(name), user=user)
+
+
+class DomainList(object):
+    def __init__(self, cluster):
+        # type: (KDIntegrationTestAPI) -> None
+        self.cluster = cluster
+
+    def add(self, name):
+        self.cluster.kdctl(u"domains create --name {}".format(name))
+
+    def delete(self, name=None, id_=None):
+        cmd = u"domains delete "
+        if name:
+            cmd += u"--name {}".format(name)
+        if id_:
+            cmd += u"--id {}".format(id_)
+        self.cluster.kdctl(cmd)
+
+    def list(self):
+        _, out, _ = self.cluster.kdctl("domains list", out_as_dict=True)
+        return out["data"]
+
+    def delete_all(self):
+        for domain in self.list():
+            self.delete(id_=domain["id"])
 
 
 class PV(object):

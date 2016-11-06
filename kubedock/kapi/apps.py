@@ -62,8 +62,8 @@ def generate(length=8):
     return random.choice(lowercase) + rest
 
 
-@celery.task(bind=True)
-def on_update_error(self, uuid, pod, owner, orig_config, orig_kube_id):
+@celery.task()
+def on_update_error(uuid, pod, owner, orig_config, orig_kube_id):
     """
     Asynchronous task error callback
     :param self: obj -> celery task object
@@ -79,8 +79,8 @@ def on_update_error(self, uuid, pod, owner, orig_config, orig_kube_id):
                           {'command': 'start', 'commandOptions': {}})
 
 
-@celery.task(bind=True, ignore_result=True)
-def update_plan_async(self, *args, **kwargs):
+@celery.task(ignore_result=True)
+def update_plan_async(*args, **kwargs):
     """
     Asynchronous pod updater
     :param self: obj -> celery task object
@@ -121,10 +121,10 @@ class PredefinedApp(object):
         """
         query = PredefinedAppModel.query.order_by(PredefinedAppModel.id)
         if as_dict:
-            return [app.to_dict() for app in query.all()]
+            return [app.to_dict(exclude=('templates',)) for app in query.all()]
         apps = []
         for dbapp in query.all():
-            apps.append(cls(**dbapp.to_dict()))
+            apps.append(cls(**dbapp.to_dict(exclude=('templates',))))
         return apps
 
     def to_dict(self, with_plans=False):
@@ -150,14 +150,14 @@ class PredefinedApp(object):
 
     @classmethod
     @atomic()
-    def delete(cls, id, version_id=None):
+    def delete(cls, id_, version_id=None):
         """
         Class method which deletes PA
-        :param id: int -> PA database ID
+        :param id_: int -> PA database ID
         :param version_id: int -> PA version id
         """
         app = PredefinedAppModel.query\
-            .filter_by(is_deleted=False, id=id).first()
+            .filter_by(is_deleted=False, id=id_).first()
         if app is None:
             raise PredefinedAppExc.NoSuchPredefinedApp
         if version_id:
@@ -165,6 +165,8 @@ class PredefinedApp(object):
                 .filter_by(is_deleted=False, id=version_id).first()
             if not app_template:
                 raise PredefinedAppExc.NoSuchPredefinedAppVersion
+            if app_template.active:
+                raise PredefinedAppExc.ActiveVersionNotRemovable()
             app_template.is_deleted = True
             if app_template.active:
                 app_template.active = False
@@ -182,17 +184,17 @@ class PredefinedApp(object):
             db.session.flush()
 
     @classmethod
-    def get(cls, id, version_id=None):
+    def get(cls, app_id, version_id=None):
         """
         Class method to return instance by ID
-        :param id: int -> PA database ID
+        :param app_id: int -> PA database ID
         :return: PA intance
         """
         dbapp = PredefinedAppModel.query\
-            .filter_by(is_deleted=False, id=id).first()
+            .filter_by(is_deleted=False, id=app_id).first()
         if dbapp is None:
             raise PredefinedAppExc.NoSuchPredefinedApp
-        if version_id:
+        if version_id is not None:
             dbapp.select_version(version_id)
         return cls(**dbapp.to_dict())
 
@@ -317,27 +319,56 @@ class PredefinedApp(object):
         if package is None:
             return False
         self._apply_package(loaded, package)
+
+        if derived.get('appVariables'):
+            # we can just fill teplate with provided values
+            values = derived.get('appVariables')
+            filled = self._fill_template(loaded, values=values)
+            stack = [(filled, derived)]
+            while stack:
+                left, right = stack.pop()
+                if left == right:
+                    continue
+                elif all(isinstance(i, Mapping) for i in (left, right)):
+                    for key, val in left.items():
+                        if key not in right:
+                            return False
+                        stack.append((val, right.pop(key)))
+                    if right:
+                        return False
+                elif all(isinstance(i, basestring) for i in (left, right)):
+                    if not re.match(re.escape(left).replace(
+                            '\\%USER\\_DOMAIN\\%', '.*'), right):
+                        return False
+                elif all(isinstance(i, Sequence) for i in (left, right)):
+                    if len(left) != len(right):
+                        return False
+                    stack.extend(zip(left, right))
+                else:
+                    return False
+            return True
+
         entities_set = set(self._entities.values())
-        any_entity_regex = re.compile('(?:%USER_DOMAIN%|{0})'.format(
+        any_entity_regex = re.compile('(?:\\%USER\\_DOMAIN\\%|{0})'.format(
             '|'.join(entity.uid for entity in entities_set)))
         stack = [(loaded, derived)]
         while stack:
             left, right = stack.pop()
             if left == right:
                 continue
-            elif all([isinstance(i, Mapping) for i in (left, right)]):
+            elif all(isinstance(i, Mapping) for i in (left, right)):
                 for key, val in left.items():
                     if key not in right:
                         return False
                     stack.append((val, right.pop(key)))
                 if right:
                     return False
-            elif all([isinstance(i, basestring) for i in (left, right)]):
+            elif all(isinstance(i, basestring) for i in (left, right)):
                 if not re.match(
                         any_entity_regex.sub('.*', re.escape(left)),
                         right):
                     return False
-            elif all([isinstance(i, Sequence) for i in (left, right)]):  # list
+            elif all(isinstance(i, Sequence) for i in (left, right)):  # list
                 if len(left) != len(right):
                     return False
                 stack.extend(zip(left, right))
@@ -364,15 +395,15 @@ class PredefinedApp(object):
 
     @classmethod
     @atomic()
-    def update(cls, id, version_id=None, new_version=None, **kw):
+    def update(cls, app_id, version_id=None, new_version=None, **kw):
         """
         Class method that updates one or more PA object fields
         :param new_version: save as new version
         :param version_id: None edit active version
-        :param id: int -> PA database ID
+        :param app_id: int -> PA database ID
         :return: object -> PA instance
         """
-        app = PredefinedAppModel.query.get(id)
+        app = PredefinedAppModel.query.get(app_id)
         if app is None:
             return
         if version_id or new_version:
@@ -383,6 +414,9 @@ class PredefinedApp(object):
         if not kw.get('origin'):
             kw['origin'] = 'unknown'
         if not kw.get('template'):
+            fields_to_update = fields_to_update - {'template'}
+        elif new_version:  # create new version before updating other fields
+            app.template = kw['template']
             fields_to_update = fields_to_update - {'template'}
         for attr in fields_to_update:
             setattr(app, attr, kw[attr])
@@ -575,6 +609,10 @@ class PredefinedApp(object):
         :param pod: obj -> pod object retrieved from DB
         :param new_config: dict -> filled config with applied values
         """
+        if not PredefinedAppModel.query.get(self.id).switchingPackagesAllowed:
+            raise PredefinedAppExc.AppPackageChangeImpossible(
+                details={'message': (
+                    "switching app package isn't supported for this version")})
         root = self._get_template_spec(new_config)
         plan = new_config['kuberdock']['appPackage']
         kube_id = plan['kubeType']
@@ -1063,6 +1101,9 @@ class PredefinedApp(object):
         if loaded is None:
             loaded = self._get_loaded_template()
 
+        if not isinstance(loaded, Mapping):
+            raise PredefinedAppExc.InvalidTemplate()
+
         def fill(target):
             if isinstance(target, self.TemplateField):
                 used_entities[target.name] = target
@@ -1087,7 +1128,11 @@ class PredefinedApp(object):
                 return [fill(v) for v in target]
             return target
 
-        return fill(loaded)
+        filled = fill(loaded)
+        filled['appVariables'] = {
+            entity.name: entity.coerce(values.get(entity.name, entity.default))
+            for entity in used_entities.values()}
+        return filled
 
     @staticmethod
     def _fill_persistent_disks(spec, pod):
@@ -1307,6 +1352,7 @@ def process_pod(pod, rc, service, template_id=None):
     plan = kdSection.get('appPackage', {})
 
     new_pod = {
+        'appVariables': doc.get('appVariables', {}),  # $VAR$ to value mapping
         'name': doc.get('metadata', {}).get('name', ''),
         'restartPolicy': spec_body.get('restartPolicy', "Always"),
         'replicas': replicas,
@@ -1319,6 +1365,9 @@ def process_pod(pod, rc, service, template_id=None):
         'kuberdock_resolve': kdSection.get('resolve') or spec_body.get(
             'resolve', []),
     }
+    if new_pod.get('kuberdock_template_id') is not None:
+        app = PredefinedAppModel.query.get(new_pod['kuberdock_template_id'])
+        new_pod['kuberdock_template_version_id'] = app.get_template_object().id
 
     if spec_body.get('domain'):
         new_pod['domain'] = spec_body.get('domain')

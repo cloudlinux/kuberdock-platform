@@ -440,11 +440,19 @@ new_pod_schema.update({
         'type': 'string',
         'nullable': True,
     },
+    'appVariables': {  # $VARIABLE$ to value mapping that was used to fill PA
+        'type': 'dict',
+    },
     'kuberdock_template_id': {
         'type': 'integer',
         'min': 0,
         'nullable': True,
         'template_exists': True,
+    },
+    'kuberdock_template_version_id': {
+        'type': 'integer',
+        'min': 0,
+        'nullable': True,
     },
     'kuberdock_plan_name': {
         'type': 'string',

@@ -48,6 +48,8 @@ class PredefinedApp(BaseModelMixin, db.Model):
         :param version: int -> version of PA
         """
         self.template_model = self.templates.filter_by(id=version_id).first()
+        if not self.template_model and not new_version:
+            raise PredefinedAppExc.NoSuchPredefinedAppVersion()
         self._new_version = new_version
 
     def set_active_version(self, version_id):
@@ -70,8 +72,7 @@ class PredefinedApp(BaseModelMixin, db.Model):
             return self.template_model
         if self._new_version or not self.id:
             return None
-        return self.templates \
-            .filter_by(active=True).first()
+        return self.templates.filter_by(active=True).first()
 
     @property
     def active(self):
@@ -85,8 +86,8 @@ class PredefinedApp(BaseModelMixin, db.Model):
         if app_template:
             if value:
                 self.set_active_version(app_template.id)
-            else:
-                app_template.active = False
+            elif app_template.active:
+                raise PredefinedAppExc.ActiveVersionNotRemovable()
             db.session.flush()
         else:
             raise PredefinedAppExc.NoSuchPredefinedAppVersion
@@ -119,9 +120,6 @@ class PredefinedApp(BaseModelMixin, db.Model):
             app_template.template = value
             app_template.modified = datetime.utcnow()
             self.modified = datetime.utcnow()
-        if self._new_version or not self.template_model:
-            # set active for new version
-            self.set_active_version(app_template.id)
         db.session.flush()
 
     def create_new_template(self, template='', **kwargs):
@@ -139,8 +137,8 @@ class PredefinedApp(BaseModelMixin, db.Model):
             app_template.active = True
         return app_template
 
-    def to_dict(self, include=None, exclude=None):
-        return {
+    def to_dict(self, include=None, exclude=()):
+        data = {
             'id': self.id,
             'name': self.name,
             'qualifier': self.qualifier,
@@ -150,8 +148,8 @@ class PredefinedApp(BaseModelMixin, db.Model):
             'modified': self.modified,
             'templates': [x.to_dict() for x in self.templates.filter_by(
                 is_deleted=False)]
-
         }
+        return {key: val for key, val in data.items() if key not in exclude}
 
 
 class PredefinedAppTemplate(BaseModelMixin, db.Model):
@@ -164,7 +162,7 @@ class PredefinedAppTemplate(BaseModelMixin, db.Model):
                                   nullable=False)
     template = db.Column(db.Text, nullable=False)
     active = db.Column(db.Boolean, default=False, nullable=False)
-    switching_allowed = db.Column(db.Boolean, default=False, nullable=False)
+    switching_allowed = db.Column(db.Boolean, default=True, nullable=False)
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
     created = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
     modified = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)

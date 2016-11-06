@@ -202,6 +202,12 @@ class PredefinedAppExc(object):
     class AppPackageChangeImpossible(APIError):
         message_template = 'Unable to change app package: {message}'
 
+    class ActiveVersionNotRemovable(APIError):
+        message_template = (
+            'Setting "active" flag to "false" or removing active version is '
+            'not allowed. You can change active version by setting another '
+            'version as active.')
+
 
 class BillingExc(object):
 

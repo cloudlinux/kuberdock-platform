@@ -140,6 +140,16 @@ spec:
 """
 
 
+VARIABLES = {
+    'APP_NAME': 'WordPress',
+    'MYSQL_PD_SIZE': 2,
+    'VAR_IN_NAME': mock.ANY,
+    'PD_RAND': mock.ANY,
+    'WPENV1': 1,
+    'TESTAUTO1': mock.ANY,
+}
+
+
 class FakeObj(object):
     id = 1
     name = 'test'
@@ -243,16 +253,17 @@ class TestFillingWorkflow(unittest.TestCase):
     @mock.patch('kubedock.kapi.apps.PredefinedApp._get_loaded_template')
     def test_filling_flow(self, lt):
         pa = apps.PredefinedApp.get(1)
-        lt.return_value = mock.sentinel.LOADED
+        lt.return_value = {'foo': 'bar'}
         rv = pa._fill_template()
-        self.assertTrue(rv is mock.sentinel.LOADED)
+        self.assertDictEqual(rv, dict(lt.return_value, appVariables={}))
         lt.assert_called_once_with()
 
     @mock.patch('kubedock.kapi.apps.PredefinedApp._get_loaded_template')
     def test_filling_flow_with_provided_loaded_template(self, lt):
         pa = apps.PredefinedApp.get(1)
-        rv = pa._fill_template(loaded=mock.sentinel.LOADED)
-        self.assertTrue(rv is mock.sentinel.LOADED)
+        loaded = {'foo': 'bar'}
+        rv = pa._fill_template(loaded=loaded)
+        self.assertDictEqual(rv, dict(loaded, appVariables={}))
         lt.assert_not_called()
 
 
@@ -384,7 +395,10 @@ class TestHowTemplateIsFilled(unittest.TestCase):
             'c': [{
                 'd': 'string with default-2\n',
                 'e': 'default-2',
-            }]})
+            }],
+            'appVariables': {name: field.default
+                             for name, field in pa._used_entities.items()}
+        })
         lt.assert_called_once_with()
         self.assertEqual(
             pa._used_entities,

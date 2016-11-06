@@ -44,8 +44,8 @@ class PredefinedAppsTestCase(APITestCase):
         url = self.item_url(predefined_app['id'])
         response = self.open(url, auth=auth)
         self.assert200(response)
+        # same, but with the list of all versions
         template_list = response.json['data'].pop('templates')
-        predefined_app.pop('templates')
         self.assertEqual(predefined_app, response.json['data'])
 
         # get by id, file-only
@@ -61,7 +61,6 @@ class PredefinedAppsTestCase(APITestCase):
         url = self.item_url(predefined_app['id'], template_list[0]['id'])
         response = self.open(url, auth=auth)
         self.assert200(response)
-        predefined_app.pop('templates', None)  # remove template versions
         self.assertEqual(predefined_app, response.json['data'])
 
         # get by id with version, file-only
@@ -95,8 +94,7 @@ class PredefinedAppsTestCase(APITestCase):
         url = self.item_url(predefined_app['id'])
         # post as json with id
         response = self.admin_open(url, method='POST',
-                                   json={'name': self.name,
-                                         'template': self.template})
+                                   json={'template': self.template})
         self.assert200(response)
         response_validator.validate(response.json)
 
@@ -143,8 +141,7 @@ class PredefinedAppsTestCase(APITestCase):
         url_app = self.item_url(predefined_app['id'])
         # post as json with id
         response = self.admin_open(url_app, method='POST',
-                                   json={'name': self.name,
-                                         'template': self.template})
+                                   json={'template': self.template})
         self.assert200(response)
         response_validator.validate(response.json)
 
@@ -156,8 +153,7 @@ class PredefinedAppsTestCase(APITestCase):
                                     template_list[1]['id'])
 
         # update template
-        new_app = {'name': 'updated yaml template name',
-                   'template': 'updated yaml template'}
+        new_app = {'template': 'updated yaml template'}
         response = self.admin_open(url_app_ver, method='PUT', json=new_app)
         self.assert200(response)
         response_validator.validate(response.json)
@@ -167,10 +163,9 @@ class PredefinedAppsTestCase(APITestCase):
         self.assert200(response)
         template_list = response.json['data'].pop('templates')
 
-        self.assertEqual(new_app['name'], response.json['data']['name'])
         self.assertEqual(new_app['template'], template_list[1]['template'])
-        self.assertFalse(template_list[0]['active'])
-        self.assertTrue(template_list[1]['active'])
+        self.assertTrue(template_list[0]['active'])
+        self.assertFalse(template_list[1]['active'])
         self.assertEqual(self.template, template_list[0]['template'])
 
     def test_delete(self):
@@ -194,8 +189,7 @@ class PredefinedAppsTestCase(APITestCase):
         url_app = self.item_url(predefined_app['id'])
         # post as json with id
         response = self.admin_open(url_app, method='POST',
-                                   json={'name': self.name,
-                                         'template': self.template})
+                                   json={'template': self.template})
         self.assert200(response)
         response_validator.validate(response.json)
 
@@ -236,8 +230,7 @@ class PredefinedAppsTestCase(APITestCase):
         url_app = self.item_url(predefined_app['id'])
         # post as json with id
         response = self.admin_open(url_app, method='POST',
-                                   json={'name': self.name,
-                                         'template': self.template})
+                                   json={'template': self.template})
         self.assert200(response)
         response_validator.validate(response.json)
 
@@ -279,9 +272,8 @@ class PredefinedAppsTestCase(APITestCase):
 
         # post as json with id
         response = self.admin_open(url_app, method='POST',
-                                   json={'name': self.name,
-                                         'template': self.template,
-                                         'switchingPackagesAllowed': True})
+                                   json={'template': self.template,
+                                         'switchingPackagesAllowed': False})
         self.assert200(response)
         response_validator.validate(response.json)
 
@@ -291,8 +283,8 @@ class PredefinedAppsTestCase(APITestCase):
 
         self.assertEqual(len(template_list), 2)
 
-        self.assertFalse(template_list[0]['switchingPackagesAllowed'])
-        self.assertTrue(template_list[1]['switchingPackagesAllowed'])
+        self.assertTrue(template_list[0]['switchingPackagesAllowed'])
+        self.assertFalse(template_list[1]['switchingPackagesAllowed'])
 
         # get first template
         url_app_ver1 = self.item_url(predefined_app['id'],
@@ -302,13 +294,13 @@ class PredefinedAppsTestCase(APITestCase):
                                      template_list[1]['id'])
 
         # set switchingPackagesAllowed
-        new_app = {'switchingPackagesAllowed': True}
+        new_app = {'switchingPackagesAllowed': False}
         response = self.admin_open(url_app_ver1, method='PUT', json=new_app)
         self.assert200(response)
         response_validator.validate(response.json)
 
         # reset switchingPackagesAllowed
-        new_app = {'switchingPackagesAllowed': False}
+        new_app = {'switchingPackagesAllowed': True}
         response = self.admin_open(url_app_ver2, method='PUT', json=new_app)
         self.assert200(response)
         response_validator.validate(response.json)
@@ -320,8 +312,8 @@ class PredefinedAppsTestCase(APITestCase):
 
         self.assertEqual(len(template_list), 2)
 
-        self.assertTrue(template_list[0]['switchingPackagesAllowed'])
-        self.assertFalse(template_list[1]['switchingPackagesAllowed'])
+        self.assertFalse(template_list[0]['switchingPackagesAllowed'])
+        self.assertTrue(template_list[1]['switchingPackagesAllowed'])
 
 
 if __name__ == '__main__':

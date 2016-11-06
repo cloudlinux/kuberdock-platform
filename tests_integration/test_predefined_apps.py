@@ -8,7 +8,7 @@ def check_pa(cluster, template_name):
                            healthcheck=True)
 
 
-@pipeline('predefined_apps', skip_reason="FIXME in AC-5036")
+@pipeline('predefined_apps')
 def test_redis_pa(cluster):
     check_pa(cluster, 'redis.yaml')
 

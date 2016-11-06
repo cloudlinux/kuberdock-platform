@@ -81,7 +81,7 @@ class _RedisPaPod(KDPAPod):
         assert_eq(r.get('foo'), 'bar')
 
 
-class _RedisPaPod(_RedisPaPod):
+class _RedisCustomPaPod(_RedisPaPod):
     SRC = 'custom_redis.yaml'
 
 

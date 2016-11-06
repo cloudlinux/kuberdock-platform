@@ -61,6 +61,7 @@ class RESTMixin(object):
 class KDPod(RESTMixin):
     # Image or PA name
     SRC = None
+    WAIT_PORTS_TIMEOUT = DEFAULT_WAIT_PORTS_TIMEOUT
     Port = namedtuple('Port', 'port proto')
 
     def __init__(self, cluster, image, name, kube_type, kubes,
@@ -261,12 +262,13 @@ class KDPod(RESTMixin):
             u"pods update --name {} '{}'".format(
                 self.escaped_name, json.dumps(data), user=self.owner))
 
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_PORTS_TIMEOUT):
+    def wait_for_ports(self, ports=None, timeout=None):
         # NOTE: we still don't know if this is in a routable network, so
         # open_all_ports does not exactly mean wait_for_ports pass.
         # But for sure it does not make sense to wait if no ports open.
         # Currently all ports can be open by setting open_all_ports, or some
         # ports can be open by setting ports_to_open while creating a pod
+        timeout = timeout or self.WAIT_PORTS_TIMEOUT
         if not (self.open_all_ports or self.ports):
             raise Exception("Cannot wait for ports on a pod with no"
                             " ports open")

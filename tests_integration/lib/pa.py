@@ -162,6 +162,7 @@ class _Gallery3PaPod(KDPAPod):
 
 class _MagentoPaPod(KDPAPod):
     SRC = 'magento.yaml'
+    WAIT_PORTS_TIMEOUT = 60 * 10
 
     def healthcheck(self):
         self._generic_healthcheck()
@@ -212,6 +213,7 @@ class _LimesurveyPaPod(KDPAPod):
 
 class _KokenPaPod(KDPAPod):
     SRC = 'koken.yaml'
+    WAIT_PORTS_TIMEOUT = 60 * 10
 
     def healthcheck(self):
         self._generic_healthcheck()
@@ -247,6 +249,7 @@ class _PhpBBPaPod(KDPAPod):
 
 class _WordpressPaPod(KDPAPod):
     SRC = 'wordpress.yaml'
+    WAIT_PORTS_TIMEOUT = 60 * 10
 
     def healthcheck(self):
         self._generic_healthcheck()
@@ -287,6 +290,7 @@ class _SugarCrmPaPod(KDPAPod):
 
 class _PostgresPaPod(KDPAPod):
     SRC = 'postgres.yaml'
+    WAIT_PORTS_TIMEOUT = 60 * 10
 
     def healthcheck(self):
         self._generic_healthcheck()

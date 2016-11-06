@@ -205,7 +205,7 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
             lsdevices,
             that = this,
             val = this.ui.node_name.val(),
-            pattern =  /^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$/i;  // eslint-disable-line max-len
+            pattern = /^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$/i; // eslint-disable-line max-len
 
         val = val.replace(/\s+/g, '');
         this.ui.node_name.val(val);
@@ -506,7 +506,7 @@ export const NodeMonitoringTabViewItem = Backbone.Marionette.ItemView.extend({
         try {
             this.makeGraph();
         } catch (e){
-            console.log('Cannot display graph' + e);
+            console.log('Cannot display graph' + e); // eslint-disable-line no-console
         }
     },
 });

@@ -972,6 +972,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             return {
                 ip: '',
                 logs: [],
+                hostname: '',
                 logsError: null,
             };
         },

@@ -133,38 +133,29 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
         'selectpicker'   : '.selectpicker',
         'add_field'      : '.add',
         'remove_field'   : '.remove',
-        'block_device'   : '.block-device'
+        'block_device'   : '.block-device',
+        'input'          : 'input'
     },
 
     events:{
         'click @ui.add_field'       : 'addField',
         'click @ui.remove_field'    : 'removeField',
         'click @ui.nodeAddBtn'      : 'complete',
-        'focus @ui.node_name'       : 'removeError',
+        'focus @ui.input'           : 'removeError',
         'change @ui.nodeTypeSelect' : 'changeKubeType',
         'change @ui.block_device'   : 'changeLsDevices',
         'change @ui.node_name'      : 'changeHostname'
     },
 
-    initialize: function(options){
+    initialize(options){
         this.setupInfo = options.setupInfo;
-        this.model.set('hostname', '');
         if (!this.setupInfo.AWS && this.setupInfo.ZFS){
             this.model.set('lsdevices', ['']);
         }
     },
 
-    changeKubeType: function(evt) {
-        if (!this.ui.nodeTypeSelect.value) {
-            this.model.set('kube_type', Number(evt.target.value));
-        }
-    },
-
-    changeHostname: function(evt) {
-        if (!this.ui.node_name.value) {
-            this.model.set('hostname', evt.target.value);
-        }
-    },
+    changeKubeType(){ this.model.set('kube_type', Number(this.ui.nodeTypeSelect.val())); },
+    changeHostname(){ this.model.set('hostname', this.ui.node_name.val()); },
 
     changeLsDevices: function(evt){
         var target = $(evt.target),
@@ -172,7 +163,7 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
         this.model.get('lsdevices')[index] = target.val().trim();
     },
 
-    templateHelpers: function(){
+    templateHelpers(){
         return {
             kubeTypes: App.kubeTypeCollection.filter(function(kube){
                 return kube.id !== -1;  // "Internal service" kube-type
@@ -181,7 +172,7 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
         };
     },
 
-    onRender: function(){
+    onRender(){
         this.model.set('kube_type', Number(this.ui.nodeTypeSelect.val()));
         this.ui.selectpicker.selectpicker();
     },
@@ -193,79 +184,83 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
         this.render();
     },
 
-    removeField: function(evt){
+    removeField(evt){
         var target = $(evt.target),
             index = target.parents('.relative').index() - 1;
         this.model.get('lsdevices').splice(index, 1);
         this.render();
     },
 
-    complete: function () {
-        var data = [],
-            lsdevices,
+    validate(data){
+        let pattern = /^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$/i;  // eslint-disable-line max-len
+        if (!data){
+            return false;
+        } else if (!data.hostname){
+            this.ui.node_name.addClass('error');
+            utils.notifyWindow('Hostname can\'t be empty');
+            return false;
+        } else if (!pattern.test(data.hostname)){
+            this.ui.node_name.addClass('error');
+            utils.notifyWindow(
+                'Hostname can\'t contain some special symbols like ' +
+                '"#", "%", "/" or start with "."');
+            return false;
+        } else if (data.lsdevices && !data.lsdevices.length){
+            utils.notifyWindow('Block devices name can\'t be empty.');
+            this.ui.block_device.addClass('error');
+            return false;
+        } else {
+            return true;
+        }
+    },
+
+    complete() {
+        let data = [],
             that = this,
-            val = this.ui.node_name.val(),
-            pattern = /^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$/i; // eslint-disable-line max-len
+            zfs = this.setupInfo.ZFS,
+            aws = this.setupInfo.AWS,
+            hostname = this.ui.node_name.val();
 
-        val = val.replace(/\s+/g, '');
-        this.ui.node_name.val(val);
+        hostname = hostname.replace(/\s+/g, '');
+        this.ui.node_name.val(hostname);
 
-        if (this.setupInfo.ZFS && !this.setupInfo.AWS) {
-            lsdevices = _.without(this.model.get('lsdevices'), '');
-            if (!lsdevices.length){
-                utils.notifyWindow('Block devices name can\'t be empty.');
-                that.ui.block_device.addClass('error');
-                return false;
-            }
+        if (zfs && !aws) {
+            data = {
+                hostname: hostname,
+                status: 'pending',
+                kube_type: that.model.get('kube_type'),
+                lsdevices: _.compact(that.model.get('lsdevices')),
+                install_log: ''
+            };
+        } else {
+            data = {
+                hostname: hostname,
+                status: 'pending',
+                kube_type: that.model.get('kube_type'),
+                install_log: ''
+            };
         }
 
-        App.getNodeCollection().done(function(nodeCollection){
-            switch (true){
-                case !val:
-                    that.ui.node_name.addClass('error');
-                    utils.notifyWindow('Enter valid hostname');
-                    break;
-                case val && !pattern.test(val):
-                    that.ui.node_name.addClass('error');
-                    utils.notifyWindow(
-                        'Hostname can\'t contain some special symbols like ' +
-                        '"#", "%", "/" or start with "."');
-                    break;
-                default:
-                    utils.preloader.show();
-                    if (that.setupInfo.ZFS && !that.setupInfo.AWS) {
-                        data = {
-                            hostname: val,
-                            status: 'pending',
-                            kube_type: that.model.get('kube_type'),
-                            lsdevices: _.compact(that.model.get('lsdevices')),
-                            install_log: ''
-                        };
-                    } else {
-                        data = {
-                            hostname: val,
-                            status: 'pending',
-                            kube_type: that.model.get('kube_type'),
-                            install_log: ''
-                        };
-                    }
-                    nodeCollection.create(data, {
-                        wait: true,
-                        complete: utils.preloader.hide,
-                        success:  function(){
-                            App.navigate('nodes', {trigger: true});
-                            utils.notifyWindow(
-                                'Node "' + val + '" is added successfully',
-                                'success'
-                            );
-                        },
-                        error: function(collection, response){
-                            that.ui.node_name.addClass('error');
-                            utils.notifyWindow(response);
-                        },
-                    });
-            }
-        });
+        if (this.validate(data)) {
+            App.getNodeCollection().done(function(nodeCollection){
+                utils.preloader.show();
+                nodeCollection.create(data, {
+                    wait: true,
+                    complete: utils.preloader.hide,
+                    success:  function(){
+                        App.navigate('nodes', {trigger: true});
+                        utils.notifyWindow(
+                            'Node "' + hostname + '" is added successfully',
+                            'success'
+                        );
+                    },
+                    error: function(collection, response){
+                        that.ui.node_name.addClass('error');
+                        utils.notifyWindow(response);
+                    },
+                });
+            });
+        }
     }
 });
 

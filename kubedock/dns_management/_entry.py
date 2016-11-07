@@ -5,9 +5,9 @@ from flask import current_app
 from . import plugins
 from ..constants import KUBERDOCK_INGRESS_POD_NAME
 from ..pods.models import Pod
-from ..users.models import User
-from ..system_settings.models import SystemSettings
 from ..system_settings import keys
+from ..system_settings.models import SystemSettings
+from ..users.models import User
 
 
 def _get_ingress_controller_pod():
@@ -37,9 +37,9 @@ class _IngressController(object):
 
     def is_ready(self):
         if self._dbpod is None:
-            return (False, u'Ingress controller pod not found')
+            return False, u'Ingress controller pod not found'
         if self.get_public_ip() is None:
-            return (False, u'Ingress controller pod has no public IP')
+            return False, u'Ingress controller pod has no public IP'
         return True, None
 
 
@@ -47,6 +47,7 @@ class _Plugin(object):
     """Simple class to access dns management plugin.
     Caches loaded plugin and it's parameters.
     """
+
     def __init__(self):
         self.name = SystemSettings.get_by_name(keys.DNS_MANAGEMENT_SYSTEM)
         self._plugin = None
@@ -118,9 +119,9 @@ def _are_components_ready(components):
     for component in components:
         if component is None:
             continue
-        isready, message = component.is_ready()
-        if not isready:
-            return isready, message
+        is_ready, message = component.is_ready()
+        if not is_ready:
+            return is_ready, message
     return True, None
 
 
@@ -132,8 +133,7 @@ def is_domain_system_ready():
 
 
 def create_or_update_type_A_record(domain):
-    """
-    Create or Update DNS A Record
+    """Create or Update DNS A Record.
 
     :param domain: Pod Domain Name
     :type domain: str
@@ -164,8 +164,7 @@ def create_or_update_type_A_record(domain):
 
 
 def delete_type_A_record(domain):
-    """
-    Delete DNS A Record
+    """Delete DNS A Record.
 
     :param domain: Pod Domain Name
     :type domain: str
@@ -188,3 +187,30 @@ def delete_type_A_record(domain):
         return False, u'Exception from plugin "{}":\n{}'.format(
             plugin.name, repr(err))
     return True, None
+
+
+def check_if_zone_exists(domain):
+    """Check if zone exists.
+
+    :param domain: Domain name
+    :type domain: str
+    :return: tuple of exists flag and error description If something goes
+        wrong in DNS Management plugin
+    """
+    plugin = _Plugin()
+    is_ready, message = plugin.is_ready()
+    if not is_ready:
+        return (
+            False,
+            u'Failed to check zone existence "{}": {}'.format(domain, message))
+    try:
+        rv = plugin.get_plugin().entry.check_if_zone_exists(
+            domain, **plugin.get_kwargs())
+    except Exception as err:
+        current_app.logger.exception(
+            u'Failed to run plugin check_if_zone_exists, domain: "{}"'
+            .format(domain))
+        return False, u'Exception from plugin "{}":\n{}'.format(
+            plugin.name, repr(err))
+    else:
+        return rv, None

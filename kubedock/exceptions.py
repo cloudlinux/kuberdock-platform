@@ -255,3 +255,16 @@ class RegisteredHostExists(ResourceExists):
 
 class RegisteredHostError(APIError):
     message_template = 'Error during registering host: {message}'
+
+
+class DNSPluginError(APIError):
+    status_code = 400
+
+
+class DomainZoneDoesNotExist(APIError):
+    status_code = 404
+    message_template = 'Zone for domain {domain} does not exist'
+
+    def __init__(self, domain):
+        details = {'domain': domain}
+        super(DomainZoneDoesNotExist, self).__init__(details=details)

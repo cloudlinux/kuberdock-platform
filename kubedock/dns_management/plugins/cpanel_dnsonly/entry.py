@@ -85,3 +85,11 @@ def create_or_update_type_A_record(domain, new_ips, **kwargs):
         # e.g. there is no dns zone that we expect
         raise ValueError("Zone for domain {} not found. "
                          "Need to configure the zone".format(domain))
+
+
+def check_if_zone_exists(domain, **kwargs):
+    api = API(**kwargs)
+    for zone in api.zones():
+        if zone.name == domain:
+            return True
+    return False

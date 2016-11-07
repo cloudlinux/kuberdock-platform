@@ -9,7 +9,10 @@ from kubedock.domains.models import BaseDomain, PodDomain
 class TestDomains(APITestCase):
 
     @mock.patch('kubedock.api.domains.prepare_ip_sharing')
-    def test_create_domain(self, prepare_ip_sharing_mock):
+    @mock.patch('kubedock.dns_management.check_if_zone_exists')
+    def test_create_domain(self, check_if_zone_exists_mock,
+                           prepare_ip_sharing_mock):
+        check_if_zone_exists_mock.return_value = (True, None)
         test_name = 'example.com'
         response = self.admin_open('/domains/', method='POST',
                                    json={'name': test_name})

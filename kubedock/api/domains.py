@@ -2,17 +2,18 @@ from flask import Blueprint
 from flask.views import MethodView
 
 from .utils import use_kwargs
+from .. import dns_management
 from ..core import db
 from ..decorators import maintenance_protected
 from ..domains.models import BaseDomain
 from ..exceptions import (AlreadyExistsError, CannotBeDeletedError,
-                          InternalAPIError, DomainNotFound)
+                          InternalAPIError, DomainNotFound, DNSPluginError,
+                          DomainZoneDoesNotExist)
 from ..kapi.ingress import prepare_ip_sharing
 from ..login import auth_required
 from ..rbac import check_permission
 from ..utils import atomic, KubeUtils, register_api
 from ..validation.schemas import domain_schema
-
 
 domains = Blueprint('domains', __name__, url_prefix='/domains')
 
@@ -65,6 +66,11 @@ class DomainsAPI(KubeUtils, MethodView):
             name = params['name']
             if BaseDomain.query.filter(BaseDomain.name == name).first():
                 raise AlreadyExistsError()
+            zone_exists, message = dns_management.check_if_zone_exists(name)
+            if message:
+                raise DNSPluginError(message)
+            if not zone_exists:
+                raise DomainZoneDoesNotExist(name)
             domain = BaseDomain(name=name)
             db.session.add(domain)
         return domain.to_dict()
@@ -107,5 +113,6 @@ class DomainsAPI(KubeUtils, MethodView):
             raise CannotBeDeletedError(
                 'Domain cannot be deleted: there are some pods that use it')
         db.session.delete(domain)
+
 
 register_api(domains, DomainsAPI, 'domains', '/', 'domain_id', 'int')

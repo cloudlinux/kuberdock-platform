@@ -76,3 +76,13 @@ def create_or_update_type_A_record(domain, new_ips, **kwargs):
                     zone=zone.name, domain=domain, ips=new_ips
                 )
             )
+
+
+def check_if_zone_exists(domain, **kwargs):
+    # For Route53 domain should end with dot
+    if not domain.endswith('.'):
+        domain += '.'
+
+    conn = Route53Connection(kwargs['id'], kwargs['secret'])
+    zone = conn.get_zone(domain)
+    return bool(zone)

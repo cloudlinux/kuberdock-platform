@@ -106,3 +106,9 @@ def create_or_update_type_A_record(domain, new_ips, **kwargs):
             'and ip "{ips}"'.format(
                 zone=zone['name'], domain=domain, ips=new_ips
             ))
+
+
+def check_if_zone_exists(domain, **kwargs):
+    cf = CloudFlare.CloudFlare(**kwargs)
+    zones = cf.zones.get(params={'name': domain})
+    return bool(zones)

@@ -1,14 +1,17 @@
-from flask import request
-import os
 import hashlib
 import operator
-import requests
-from requests.auth import HTTPBasicAuth
+import os
+import sys
 from urlparse import urlparse
+
+import requests
 import yaml
+from requests.auth import HTTPBasicAuth
+
+from flask import request
 from kubedock.exceptions import BillingExc
-from kubedock.utils import KubeUtils
 from kubedock.system_settings.models import SystemSettings
+from kubedock.utils import KubeUtils
 
 
 class BillingFactory(object):
@@ -99,9 +102,12 @@ class Billing(object):
                     i.get('name'), i.get('value'))
 
     def _compose_url(self, endpoint):
-        return '/'.join([
+        url = '/'.join([
             self.billing_url.rstrip('/'),
             endpoint.lstrip('/')])
+        if not urlparse(url).scheme:
+            url = 'http://{0}'.format(url)
+        return url
 
     def _compose_args(self, method, data=None):
         args = {}
@@ -179,12 +185,12 @@ class Billing(object):
             request_args = self._compose_args(m, filled_params)
             try:
                 r = f(url, **request_args)
-                rv = r.json()
-            except ValueError:
-                return r.text
-            except Exception, e:
-                raise BillingExc.InternalBillingError(
-                    details={'message': str(e)})
+                try:
+                    rv = r.json()
+                except ValueError:
+                    return r.text
+            except Exception:
+                raise BillingExc.InternalBillingError.from_exc(*sys.exc_info())
             return self._get_return_value(data, self._check_for_errors(rv))
         return method
 

@@ -99,10 +99,15 @@ def pre_start_hook(app):
 
 
 def on_app_error(e):
+    try:
+        current_user = KubeUtils.get_current_user()
+    except AttributeError:
+        current_user = None
+
     if isinstance(e, InternalAPIError):
         current_app.logger.error(e.message, exc_info=e.exc_info)
-        current_user = KubeUtils.get_current_user()
-        if current_user.is_administrator():
+
+        if current_user and current_user.is_administrator():
             return _jsonify_api_error(e)
         else:
             send_event_to_role('notify:error', {'message': e.message}, 'Admin')
@@ -114,8 +119,7 @@ def on_app_error(e):
 
     else:  # unexpected error
         current_app.logger.exception(e.message)
-        current_user = KubeUtils.get_current_user()
-        if current_user.is_administrator():
+        if current_user and current_user.is_administrator():
             return _jsonify_api_error(APIError(repr(e), 500))
         else:
             send_event_to_role('notify:error',

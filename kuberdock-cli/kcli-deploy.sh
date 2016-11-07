@@ -63,6 +63,7 @@ yum_wrapper() {
 
 
 upgrade() {
+    yum_wrapper -y install epel-release
     yum_wrapper -y update flannel kubernetes-proxy kuberdock-cli kuberdock-plugin
     sed -i "s/^#\?KUBE_PROXY_ARGS=.*$/KUBE_PROXY_ARGS=\"--proxy-mode userspace\"/" $PROXY_CONFIG_ARGS
     do_and_log service flanneld restart
@@ -144,8 +145,9 @@ EOF
 
 do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 
-
-yum_wrapper -y install kuberdock-cli kuberdock-plugin
+yum_wrapper -y install epel-release
+yum_wrapper -y install kuberdock-cli
+yum_wrapper -y install kuberdock-plugin
 
 sed -i -e "/^url/ {s|[ \t]*\$||}" -e "/^url/ {s|[^/]\+$|$KD_HOST|}" $GLOBAL_KCLI_CONFIG
 

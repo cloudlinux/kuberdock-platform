@@ -9,9 +9,8 @@
   when:
       ansible_hostname in ntypes
 
-#TODO: Remove after new consistensy manage.py command will be released.
 - set_fact:
-    add_node_command: add_node
+    add_node_command: add-node
   when: is_release_install
 
 - name: Add node to master

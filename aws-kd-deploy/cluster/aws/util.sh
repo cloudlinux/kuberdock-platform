@@ -1017,6 +1017,16 @@ function kube-up {
   # HTTPS to the master is allowed (for API access)
   authorize-security-group-ingress "${MASTER_SG_ID}" "--protocol tcp --port 443 --cidr 0.0.0.0/0"
 
+  # Allow traffic to master needed for remote hosts
+  # 8123 - etcd opened for kd cluster members and rhosts
+  # 8118 - kube-apiserver opened for kd cluster members and rhosts
+  authorize-security-group-ingress "${MASTER_SG_ID}" "--protocol tcp --port 8123 --cidr 0.0.0.0/0"
+  authorize-security-group-ingress "${MASTER_SG_ID}" "--protocol tcp --port 8118 --cidr 0.0.0.0/0"
+
+  # BGP
+  authorize-security-group-ingress "${MASTER_SG_ID}" "--protocol tcp --port 179 --cidr 0.0.0.0/0"
+  authorize-security-group-ingress "${NODE_SG_ID}" "--protocol tcp --port 179 --cidr 0.0.0.0/0"
+
   # KUBE_USE_EXISTING_MASTER is used to add minions to an existing master
   if [[ "${KUBE_USE_EXISTING_MASTER:-}" == "true" ]]; then
     detect-master

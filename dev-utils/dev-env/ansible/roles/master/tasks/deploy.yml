@@ -1,9 +1,15 @@
 ---
 
 - name: Deploy
-  shell: echo "{{ ansible_default_ipv4.address }}" | KEY_BITS=1024 KD_OWNER_EMAIL=vagrant@dummy.com bash deploy.sh {{ add_testing_repo }} {{ fixed_ip_pools_mode }} {{ ceph_params|default("") }} {{ zfs_params }} chdir="{{ master_rpms_dir }}"
+  shell: echo "{{ ansible_default_ipv4.address }}" | KEY_BITS=1024 KD_OWNER_EMAIL=vagrant@dummy.com bash deploy.sh {{ add_testing_repo }} {{ fixed_ip_pools_mode }} {{ ceph_params|default("") }} {{ zfs_params }} | while IFS= read -r line; do echo "$(date) $line"; done chdir="{{ master_rpms_dir }}"
   register: deploy_result
   ignore_errors: True
+  tags:
+      - deploy
+
+- set_fact:
+    deploy_log: "{{ deploy_result.stdout.split('\n') }}"
+  when: add_timestamps
   tags:
       - deploy
 
@@ -20,7 +26,7 @@
       - deploy
 
 - debug: var=deploy_log
-  when: deploy_result|failed
+  when: deploy_result|failed or add_timestamps
   tags:
     - deploy
 

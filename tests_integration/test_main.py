@@ -32,18 +32,28 @@ def test_a_pv_created_together_with_pod(cluster):
     # same CEPH pool (AC-3831). That is why name is randomized.
     pv_name = _gen_rnd_ceph_pv_name()
 
-    mount_path = '/nginxpv'
+    mount_path = '/usr/share/nginx/html'
 
     # It is possible to create an nginx pod together with new PV
     pv = cluster.pvs.add("dummy", pv_name, mount_path)
     pod = cluster.pods.create("nginx", "test_nginx_pod_1", pvs=[pv],
-                              start=True, wait_for_status='running')
-    assert pv.exists()
+                              start=True, wait_for_status='running',
+                              wait_ports=True, open_all_ports=True)
+    assert_eq(pv.exists(), True)
+
+    c_id = pod.get_container_id(container_image='nginx')
+    pod.docker_exec(c_id,
+                    'echo -n TEST > {path}/test.txt'.format(path=mount_path))
+    ret = pod.do_GET(path='/test.txt')
+    assert_eq('TEST', ret)
     pod.delete()
 
     # It is possible to create an nginx pod using existing PV
     pod = cluster.pods.create("nginx", "test_nginx_pod_2", pvs=[pv],
-                              start=True, wait_for_status='running')
+                              start=True, wait_for_status='running',
+                              wait_ports=True, open_all_ports=True)
+    ret = pod.do_GET(path='/test.txt')
+    assert_eq('TEST', ret)
     pod.delete()
 
     # It's possible to remove PV created together with pod

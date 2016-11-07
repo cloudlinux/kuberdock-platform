@@ -332,6 +332,30 @@ class KDPod(RESTMixin):
         _, out, _ = self.docker_exec(container_id, 'hostname --ip-address')
         return out
 
+    def get_container_id(self, container_name=None, container_image=None):
+        if not (container_name is None) ^ (container_image is None):
+            raise ValueError('You need to specify either the container_name'
+                             ' or container image')
+
+        spec = self.get_spec()
+        if container_name is not None:
+            def predicate(c):
+                return c['name'] == container_name
+        elif container_image is not None:
+            def predicate(c):
+                return c['image'] == container_image
+
+        try:
+            container = next(c for c in
+                             spec['containers']
+                             if predicate(c))
+        except StopIteration:
+            LOG.error("Pod {} does not have {} container".format(
+                self.name, container_name))
+            raise
+
+        return container['containerID']
+
     def get_spec(self):
         _, out, _ = self.cluster.kubectl(
             u"describe pods {}".format(self.escaped_name), out_as_dict=True,

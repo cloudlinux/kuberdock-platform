@@ -455,8 +455,12 @@ class PodCollection(object):
                         u'DNS management system is misconfigured. '
                         u'Please, contact administrator.')
                 )
-            with db.session.begin_nested():
-                pod_domain = pod_domains.set_pod_domain(pod, domain_name)
+            with utils.atomic(PublicAccessAssigningError(
+                    details={'message': 'Error while getting Pod Domain'})):
+                pod_domain, pod_domain_created = \
+                    pod_domains.get_or_create_pod_domain(pod, domain_name)
+                if pod_domain_created:
+                    db.session.add(pod_domain)
             conf['domain'] = pod.domain = str(pod_domain)
         if config is None:
             pod.set_dbconfig(conf, save=False)

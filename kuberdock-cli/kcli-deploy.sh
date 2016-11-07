@@ -26,7 +26,7 @@ show_help() {
     echo "-u|--user             : Specify kuberdock admin username (if not specified 'admin' is used)"
     echo "-t|--testing          : Use testing repositories"
     echo "-k|--kuberdock        : Specify KuberDock master hostname or IP address (if not specified '127.0.0.1' is used)"
-    echo "-i|--interface        : Network interface to use"
+    echo "-i|--ip-address       : Ip v4 address to use in calico-node"
     echo "-C|--switch-to-calico : Switch Networking to Calico"
     echo "-h|--help             : Show this help"
     exit 0
@@ -127,7 +127,11 @@ install_calico() {
     echo "Starting Calico node..."
     # In case of ambiguity we can force calico to register host with
     # envvar HOSTNAME="$SOME_HOSTNAME"
-    ETCD_AUTHORITY="$KD_HOST:8123" do_and_log /opt/bin/calicoctl node --node-image="$CALICO_NODE_IMAGE"
+    if [ -z "$SELF_IP" ]; then
+        ETCD_AUTHORITY="$KD_HOST:8123" do_and_log /opt/bin/calicoctl node --node-image="$CALICO_NODE_IMAGE"
+    else
+        ETCD_AUTHORITY="$KD_HOST:8123" do_and_log /opt/bin/calicoctl node --ip="$SELF_IP" --node-image="$CALICO_NODE_IMAGE"
+    fi
 
     # wait for calico routes to bring up
     # TODO looks like this workaround is not needed after all fixes and may be
@@ -151,7 +155,7 @@ switch_to_calico() {
 
 VER=$(cat /etc/redhat-release|sed -e 's/[^0-9]//g'|cut -c 1)
 
-TEMP=$(getopt -o k:u:i:tcCh,U -l kuberdock:,user:,interface:,testing,calico,switch-to-calico,help,upgrade -n 'kcli-deploy.sh' -- "$@")
+TEMP=$(getopt -o k:u:i:tcCh,U -l kuberdock:,user:,calico-node-ip:,testing,calico,switch-to-calico,help,upgrade -n 'kcli-deploy.sh' -- "$@")
 eval set -- "$TEMP"
 
 
@@ -166,8 +170,8 @@ while true;do
         -t|--testing)
             TESTING=true;shift;
         ;;
-        -i|--interface)
-            IFACE=$2;shift 2;
+        -i|--ip-address)
+            SELF_IP=$2;shift 2;
         ;;
         -C|--switch-to-calico)
             switch_to_calico

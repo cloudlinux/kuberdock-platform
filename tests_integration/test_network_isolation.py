@@ -481,7 +481,7 @@ def test_network_isolation_nodes_from_pods(cluster):
             udp_check(pods[name], container_ids[name], non_host_ip)
 
 
-@pipeline('networking_rhost_cent6', skip_reason="FIXME in AC-4158")
+@pipeline('networking_rhost_cent6')
 @pipeline('networking')
 @pipeline('networking_upgraded')
 def test_network_isolation_pods_from_cluster(cluster):

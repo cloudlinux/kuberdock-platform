@@ -1,10 +1,19 @@
 define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionette, Utils){
     "use strict";
+
+
     var App = new Backbone.Marionette.Application({
-        regions: {
-            contents: '#contents',
-            message: '#message-popup'
-        },
+        rootLayout: new (Backbone.Marionette.LayoutView.extend({
+            el: 'body',
+            template: require('app_data/layout.tpl'),
+            regions: {
+                nav: 'div#nav',
+                contents: '#contents',
+                message: '#message-popup',
+            },
+            onBeforeShow(){ Utils.preloader.show(); },
+            onShow(){ Utils.preloader.hide(); },
+        })),
 
         initialize: function(){
             this._cache = {};
@@ -346,6 +355,7 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                 // trigger Routers for the current url
                 Backbone.history.loadUrl(App.getCurrentRoute());
                 App.controller.showNotifications();
+                App.controller.showMenu();
                 App.initialized = true;
                 deferred.resolveWith(App, [authData]);
             }).fail(function(){ deferred.rejectWith(App, arguments); });
@@ -360,6 +370,7 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
 
             var controller = App.controller = new Controller();
             new Router({controller: controller});
+            App.rootLayout.render();
 
             if (Backbone.history) {
                 Backbone.history.start({root: '/', silent: true});

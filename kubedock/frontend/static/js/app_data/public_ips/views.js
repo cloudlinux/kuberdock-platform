@@ -44,7 +44,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
     views.SettingsLayout = Marionette.LayoutView.extend({
         template: publicIPsLayoutTpl,
         regions: {
-            nav: 'div#nav',
             breadcrumbs : '#breadcrumbs',
             main: 'div#details_content'
         },

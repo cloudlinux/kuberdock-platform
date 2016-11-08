@@ -129,7 +129,6 @@ define([
     views.DomainsLayoutView = Marionette.LayoutView.extend({
         template: domainsLayoutTpl,
         regions: {
-            nav       : '#nav',
             breadcrumb: '#breadcrumb',
             main      : '#main',
             pager     : '#pager',

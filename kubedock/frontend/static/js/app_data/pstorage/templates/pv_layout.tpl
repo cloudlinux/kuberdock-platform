@@ -1,4 +1,3 @@
-<div id="nav"></div>
 <div>
     <div class="breadcrumbs-wrapper">
         <div class="container breadcrumbs" id="breadcrumbs">
@@ -19,4 +18,3 @@
     </div>
 </div>
 <div id="pager"></div>
-

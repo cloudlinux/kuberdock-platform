@@ -1,4 +1,3 @@
-<div id="item-navbar"></div>
 <div id="item-header"></div>
 <div id="messages-block" class="container"></div>
 <div class="container">

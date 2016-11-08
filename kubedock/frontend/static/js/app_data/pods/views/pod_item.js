@@ -28,9 +28,8 @@ define(['app_data/app', 'app_data/model',
     podItem.PodItemLayout = Backbone.Marionette.LayoutView.extend({
         template : layoutPodItemTpl,
 
-        // TODO: move nav, header, and messages out of here
+        // TODO: move header, and messages out of here
         regions: {
-            nav      : '#item-navbar',
             header   : '#item-header',
             messages : '#messages-block',
             controls : '#item-controls',

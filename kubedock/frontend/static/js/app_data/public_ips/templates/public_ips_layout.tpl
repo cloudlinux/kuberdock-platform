@@ -1,4 +1,3 @@
-<div id="nav"></div>
 <div id="breadcrumbs"></div>
 <div class="container">
     <div class="row">

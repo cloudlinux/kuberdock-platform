@@ -11,6 +11,7 @@ var webpack = require('webpack');
 var webpackDevMiddleware = require("webpack-dev-middleware");
 var ProgressPlugin = require('webpack/lib/ProgressPlugin');
 var conf = require('./config');
+conf.BUILD_PREFIX = 'prepared';
 var webpackConfig = require('./webpack.config.js');
 
 
@@ -27,6 +28,11 @@ compiler.apply(new ProgressPlugin(function(percentage, msg) {
 }));
 
 var app = express();
+
+app.use('/static', function(req, res, next) {
+   req.url = req.url.replace(/^\/prepared-build\w+/, '/' + conf.BUILD_PREFIX);
+   next();
+});
 
 // recompile and serve prepared.js and prepared.css in memory, don't write it on disk
 app.use(webpackDevMiddleware(compiler, {

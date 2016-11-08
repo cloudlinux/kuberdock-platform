@@ -14,7 +14,7 @@ var webpackConfig = {
     output: {
         publicPath: '/static/',
         path: __dirname,
-        filename: 'prepared.js',
+        filename: `${conf.BUILD_PREFIX}.js`,
         // set more convenient names of sources in sourceMaps:
         // kd-js:// -- our js
         // kd-css:// -- our less/css
@@ -67,7 +67,7 @@ var webpackConfig = {
             test: /\.(?:png|gif|svg|ttf|woff2?|eot)$/, include: /node_modules/,
             // files less then 16kb will be converted to the dataURI
             // the others will be moved to /static/
-            loader: 'url', query: {limit: 16384, name: 'prepared-[name]-[hash].[ext]'},
+            loader: 'url', query: {limit: 16384, name: `${conf.BUILD_PREFIX}-[name]-[hash].[ext]`},
         }, {
             // same, but only for our files: no emit required
             test: /\.(?:png|gif|svg|ttf|woff2?|eot)$/, exclude: /node_modules/,
@@ -116,7 +116,7 @@ var webpackConfig = {
         new webpack.optimize.LimitChunkCountPlugin({maxChunks: 1}),
 
         // put css in a separate file (not in prepared.js)
-        new ExtractTextPlugin('prepared.css', {allChunks: true}),
+        new ExtractTextPlugin(`${conf.BUILD_PREFIX}.css`, {allChunks: true}),
 
         // make those modueles available in every other module: {globalName: 'module',..}
         new webpack.ProvidePlugin({

@@ -28,7 +28,6 @@ define(['app_data/app', 'app_data/utils', 'marionette', 'js-yaml',
             template: mainTpl,
 
             regions: {
-                nav: '#nav',
                 breadcrumbs: '#breadcrumbs',
                 main: '#main',
                 pager: '#footer',

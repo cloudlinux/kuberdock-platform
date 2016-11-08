@@ -24,7 +24,10 @@ class Utils(object):
             browser_args.append('--ignore-ssl-errors=true')
         elif browser.lower() == 'chrome':
             browser_args.append('--ignore-certificate-errors')
-        self.selenium.create_webdriver(browser, service_args=browser_args)
+        if browser_args:
+            self.selenium.create_webdriver(browser, service_args=browser_args)
+        else:
+            self.selenium.create_webdriver(browser)
         self.selenium.go_to(url)
 
     def prepare_and_open_browser(self, browser, url, browser_args=None,

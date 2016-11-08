@@ -325,7 +325,6 @@ export const NodeDetailedLayout = Backbone.Marionette.LayoutView.extend({
     template: nodeDetailedLayoutTpl,
 
     regions: {
-        nav: '#nav',
         breadcrumbs: '#breadcrumbs',
         sidebar: '#sidebar',
         statusLine: '#status-line',
@@ -531,7 +530,6 @@ export const NodeTimelinesTabView = Backbone.Marionette.ItemView.extend({
 export const NodesLayout = Backbone.Marionette.LayoutView.extend({
     template: nodeLayoutTpl,
     regions: {
-        nav: 'div#nav',
         breadcrumbs: 'div#breadcrumbs',
         main: 'div#main',
         pager: 'div#pager'

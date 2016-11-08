@@ -43,9 +43,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
     views.PodWizardLayout = Backbone.Marionette.LayoutView.extend({
         template: layoutWizardTpl,
         regions: {
-            // TODO: 1) move menu and breadcrumbs regions into App;
+            // TODO: 1) move breadcrumbs region into App;
             //       2) pull common parts out of "steps" into separate regions;
-            nav    : '#navbar-steps',
             header : '#header-steps',
             steps  : '#steps',
         },

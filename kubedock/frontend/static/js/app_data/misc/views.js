@@ -1,11 +1,10 @@
 define(['app_data/app', 'marionette',
         'app_data/misc/templates/message_list.tpl',
         'app_data/misc/templates/message_list_item.tpl',
-        'app_data/misc/templates/page_layout.tpl',
         'app_data/misc/templates/page_not_found.tpl'],
        function(App, Marionette,
                 messageListTpl, messageListItemTpl,
-                pageLayoutTpl, pageNotFoundTpl){
+                pageNotFoundTpl){
 
     var views = {};
 
@@ -47,14 +46,6 @@ define(['app_data/app', 'marionette',
             if (this.collection.where({type: 'warning'}).length > 0 ) {
                 this.ui.toggler.click();
             }
-        }
-    });
-
-    views.PageLayout = Marionette.LayoutView.extend({
-        template: pageLayoutTpl,
-        regions: {
-            nav: '#nav',
-            main: '#main'
         }
     });
 

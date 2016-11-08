@@ -42,15 +42,13 @@ define([
                                     collection: plans,
                                 }),
                                 breadcrumbsLayout = new Breadcrumbs.Layout(
-                                    {points: ['pods', 'pod', 'container']}),
-                                navbar = new Menu.NavList({collection: App.menuCollection});
+                                    {points: ['pods', 'pod', 'container']});
 
                             plans.each(function(plan){
                                 plan.set('current', plan.get('name') === currentPlanName);
                             });
 
                             plansLayout.on('show', function(){
-                                plansLayout.header.show(navbar);
                                 plansLayout.breadcrumbs.show(breadcrumbsLayout);
                                 breadcrumbsLayout.pods.show(new Breadcrumbs.Link(
                                     {text: 'Pods', href: '#pods'}));
@@ -61,7 +59,7 @@ define([
 
                                 plansLayout.plans.show(plansListView);
                             });
-                            App.contents.show(plansLayout);
+                            App.rootLayout.contents.show(plansLayout);
                         });
                 });
             });
@@ -70,7 +68,8 @@ define([
             var deferred = new $.Deferred();
             require(['app_data/login/views'], function(Views){
                 var loginView = new Views.LoginView(options);
-                App.message.empty();  // hide any notification
+                App.rootLayout.message.empty();  // hide any notification
+                App.rootLayout.nav.empty();  // hide menu
                 utils.preloader.hide();  // hide preloader if there is any
                 App.listenTo(loginView, 'action:signin', function(authModel){
                     authModel.unset('password');
@@ -78,7 +77,7 @@ define([
                     App.storage.authData = token;
                     deferred.resolveWith(App, [token]);
                 });
-                App.contents.show(loginView);
+                App.rootLayout.contents.show(loginView);
             });
             return deferred;
         },
@@ -98,12 +97,10 @@ define([
                         id: 'add_pod', href: '#pods/new', title: 'Add new container',
                         suspendedTitle: suspendedTitle},
                     breadcrumbsControls = new Breadcrumbs.Controls(
-                        {search: true, button: button}),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                        {search: true, button: button});
 
                 that.listenTo(listLayout, 'show', function(){
                     App.getPodCollection().done(function(collection){
-                        listLayout.nav.show(navbar);
                         listLayout.header.show(breadcrumbsLayout);
                         breadcrumbsLayout.pods.show(new Breadcrumbs.Text({text: 'Pods'}));
                         breadcrumbsLayout.controls.show(breadcrumbsControls);
@@ -126,12 +123,12 @@ define([
                     listLayout.pager.empty();
                 });
 
-                App.contents.show(listLayout);
+                App.rootLayout.contents.show(listLayout);
             });
         },
 
         /**
-         * Show basic pod page layout, menu, breadcrumbs.
+         * Show basic pod page layout, breadcrumbs.
          *
          * @param {string} id - Pod id.
          * @returns {Promise} Promise of the pod page data (model, layout, views).
@@ -162,7 +159,6 @@ define([
                     });
 
                     var itemLayout = new Views.PodItemLayout(),
-                        navbar = new Menu.NavList({collection: App.menuCollection}),
                         messagesLayout = new PodMessages.Layout(),
                         breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'podName']}),
                         fixedPrice = App.userPackage.get('count_type') === 'fixed' &&
@@ -170,8 +166,6 @@ define([
                             .get('value').toLowerCase() !== 'no billing';
 
                     that.listenTo(itemLayout, 'show', function(){
-                        itemLayout.nav.show(navbar);
-
                         itemLayout.header.show(breadcrumbsLayout);
                         breadcrumbsLayout.pods.show(
                             new Breadcrumbs.Link({text: 'Pods', href: '#pods'}));
@@ -190,10 +184,10 @@ define([
                         delete this.podPageData;
                     });
 
-                    App.contents.show(itemLayout);
+                    App.rootLayout.contents.show(itemLayout);
 
                     that.podPageData = {model: model, fixedPrice: fixedPrice,
-                                        itemLayout: itemLayout, navbar: navbar};
+                                        itemLayout: itemLayout};
                     deferred.resolveWith(that, [that.podPageData]);
                 });
             });
@@ -304,7 +298,6 @@ define([
                         pod = podCollection.fullCollection.get(id),
                         diffCollection = pod.getContainersDiffCollection(),
                         model = diffCollection.get(name),
-                        navbar = new Menu.NavList({ collection: App.menuCollection }),
                         breadcrumbsLayout = new Breadcrumbs.Layout(
                             {points: ['pods', 'pod', 'container']}),
                         messagesLayout = new PodMessages.Layout(),
@@ -352,8 +345,6 @@ define([
                     };
 
                     that.listenTo(wizardLayout, 'show', function(){
-                        wizardLayout.nav.show(navbar);
-
                         wizardLayout.header.show(breadcrumbsLayout);
                         breadcrumbsLayout.pods.show(new Breadcrumbs.Link(
                             {text: 'Pods', href: '#pods'}));
@@ -391,7 +382,7 @@ define([
                                   _.partial(showTab, 'stats', true));
                     that.listenTo(wizardLayout, 'step:logsconf',
                                   _.partial(showTab, 'logs', true));
-                    App.contents.show(wizardLayout);
+                    App.rootLayout.contents.show(wizardLayout);
                 });
             });
         },
@@ -546,11 +537,9 @@ define([
                     if (!options.layout){
                         options.layout = new Views.PodWizardLayout();
 
-                        var navbar = new Menu.NavList({collection: App.menuCollection}),
-                            breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'pod']});
+                        var breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pods', 'pod']});
 
                         that.listenTo(options.layout, 'show', function(){
-                            options.layout.nav.show(navbar);
                             options.layout.header.show(breadcrumbsLayout);
                             breadcrumbsLayout.pods.show(
                                 new Breadcrumbs.Link({text: 'Pods', href: '#pods'}));
@@ -644,7 +633,7 @@ define([
 
                     }
 
-                    App.contents.show(options.layout);
+                    App.rootLayout.contents.show(options.layout);
                     deferred.resolveWith(that, [options, Views]);
                 });
             });
@@ -908,7 +897,6 @@ define([
             require(['app_data/nodes/views'], function(Views){
                 var view,
                     layoutView = new Views.NodesLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection}),
                     button = {
                         id: 'add_node',
                         title: 'Add node',
@@ -924,7 +912,6 @@ define([
                         if (_.has(options, 'deleted')) {
                             nodeCollection.fullCollection.remove(options.deleted);
                         }
-                        layoutView.nav.show(navbar);
                         layoutView.breadcrumbs.show(breadcrumbsLayout);
                         breadcrumbsLayout.nodes.show(
                             new Breadcrumbs.Text({text: 'Nodes'}));
@@ -944,7 +931,7 @@ define([
                         view.listenTo(breadcrumbsControls, 'search', view.search);
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -956,12 +943,10 @@ define([
             require(['app_data/nodes/views'], function(Views){
                 var view,
                     layoutView = new Views.NodesLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection}),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['nodes', 'create']});
 
                 App.getSetupInfo().done(function(setupInfo){
                     that.listenTo(layoutView, 'show', function(){
-                        layoutView.nav.show(navbar);
                         layoutView.breadcrumbs.show(breadcrumbsLayout);
                         breadcrumbsLayout.nodes.show(
                             new Breadcrumbs.Link({text: 'Nodes', href:'#nodes'}));
@@ -973,7 +958,7 @@ define([
                             });
                         layoutView.main.show(view);
                     });
-                    App.contents.show(layoutView);
+                    App.rootLayout.contents.show(layoutView);
                 });
             });
         },
@@ -986,7 +971,6 @@ define([
                 App.getNodeCollection().done(function(nodeCollection){
                     var node = nodeCollection.get(nodeId),
                         layoutView = new Views.NodeDetailedLayout({nodeId: nodeId, tab: tab}),
-                        navbar = new Menu.NavList({collection: App.menuCollection}),
                         breadcrumbsLayout = new Breadcrumbs.Layout(
                             {points: ['nodes', 'name', 'tab']}
                         );
@@ -1000,7 +984,6 @@ define([
                     });
 
                     that.listenTo(layoutView, 'show', function(){
-                        layoutView.nav.show(navbar);
                         layoutView.breadcrumbs.show(breadcrumbsLayout);
                         breadcrumbsLayout.nodes.show(
                             new Breadcrumbs.Link({text: 'Nodes', href:'#nodes'}));
@@ -1043,7 +1026,7 @@ define([
                                 new Views.NodeGeneralTabView({model: node}));
                         }
                     });
-                    App.contents.show(layoutView);
+                    App.rootLayout.contents.show(layoutView);
                 });
             });
         },
@@ -1062,7 +1045,7 @@ define([
         //         layout_view.main.show(online_users_list_view);
         //         layout_view.pager.show(user_list_pager);
         //     });
-        //     App.contents.show(layout_view);
+        //     App.rootLayout.contents.show(layout_view);
         // },
         //
         // showUserActivity: function(user_id){
@@ -1084,7 +1067,7 @@ define([
         //                 layout_view.main.show(activities_view);
         //                 layout_view.pager.show(activities_list_pager);
         //             });
-        //             App.contents.show(layout_view);
+        //             App.rootLayout.contents.show(layout_view);
         //         },
         //     });
         // },
@@ -1094,10 +1077,8 @@ define([
                 return;
             var that = this;
             require(['app_data/users/views'], function(Views){
-                var layoutView = new Views.UsersLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var layoutView = new Views.UsersLayout();
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     App.getUserCollection().done(function(userCollection){
                         var userCollectionView = new Views.UsersListView(
                             {collection: userCollection});
@@ -1106,7 +1087,7 @@ define([
                             {view: userCollectionView}));
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1115,13 +1096,11 @@ define([
                 return;
             var that = this;
             require(['app_data/users/views'], function(Views){
-                var layoutView = new Views.UsersLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var layoutView = new Views.UsersLayout();
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     layoutView.main.show(new Views.AllUsersActivitiesView());
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1130,10 +1109,8 @@ define([
                 return;
             var that = this;
             require(['app_data/users/views'], function(Views){
-                var layoutView = new Views.UsersLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var layoutView = new Views.UsersLayout();
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     $.when(
                         App.getRoles(),
                         App.getPackages(),
@@ -1147,7 +1124,7 @@ define([
                         }));
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1156,10 +1133,8 @@ define([
                 return;
             var that = this;
             require(['app_data/users/views'], function(Views){
-                var layoutView = new Views.UsersLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var layoutView = new Views.UsersLayout();
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     $.when(
                         App.getUserCollection(),
                         App.getRoles(),
@@ -1175,7 +1150,7 @@ define([
                         $('#user-header h2').text('Edit');
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1184,10 +1159,8 @@ define([
                 return;
             var that = this;
             require(['app_data/users/views'], function(Views){
-                var layoutView = new Views.UsersLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var layoutView = new Views.UsersLayout();
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     App.getUserCollection().done(function(userCollection){
                         var userModel = userCollection.fullCollection.get(Number(userId)),
                             userProfileView = new Views.UserProfileView({
@@ -1195,7 +1168,7 @@ define([
                         layoutView.main.show(userProfileView);
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1204,17 +1177,15 @@ define([
                 return;
             var that = this;
             require(['app_data/users/views'], function(Views){
-                var layoutView = new Views.UsersLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var layoutView = new Views.UsersLayout();
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     App.getUserCollection().done(function(userCollection){
                         var model = userCollection.fullCollection.get(Number(userId)),
                             view = new Views.UserProfileLogHistory({ model: model });
                         layoutView.main.show(view);
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1225,7 +1196,6 @@ define([
             require(['app_data/papps/views'], function(Views){
                 App.getAppCollection().done(function(appCollection){
                     var mainLayout = new Views.MainLayout(),
-                        navbar = new Menu.NavList({collection: App.menuCollection}),
                         breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pa', 'tabName']}),
                         successModelSaving = function(context) {
                             if (context.isNew){
@@ -1262,7 +1232,6 @@ define([
                                         : "Add new application" }),
                                 view = new Views.AppLoader({model: appModel});
 
-                            mainLayout.nav.show(navbar);
                             mainLayout.breadcrumbs.show(breadcrumbsLayout);
                             breadcrumbsLayout.pa.show(breadcrumbLink);
                             breadcrumbsLayout.tabName.show(breadcrumbText);
@@ -1292,7 +1261,7 @@ define([
                             .done(function(){ successModelSaving(context); })
                             .fail(function(xhr){ errorModelSaving(context, xhr); });
                     });
-                    App.contents.show(mainLayout);
+                    App.rootLayout.contents.show(mainLayout);
                 });
             });
         },
@@ -1303,7 +1272,6 @@ define([
             var that = this;
             require(['app_data/papps/views'], function(Views){
                 var mainLayout = new Views.MainLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection}),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pa']}),
                     button = {id: 'add_pod', href: '#predefined-apps/newapp',
                              title: 'Add new application'},
@@ -1312,7 +1280,6 @@ define([
                     );
 
                 that.listenTo(mainLayout, 'show', function(){
-                    mainLayout.nav.show(navbar);
                     mainLayout.breadcrumbs.show(breadcrumbsLayout);
                     breadcrumbsLayout.pa.show(
                        new Breadcrumbs.Text({text: 'Predefined Apps'}));
@@ -1333,7 +1300,7 @@ define([
                         view.listenTo(breadcrumbsControls, 'search', view.search);
                     });
                 });
-                App.contents.show(mainLayout);
+                App.rootLayout.contents.show(mainLayout);
             });
         },
 
@@ -1347,10 +1314,8 @@ define([
             var that = this;
             require(['app_data/settings/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection}),
                     userModel = App.currentUser;
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     utils.preloader.show();
                     App.getTimezones().done(function(timezones){
                         utils.preloader.hide();
@@ -1366,7 +1331,7 @@ define([
                         });
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1375,10 +1340,8 @@ define([
                 return;
             var that = this;
             require(['app_data/settings/views'], function(Views){
-                var layoutView = new Views.SettingsLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var layoutView = new Views.SettingsLayout();
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     App.getSystemSettingsCollection().done(function(settingsCollection){
                         var view = new Views.GeneralView({
                             collection: new Model.SettingsCollection(
@@ -1388,7 +1351,7 @@ define([
                         layoutView.main.show(view);
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1401,17 +1364,15 @@ define([
                 return;
             var that = this;
             require(['app_data/settings/views'], function(Views){
-                var layoutView = new Views.SettingsLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var layoutView = new Views.SettingsLayout();
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     utils.preloader.show();
                     App.getLicenseModel().done(function(license){
                         utils.preloader.hide();
                         layoutView.main.show(new Views.LicenseView({ model: license }));
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1421,10 +1382,8 @@ define([
             var that = this;
             require(['app_data/ippool/views'], function(Views){
                 var layoutView = new Views.IppoolLayoutView(),
-                    navbar = new Menu.NavList({collection: App.menuCollection}),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['subnets']});
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     layoutView.breadcrumb.show(breadcrumbsLayout);
                     $.when(App.getIppoolMode(), App.getIPPoolCollection())
                         .done(function(ipPoolMode, ippoolCollection){
@@ -1468,7 +1427,7 @@ define([
                             }
                         });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1478,10 +1437,8 @@ define([
             var that = this;
             require(['app_data/ippool/views'], function(Views){
                 var layoutView = new Views.IppoolLayoutView(),
-                    navbar = new Menu.NavList({collection: App.menuCollection}),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['subnets', 'create']});
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     layoutView.breadcrumb.show(breadcrumbsLayout);
                     breadcrumbsLayout.subnets.show(
                         new Breadcrumbs.Link({text: 'IP Pool', href:'#ippool'}));
@@ -1497,7 +1454,7 @@ define([
                             {ipPoolMode : ipPoolMode, nodelist : nodelist}));
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1509,11 +1466,9 @@ define([
                 App.getIppoolMode()
                     .done(function(ipPoolMode) {
                         var layoutView = new Views.IppoolLayoutView(),
-                            navbar = new Menu.NavList({collection: App.menuCollection}),
                             breadcrumbsLayout = new Breadcrumbs.Layout(
                                 {points: ['subnets', 'subnetName']});
                         that.listenTo(layoutView, 'show', function () {
-                            layoutView.nav.show(navbar);
                             layoutView.breadcrumb.show(breadcrumbsLayout);
                             breadcrumbsLayout.subnets.show(
                                 new Breadcrumbs.Link({
@@ -1538,7 +1493,7 @@ define([
                                     layoutView.pager.show(new Pager.PaginatorView({view: view}));
                                 });
                         });
-                        App.contents.show(layoutView);
+                        App.rootLayout.contents.show(layoutView);
                     })
             });
         },
@@ -1549,10 +1504,8 @@ define([
             var that = this;
             require(['app_data/domains/views'], function(Views){
                 var layoutView = new Views.DomainsLayoutView(),
-                    navbar = new Menu.NavList({collection: App.menuCollection}),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['domains', 'add']});
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     layoutView.breadcrumb.show(breadcrumbsLayout);
                     breadcrumbsLayout.domains.show(
                         new Breadcrumbs.Link({text: 'Domains Control', href:'#domains'}));
@@ -1561,7 +1514,7 @@ define([
                         new Views.DomainsAddDomainView()
                     );
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1572,13 +1525,11 @@ define([
             require(['app_data/domains/views'], function(Views){
                 var view,
                     layoutView = new Views.DomainsLayoutView(),
-                    navbar = new Menu.NavList({collection: App.menuCollection}),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['domains']}),
                     button = {id: 'add_domain', href: '#domains/add', title: 'Add new domain'},
                     breadcrumbsControls = new Breadcrumbs.Controls({button: button});
 
                 that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
                     layoutView.breadcrumb.show(breadcrumbsLayout);
                     breadcrumbsLayout.domains.show(
                         new Breadcrumbs.Link({text: 'Domains Control'}));
@@ -1589,7 +1540,7 @@ define([
                         layoutView.pager.show(new Pager.PaginatorView({view: view}));
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1598,12 +1549,10 @@ define([
                 return;
             var that = this;
             require(['app_data/pstorage/views'], function(Views){
-                var layoutView = new Views.PersistentVolumesLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
+                var layoutView = new Views.PersistentVolumesLayout();
 
                 that.listenTo(layoutView, 'show', function(){
                     var pvCollection = new Model.PaginatedPersistentStorageCollection();
-                    layoutView.nav.show(navbar);
                     pvCollection.fetch({
                         wait: true,
                         success: function(collection, resp, opts){
@@ -1616,7 +1565,7 @@ define([
                         },
                     });
                 });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1626,7 +1575,6 @@ define([
             var that = this;
             require(['app_data/public_ips/views'], function(Views){
                 var layoutView = new Views.SettingsLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection}),
                     breadcrumbsLayout = new Breadcrumbs.Layout(
                         {points: ['name']}
                     ),
@@ -1634,7 +1582,6 @@ define([
 
                 App.getSetupInfo().done(function(setupInfo){
                     that.listenTo(layoutView, 'show', function(){
-                        layoutView.nav.show(navbar);
                         layoutView.breadcrumbs.show(breadcrumbsLayout);
                         breadcrumbsLayout.name.show(
                             new Breadcrumbs.Text(
@@ -1652,10 +1599,15 @@ define([
                             },
                         });
                     });
-                    App.contents.show(layoutView);
+                    App.rootLayout.contents.show(layoutView);
                 });
 
             });
+        },
+
+        showMenu: function(){
+            App.rootLayout.nav.show(
+                new Menu.NavList({collection: App.menuCollection}));
         },
 
         showNotifications: function(){
@@ -1664,7 +1616,7 @@ define([
                     if (notificationCollection.length) {
                         var notificationView = new Views.MessageList(
                             {collection: notificationCollection});
-                        App.message.show(notificationView);
+                        App.rootLayout.message.show(notificationView);
                     }
                 });
             });
@@ -1676,13 +1628,13 @@ define([
                     notificationCollection.add(data);
                     var notificationView = new Views.MessageList(
                         {collection: notificationCollection});
-                    App.message.show(notificationView);
+                    App.rootLayout.message.show(notificationView);
                 });
             });
         },
 
         detachNotification: function(data){
-            if (!App.message.hasView()) { return; }
+            if (!App.rootLayout.message.hasView()) return;
             require(['app_data/misc/views'], function(Views){
                 App.getNotificationCollection().done(function(notificationCollection){
                     notificationCollection.remove(
@@ -1693,9 +1645,9 @@ define([
                     if (notificationCollection.length) {
                         var notificationView = new Views.MessageList(
                             {collection: notificationCollection});
-                        App.message.show(notificationView);
+                        App.rootLayout.message.show(notificationView);
                     } else {
-                        App.message.empty();
+                        App.rootLayout.message.empty();
                     }
                 });
             });
@@ -1704,13 +1656,7 @@ define([
         pageNotFound: function(){
             var that = this;
             require(['app_data/misc/views'], function(Views){
-                var layoutView = new Views.PageLayout(),
-                    navbar = new Menu.NavList({collection: App.menuCollection});
-                that.listenTo(layoutView, 'show', function(){
-                    layoutView.nav.show(navbar);
-                    layoutView.main.show(new Views.PageNotFound());
-                });
-                App.contents.show(layoutView);
+                App.rootLayout.contents.show(new Views.PageNotFound());
             });
         }
     };

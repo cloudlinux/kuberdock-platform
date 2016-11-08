@@ -337,7 +337,6 @@ export const SubnetIpsListView = Marionette.CompositeView.extend({
 export const IppoolLayoutView = Marionette.LayoutView.extend({
     template: ippoolLayoutTpl,
     regions: {
-        nav : '#nav',
         breadcrumb : '#breadcrumb',
         main : '#main',
         pager : '#pager'

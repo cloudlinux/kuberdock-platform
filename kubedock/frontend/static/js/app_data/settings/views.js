@@ -470,7 +470,6 @@ export const ProfileEditView = Backbone.Marionette.ItemView.extend({
 export const SettingsLayout = Marionette.LayoutView.extend({
     template: settingsLayoutTpl,
     regions: {
-        nav: 'div#nav',
         main: 'div#details_content'
     },
 

@@ -14,7 +14,6 @@ define(['app_data/app',
         template: layoutPodListTpl,
 
         regions: {
-            nav: '#layout-nav',
             header: '#layout-header',
             list: '#layout-list',
             pager: '#layout-footer'

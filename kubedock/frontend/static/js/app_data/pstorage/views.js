@@ -121,7 +121,6 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
     views.PersistentVolumesLayout = Marionette.LayoutView.extend({
         template: pvLayoutTpl,
         regions: {
-            nav : 'div#nav',
             main: 'div#details_content',
             pager: 'div#pager'
         },

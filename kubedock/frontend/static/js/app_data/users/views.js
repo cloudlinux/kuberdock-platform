@@ -781,7 +781,6 @@ export const UsersEditView = UserFormBaseView.extend({
 export const UsersLayout = Marionette.LayoutView.extend({
     template : usersLayoutTpl,
     regions  : {
-        nav   : 'div#nav',
         main  : 'div#main',
         pager : 'div#pager'
     },

@@ -22,7 +22,6 @@ define([
     views.PlansLayout = Marionette.LayoutView.extend({
         template: plansLayoutTpl,
         regions: {
-            header: '.pa-header-wrapper',
             breadcrumbs: '.pa-breadcrumbs',
             plans: '.pa-plans',
         },

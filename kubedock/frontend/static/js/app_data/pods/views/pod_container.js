@@ -56,9 +56,8 @@ define(['app_data/app', 'app_data/model', 'app_data/utils',
             });
         },
         regions: {
-            // TODO: 1) move menu, breadcrumbs and messages regions into App;
+            // TODO: 1) move breadcrumbs and messages regions into App;
             //       2) pull common parts out of "steps" into separate regions;
-            nav    : '#navbar-steps',
             header : '#header-steps',
             messages: '#messages-block',
             steps  : '#steps',

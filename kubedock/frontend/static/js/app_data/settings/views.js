@@ -31,23 +31,20 @@ export const GeneralItemView = Marionette.ItemView.extend({
                  'dns_management_aws_route53_id',
                  'dns_management_aws_route53_secret',
                  'dns_management_cloudflare_email',
-                 'dns_management_cloudflare_token',
-                 'dns_management_cloudflare_certtoken'], name)) {
+                 'dns_management_cloudflare_token'], name)) {
             className += ' hidden';
         } else if (dnsSystem === 'cpanel_dnsonly' && _.contains(
                 ['dns_management_aws_route53_id',
                  'dns_management_aws_route53_secret',
                  'dns_management_cloudflare_email',
-                 'dns_management_cloudflare_token',
-                 'dns_management_cloudflare_certtoken'], name)) {
+                 'dns_management_cloudflare_token'], name)) {
             className += ' hidden';
         } else if (dnsSystem === 'aws_route53' && _.contains(
                 ['dns_management_cpanel_dnsonly_host',
                  'dns_management_cpanel_dnsonly_user',
                  'dns_management_cpanel_dnsonly_token',
                  'dns_management_cloudflare_email',
-                 'dns_management_cloudflare_token',
-                 'dns_management_cloudflare_certtoken'], name)) {
+                 'dns_management_cloudflare_token'], name)) {
             className += ' hidden';
         } else if (dnsSystem === 'cloudflare' && _.contains(
                 ['dns_management_cpanel_dnsonly_host',
@@ -126,7 +123,7 @@ export const GeneralItemView = Marionette.ItemView.extend({
             $('#dns_management_aws_route53_id, #dns_management_aws_route53_secret').parent()
                 .toggleClass('hidden', this.model.get('value') !== 'aws_route53');
             $('#dns_management_cloudflare_email,' +
-              '#dns_management_cloudflare_token, #dns_management_cloudflare_certtoken').parent()
+              '#dns_management_cloudflare_token').parent()
                 .toggleClass('hidden', this.model.get('value') !== 'cloudflare');
         }
     },
@@ -185,8 +182,7 @@ export const GeneralView = Marionette.CompositeView.extend({
         if (dnsSystem === 'cloudflare'){
             allNonEmpty = this.collection.chain().filter(function(model){
                     return _.contains(['dns_management_cloudflare_email',
-                                       'dns_management_cloudflare_token',
-                                       'dns_management_cloudflare_certtoken'],
+                                       'dns_management_cloudflare_token'],
                                         model.get('name'));
                 }).map(function(model){ return model.get('value'); }).all().value();
         }

@@ -120,12 +120,5 @@ def add_system_settings():
             placeholder='Enter CloudFlare Global API Key',
             setting_group='domain'
         ),
-        SystemSettings(
-            name=keys.DNS_MANAGEMENT_CLOUDFLARE_CERTTOKEN,
-            label='CloudFlare Origin CA Key',
-            description='Origin CA Key for CloudFlare DNS management',
-            placeholder='Enter CloudFlare Origin CA Key',
-            setting_group='domain'
-        ),
     ])
     db.session.commit()

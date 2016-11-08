@@ -6,7 +6,7 @@
         <% }) %>
     </select>
 <% } else { %>
-    <% if (name === 'dns_management_cpanel_dnsonly_token' || name === 'dns_management_cloudflare_certtoken') { %>
+    <% if (name === 'dns_management_cpanel_dnsonly_token') { %>
         <textarea id="<%= name %>" class="settings-item" type="text"
             placeholder="<%- placeholder %>"><%- typeof value !== 'undefined' ? value : '' %></textarea>
     <% } else { %>

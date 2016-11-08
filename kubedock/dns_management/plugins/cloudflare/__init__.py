@@ -1,6 +1,6 @@
 from . import entry  # noqa
 
-ALLOWED_ARGS = ['email', 'token', 'certtoken']
+ALLOWED_ARGS = ['email', 'token']
 
 
 def is_valid_arg(name, value):

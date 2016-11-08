@@ -9,7 +9,7 @@ def delete_type_A_record(domain, **kwargs):
 
     :param domain: domain which will have been deleted
     :param dict kwargs: additional params such as email and
-        token and certtoken for access to Cloudflare API
+        token for access to Cloudflare API
     :return: None
     """
     _, _, main_domain = domain.partition('.')

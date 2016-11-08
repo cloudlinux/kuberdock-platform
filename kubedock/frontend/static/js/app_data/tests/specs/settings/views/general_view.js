@@ -81,8 +81,7 @@ describe('settings.views.GeneralView', function(){
             let fakeCollection = [
                     {name: 'dns_management_system', value: 'cloudflare'},
                     {name:  'dns_management_cloudflare_email', value: 'test' },
-                    {name:  'dns_management_cloudflare_token', value: 'test' },
-                    {name:  'dns_management_cloudflare_certtoken', value: 'test' }
+                    {name:  'dns_management_cloudflare_token', value: 'test' }
                 ],
                 view = new View({
                     collection: new Model.SettingsCollection(fakeCollection)

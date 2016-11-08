@@ -9,7 +9,7 @@ def delete_type_A_record(domain, **kwargs):
 
     :param domain: domain which will have been deleted
     :param dict kwargs: additional params such as email and
-        token and certtoken for access to Cloudflare API
+        token for access to Cloudflare API
     :return: None
     """
     sub_domain, _, main_domain = domain.partition('.')
@@ -64,8 +64,8 @@ def create_or_update_type_A_record(domain, new_ips, **kwargs):
 
     :param str domain: New subdomain name in existing zone
     :param list new_ips: IP addresses of load balancer
-    :param dict kwargs: additional params such as email and
-        token and certtoken for access to Cloudflare API
+    :param dict kwargs: additional params such as email and token
+        for access to Cloudflare API
     :return: None
     """
     sub_domain, _, main_domain = domain.partition('.')

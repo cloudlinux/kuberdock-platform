@@ -119,6 +119,7 @@ ln -sf  /var/opt/kuberdock/backup_master.py %{buildroot}%{_bindir}/kd-backup-mas
 ln -sf  /var/opt/kuberdock/backup_ceph.py %{buildroot}%{_bindir}/kd-backup-ceph
 %{__install} -D -m 0644 conf/kuberdock-ssl.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %{__install} -D -m 0644 conf/shared-kubernetes.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
+%{__install} -D -m 0644 conf/shared-etcd.conf %{buildroot}%{_sysconfdir}/nginx/conf.d/shared-etcd.conf
 %{__install} -D -m 0644 conf/kuberdock.conf %{buildroot}%{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 %{__install} -D -m 0644 conf/sudoers-nginx.conf %{buildroot}%{_sysconfdir}/sudoers.d/nginx
 %{__install} -D -m 755 kdcustomize %{buildroot}%{_bindir}/kdcustomize
@@ -201,6 +202,7 @@ fi
 %dir %{_sysconfdir}/nginx/ssl
 %config %{_sysconfdir}/nginx/conf.d/kuberdock-ssl.conf
 %attr (-,nginx,nginx) %config %{_sysconfdir}/nginx/conf.d/shared-kubernetes.conf
+%attr (-,nginx,nginx) %config %{_sysconfdir}/nginx/conf.d/shared-etcd.conf
 %config %{_sysconfdir}/sudoers.d/nginx
 %attr (-,nginx,nginx) %config(noreplace) %{_sysconfdir}/sysconfig/kuberdock/kuberdock.conf
 %attr (-,nginx,nginx) %{_bindir}/kuberdock-upgrade

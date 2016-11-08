@@ -87,6 +87,22 @@ remove_flannel() {
 }
 
 
+register_host() {
+    REGISTER_INFO=$(kcli kubectl register 2>&1)
+    if [ $? -ne 0 ];then
+        echo $REGISTER_INFO | grep -iq "already registered"
+        if [ $? -ne 0 ];then
+            echo "Could not register host in KuberDock. Check hostname, username and password and try again. Quitting."
+            exit 1
+        else
+            echo "Already registered"
+        fi
+    else
+        echo "Done"
+    fi
+}
+
+
 install_calico() {
     if [ "$VER" == "7" ];then
         yum_wrapper -y install docker
@@ -103,7 +119,7 @@ install_calico() {
     # Separate pull command helps to prevent timeout bugs in calicoctl (AC-4679)
     # during deploy process under heavy IO (slow dev clusters).
     # If it's not enough we could add few retries with sleep here
-    CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0-rh1"
+    CALICO_NODE_IMAGE="kuberdock/calico-node:0.22.0-rh2"
     echo "Pulling Calico node image..."
     docker pull "$CALICO_NODE_IMAGE" > /dev/null
     time sync
@@ -117,6 +133,9 @@ install_calico() {
     # TODO looks like this workaround is not needed after all fixes and may be
     # safely removed after few iterations of KD with Calico (KD 1.5.0)
     #sleep 20
+
+    echo "Re-registering host again with network running..."
+    register_host
 }
 
 
@@ -126,6 +145,7 @@ switch_to_calico() {
     fi
     remove_flannel
     install_calico
+    exit 0
 }
 
 
@@ -236,21 +256,6 @@ else
     echo "Check KuberDock host connectivity, username and password correctness"
     exit 1
 fi
-
-register_host() {
-    REGISTER_INFO=$(kcli kubectl register 2>&1)
-    if [ $? -ne 0 ];then
-        echo $REGISTER_INFO | grep -iq "already registered"
-        if [ $? -ne 0 ];then
-            echo "Could not register host in KuberDock. Check hostname, username and password and try again. Quitting."
-            exit 1
-        else
-            echo "Already registered"
-        fi
-    else
-        echo "Done"
-    fi
-}
 
 echo -n "Registering host in KuberDock... "
 register_host

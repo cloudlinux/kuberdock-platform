@@ -49,13 +49,13 @@ class TestUtilUpdateNginxProxyRestriction(unittest.TestCase):
         """
     accept_ips = ['127.0.0.1', '192.168.3.1', '192.168.3.2']
 
-    @mock.patch('kubedock.kapi.nginx_utils.Node')
-    def test_update_allowed(self, node_mock):
-        node_mock.query.values.return_value = []
+    @mock.patch('kubedock.kapi.nginx_utils.RegisteredHost')
+    def test_update_allowed(self, registered_host_mock):
+        registered_host_mock.query.values.return_value = []
 
         def check_ips(location):
             ips = [key.value for key in location.keys if key.name == 'allow']
-            self.assertEqual([MASTER_IP] + self.accept_ips, ips)
+            self.assertEqual(self.accept_ips, ips)
             self.assertEqual(location.keys[-1].as_dict, {'deny': 'all'})
 
         conf = nginx.loads(self.conf)

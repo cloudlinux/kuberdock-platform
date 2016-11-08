@@ -35,8 +35,8 @@ from .pods import Pod
 from .rbac.models import Role
 from .settings import (
     KUBE_MASTER_URL, KUBE_BASE_URL, KUBE_API_VERSION, NODE_TOBIND_EXTERNAL_IPS,
-    ETCD_BASE_URL, ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE,
-    ETCD_CALICO_V_PATH, ETCD_CALICO_HOST_KEY_PATH_TEMPLATE
+    ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE,
+    ETCD_CALICO_HOST_KEY_PATH_TEMPLATE, ETCD_CALICO_URL
 )
 from .users.models import SessionData
 
@@ -1158,7 +1158,7 @@ def get_current_calico_hosts():
     """
     res = []
     try:
-        resp = Etcd(ETCD_CALICO_V_PATH + '/host/').get()
+        resp = Etcd(ETCD_CALICO_URL + '/host/').get()
         for host in resp[u'node'][u'nodes']:
             if host[u'dir']:
                 hostname = host[u'key'].rsplit(u'/', 1)[-1]
@@ -1217,3 +1217,22 @@ def _find_calico_host(nodes, ip):
         for sub_node in node['nodes']:
             if sub_node.get('value') == ip:
                 return node['key'].split('/')[-1]
+
+
+def find_remote_host_tunl_addr(ip):
+    calico_host, err = find_calico_host_by_ip(ip)
+
+    if err:
+        return None, err
+
+    if not calico_host:
+        # Calico node with this IP is not added yet
+        return None, None
+
+    remote_host_tunl_addr = get_calico_ip_tunnel_address(calico_host)
+
+    if not remote_host_tunl_addr:
+        # This is possibly a case when calico ipip tunnel is not ready yet
+        return None, None
+
+    return remote_host_tunl_addr, None

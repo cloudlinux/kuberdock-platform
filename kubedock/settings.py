@@ -271,8 +271,6 @@ ETCD_HOST = '127.0.0.1'
 ETCD_PORT = 4001
 ETCD_BASE_URL = 'http://{0}:{1}/v2/keys'.format(ETCD_HOST, ETCD_PORT)
 
-ETCD_REGISTERED_HOSTS = \
-    ETCD_BASE_URL + '/kuberdock/network/plugin/registered_hosts'
 # Some calico config paths, see
 # 'https://github.com/projectcalico/libcalico/blob/master/calico_containers/
 #   pycalico/datastore.py'

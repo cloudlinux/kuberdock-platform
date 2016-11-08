@@ -716,10 +716,6 @@ fi
 #4.3 nginx config fix
 cp $KUBERDOCK_DIR/conf/nginx.conf /etc/nginx/nginx.conf
 
-#4.4 populate nginx configs from templates
-sed "s/@MASTER_IP@/$MASTER_IP/g" "$KUBERDOCK_DIR/conf/shared-etcd.conf.template" > "$NGINX_SHARED_ETCD"
-chown "$WEBAPP_USER" "$NGINX_SHARED_ETCD"
-
 #5 Write settings that hoster enter above (only after yum kuberdock.rpm)
 echo "MASTER_IP = $MASTER_IP" >> $KUBERDOCK_MAIN_CONFIG
 echo "MASTER_TOBIND_FLANNEL = $MASTER_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG

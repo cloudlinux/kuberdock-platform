@@ -150,19 +150,10 @@ def on_404(e):
 
 
 def populate_registered_hosts(app):
-    import requests
-    from ..settings import ETCD_REGISTERED_HOSTS
-    from ..nodes.models import RegisteredHost
     from ..kapi.nginx_utils import update_nginx_proxy_restriction
 
-    requests.delete(ETCD_REGISTERED_HOSTS, params={'recursive': True})
-
     with app.app_context():
-        accept_ips = [registered.host for registered in RegisteredHost.query]
-        update_nginx_proxy_restriction(accept_ips)
-
-    for registered_host in accept_ips:
-        requests.put('/'.join([ETCD_REGISTERED_HOSTS, registered_host]))
+        update_nginx_proxy_restriction()
 
 
 class check_api_version(object):

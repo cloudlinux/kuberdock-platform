@@ -5,8 +5,8 @@ what rules and in what order is applied to traffic.
 Some rules/tiers are created in deploy.sh
 """
 
-from ..utils import get_calico_ip_tunnel_address, find_calico_host_by_ip
-from ..exceptions import SubsystemtIsNotReadyError
+from ..utils import get_calico_ip_tunnel_address
+from ..exceptions import RegisteredHostError, SubsystemtIsNotReadyError
 from .. import settings
 from ..settings import (
     ELASTICSEARCH_REST_PORT,
@@ -107,20 +107,33 @@ def get_logs_policy_config(user_id, namespace, logs_pod_name):
     }
 
 
-def get_rhost_policy(ip):
+def get_rhost_policy(host_ip, tunl_ip):
     """
     Allow all traffic from this ip to pods. Needed cPanel like hosts.
     This Rule is in "kuberdock-hosts" tier
-    :param ip:
+    :param host_ip: Remote Host IP Address
+    :param tunl_ip: Remote Host Tunnel IP Address
     :return:
     """
+    if not (host_ip and tunl_ip):
+        raise RegisteredHostError(
+            details={'message': 'Invalid data received during registration: '
+                     'Host IP - {0}, Tunnel IP - {1}'.format(host_ip, tunl_ip)
+            }
+        )
+
     return {
-        "id": ip,
+        "id": host_ip,
         "order": 10,
         "inbound_rules": [
             {
                 "action": "allow",
-                "src_net": "{0}/32".format(ip)
+                "src_net": "{0}/32".format(host_ip)
+            },
+            {
+                # Tested that we need this rule too
+                "action": "allow",
+                "src_net": "{0}/32".format(tunl_ip)
             },
             # {"action": "next-tier"} # TODO like for generic KD nodes?
         ],

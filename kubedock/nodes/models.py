@@ -138,6 +138,7 @@ class RegisteredHost(db.Model):
     host = db.Column(db.String, nullable=False, unique=True)
     description = db.Column(db.Text, nullable=True)
     time_stamp = db.Column(db.DateTime, nullable=False)
+    tunnel_ip = db.Column(db.String, nullable=True)
 
     def __repr__(self):
         return "<RegisteredHost(host='{0}', description='{1}')>".format(

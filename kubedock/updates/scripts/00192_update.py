@@ -79,9 +79,9 @@ new_permissions = [
 ]
 
 
-def _update_00196_upgrade(upd):
+def _update_00200_upgrade(upd):  # also applies 00196 update migration
     upd.print_log('Upgrading db...')
-    helpers.upgrade_db(revision='3149fa6dc22b')
+    helpers.upgrade_db()
 
 
 def _update_00174_upgrade_node(upd, with_testing):
@@ -192,9 +192,6 @@ def _update_00188_upgrade_node():  # update 00187 absorbed by 00188
 
 def _update_00191_upgrade(calico_network):
     _master_flannel()
-
-    _master_shared_etcd()
-    helpers.restart_service('nginx')
 
     etcd1 = helpers.local('uname -n')
     _master_etcd_cert(etcd1)
@@ -460,15 +457,6 @@ _NODE_CNI_CONF = '''\
 
 CALICO_CNI = 'calico-cni-1.3.1-3.el7'
 CALICOCTL = 'calicoctl-0.22.0-3.el7'
-
-
-def _master_shared_etcd():
-    helpers.local(
-        'sed "s/@MASTER_IP@/{0}/g" '
-        '"/var/opt/kuberdock/conf/shared-etcd.conf.template" > '
-        '"{1}"'.format(MASTER_IP, _NGINX_SHARED_ETCD)
-    )
-    helpers.local('chown "{0}" "{1}"'.format(_WEBAPP_USER, _NGINX_SHARED_ETCD))
 
 
 def _master_etcd_cert(etcd1):
@@ -871,7 +859,7 @@ def get_calico_network(host_nets):
             return str(net)
 
 def upgrade(upd, with_testing, *args, **kwargs):
-    _update_00196_upgrade(upd)  # db migration
+    _update_00200_upgrade(upd)  # db migration
     nets = helpers.local("ip -o -4 addr | grep -vP '\slo\s' | awk '{print $4}'")
     calico_network = get_calico_network(nets)
     if not calico_network:

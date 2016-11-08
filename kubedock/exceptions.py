@@ -244,3 +244,12 @@ class AllowedPortsException(object):
 
     class ClosePortError(APIError):
         message_template = 'Error closing port: {message}'
+
+
+class RegisteredHostExists(ResourceExists):
+    resource_type = 'RegisteredHost'
+    message = 'Host is already registered'
+
+
+class RegisteredHostError(APIError):
+    message_template = 'Error during registering host: {message}'

@@ -60,8 +60,6 @@ DIRECT_SSH_USERNAME_LEN = 30
 DIRECT_SSH_ERROR = "Error retrieving ssh access, please contact administrator"
 
 
-
-
 def _check_license():
     if not licensing.is_valid():
         raise APIError("Action forbidden. Please contact support.")

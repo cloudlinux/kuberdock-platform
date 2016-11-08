@@ -1,9 +1,9 @@
 import time
 import logging
+from urllib2 import HTTPError
 
-
-from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.utils import assert_eq, gen_rnd_ceph_pv_name
+from tests_integration.lib.utils import (
+    assert_eq, gen_rnd_ceph_pv_name, assert_raises)
 from tests_integration.lib.pipelines import pipeline
 
 LOG = logging.getLogger(__name__)
@@ -58,7 +58,22 @@ def test_a_pv_created_together_with_pod(cluster):
 
     # It's possible to remove PV created together with pod
     pv.delete()
-    assert not pv.exists()
+    assert_eq(pv.exists(), False)
+
+    # Create another PV with the same name
+    pv = cluster.pvs.add('dummy', pv_name, mount_path)
+    pod = cluster.pods.create(
+        'nginx', 'test_nginx_pod_3', pvs=[pv], start=True,
+        wait_for_status='running', wait_ports=True, open_all_ports=True)
+    assert_eq(pv.exists(), True)
+
+    # '/test.txt' is not on newly created PV, we expect HTTP Error 404
+    with assert_raises(HTTPError, 'HTTP Error 404: Not Found'):
+        pod.do_GET(path='/test.txt')
+
+    pod.delete()
+    pv.delete()
+    assert_eq(pv.exists(), False)
 
 
 @pipeline('main')

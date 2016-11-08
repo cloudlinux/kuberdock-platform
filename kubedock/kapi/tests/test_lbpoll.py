@@ -5,10 +5,9 @@ from kubedock.kapi.lbpoll import ExternalIPsService
 
 class TestLoadBalancer(unittest.TestCase):
 
-
     def test_get_publicIP(self):
         conf = Services().get_template(
-            'pod_id', [{"name":"port", "port": 80, "targetPort": 80}])
+            'pod_id', [{"name": "port", "port": 80, "targetPort": 80}])
         publicIP = '10.0.0.1'
         self.assertEqual(None, ExternalIPsService().get_publicIP(conf))
         conf['spec']['externalIPs'] = [publicIP]
@@ -16,7 +15,3 @@ class TestLoadBalancer(unittest.TestCase):
         self.assertEqual(
             {'pod_id': publicIP},
             ExternalIPsService().get_pods_publicIP({'pod_id': conf}))
-
-
-
-

@@ -499,8 +499,8 @@ class PredefinedApp(object):
         if new_pv_sizes:
             # save old values
             old_pv_sizes = pod.get_volumes_size()
-            shared_items = set(old_pv_sizes.items()) &\
-                           set(new_pv_sizes.items())
+            shared_items = (set(old_pv_sizes.items()) &
+                            set(new_pv_sizes.items()))
             if not STORAGE_CLASS.is_pv_resizable() and \
                len(shared_items) != len(old_pv_sizes):
                 raise APIError("Resize persistent disks not allowed")
@@ -526,7 +526,6 @@ class PredefinedApp(object):
         pod_config = db_pod.get_dbconfig()
         pod.volumes = pod_config['volumes']
         return pod_config
-
 
     def _update_pod_config(self, pod, new_config, async=True, dry_run=False):
         """
@@ -569,7 +568,7 @@ class PredefinedApp(object):
                             pd.get('persistentDisk')}
 
         pod_config = self._update_pv_sizes(pod, new_pd_sizes,
-                                             dry_run=dry_run)
+                                           dry_run=dry_run)
         self._update_kubes(root, pod_config)
         self._update_IPs(pod, root, pod_config, dry_run=dry_run)
         try:

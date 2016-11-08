@@ -715,10 +715,10 @@ listen_events = listen_fabric(
 )
 
 # we don't use it for now
-#  listen_extended_statuses = listen_fabric_etcd(
-    #  ETCD_EXTENDED_STATUSES_URL,
-    #  process_extended_statuses,
-    #  prelist_extended_statuses
-#  )
+# listen_extended_statuses = listen_fabric_etcd(
+#     ETCD_EXTENDED_STATUSES_URL,
+#     process_extended_statuses,
+#     prelist_extended_statuses
+# )
 
 listen_pod_states = listen_fabric_etcd(ETCD_POD_STATES_URL)

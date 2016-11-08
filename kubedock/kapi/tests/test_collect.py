@@ -1,5 +1,4 @@
 import copy
-import subprocess
 import unittest
 
 import mock

@@ -44,7 +44,7 @@ export const NodeItem = Backbone.Marionette.ItemView.extend({
     },
 
     modelEvents: { 'change': 'render' },
-    templateHelpers: function(){
+    templateHelpers(){
         var model = this.model,
             kubeType = App.kubeTypeCollection.get(model.get('kube_type'));
         return {
@@ -52,9 +52,9 @@ export const NodeItem = Backbone.Marionette.ItemView.extend({
         };
     },
 
-    onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
+    onDomRefresh(){ this.ui.tooltip.tooltip(); },
 
-    deleteNode: function() {
+    deleteNode() {
         var that = this,
             name = that.model.get('hostname');
 
@@ -64,7 +64,7 @@ export const NodeItem = Backbone.Marionette.ItemView.extend({
             small: true,
             show: true,
             footer: {
-                buttonOk: function() {
+                buttonOk() {
                     utils.preloader.show();
                     that.model.save({command: 'delete'}, {patch: true})
                         .always(utils.preloader.hide)
@@ -91,7 +91,7 @@ export const NodesListView = Backbone.Marionette.CompositeView.extend({
         'click @ui.th' : 'toggleSort'
     },
 
-    initialize: function(){
+    initialize(){
         this.collection.order = [
             {key: 'hostname', order: 1},
             {key: 'ip', order: 1},
@@ -104,18 +104,18 @@ export const NodesListView = Backbone.Marionette.CompositeView.extend({
         });
     },
 
-    templateHelpers: function(){
+    templateHelpers(){
         return {
             sortingType: this.collection.orderAsDict()
         };
     },
 
-    search: function(data){
+    search(data){
         this.collection.searchString = data;
         this.collection.refilter();
     },
 
-    toggleSort: function(e) { //TODO move filter to model
+    toggleSort(e) { //TODO move filter to model
         var targetClass = e.target.className;
         if (!targetClass) return;
         this.collection.toggleSort(targetClass);
@@ -157,7 +157,7 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
     changeKubeType(){ this.model.set('kube_type', Number(this.ui.nodeTypeSelect.val())); },
     changeHostname(){ this.model.set('hostname', this.ui.node_name.val()); },
 
-    changeLsDevices: function(evt){
+    changeLsDevices(evt){
         var target = $(evt.target),
             index = target.parent().index() - 1;
         this.model.get('lsdevices')[index] = target.val().trim();
@@ -177,9 +177,9 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
         this.ui.selectpicker.selectpicker();
     },
 
-    removeError: function(evt){ $(evt.target).removeClass('error'); },
+    removeError(evt){ $(evt.target).removeClass('error'); },
 
-    addField: function(){
+    addField(){
         this.model.get('lsdevices').push('');
         this.render();
     },
@@ -271,7 +271,7 @@ export const NodeDetailedSatusLine = Backbone.Marionette.ItemView.extend({
     ui: { 'delete' : '.terminate-btn' },
     events: { 'click @ui.delete' : 'deleteNode' },
 
-    initialize: function (options) {
+    initialize(options) {
         var that = this;
         App.getNodeCollection().done(function(nodeCollection){
             that.nodeId = options.nodeId;
@@ -279,7 +279,7 @@ export const NodeDetailedSatusLine = Backbone.Marionette.ItemView.extend({
         });
     },
 
-    deleteNode: function() {
+    deleteNode() {
         var that = this;
         App.getNodeCollection().done(function(nodeCollection){
             var model = nodeCollection.get(that.nodeId),
@@ -290,7 +290,7 @@ export const NodeDetailedSatusLine = Backbone.Marionette.ItemView.extend({
                 small: true,
                 show: true,
                 footer: {
-                    buttonOk: function(){
+                    buttonOk(){
                         utils.preloader.show();
                         model.save({command: 'delete'}, {patch: true})
                             .always(utils.preloader.hide)
@@ -308,12 +308,12 @@ export const NodeDetailedSidebar = Backbone.Marionette.ItemView.extend({
     tagName: 'ul',
     className: 'nav nav-sidebar',
 
-    initialize: function(options){
+    initialize(options){
         this.tab = options.tab;
         this.nodeId = options.nodeId;
     },
 
-    templateHelpers: function(){
+    templateHelpers(){
         return {
             tab : this.tab,
             id : this.nodeId
@@ -332,7 +332,7 @@ export const NodeDetailedLayout = Backbone.Marionette.LayoutView.extend({
         tabContent: '.content'
     },
 
-    templateHelpers: function(){
+    templateHelpers(){
         return {
             hostname: this.model ? this.model.get('hostname') : 'hostname'
         };
@@ -343,14 +343,14 @@ export const NodeGeneralTabView = Backbone.Marionette.ItemView.extend({
     template: nodeGeneralTabTpl,
     ui: { 'logSpollerButton' : '.spoiler-btn.log' },
     events: { 'click @ui.logSpollerButton' : 'logSpoller' },
-    onBeforeShow: function(){ utils.preloader.show(); },
-    onShow: function(){ utils.preloader.hide(); },
+    onBeforeShow: utils.preloader.show,
+    onShow: utils.preloader.hide,
     modelEvents: { 'change': 'render' },
-    logSpoller: function(){
+    logSpoller(){
         this.ui.logSpollerButton.parent().children('.spoiler-body').collapse('toggle');
     },
 
-    initialize: function () {
+    initialize() {
         this.listenTo(this.model, 'update_install_log', this.render);
         this.listenTo(this.model.collection, 'reset', this.render);
     }
@@ -360,10 +360,10 @@ export const NodeLogsTabView = Backbone.Marionette.ItemView.extend({
     template: nodeLogsTabTpl,
     ui: { textarea: '.node-logs' },
     modelEvents: { 'change': 'render' },
-    onBeforeShow: function(){ utils.preloader.show(); },
-    onShow: function(){ utils.preloader.hide(); },
+    onBeforeShow: utils.preloader.show,
+    onShow: utils.preloader.hide,
 
-    initialize: function() {
+    initialize() {
         var that = this;
         _.bindAll(this, 'getLogs');
         App.getNodeCollection().done(function(nodeCollection){
@@ -372,7 +372,7 @@ export const NodeLogsTabView = Backbone.Marionette.ItemView.extend({
         });
     },
 
-    getLogs: function() {
+    getLogs() {
         var that = this;
         this.model.getLogs(/*size=*/100).always(function(){
             // callbacks are called with model as a context
@@ -383,7 +383,7 @@ export const NodeLogsTabView = Backbone.Marionette.ItemView.extend({
         });
     },
 
-    onBeforeRender: function () {
+    onBeforeRender() {
         var el = this.ui.textarea;
         if (typeof el !== 'object' ||
                 (el.scrollTop() + el.innerHeight()) === el[0].scrollHeight)
@@ -392,14 +392,14 @@ export const NodeLogsTabView = Backbone.Marionette.ItemView.extend({
             this.logScroll = el.scrollTop();  // stay at this position
     },
 
-    onRender: function () {
+    onRender() {
         if (this.logScroll === null)  // stick to bottom
             this.ui.textarea.scrollTop(this.ui.textarea[0].scrollHeight);
         else  // stay at the same position
             this.ui.textarea.scrollTop(this.logScroll);
     },
 
-    onBeforeDestroy: function () {
+    onBeforeDestroy() {
         this.destroyed = true;
         clearTimeout(this.model.get('timeout'));
     }
@@ -409,13 +409,13 @@ export const NodeMonitoringTabViewItem = Backbone.Marionette.ItemView.extend({
     template: nodeItemGraphTpl,
     ui: { chart: '.graph-item' },
 
-    initialize: function(options) {
+    initialize(options) {
         this.node = options.node;
         this.error = options.error;
         this.listenTo(this.node.collection, 'reset', this.render);
     },
 
-    makeGraph: function(){
+    makeGraph(){
         var lines = this.model.get('lines'),
             points = [],
             error;
@@ -497,7 +497,7 @@ export const NodeMonitoringTabViewItem = Backbone.Marionette.ItemView.extend({
         this.ui.chart.jqplot(points, options);
     },
 
-    onDomRefresh: function(){
+    onDomRefresh(){
         try {
             this.makeGraph();
         } catch (e){
@@ -510,14 +510,14 @@ export const NodeMonitoringTabView = Backbone.Marionette.CompositeView.extend({
     template: nodeMonitoringTabTpl,
     childView: NodeMonitoringTabViewItem,
     childViewContainer: '.graphs',
-    childViewOptions: function(){
+    childViewOptions(){
         return {node: this.model, error: this.error};
     },
-    onBeforeRender: function(){ utils.preloader.show(); },
-    onShow: function(){ utils.preloader.hide(); },
+    onBeforeRender: utils.preloader.show,
+    onShow: utils.preloader.hide,
     modelEvents: { 'change': 'render' },
 
-    initialize: function(options){
+    initialize(options){
         this.error = options.error;
         if (this.error)
             this.collection.setEmpty();
@@ -536,6 +536,6 @@ export const NodesLayout = Backbone.Marionette.LayoutView.extend({
         main: 'div#main',
         pager: 'div#pager'
     },
-    onBeforeShow: function(){ utils.preloader.show(); },
-    onShow: function(){ utils.preloader.hide(); }
+    onBeforeShow: utils.preloader.show,
+    onShow:utils.preloader.hide
 });

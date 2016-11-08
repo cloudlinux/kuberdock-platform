@@ -2,7 +2,7 @@
 /* eslint-disable no-unused-expressions */
 mocha.allowUncaught();
 
-import {expect, assert} from 'chai';
+import {expect} from 'chai';
 import sinon from 'sinon';
 import {
   NodeAddStep as View,
@@ -41,22 +41,22 @@ describe('nodes.views.NodeAddStep', function(){
 
         it('should return "false" if hostname is empty', function() {
             expect(view.validate({hostname: ''})).to.be.false;
-            assert(notify.calledWith('Hostname can\'t be empty'));
+            expect(notify).to.have.been.calledWith(`Hostname can't be empty`);
         });
 
         for (let symbol of symbols) {
             it(`should return "false" if hostname contain some special symbols "${symbol}"`,
             function() {
                 expect(view.validate({hostname: symbol})).to.be.false;
-                assert(notify.calledWith('Hostname can\'t contain some special symbols like ' +
-                '"#", "%", "/" or start with "."'));
+                expect(notify).to.have.been.calledWith('Hostname can\'t contain some special ' +
+                                                  'symbols like "#", "%", "/" or start with "."');
             });
         }
 
         it(`should return "false" if hostname start with symbols "."`, function() {
             expect(view.validate({hostname: '.'})).to.be.false;
-            assert(notify.calledWith('Hostname can\'t contain some special symbols like ' +
-            '"#", "%", "/" or start with "."'));
+            expect(notify).to.have.been.calledWith('Hostname can\'t contain some special symbols ' +
+                                                   'like "#", "%", "/" or start with "."');
         });
 
         it(`should return "rtue" if hostname correct`, function() {
@@ -65,7 +65,7 @@ describe('nodes.views.NodeAddStep', function(){
 
         it(`should return "false" if lsdevices is empty (ZFS)`, function() {
             expect(view.validate({hostname: 'example.ex.com', lsdevices: []})).to.be.false;
-            assert(notify.calledWith('Block devices name can\'t be empty.'));
+            expect(notify).to.have.been.calledWith(`Block devices name can't be empty.`);
         });
 
         it(`should return "true" if hostname and lsdevices is correct (ZFS)`, function() {
@@ -114,7 +114,7 @@ describe('nodes.views.NodeAddStep', function(){
     });
 
     describe('complete', function(){
-        let App, fakeNodes, view, resetRewired,
+        let App, fakeNodes, view, resetRewired, utils,
             sandbox = sinon.sandbox.create(),
             setupInfo = { AWS : false, ZTF : false };
 
@@ -125,18 +125,27 @@ describe('nodes.views.NodeAddStep', function(){
                 };
 
         beforeEach(function(){
-            [{App}, resetRewired] = rewired(ViewRewireAPI, 'App');
+            [{App, utils}, resetRewired] = rewired(ViewRewireAPI, 'utils', 'App');
+            sandbox.stub(utils.preloader, 'hide');
+            sandbox.stub(utils.preloader, 'show');
+            sandbox.stub(utils, 'notifyWindow');
             fakeNodes = {fetch: sandbox.stub(), create: sandbox.stub()};
             sandbox.stub(App, 'getNodeCollection').returns($.Deferred().resolve(fakeNodes));
         });
 
         afterEach(function () { sandbox.restore(); resetRewired(); });
 
-        it('should be called getNodeCollection', function() {
+        it('should be called getNodeCollection', function(done) {
             view.changeKubeType();
             view.changeHostname();
             view.complete();
-            expect(App.getNodeCollection).to.have.been.calledOnce;
+            _.defer(() => {
+                expect(fakeNodes.fetch).not.have.been.calledOnce;
+                expect(view.validate({hostname: 'example.ex.com'})).to.be.true;
+                expect(utils.preloader.show).to.have.been.calledOnce;
+                expect(fakeNodes.create).to.have.been.calledOnce;
+                done();
+            });
         });
     });
 });

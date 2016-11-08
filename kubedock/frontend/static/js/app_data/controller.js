@@ -1228,9 +1228,7 @@ define([
                         navbar = new Menu.NavList({collection: App.menuCollection}),
                         breadcrumbsLayout = new Breadcrumbs.Layout({points: ['pa', 'tabName']}),
                         successModelSaving = function(context) {
-                            if (context.isNew){
-                                context.appCollection.add(context.model);
-                            }
+                            appCollection.add(context.model, {merge: true});
                             App.navigate('#predefined-apps', {trigger: true});
                             utils.notifyWindow(
                                 'Predefined application "' + context.model.get('name') +
@@ -1253,6 +1251,7 @@ define([
                             var appModel = id !== null
                                     ? appCollection.fullCollection.get(id)
                                     : new Model.AppModel(),
+                                tmpModel = new Model.AppModel(utils.deepClone(appModel.toJSON())),
                                 breadcrumbLink = new Breadcrumbs.Link({
                                     text: 'Predefined Apps',
                                     href:'#predefined-apps'}),
@@ -1260,7 +1259,7 @@ define([
                                     text: id !== null
                                         ? "Edit application"
                                         : "Add new application" }),
-                                view = new Views.AppLoader({model: appModel});
+                                view = new Views.AppLoader({model: tmpModel});
 
                             mainLayout.nav.show(navbar);
                             mainLayout.breadcrumbs.show(breadcrumbsLayout);
@@ -1539,7 +1538,7 @@ define([
                                 });
                         });
                         App.contents.show(layoutView);
-                    })
+                    });
             });
         },
 

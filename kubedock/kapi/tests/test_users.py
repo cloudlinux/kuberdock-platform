@@ -126,11 +126,6 @@ class TestSuspendHelpers(DBTestCase):
             mock.call('running-pod', {'command': 'stop'}),
             mock.call('pending-pod', {'command': 'stop'}),
         ])
-        self.PodCollectionMock()._remove_public_ip.assert_has_calls([
-            mock.call(pod_id='stopped-pod'),
-            mock.call(pod_id='running-pod'),
-            mock.call(pod_id='pending-pod'),
-        ])
 
     def test_unsuspend(self):
         """

@@ -338,7 +338,6 @@ class UserCollection(object):
         for pod in pod_collection.get(as_json=False):
             if pod.get('status') != POD_STATUSES.stopped:
                 pod_collection.update(pod['id'], {'command': 'stop'})
-            pod_collection._remove_public_ip(pod_id=pod['id'])
 
     @staticmethod
     @atomic()

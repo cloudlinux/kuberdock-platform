@@ -3,7 +3,7 @@ import logging
 
 
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.utils import assert_eq, get_rnd_string
+from tests_integration.lib.utils import assert_eq, gen_rnd_ceph_pv_name
 from tests_integration.lib.pipelines import pipeline
 
 LOG = logging.getLogger(__name__)
@@ -30,7 +30,7 @@ def test_a_pv_created_together_with_pod(cluster):
     # type: (KDIntegrationTestAPI) -> None
     # We have issue related to using non-unique disk names within
     # same CEPH pool (AC-3831). That is why name is randomized.
-    pv_name = _gen_rnd_ceph_pv_name()
+    pv_name = gen_rnd_ceph_pv_name()
 
     mount_path = '/usr/share/nginx/html'
 
@@ -67,7 +67,7 @@ def test_a_pv_created_together_with_pod(cluster):
 @pipeline('ceph_upgraded')
 def test_a_pv_created_separately(cluster):
     # type: (KDIntegrationTestAPI) -> None
-    pv_name = _gen_rnd_ceph_pv_name()
+    pv_name = gen_rnd_ceph_pv_name()
     pv_size = 2
     mount_path = '/nginxpv'
 
@@ -142,7 +142,3 @@ def test_nginx_kublet_resize(cluster):
     pod.wait_for_ports()
     time.sleep(15)
     pod.healthcheck()
-
-
-def _gen_rnd_ceph_pv_name():
-    return get_rnd_string(prefix="integr_test_disk_")

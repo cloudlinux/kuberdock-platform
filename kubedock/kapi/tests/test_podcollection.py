@@ -1953,8 +1953,7 @@ class TestPodCollectionEdit(DBTestCase, TestCaseMixin):
 
         self.mock_methods(
             podcollection.PodCollection, '_get_namespaces', '_get_pods',
-            '_merge', 'get_secrets', '_preprocess_new_pod',
-            '_save_k8s_secrets')
+            '_merge', 'get_secrets', '_save_k8s_secrets')
 
         self.user, _ = self.fixtures.user_fixtures()
         self.db_pod = self.fixtures.pod(owner=self.user, kube_id=0, config={
@@ -1976,6 +1975,7 @@ class TestPodCollectionEdit(DBTestCase, TestCaseMixin):
                 'image': 'wncm/my-img',
                 'secret': {'username': self.old_secret[0],
                            'password': self.old_secret[1]},
+                'kubes': 2,
             }, {  # added container
                 'name': 'woeufh29',
                 'image': '45.55.52.203:5000/my-img',
@@ -1987,7 +1987,6 @@ class TestPodCollectionEdit(DBTestCase, TestCaseMixin):
         pc = podcollection.PodCollection
         pc._save_k8s_secrets.side_effect = lambda *a, **kw: [str(uuid4())]
         pc.get_secrets.return_value = {self.secret_name: self.old_secret}
-        pc._preprocess_new_pod.return_value = (self.edited, self.all_secrets)
 
         self.podcollection = podcollection.PodCollection(self.user)
         self.orig_pod = podcollection.Pod(dict(
@@ -1995,36 +1994,62 @@ class TestPodCollectionEdit(DBTestCase, TestCaseMixin):
             name=self.db_pod.name, owner=self.db_pod.owner,
             kube_type=self.db_pod.kube_id))
 
-    def test_edited_config_saved(self):
+    @mock.patch.object(podcollection.PodCollection, '_preprocess_new_pod')
+    def test_edited_config_saved(self, _preprocess_new_pod):
+        _preprocess_new_pod.return_value = (self.edited, self.all_secrets)
         self.podcollection.edit(self.orig_pod, {'edited_config': self.edited})
         self.assertIsNotNone(self.db_pod.get_dbconfig().get('edited_config'))
 
-    def test_preprocess_new_pod_called(self):
+    @mock.patch.object(podcollection.PodCollection, '_preprocess_new_pod')
+    def test_preprocess_new_pod_called(self, _preprocess_new_pod):
+        _preprocess_new_pod.return_value = (self.edited, self.all_secrets)
         self.podcollection.edit(self.orig_pod, {'edited_config': self.edited})
-        self.podcollection._preprocess_new_pod.assert_called_once_with(
+        _preprocess_new_pod.assert_called_once_with(
             self.edited, original_pod=self.orig_pod, skip_check=False)
 
-        self.podcollection._preprocess_new_pod.reset_mock()
+        _preprocess_new_pod.reset_mock()
         self.podcollection.edit(self.orig_pod,
                                 {'edited_config': self.edited},
                                 skip_check=True)
-        self.podcollection._preprocess_new_pod.assert_called_once_with(
+        _preprocess_new_pod.assert_called_once_with(
             self.edited, original_pod=self.orig_pod, skip_check=True)
 
-    def test_create_only_new_secrets(self):
+    @mock.patch.object(podcollection.PodCollection, '_preprocess_new_pod')
+    def test_create_only_new_secrets(self, _preprocess_new_pod):
         """PodCollection.edit shouldn't duplicate secrets."""
         prepared_config = copy.deepcopy(self.edited)
         for container in prepared_config['containers']:
             container.pop('secrets', None)
             container.setdefault('kubes', 1)
-        podcollection.PodCollection._preprocess_new_pod.return_value = (
-            prepared_config, self.all_secrets
-        )
+        _preprocess_new_pod.return_value = (prepared_config, self.all_secrets)
 
         self.podcollection.edit(self.orig_pod, {'edited_config': self.edited})
         self.podcollection._save_k8s_secrets.assert_called_once_with(
             set([self.new_secret]), self.orig_pod.namespace)
 
+    @mock.patch.object(podcollection.Image, 'check_containers',
+                      mock.Mock(return_value=None))
+    @mock.patch.object(podcollection, 'update_service',
+                       mock.Mock())
+    def test_apply_edit(self):
+        self.maxDiff = None
+        edited = dict(self.edited,
+                      namespace='024ab4aa-8457-478d-8d4a-5007d70a2ff9')
+        config = dict(
+            self.db_pod.get_dbconfig(), id=self.db_pod.id,
+            name=self.db_pod.name, owner=self.db_pod.owner,
+            kube_type=self.db_pod.kube_id, edited_config=edited,
+            namespace='024ab4aa-8457-478d-8d4a-5007d70a2ff9'
+        )
+
+        orig_pod = podcollection.Pod(config)
+        self.db_pod.set_dbconfig(config)
+        self.podcollection._apply_edit(orig_pod, self.db_pod, config)
+        new_config = self.db_pod.get_dbconfig()
+        self.assertEqual(len(new_config['containers']), len(self.edited[
+            'containers']))
+        self.assertEqual(new_config['containers'][0]['kubes'],
+                         self.edited['containers'][0]['kubes'])
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)

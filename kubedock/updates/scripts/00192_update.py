@@ -224,7 +224,9 @@ def _update_00191_upgrade(upd, calico_network):
     _master_docker()
     _master_firewalld()
     _master_k8s_node()
-    _master_calico(calico_network)
+
+    if helpers.local('docker ps --format "{{.Names}}" | grep "^calico-node$"') != 'calico-node':
+        _master_calico(calico_network)
 
     _master_k8s_extensions()
     helpers.restart_master_kubernetes()
@@ -244,7 +246,10 @@ def _update_00191_upgrade_node(with_testing, env, **kwargs):
     helpers.remote_install(CONNTRACK_PACKAGE)
     _node_kube_proxy()
     _node_flannel()
-    _node_calico(with_testing, env.host_string, kwargs['node_ip'])
+
+    if run('docker ps --format "{{.Names}}" | grep "^calico-node$"') != 'calico-node':
+        _node_calico(with_testing, env.host_string, kwargs['node_ip'])
+
     _node_policy_agent(env.host_string)
     _node_move_config()
 
@@ -290,8 +295,8 @@ def _upgrade_docker(with_testing):
         if not re.match(r'OPTIONS=.*', line):
             return line
 
-        to_remove = (r'\s*(--log-level=\w+)|(-l \w+)\s*',
-                     r'\s*(--log-driver=\w+)\s*')
+        to_remove = (r'\s*(--log-level=[^\s\']+\s*)|(-l \[^\s\']+\s*)',
+                     r'\s*(--log-driver=[^\s\']+)')
         for pattern in to_remove:
             line = re.sub(pattern, '', line)
 
@@ -801,9 +806,7 @@ def _node_calico(with_testing, node_name, node_ip):
     helpers.remote_install(CALICO_CNI, with_testing)
     helpers.remote_install(CALICOCTL, with_testing)
 
-    etcd_conf = _NODE_ETCD_CONF.format(MASTER_IP)
-    run('echo "{0}" >> /etc/kubernetes/config'.format(etcd_conf))
-
+    _create_etcd_config()
     _create_calico_config()
 
     run('python /var/lib/kuberdock/scripts/kubelet_args.py --network-plugin=')
@@ -832,6 +835,16 @@ def _node_calico(with_testing, node_name, node_ip):
         if rv.failed:
             raise helpers.UpgradeError("Can't start calico node: {}".format(rv))
 
+
+def _create_etcd_config():
+    etcd_conf = _NODE_ETCD_CONF.format(MASTER_IP)
+    config_file = StringIO()
+    get('/etc/kubernetes/config', config_file)
+    config = config_file.getvalue()
+
+    if etcd_conf not in config:
+        new_fd = StringIO(config + '\n' + etcd_conf)
+        put(new_fd, '/etc/kubernetes/config')
 
 def _create_calico_config():
     kube_config = StringIO()

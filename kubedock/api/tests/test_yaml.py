@@ -48,6 +48,8 @@ class YamlURL(object):
 
 
 class TestYamlAPI(APITestCase):
+    url = '/yamlapi'
+
     def test_invalid_data(self):
         response = self.user_open(YamlURL.post(), 'POST')
         self.assertAPIError(response, 400, 'InsufficientData')
@@ -143,3 +145,39 @@ class TestYamlAPI(APITestCase):
                 'data': yml_config
             })
             self.assert200(response)
+
+    @mock.patch.object(yaml_api.KubeUtils, 'get_current_user',
+                       return_value=100)
+    @mock.patch.object(yaml_api.PredefinedApp, 'update_pod_to_plan')
+    @mock.patch.object(yaml_api.PredefinedApp, 'update_pod_to_plan_by_name')
+    def test_switch_pod_plan(self, update_pod_to_plan_by_name,
+                             update_pod_to_plan, get_current_user):
+        pod_id = '79fd8c00-f6d6-41c5-956f-188e48767bce'
+        plan_id = 0
+        update_pod_to_plan.return_value = {}
+        url = self.item_url('switch', pod_id, plan_id)
+        self.open(url, 'PUT', auth=self.userauth)
+        update_pod_to_plan_by_name.assert_not_called()
+        update_pod_to_plan.assert_called_once_with(pod_id,
+                                                   plan_id,
+                                                   async=True,
+                                                   dry_run=False,
+                                                   user=100)
+
+    @mock.patch.object(yaml_api.KubeUtils, 'get_current_user',
+                       return_value=100)
+    @mock.patch.object(yaml_api.PredefinedApp, 'update_pod_to_plan')
+    @mock.patch.object(yaml_api.PredefinedApp, 'update_pod_to_plan_by_name')
+    def test_switch_pod_plan_by_name(self, update_pod_to_plan_by_name,
+                                     update_pod_to_plan, get_current_user):
+        pod_id = '79fd8c00-f6d6-41c5-956f-188e48767bce'
+        plan_id = 'M'
+        update_pod_to_plan_by_name.return_value = {}
+        url = self.item_url('switch', pod_id, plan_id)
+        self.open(url, 'PUT', auth=self.userauth)
+        update_pod_to_plan.assert_not_called()
+        update_pod_to_plan_by_name.assert_called_once_with(pod_id,
+                                                           plan_id,
+                                                           async=True,
+                                                           dry_run=False,
+                                                           user=100)

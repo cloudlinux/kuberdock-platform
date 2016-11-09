@@ -9,6 +9,7 @@ import yaml
 from fabric.operations import run, get, put
 from fabric.context_managers import cd, quiet
 
+from kubedock.allowed_ports.models import AllowedPort
 from kubedock.core import db, ssh_connect
 from kubedock.kapi.nodes import (
     KUBERDOCK_DNS_POD_NAME,
@@ -31,6 +32,7 @@ from kubedock.kapi.podcollection import PodCollection, PodNotFound, run_service
 from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod
 from kubedock.predefined_apps.models import PredefinedApp
+from kubedock.rbac import fixtures
 from kubedock.settings import (
     ETCD_NETWORK_POLICY_SERVICE,
     MASTER_IP, NODE_DATA_DIR, NODE_TOBIND_EXTERNAL_IPS
@@ -65,6 +67,16 @@ NODE_SCRIPT_DIR = '/var/lib/kuberdock/scripts'
 NODE_STORAGE_MANAGE_DIR = 'node_storage_manage'
 KD_INSTALL_DIR = '/var/opt/kuberdock'
 
+# update 00197
+new_resources = [
+    'allowed-ports',
+]
+
+new_permissions = [
+    ('allowed-ports', 'Admin', 'get', True),
+    ('allowed-ports', 'Admin', 'create', True),
+    ('allowed-ports', 'Admin', 'delete', True),
+]
 
 
 def _update_00196_upgrade(upd):
@@ -218,6 +230,14 @@ def _update_00191_upgrade_node(env, **kwargs):
 
 def _update_00191_post_upgrade_nodes():
     _add_nodes_host_endpoints()
+
+
+def _update_00197_upgrade(upd):
+    upd.print_log('Create table for AllowedPort model if not exists')
+    AllowedPort.__table__.create(bind=db.engine, checkfirst=True)
+    upd.print_log('Upgrade permissions')
+    fixtures.add_permissions(resources=new_resources,
+                             permissions=new_permissions)
 
 
 # update 00176 stuff bellow (update 00175 absorbed by 00176)
@@ -884,6 +904,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     _update_00185_upgrade()
     _update_00186_upgrade()
     _update_00191_upgrade(calico_network)
+    _update_00197_upgrade(upd)
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):

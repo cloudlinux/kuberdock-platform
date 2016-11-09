@@ -19,6 +19,9 @@ class AnonymousUserMixin(object):
     def is_active(self):
         return False
 
+    def is_administrator(self):
+        return False
+
     def is_anonymous(self):
         return True
 

@@ -124,6 +124,8 @@ class Billing(object):
         elif auth == 'headers':
             args['auth'] = HTTPBasicAuth(
                 self.billing_username, self.billing_password)
+        if self._structure.get('verify') == False:
+            args['verify'] = False
         return args
 
     @staticmethod

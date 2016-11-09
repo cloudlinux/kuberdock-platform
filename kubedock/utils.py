@@ -30,7 +30,7 @@ from werkzeug.wrappers import Response as ResponseBase
 
 from .core import ssh_connect, db, ConnectionPool
 from .exceptions import APIError, PermissionDenied, NoFreeIPs, NoSuitableNode
-from .login import current_user
+from .login import current_user, AnonymousUserMixin
 from .pods import Pod
 from .rbac.models import Role
 from .settings import (
@@ -708,7 +708,7 @@ class KubeUtils(object):
         if hasattr(current_user, 'username'):
             return current_user
         else:
-            return g.user
+            return getattr(g, 'user', AnonymousUserMixin())
 
     @classmethod
     def jsonwrap(cls, func):

@@ -42,10 +42,14 @@ from kubedock.system_settings import keys
 from kubedock.system_settings.models import SystemSettings
 from kubedock.updates import helpers
 from kubedock.users.models import User
-from kubedock.utils import POD_STATUSES, Etcd, get_calico_ip_tunnel_address
-from kubedock.kapi import network_policies
+from kubedock.utils import (
+    POD_STATUSES, Etcd, get_calico_ip_tunnel_address, retry)
+
 
 KUBERDOCK_MAIN_CONFIG = '/etc/sysconfig/kuberdock/kuberdock.conf'
+
+# It is needed for upgraded kube-proxy
+CONNTRACK_PACKAGE = 'conntrack-tools'
 
 # update 00174
 K8S_VERSION = '1.2.4-6'
@@ -190,7 +194,7 @@ def _update_00188_upgrade_node():  # update 00187 absorbed by 00188
         run('ln -s node_lvm_manage.py storage.py 2> /dev/null || true')
 
 
-def _update_00191_upgrade(calico_network):
+def _update_00191_upgrade(upd, calico_network):
     _master_flannel()
 
     etcd1 = helpers.local('uname -n')
@@ -209,7 +213,7 @@ def _update_00191_upgrade(calico_network):
     # we need to restart here again, because kubernetes sometimes don't accept
     # extensions onfly
     helpers.restart_master_kubernetes()
-    _master_network_policy(calico_network)
+    _master_network_policy(upd, calico_network)
 
     _master_dns_policy()
     _master_pods_policy()
@@ -218,6 +222,7 @@ def _update_00191_upgrade(calico_network):
 
 
 def _update_00191_upgrade_node(with_testing, env, **kwargs):
+    helpers.remote_install(CONNTRACK_PACKAGE)
     _node_kube_proxy()
     _node_flannel()
     _node_calico(with_testing, env.host_string, kwargs['node_ip'])
@@ -490,6 +495,7 @@ def _master_docker():
 
 
 def _master_k8s_node():
+    helpers.install_package(CONNTRACK_PACKAGE)
     helpers.local('systemctl reenable kube-proxy')
     helpers.restart_service('kube-proxy')
 
@@ -514,7 +520,7 @@ def _master_k8s_extensions():
     )
 
 
-def _master_network_policy(calico_network):
+def _master_network_policy(upd, calico_network):
     RULE_NEXT_TIER = {
         "id": "next-tier",
         "order": 9999,
@@ -554,7 +560,14 @@ def _master_network_policy(calico_network):
     )
 
     KD_HOST_ROLE = 'kdnode'
-    MASTER_TUNNEL_IP = get_calico_ip_tunnel_address()
+    upd.print_log('Trying to get master tunnel IP...')
+    retry_pause = 1
+    max_retries = 30
+    MASTER_TUNNEL_IP = retry(
+        get_calico_ip_tunnel_address, retry_pause, max_retries)
+    upd.print_log('Master tunnel IP is: {}'.format(MASTER_TUNNEL_IP))
+    if not MASTER_TUNNEL_IP:
+        raise helpers.UpgradeError("Failed to get master tunnel IP")
 
     KD_NODES_NEXT_TIER_FOR_PODS = {
         "id": "kd-nodes-dont-drop-pods-traffic",
@@ -873,7 +886,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     _update_00176_upgrade(upd)
     _update_00185_upgrade()
     _update_00186_upgrade()
-    _update_00191_upgrade(calico_network)
+    _update_00191_upgrade(upd, calico_network)
     _update_00197_upgrade(upd)
 
 

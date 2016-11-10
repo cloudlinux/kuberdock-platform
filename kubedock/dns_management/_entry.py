@@ -163,6 +163,8 @@ def create_or_update_record(domain, record_type):
             plugin_module.entry.delete_type_A_record(domain, **kwargs)
             plugin_module.entry.create_or_update_type_CNAME_record(
                 domain, ingress_controller.get_public_ip(), **kwargs)
+        else:
+            raise Exception('Unexpected record type: {}'.format(record_type))
     except Exception as err:
         current_app.logger.exception(
             u'Failed to run plugin create_or_update_type_{}_record, '
@@ -193,6 +195,8 @@ def delete_record(domain, record_type):
             p.entry.delete_type_A_record(domain, **plugin.get_kwargs())
         elif record_type == 'CNAME':
             p.entry.delete_type_CNAME_record(domain, **plugin.get_kwargs())
+        else:
+            raise Exception('Unexpected record type: {}'.format(record_type))
         return True, None
     except Exception as err:
         current_app.logger.exception(

@@ -6,10 +6,8 @@ from uuid import uuid4
 
 import mock
 
-from kubedock.core import db
-from kubedock.domains.models import BaseDomain, PodDomain
 from kubedock.kapi import apps
-from kubedock.pods.models import PersistentDisk, Pod
+from kubedock.pods.models import Pod
 from kubedock.testutils.testcases import DBTestCase
 from kubedock.exceptions import PredefinedAppExc
 from kubedock.utils import POD_STATUSES
@@ -45,6 +43,7 @@ kuberdock:
               pdSize: $MYSQL_PD_SIZE|default:2|MySQL persistent disk size$
     - name: M
       goodFor: up to 100K visitors
+      publicIP: true
       pods:
         - name: $APP_NAME$
           kubeType: 0
@@ -106,6 +105,7 @@ spec:
             -
               containerPort: 80
               hostPort: 80
+              isPublic: True
           volumeMounts:
             - mountPath: /var/www/html
               name: wordpress-persistent-storage
@@ -592,7 +592,7 @@ def fake_pod(**kwargs):
 
 
 class TestPodConfig(DBTestCase):
-    @mock.patch('kubedock.kapi.apps.PredefinedApp._update_kubes')
+
     @mock.patch('kubedock.kapi.apps.PredefinedApp._update_IPs')
     @mock.patch('kubedock.kapi.apps.PodCollection._get_namespaces')
     @mock.patch('kubedock.kapi.apps.PodCollection.update')
@@ -605,7 +605,6 @@ class TestPodConfig(DBTestCase):
                        pod_collection_update,
                        _get_namespaces,
                        _update_IPs,
-                       _update_kubes,
                        ):
         pod_id = str(uuid4())
         PredefinedAppModel(id=1, name='test', template=VALID_TEMPLATE1).save()
@@ -656,7 +655,7 @@ class TestPodConfig(DBTestCase):
                 'containers': []
             }
         )
-        pd1 = self.fixtures.persistent_disk(
+        self.fixtures.persistent_disk(
             name='mysql-persistent-storag',
             drive_name='3/mysql-persistent-storag',
             owner_id=1,
@@ -676,6 +675,77 @@ class TestPodConfig(DBTestCase):
             template=VALID_TEMPLATE1
         ).update_pod_to_plan(pod_id, plan_id=1, async=False)
         change_pv_size.assert_called_once_with(pd2.id, 2, dry_run=False)
+
+    @mock.patch('kubedock.kapi.apps.PredefinedApp._update_IPs')
+    @mock.patch('kubedock.kapi.apps.PodCollection._get_namespaces')
+    @mock.patch('kubedock.kapi.apps.PodCollection.update')
+    @mock.patch('kubedock.kapi.apps.update_plan_async')
+    def test_set_public_ip(self, update_plan_async,
+                           pod_collection_update,
+                           _get_namespaces,
+                           _update_IPs):
+        pod_id = str(uuid4())
+        PredefinedAppModel(id=1, name='test', template=VALID_TEMPLATE1).save()
+        self.fixtures.pod(
+            id=pod_id,
+            owner_id=1,
+            name='pod1',
+            kube_id=0,
+            template_id=1,
+            config={
+                'volumes_public': [],
+                "volumes": [],
+                'containers': [
+                    {"sourceUrl": "hub.docker.com/_/mysql",
+                     "name": "mysql",
+                     "image": "mysql:5",
+                     "kubes": 2,
+                     "workingDir": "/data",
+                     "readinessProbe": {
+                         "initialDelaySeconds": 1,
+                         "tcpSocket": {"port": 3306}
+                     },
+                     "ports": [{"podPort": 3306, "containerPort": 3306,"isPublic": False}]
+                     },
+                    {"sourceUrl": "hub.docker.com/_/wordpress",
+                     "name": "wordpress",
+                     "image": "wordpress:5",
+                     "kubes": 2,
+                     "workingDir": "/data",
+                     "readinessProbe": {
+                         "initialDelaySeconds": 1,
+                         "tcpSocket": {"port": 80}
+                     },
+                     "ports": [{"podPort": 80, "containerPort": 80,
+                                "isPublic": False}]
+                     }
+                ]
+            }
+        )
+
+
+        pod_db = Pod.query.get(pod_id)
+        config = pod_db.get_dbconfig()
+        wordpress_container = filter(lambda x: x['name'] == 'wordpress',
+                                     config['containers'])[0]
+        self.assertFalse(wordpress_container['ports'][0].get('isPublic',
+                                                             False))
+
+        apps.PredefinedApp(
+            id=1,
+            name='test',
+            template=VALID_TEMPLATE1
+        ).update_pod_to_plan(pod_id, plan_id=1, async=False)
+
+        pod_db = Pod.query.get(pod_id)
+        config = pod_db.get_dbconfig()
+        wordpress_container = filter(lambda x: x['name'] == 'wordpress',
+                                     config['containers'])[0]
+        mysql_container = filter(lambda x: x['name'] == 'mysql',
+                                     config['containers'])[0]
+
+        self.assertTrue(wordpress_container['ports'][0].get('isPublic'))
+        self.assertFalse(mysql_container['ports'][0].get('isPublic', False))
 
 if __name__ == '__main__':
     unittest.main()

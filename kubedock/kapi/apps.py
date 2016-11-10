@@ -570,12 +570,14 @@ class PredefinedApp(object):
         pod_config = self._update_pv_sizes(pod, new_pd_sizes,
                                            dry_run=dry_run)
         self._update_kubes(root, pod_config)
+        self._update_ports(root, pod_config)
         self._update_IPs(pod, root, pod_config, dry_run=dry_run)
         try:
             pod.kube_id = kube_id
             pod.template_plan_name = plan['name']
             pod.config = json.dumps(pod_config)
             if not dry_run:
+                db.session.commit()
                 if async:
                     update_plan_async.apply_async(
                         args=[pod, pod.owner],
@@ -617,6 +619,21 @@ class PredefinedApp(object):
         for container in right.get('containers', []):
             if container.get('name') in kubes_by_container:
                 container['kubes'] = kubes_by_container[container.get('name')]
+
+    @staticmethod
+    def _update_ports(left, right):
+        """
+        Updates right list ports with left list values
+        :param left: list -> list to take values from
+        :param right: list -> list to apply values to
+        """
+        ports_by_container = {}
+        for container in left.get('containers', []):
+            ports_by_container[container.get('name')] = container.get('ports')
+
+        for container in right.get('containers', []):
+            if container.get('name') in ports_by_container:
+                container['ports'] = ports_by_container[container.get('name')]
 
     @staticmethod
     def _update_volumes(left, right):

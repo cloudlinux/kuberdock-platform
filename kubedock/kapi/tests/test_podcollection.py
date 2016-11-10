@@ -811,19 +811,21 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
     @mock.patch.object(podcollection, 'IpState')
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection.dns_management, 'is_domain_system_ready')
-    def test_apply_edit_called(self, is_domain_system_ready_mock, DBPod,
-                               IpState, get_replicationcontroller,
+    @mock.patch.object(podcollection, 'db')
+    def test_apply_edit_called(self, mock_db, is_domain_system_ready_mock,
+                               DBPod, IpState, get_replicationcontroller,
                                prepare_and_run_pod_task, _make_namespace):
         config = {'volumes': [], 'service': self.test_service_name}
         DBPod.query.get().get_dbconfig.return_value = config
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
         self.pod_collection._apply_edit.return_value = (self.test_pod, config)
         is_domain_system_ready_mock.return_value = (True, None)
-
+        mock_db.session.commit = mock.Mock()
         self.pod_collection._start_pod(
             self.test_pod, {'commandOptions': {'applyEdit': True}})
         self.pod_collection._apply_edit.assert_called_once_with(
             self.test_pod, DBPod.query.get(), config)
+        mock_db.session.commit.assert_called_once_with()
 
 
 class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):

@@ -145,8 +145,8 @@ def test_recreate_pod_with_real_ip(cluster):
     pod.delete()
 
 
-@pipeline('main', skip_reason="FIXME in AC-4974")
-@pipeline('main_upgraded', skip_reason="FIXME in AC-4974")
+@pipeline('main')
+@pipeline('main_upgraded')
 def test_nginx_kublet_resize(cluster):
     # type: (KDIntegrationTestAPI) -> None
     pod = cluster.pods.create("nginx", "test_nginx_pod_1",

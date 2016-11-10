@@ -14,6 +14,11 @@ def upgrade(upd, with_testing, *args, **kwargs):
     pod = db.session.query(Pod).filter_by(
         name=KUBERDOCK_DNS_POD_NAME, owner=ku).first()
     nodes = Node.query.all()
+
+    if not nodes:
+        upd.print_log('No nodes found, exiting')
+        return
+
     for node in nodes:
         k8s_node = node_utils._get_k8s_node_by_host(node.hostname)
         status, _ = node_utils.get_status(node, k8s_node)
@@ -22,9 +27,9 @@ def upgrade(upd, with_testing, *args, **kwargs):
                 pc = PodCollection()
                 pc.delete(pod.id, force=True)
             create_dns_pod(node.hostname, ku)
-            break
-    else:
-        raise helpers.UpgradeError("Can't find any running node to run dns pod")
+            return
+
+    raise helpers.UpgradeError("Can't find any running node to run dns pod")
 
 
 def downgrade(upd, with_testing,  exception, *args, **kwargs):

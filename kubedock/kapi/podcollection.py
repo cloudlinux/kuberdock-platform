@@ -426,22 +426,30 @@ class PodCollection(object):
 
     @staticmethod
     @utils.atomic()
-    def _prepare_for_public_address(pod, config=None):
+    def _prepare_for_public_address(pod, config):
         """Prepare pod for Public IP assigning"""
-        conf = pod.get_dbconfig() if config is None else config
-        public_ip = conf.get('public_ip')
-        if public_ip or not PodCollection.has_public_ports(conf):
-            if 'domain' in conf:
-                conf['_domain'] = conf.pop('domain', None)
+        public_ip = config.get('public_ip')
+        if public_ip:
+            # if both fields public_ip and domain/_domain appear in config
+            # then public_ip is used
+            config.pop('domain', None)
+            config.pop('_domain', None)
+            pod.set_dbconfig(config, save=False)
             return
-        domain_name = conf.get('domain', None) or conf.get('_domain', None)
+        if not PodCollection.has_public_ports(config):
+            # save domain to _domain if there are no public ports after edit
+            if 'domain' in config:
+                config['_domain'] = config.pop('domain', None)
+                pod.set_dbconfig(config, save=False)
+            return
+        domain_name = config.get('domain', None) or config.get('_domain', None)
         if domain_name is None:
             if settings.AWS:
-                conf.setdefault('public_aws', UNKNOWN_ADDRESS)
+                config.setdefault('public_aws', UNKNOWN_ADDRESS)
             else:
                 IPPool.get_free_host(as_int=True)
                 # 'true' indicates that this Pod needs Public IP to be assigned
-                conf['public_ip'] = pod.public_ip = 'true'
+                config['public_ip'] = pod.public_ip = 'true'
         else:
             ready, message = dns_management.is_domain_system_ready()
             if not ready:
@@ -458,9 +466,8 @@ class PodCollection(object):
                     pod_domains.get_or_create_pod_domain(pod, domain_name)
                 if pod_domain_created:
                     db.session.add(pod_domain)
-            conf['domain'] = pod.domain = str(pod_domain)
-        if config is None:
-            pod.set_dbconfig(conf, save=False)
+            config['domain'] = pod.domain = str(pod_domain)
+        pod.set_dbconfig(config, save=False)
 
     @utils.atomic(nested=False)
     def _set_entry(self, pod, data):
@@ -592,8 +599,7 @@ class PodCollection(object):
         for container in pod_config['containers']:
             for port in container['ports']:
                 port['isPublic'] = port.pop('isPublic_before_freed', None)
-        pod.set_dbconfig(pod_config, save=False)
-        cls._prepare_for_public_address(pod)
+        cls._prepare_for_public_address(pod, pod_config)
 
     @utils.atomic()
     def _save_pod(self, obj, db_pod=None):
@@ -617,12 +623,11 @@ class PodCollection(object):
                            kube_id=obj.kube_type, owner=self.owner)
             db.session.add(db_pod)
         else:
-            db_pod.config = json.dumps(data)
             db_pod.status = status
             db_pod.kube_id = obj.kube_type
             db_pod.owner = self.owner
 
-        self._prepare_for_public_address(db_pod)
+        self._prepare_for_public_address(db_pod, data)
         return db_pod
 
     def update(self, pod_id, data):
@@ -958,8 +963,10 @@ class PodCollection(object):
                     else:
                         container['state'] = 'failed'
                 container.pop('resources', None)
-                container['limits'] = billing.repr_limits(container['kubes'],
-                                                          pod.kube_type)
+                kubes = container.get('kubes')
+                if kubes:
+                    container['limits'] = billing.repr_limits(kubes,
+                                                              pod.kube_type)
 
     def _resize_replicas(self, pod, data):
         # FIXME: not working for now
@@ -1069,9 +1076,9 @@ class PodCollection(object):
             self._assign_public_ip(pod, db_pod, db_config)
 
         if async_pod_create:
-            prepare_and_run_pod_task.delay(pod)
+            prepare_and_run_pod_task.delay(pod, db_pod, db_config)
         else:
-            prepare_and_run_pod(pod)
+            prepare_and_run_pod(pod, db_pod, db_config)
         return pod.as_dict()
 
     def assign_public_ip(self, pod_id, node=None):
@@ -1245,15 +1252,6 @@ class PodCollection(object):
         return pod.as_dict()
 
     def _redeploy(self, pod, data):
-        db_pod = DBPod.query.get(pod.id)
-        # apply changes in config
-        db_config = db_pod.get_dbconfig()
-        containers = {c['name']: c for c in db_config['containers']}
-        for container in data.get('containers', []):
-            if container.get('kubes') is not None:
-                containers[container['name']]['kubes'] = container.get('kubes')
-        db_pod.set_dbconfig(db_config)
-
         finish_redeploy.delay(pod.id, data)
         # return updated pod
         return PodCollection(owner=self.owner).get(pod.id, as_json=False)
@@ -1653,13 +1651,11 @@ def fix_relative_mount_paths(containers):
 
 
 @celery.task(ignore_results=True)
-def prepare_and_run_pod_task(pod):
-    return prepare_and_run_pod(pod)
+def prepare_and_run_pod_task(pod, db_pod, db_config):
+    return prepare_and_run_pod(pod, db_pod, db_config)
 
 
-def prepare_and_run_pod(pod):
-    db_pod = DBPod.query.get(pod.id)
-    db_config = db_pod.get_dbconfig()
+def prepare_and_run_pod(pod, db_pod, db_config):
     try:
         _process_persistent_volumes(pod, db_config.get('volumes', []))
 
@@ -1668,7 +1664,8 @@ def prepare_and_run_pod(pod):
             db_config['service'] = pod.service = local_svc['metadata']['name']
             db_config['podIP'] = LocalService().get_clusterIP(local_svc)
 
-        helpers.replace_pod_config(pod, db_config)
+        with utils.atomic():
+            db_pod.set_dbconfig(db_config, save=False)
 
         config = pod.prepare()
         k8squery = KubeQuery()

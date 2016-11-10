@@ -543,7 +543,6 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
     @mock.patch.object(podcollection.ingress_resource, 'create_ingress')
     @mock.patch.object(podcollection.dns_management,
                        'create_or_update_type_A_record')
-    @mock.patch.object(podcollection.helpers, 'replace_pod_config')
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection, 'run_service')
     @mock.patch.object(podcollection.podutils, 'raise_if_failure')
@@ -551,9 +550,8 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
     @mock.patch.object(podcollection.PodCollection, 'has_public_ports')
     def test_pod_prepare_and_run_task(
             self, has_public_ports_mock, post_mock, raise_if_failure_mock,
-            run_service_mock, dbpod_mock, replace_pod_config_mock,
-            create_or_update_type_A_record_mock, create_ingress_mock,
-            try_update_rc_mock):
+            run_service_mock, dbpod_mock, create_or_update_type_A_record_mock,
+            create_ingress_mock, try_update_rc_mock):
         """
         Test first _start_pod in usual case
         :type post_: mock.Mock
@@ -566,13 +564,15 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         self.test_pod.kuberdock_resolve = []
         dbpod = mock.Mock()
         dbpod_mock.query.get.return_value = dbpod
-        dbpod.get_dbconfig.return_value = {'volumes': []}
+        dbpod_config = {'volumes': []}
+        dbpod.get_dbconfig.return_value = dbpod_config
         run_service_mock.return_value = (None, None)
         create_or_update_type_A_record_mock.return_value = (True, None)
         try_update_rc_mock.return_value = False
 
         # Actual call
-        res = podcollection.prepare_and_run_pod_task(self.test_pod)
+        res = podcollection.prepare_and_run_pod_task(self.test_pod, dbpod,
+                                                     dbpod_config)
 
         run_service_mock.assert_called_once_with(self.test_pod)
         self.test_pod.prepare.assert_called_once_with()
@@ -580,8 +580,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
             ns=self.test_pod.namespace)
         self.assertTrue(raise_if_failure_mock.called)
-        replace_pod_config_mock.assert_called_once_with(
-            self.test_pod, dbpod.get_dbconfig.return_value)
+        dbpod.set_dbconfig.assert_called_once_with(dbpod_config, save=False)
         self.test_pod.set_status.assert_called_with(
             POD_STATUSES.pending, send_update=True)
         create_or_update_type_A_record_mock.assert_called_once_with(
@@ -603,7 +602,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
     @mock.patch.object(podcollection.PodCollection, '_node_available_for_pod')
     def test_pod_start(
             self, node_available_mock, mk_ns, run_pod_mock, set_pod_status,
-            DBPod, db_pod_mock):
+            db_pod_mock, DBPod):
         """
         Test first _start_pod for pod without ports
         :type post_: mock.Mock
@@ -624,13 +623,15 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
 
         db_pod = mock.Mock(id=pod.id, status=POD_STATUSES.stopped)
         db_pod_mock.query.get.return_value = db_pod
+        db_config = {}
+        db_pod.get_dbconfig.return_value = db_config
 
         # Actual call
         self.pod_collection._start_pod(pod)
 
         node_available_mock.assert_called_once_with(pod)
         mk_ns.assert_called_once_with(pod.namespace)
-        run_pod_mock.delay.assert_called_once_with(pod)
+        run_pod_mock.delay.assert_called_once_with(pod, db_pod, db_config)
         self.assertEqual(pod.status, POD_STATUSES.preparing)
 
     @mock.patch.object(podcollection, 'DBPod')
@@ -758,17 +759,18 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
 
         dbpod = mock.Mock()
         dbpod_mock.query.get.return_value = dbpod
-        dbpod.get_dbconfig.return_value = {
+        dbpod_config = {
             'volumes': [], 'service': self.test_service_name
         }
+        dbpod.get_dbconfig.return_value = dbpod.config
         run_service_mock.return_value = (None, None)
         create_or_update_type_A_record_mock.return_value = (True, None)
         try_update_rc_mock.return_value = False
 
         # Actual call
-        res = podcollection.prepare_and_run_pod_task(self.test_pod)
+        res = podcollection.prepare_and_run_pod_task(self.test_pod, dbpod,
+                                                     dbpod_config)
 
-        dbpod.get_dbconfig.assert_called_once_with()
         self.test_pod.prepare.assert_called_once_with()
         post_.assert_called_once_with(
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,

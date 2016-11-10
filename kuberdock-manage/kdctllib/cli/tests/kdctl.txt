@@ -1,5 +1,20 @@
 images search some_image
 
+allowed-ports list
+allowed-ports open 80
+allowed-ports open 80 tcp
+allowed-ports close 80
+allowed-ports close 80 tcp
+
+domains list
+domains get --id 1
+domains get --name foo
+domains create --name foo
+domains update --id 1 --new-name bar
+domains update --name foo --new-name bar
+domains delete --id 1
+domains delete --name foo
+
 ippool list
 ippool list --page 1
 ippool list --free-only

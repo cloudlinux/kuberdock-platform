@@ -1,3 +1,7 @@
+domains list
+domains get --id 1
+domains get --name foo
+
 images search some_image
 
 pods list

@@ -1,5 +1,6 @@
 from endpoints.allowed_ports import AllowedPortsClient
 from endpoints.auth import AuthClient
+from endpoints.domains import DomainsClient
 from endpoints.ippool import IPPoolClient
 from endpoints.images import ImagesClient
 from endpoints.nodes import NodesClient
@@ -29,6 +30,7 @@ class KDClient(object):
         self.transport = Transport(url, user, password, token)
         self.allowed_ports = AllowedPortsClient(self)
         self.auth = AuthClient(self)
+        self.domains = DomainsClient(self)
         self.images = ImagesClient(self)
         self.ippool = IPPoolClient(self)
         self.nodes = NodesClient(self)

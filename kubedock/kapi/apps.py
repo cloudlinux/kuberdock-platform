@@ -471,7 +471,7 @@ class PredefinedApp(object):
         :param root: dict -> modified pod config spec
         :param pod_config: dict -> current pod config spec
         """
-        wanted = PodCollection.needs_public_ip(root)
+        wanted = PodCollection.has_public_ports(root)
         curr_IP = pod_config.get('public_ip')
         if wanted and curr_IP is None:
             if not IPPool.has_public_ips():

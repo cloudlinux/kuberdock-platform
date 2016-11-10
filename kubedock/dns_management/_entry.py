@@ -5,9 +5,9 @@ from flask import current_app
 from . import plugins
 from ..constants import KUBERDOCK_INGRESS_POD_NAME
 from ..pods.models import Pod
-from ..users.models import User
-from ..system_settings.models import SystemSettings
 from ..system_settings import keys
+from ..system_settings.models import SystemSettings
+from ..users.models import User
 
 
 def _get_ingress_controller_pod():

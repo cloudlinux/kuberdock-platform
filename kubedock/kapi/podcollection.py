@@ -19,16 +19,16 @@ from helpers import (
 from images import Image
 from kubedock.exceptions import (
     NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError, ServicePodDumpError)
-from node import Node as K8SNode
-from node import NodeException
-from pod import Pod
+from kubedock.kapi.lbpoll import get_service_provider
 from network_policies import (
     allow_public_ports_policy,
     allow_same_user_policy,
     PUBLIC_PORT_POLICY_NAME
 )
+from node import Node as K8SNode
+from node import NodeException
+from pod import Pod
 from .. import billing
-from kubedock.kapi.lbpoll import get_service_provider
 from .. import dns_management
 from .. import settings
 from .. import utils
@@ -45,8 +45,8 @@ from ..kd_celery import celery
 from ..nodes.models import Node
 from ..pods.models import (
     PersistentDisk, PodIP, IPPool, Pod as DBPod, PersistentDiskStatuses)
-from ..system_settings.models import SystemSettings
 from ..system_settings import keys as settings_keys
+from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
 from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils
 
@@ -58,8 +58,6 @@ UNKNOWN_ADDRESS = 'Unknown'
 # will be copied to each node at deploy stage
 DIRECT_SSH_USERNAME_LEN = 30
 DIRECT_SSH_ERROR = "Error retrieving ssh access, please contact administrator"
-
-
 
 
 def _check_license():
@@ -227,9 +225,9 @@ class PodCollection(object):
         with utils.atomic():
             # create PD models in db and change volumes schema in config
             pod.compose_persistent(reuse_pv=reuse_pv)
-            set_public_ip = self.needs_public_ip(data)
             db_pod = self._save_pod(pod)
-            if set_public_ip:
+
+            if self.has_public_ports(data):
                 if getattr(db_pod, 'public_ip', None):
                     pod.public_ip = db_pod.public_ip
                 if getattr(db_pod, 'public_aws', None):
@@ -418,10 +416,8 @@ class PodCollection(object):
         return pods
 
     @staticmethod
-    def needs_public_ip(conf):
-        """
-        Return true if pod needs public ip
-        """
+    def has_public_ports(conf):
+        """Returns true if pod has public ports"""
         for c in conf.get('containers', []):
             for port in c.get('ports', []):
                 if port.get('isPublic', False):
@@ -434,10 +430,11 @@ class PodCollection(object):
         """Prepare pod for Public IP assigning"""
         conf = pod.get_dbconfig() if config is None else config
         public_ip = conf.get('public_ip')
-        if public_ip or not PodCollection.needs_public_ip(conf):
-            conf.pop('domain', None)
+        if public_ip or not PodCollection.has_public_ports(conf):
+            if 'domain' in conf:
+                conf['_domain'] = conf.pop('domain', None)
             return
-        domain_name = conf.get('domain', None)
+        domain_name = conf.get('domain', None) or conf.get('_domain', None)
         if domain_name is None:
             if settings.AWS:
                 conf.setdefault('public_aws', UNKNOWN_ADDRESS)
@@ -681,19 +678,23 @@ class PodCollection(object):
         if hasattr(pod, 'public_ip'):
             self._remove_public_ip(pod_id=pod_id, force=force)
         if hasattr(pod, 'domain'):
-            ok, message = dns_management.delete_type_A_record(pod.domain)
-            if not ok:
-                current_app.logger.error(
-                    u'Failed to delete A DNS record for pod "{}": {}'
-                    .format(pod.id, message))
-                utils.send_event_to_role(
-                    'notify:error', {'message': message}, 'Admin')
+            self._remove_pod_domain(pod_id=pod_id, domain=pod.domain)
 
         self._drop_network_policies(pod.namespace, force=force)
         # all deleted asynchronously, now delete namespace, that will ensure
         # delete all content
         self._drop_namespace(pod.namespace, force=force)
         helpers.mark_pod_as_deleted(pod_id)
+
+    @staticmethod
+    def _remove_pod_domain(pod_id, domain):
+        ok, message = dns_management.delete_type_A_record(domain)
+        if not ok:
+            current_app.logger.error(
+                u'Failed to delete DNS record for pod "{}": {}'
+                .format(pod_id, message))
+            utils.send_event_to_role(
+                'notify:error', {'message': message}, 'Admin')
         PodDomain.query.filter_by(pod_id=pod_id).delete()
 
     def check_updates(self, pod_id, container_name):
@@ -978,6 +979,7 @@ class PodCollection(object):
             return pod, db_config
 
         old_pod = pod
+        old_saved_domain = db_config.get('_domain', None)
         db_config = db_config['edited_config']
         db_config['forbidSwitchingAppPackage'] = 'the pod was edited'
         db_config['podIP'] = getattr(old_pod, 'podIP', None)
@@ -986,6 +988,16 @@ class PodCollection(object):
             old_pod, 'postDescription', None)
         db_config['public_ip'] = getattr(old_pod, 'public_ip', None)
         db_config['public_aws'] = getattr(old_pod, 'public_aws', None)
+
+        if not self.has_public_ports(db_config):
+            if db_config.get('domain', None):
+                self._remove_pod_domain(pod_id=db_pod.id,
+                                        domain=db_config['domain'])
+                db_config['_domain'] = db_config.pop('domain', None)
+            elif old_saved_domain:
+                db_config['_domain'] = old_saved_domain
+        elif 'domain' not in db_config and old_saved_domain:
+            db_config['domain'] = old_saved_domain
 
         # re-check images, PDs, etc.
         db_config, _ = self._preprocess_new_pod(
@@ -996,7 +1008,7 @@ class PodCollection(object):
         pod.set_owner(db_pod.owner)
         update_service(pod)
         db_pod = self._save_pod(pod, db_pod=db_pod)
-        if self.needs_public_ip(db_config):
+        if self.has_public_ports(db_config):
             if getattr(db_pod, 'public_ip', None):
                 pod.public_ip = db_pod.public_ip
             elif getattr(db_pod, 'public_aws', None):
@@ -1010,7 +1022,11 @@ class PodCollection(object):
         return pod, db_pod.get_dbconfig()
 
     def _sync_start_pod(self, pod, data=None):
-        return self._start_pod(pod, data={'async-pod-create': False})
+        if data is None:
+            data = {'async-pod-create': False}
+        else:
+            data['async-pod-create'] = False
+        return self._start_pod(pod, data=data)
 
     def _start_pod(self, pod, data=None):
         if data is None:
@@ -1021,6 +1037,7 @@ class PodCollection(object):
         db_config = db_pod.get_dbconfig()
         if command_options.get('applyEdit'):
             pod, db_config = self._apply_edit(pod, db_pod, db_config)
+            db.session.commit()
 
         async_pod_create = data.get('async-pod-create', True)
 
@@ -1060,8 +1077,7 @@ class PodCollection(object):
     def assign_public_ip(self, pod_id, node=None):
         """Returns assigned ip"""
         pod = self._get_by_id(pod_id)
-        db_pod = DBPod.query.get(pod_id)
-        ":type: DBPod"
+        db_pod = DBPod.query.get(pod_id)  # type: DBPod
         if db_pod is None:
             raise Exception('Something goes wrong. Pod is present, but db_pod '
                             'is absent')
@@ -1108,9 +1124,7 @@ class PodCollection(object):
                                    new_ip=utils.int2ip(ip_address)))
                     for user_id in send_to_ids:
                         utils.send_event_to_user(
-                            # TODO: change event_name to 'notify:warning' when
-                            # it will be implemented
-                            event_name='notify:error', data={'message': msg},
+                            event_name='notify:warning', data={'message': msg},
                             user_id=user_id)
 
                 network = IPPool.get_network_by_ip(ip_address)
@@ -1509,8 +1523,8 @@ def scale_replicationcontroller_task(*args, **kwargs):
     scale_replicationcontroller(*args, **kwargs)
 
 
-@celery.task(bind=True, ignore_results=True)
-def finish_redeploy(self, pod_id, data, start=True):
+@celery.task(ignore_results=True)
+def finish_redeploy(pod_id, data, start=True):
     db_pod = DBPod.query.get(pod_id)
     pod_collection = PodCollection(db_pod.owner)
     pod = pod_collection._get_by_id(pod_id)
@@ -1535,7 +1549,12 @@ def finish_redeploy(self, pod_id, data, start=True):
 
     if start:  # start updated pod
         PodCollection(db_pod.owner).update(
-            pod_id, {'command': 'start', 'commandOptions': command_options})
+            pod_id,
+            {
+                # already in celery, use the same task, sync
+                'command': 'synchronous_start',
+                'commandOptions': command_options
+            })
 
 
 def restore_containers_host_ports_config(pod_containers, db_containers):
@@ -1685,7 +1704,8 @@ def prepare_and_run_pod(pod):
                 current_app.logger.exception(
                     'Failed to add resolve records for pod: %s', pod)
 
-        if hasattr(pod, 'domain'):
+        if hasattr(pod, 'domain') and \
+                PodCollection.has_public_ports(db_config):
             ok, message = dns_management.create_or_update_type_A_record(
                 pod.domain)
             if ok:
@@ -1707,7 +1727,7 @@ def prepare_and_run_pod(pod):
             # We need to update db_pod in case if the pod status was changed
             # since the last retrieval from DB
             db.session.refresh(db_pod)
-            if not isinstance(err, PodStartFailure) or not db_pod.is_deleted():
+            if not isinstance(err, PodStartFailure) or not db_pod.is_deleted:
                 utils.send_event_to_user(
                     'notify:error', {'message': err.message},
                     db_pod.owner_id)

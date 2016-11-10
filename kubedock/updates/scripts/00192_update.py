@@ -94,6 +94,21 @@ new_permissions = [
 ]
 
 
+def _update_nonfloating_config(upd):
+    upd.print_log('Updating kube-scheduler config...')
+    helpers.local('sed -i "s/--enable-non-floating-ip/--enable-fixed-ip-pools/" /etc/kubernetes/scheduler')
+    helpers.local('systemctl restart kube-scheduler')
+    upd.print_log('Updating kuberdock main config...')
+    helpers.local('sed -i "s/NONFLOATING_PUBLIC_IPS/FIXED_IP_POOLS/" {}'.format(KUBERDOCK_MAIN_CONFIG))
+
+
+def _update_node_nonfloating_config(upd):
+    # it should be called before _update_00191_upgrade_node
+    upd.print_log('Updating kuberdock.json')
+    config_file = '/usr/libexec/kubernetes/kubelet-plugins/net/exec/kuberdock/kuberdock.json'
+    run('sed -i "s/nonfloating_public_ips/fixed_ip_pools/" {}'.format(config_file))
+
+
 def _update_00200_upgrade(upd):  # also applies 00196 update migration
     upd.print_log('Upgrading db...')
     helpers.upgrade_db()
@@ -908,6 +923,7 @@ def get_calico_network(host_nets):
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
+    _update_nonfloating_config(upd)
     _update_00200_upgrade(upd)  # db migration
     nets = helpers.local("ip -o -4 addr | grep -vP '\slo\s' | awk '{print $4}'")
     calico_network = get_calico_network(nets)
@@ -929,6 +945,7 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
 
 
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
+    _update_node_nonfloating_config(upd)
     _update_00174_upgrade_node(upd, with_testing)
     _update_00176_upgrade_node(with_testing)
     _update_00179_upgrade_node(env)

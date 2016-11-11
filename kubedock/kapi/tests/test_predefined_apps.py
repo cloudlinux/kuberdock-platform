@@ -505,7 +505,6 @@ class TestPodConfig(DBTestCase):
                             'pdSize': 2
                         },
                         'name': 'mysql-persistent-storage'
-
                     },
                     {
                         'persistentDisk': {
@@ -540,8 +539,8 @@ class TestPodConfig(DBTestCase):
             }
         )
         self.fixtures.persistent_disk(
-            name='mysql-persistent-storag',
-            drive_name='3/mysql-persistent-storag',
+            name='mysql-persistent-storage',
+            drive_name='3/mysql-persistent-storage',
             owner_id=1,
             size=2
         )

@@ -101,17 +101,17 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         size = params['size']
         return podcollection.change_pv_size(device_id, int(size))
 
-    @use_kwargs(schema_with_owner)
-    def delete(self, device_id, owner=None):
+    @use_kwargs(schema_with_owner, allow_unknown=True)
+    def delete(self, device_id, owner=None, **params):
         current_user = self.get_current_user()
         owner = owner or current_user
+        force = params.get('force')
 
         check_permission('own', 'persistent_volumes', user=owner).check()
         if owner == current_user:
             check_permission('delete', 'persistent_volumes').check()
         else:
             check_permission('delete_non_owned', 'persistent_volumes').check()
-
         pd = PersistentDisk.get_all_query().filter(
             PersistentDisk.id == device_id,
             # allow deletion owner's PDs only
@@ -119,14 +119,15 @@ class PersistentStorageAPI(KubeUtils, MethodView):
         ).first()
         if pd is None:
             raise PDNotFound()
-        if pd.pod_id is not None:
+        if pd.pod_id is not None and not force:
             raise PDIsUsed()
-        allow_flag, description = ps.drive_can_be_deleted(device_id)
-        if not allow_flag:
-            raise APIError(
-                'Volume can not be deleted. Reason: {}'.format(description)
-            )
-        ps.delete_drive_by_id(device_id)
+        if not force:
+            allow_flag, description = ps.drive_can_be_deleted(device_id)
+            if not allow_flag:
+                raise APIError(
+                    'Volume can not be deleted. Reason: {}'.format(description)
+                )
+        ps.delete_drive_by_id(device_id, force=force)
 
 
 def add_kube_types(disks):

@@ -221,7 +221,7 @@ class TestPStorageApiDelete(APITestCase):
     def test_pstorage_delete_called(self, delete_mock):
         res = self.user_open(self.item_url(self.free_pd.id), method='DELETE')
         self.assert200(res)
-        delete_mock.assert_called_once_with(self.free_pd.id)
+        delete_mock.assert_called_once_with(self.free_pd.id, force=None)
 
     @mock.patch('kubedock.kapi.node_utils.get_nodes_collection')
     def test_delete_free_pd(self, m1):
@@ -235,6 +235,11 @@ class TestPStorageApiDelete(APITestCase):
         res = self.user_open(self.item_url(self.non_free_pd.id),
                              method='DELETE')
         self.assertAPIError(res, 400, 'PDIsUsed')
+
+    def test_delete_non_free_pd_force(self):
+        res = self.user_open(self.item_url(self.non_free_pd.id),
+                             method='DELETE', json={'force': True})
+        self.assert200(res)
 
     @mock.patch('kubedock.kapi.node_utils.get_nodes_collection')
     def test_used_disk_is_not_deleted(self, m1):

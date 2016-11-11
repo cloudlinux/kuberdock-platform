@@ -1493,8 +1493,8 @@ define([
                                     layoutView.pager.show(new Pager.PaginatorView({view: view}));
                                 });
                         });
-                        App.rootLayout.contents.show(layoutView);
-                    })
+                        App.contents.show(layoutView);
+                    });
             });
         },
 
@@ -1654,7 +1654,6 @@ define([
         },
 
         pageNotFound: function(){
-            var that = this;
             require(['app_data/misc/views'], function(Views){
                 App.rootLayout.contents.show(new Views.PageNotFound());
             });

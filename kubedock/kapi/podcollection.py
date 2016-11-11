@@ -679,10 +679,13 @@ class PodCollection(object):
         if hasattr(pod, 'public_ip'):
             self._remove_public_ip(pod_id=pod_id, force=force)
         if hasattr(pod, 'domain'):
-            ok, message = dns_management.delete_type_A_record(pod.domain)
+            if current_app.config['AWS']:
+                ok, message = dns_management.delete_record(pod.domain, 'CNAME')
+            else:
+                ok, message = dns_management.delete_record(pod.domain, 'A')
             if not ok:
                 current_app.logger.error(
-                    u'Failed to delete A DNS record for pod "{}": {}'
+                    u'Failed to delete DNS record for pod "{}": {}'
                     .format(pod.id, message))
                 utils.send_event_to_role(
                     'notify:error', {'message': message}, 'Admin')
@@ -1666,8 +1669,13 @@ def prepare_and_run_pod(pod):
             container['state'] = POD_STATUSES.pending
 
         if hasattr(pod, 'domain'):
-            ok, message = dns_management.create_or_update_type_A_record(
-                pod.domain)
+            # In AWS case we use a CNAME record - pod.domain -> ELB DNS name
+            if current_app.config['AWS']:
+                ok, message = dns_management.create_or_update_record(
+                    pod.domain, 'CNAME')
+            else:
+                ok, message = dns_management.create_or_update_record(
+                    pod.domain, 'A')
             if ok:
                 ok, message = ingress_resource.create_ingress(
                     pod.containers, pod.namespace, pod.domain, pod.service)

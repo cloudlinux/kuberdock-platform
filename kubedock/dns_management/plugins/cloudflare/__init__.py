@@ -1,4 +1,4 @@
-from . import entry
+from . import entry  # noqa
 
 ALLOWED_ARGS = ['email', 'token', 'certtoken']
 

@@ -7,7 +7,7 @@ Usage of this plugin is not restricted to KuberDock on AWS and can be used on
 API reference: http://boto.cloudhackers.com/en/latest/ref/route53.html
 """
 
-from . import entry
+from . import entry  # noqa
 
 ALLOWED_ARGS = ['id', 'secret']
 

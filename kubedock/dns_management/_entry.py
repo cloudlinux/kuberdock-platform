@@ -32,7 +32,10 @@ class _IngressController(object):
             return self._public_ip
         if self._dbpod is None:
             return None
-        self._public_ip = self._dbpod.get_dbconfig('public_ip')
+        if current_app.config['AWS']:
+            self._public_ip = self._dbpod.get_dbconfig('public_aws')
+        else:
+            self._public_ip = self._dbpod.get_dbconfig('public_ip')
         return self._public_ip
 
     def is_ready(self):
@@ -108,7 +111,7 @@ class _Plugin(object):
         return True, None
 
 
-def _are_components_ready(components):
+def _are_components_ready(*components):
     """Checks if DNS management system is ready for assignment pod's domains.
     :param ingress_controller: optional object of _IngressController class
     :param plugin: optional object of _Plugin class
@@ -129,11 +132,11 @@ def is_domain_system_ready():
     """Checks if domain subsystem is ready and properly configured.
     :return: tuple of success flag and error description.
     """
-    return _are_components_ready([_IngressController(), _Plugin()])
+    return _are_components_ready(_IngressController(), _Plugin())
 
 
-def create_or_update_type_A_record(domain):
-    """Create or Update DNS A Record.
+def create_or_update_record(domain, record_type):
+    """Create or Update DNS record
 
     :param domain: Pod Domain Name
     :type domain: str
@@ -142,32 +145,39 @@ def create_or_update_type_A_record(domain):
     """
     ingress_controller = _IngressController()
     plugin = _Plugin()
-    isready, message = _are_components_ready([ingress_controller, plugin])
+    isready, message = _are_components_ready(ingress_controller, plugin)
     if not isready:
         return (
             False,
             u'Failed to create domain {}. Reason: {}'.format(domain, message))
 
-    new_ips = [ingress_controller.get_public_ip()]
     plugin_module = plugin.get_plugin()
     kwargs = plugin.get_kwargs()
     try:
-        plugin_module.entry.create_or_update_type_A_record(
-            domain, new_ips, **kwargs)
+        if record_type == 'A':
+            plugin_module.entry.delete_type_CNAME_record(domain, **kwargs)
+            new_ips = [ingress_controller.get_public_ip()]
+            plugin_module.entry.create_or_update_type_A_record(
+                domain, new_ips, **kwargs)
+        elif record_type == 'CNAME':
+            plugin_module.entry.delete_type_A_record(domain, **kwargs)
+            plugin_module.entry.create_or_update_type_CNAME_record(
+                domain, ingress_controller.get_public_ip(), **kwargs)
     except Exception as err:
         current_app.logger.exception(
-            u'Failed to run plugin create_or_update_type_A_record, '
-            u'domain: "{}"'.format(domain))
+            u'Failed to run plugin create_or_update_type_{}_record, '
+            u'domain: "{}"'.format(record_type, domain))
         return False, u'Exception from plugin "{}":\n{}'.format(
             plugin.name, repr(err))
     return True, None
 
 
-def delete_type_A_record(domain):
-    """Delete DNS A Record.
+def delete_record(domain, record_type):
+    """Delete DNS record given its type
 
     :param domain: Pod Domain Name
     :type domain: str
+    :type record_type: either A or CNAME string at the moment
     :return: tuple of success flag and error description If something goes
         wrong in DNS Management plugin
     """
@@ -178,15 +188,18 @@ def delete_type_A_record(domain):
             False,
             u'Failed to delete domain record "{}": {}'.format(domain, message))
     try:
-        plugin.get_plugin().entry.delete_type_A_record(
-            domain, **plugin.get_kwargs())
+        p = plugin.get_plugin()
+        if record_type == 'A':
+            p.entry.delete_type_A_record(domain, **plugin.get_kwargs())
+        elif record_type == 'CNAME':
+            p.entry.delete_type_CNAME_record(domain, **plugin.get_kwargs())
+        return True, None
     except Exception as err:
         current_app.logger.exception(
-            u'Failed to run plugin delete_type_A_record, domain: "{}"'
-            .format(domain))
+            u'Failed to run plugin delete_type_{}_record, domain: "{}"'
+            .format(record_type, domain))
         return False, u'Exception from plugin "{}":\n{}'.format(
             plugin.name, repr(err))
-    return True, None
 
 
 def check_if_zone_exists(domain):

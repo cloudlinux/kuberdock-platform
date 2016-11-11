@@ -3,12 +3,15 @@ from urlparse import urljoin
 
 import requests
 
+from ... import exceptions
+
 
 class Connect(object):
     def __init__(self, host, user, token):
         self.host = host
         self.user = user
-        _token = ''.join(token.split())  # if token entered as multi-line string
+        _token = ''.join(
+            token.split())  # if token entered as multi-line string
         self.token = _token
         self.api_type = 'json-api'
 
@@ -37,6 +40,13 @@ class Connect(object):
 
     def get(self, *args, **kwargs):
         return self._request('GET', *args, **kwargs)
+
+    def raise_for_status(self, response):
+        try:
+            if any(r['status'] != 1 for r in response['result']):
+                raise exceptions.GenericPluginError(response['result'])
+        except KeyError:
+            raise exceptions.UnexpectedResponse(response)
 
 
 class API(object):
@@ -75,7 +85,7 @@ class Zone(object):
                      record_class="IN",
                      record_type="A",
                      ttl=86400):
-        Record(
+        return Record(
             zone_name=self.name,
             connect=self.connect,
             **{
@@ -84,6 +94,20 @@ class Zone(object):
                 'class': record_class,
                 'ttl': ttl,
                 'type': record_type
+            }
+        ).add()
+
+    def add_cname_record(self, domain, target, ttl=86400):
+        return Record(
+            zone_name=self.name,
+            connect=self.connect,
+            # ** is used here because class and type are reserverd keywords
+            **{
+                'cname': target,
+                'name': domain.split('.')[0],
+                'ttl': ttl,
+                'class': 'IN',
+                'type': 'CNAME',
             }
         ).add()
 
@@ -96,7 +120,7 @@ class Record(object):
 
     def __setattr__(self, key, value):
         if key not in ['connect', 'info', 'zone_name']:
-            self.info['key'] = value
+            self.info[key] = value
         else:
             super(Record, self).__setattr__(key, value)
 
@@ -106,18 +130,24 @@ class Record(object):
     def add(self):
         new_info = self.info.copy()
         new_info['domain'] = self.zone_name
-        return self.connect.post('addzonerecord', data=new_info)
+        response = self.connect.post('addzonerecord', data=new_info)
+        self.connect.raise_for_status(response)
+        return response
 
     def edit(self):
         new_info = self.info.copy()
         new_info['domain'] = self.zone_name
-        return self.connect.post('editzonerecord', data=new_info)
+        response = self.connect.post('editzonerecord', data=new_info)
+        self.connect.raise_for_status(response)
+        return response
 
     def delete(self):
         assert self.zone_name, "Domain name should be define"
         assert self.info['Line'], "Line should be define"
 
-        return self.connect.post('removezonerecord', data={
+        response = self.connect.post('removezonerecord', data={
             'zone': self.zone_name,
             'line': self.info['Line']
         })
+        self.connect.raise_for_status(response)
+        return response

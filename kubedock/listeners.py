@@ -645,7 +645,7 @@ def listen_fabric_etcd(url):
                         last_reconnect = now
                         logger = current_app.logger.exception
                     logger('Error while etcd connect', exc_info=True)
-                except Exception as e:
+                except Exception:
                     current_app.logger.warning(
                         "Error while get keys", exc_info=True)
                 # if we get here, that mean some exception occurred or

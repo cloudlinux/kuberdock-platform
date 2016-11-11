@@ -2,8 +2,6 @@
 import unittest
 from collections import namedtuple
 
-import mock
-
 from kubedock import settings
 from kubedock.kapi import pd_utils
 

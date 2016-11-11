@@ -8,7 +8,8 @@ var conf = {
     PROD: false,
     TEST: false,
     LOCAL_PORT: 3000,
-    BUILD_PREFIX: `prepared-build${Math.random().toString(36).substr(2, 8)}`,
+    // BUILD_PREFIX: `prepared-build${Math.random().toString(36).substr(2, 8)}`,
+    BUILD_PREFIX: 'prepared',
 };
 
 // local config

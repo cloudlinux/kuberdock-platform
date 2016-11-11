@@ -268,3 +268,10 @@ class RegisteredHostExists(ResourceExists):
 
 class RegisteredHostError(APIError):
     message_template = 'Error during registering host: {message}'
+
+
+class CanNotRemoveIPPool(APIError):
+    message_template = 'Can not remove IP Pool. {message}'
+
+    def __init__(self, details):
+        super(CanNotRemoveIPPool, self).__init__(details={'message': details})

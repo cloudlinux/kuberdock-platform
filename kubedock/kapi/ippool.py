@@ -9,12 +9,14 @@ from ..kapi import podutils
 from .podcollection import PodCollection
 from .. import utils
 from .. import validation
-from ..exceptions import APIError, NoFreeIPs
+from ..exceptions import APIError, NoFreeIPs, CanNotRemoveIPPool
 from ..kapi.node import Node as K8SNode, NodeException, NodeNotFound
 from ..kapi.lbpoll import LoadBalanceService, get_service_provider
 from ..nodes.models import Node
+from ..domains.models import BaseDomain
 from ..pods.models import IPPool, PodIP, ip_network, Pod
 from ..settings import AWS, KUBERDOCK_INTERNAL_USER
+from ..constants import KUBERDOCK_INGRESS_POD_NAME
 
 
 class IpAddrPool(object):
@@ -191,14 +193,32 @@ class IpAddrPool(object):
                 for i in PodIP.filter(PodIP.pod_id.in_(pods.keys()))]
 
     @classmethod
-    @utils.atomic(nested=False)
     def delete(cls, network):
         network = str(ip_network(network))
         pool = IPPool.filter_by(network=network).first()
         if not pool:
             raise APIError("Network '{0}' does not exist".format(network), 404)
         cls._check_if_network_used_by_pod(network)
+        cls._remove_ingress_pod_if_possible_and_needed(network)
         cls._delete_network(network, pool)
+
+    @staticmethod
+    def _remove_ingress_pod_if_possible_and_needed(network):
+        pod = Pod.query.\
+            filter(Pod.name == KUBERDOCK_INGRESS_POD_NAME).join(PodIP).\
+            filter(PodIP.network == network).first()
+
+        if pod is None:
+            return
+
+        if BaseDomain.query.count() > 0:
+            raise CanNotRemoveIPPool(
+                "Can not remove network because there is an Ingress "
+                "controller pod running on it. Please remove all "
+                "domains from KuberDock so it would be possible to "
+                "remove the controller and the network")
+
+        PodCollection().delete(pod.id, force=True)
 
     @staticmethod
     def _delete_network(network, pool):
@@ -216,7 +236,14 @@ class IpAddrPool(object):
 
     @staticmethod
     def _check_if_network_used_by_pod(network):
-        pod_ip = PodIP.filter_by(network=network).first()
+        """
+        Does not take into account the ingress pod as it should go away if
+        not needed anymore so the network could be removed
+        """
+        pod_ip = PodIP.filter(PodIP.network == network).\
+            join(PodIP.pod).\
+            filter(Pod.name != KUBERDOCK_INGRESS_POD_NAME).first()
+
         if pod_ip is not None:
             raise APIError("You cannot delete this network '{0}' while "
                            "some of IP-addresses of this network are "

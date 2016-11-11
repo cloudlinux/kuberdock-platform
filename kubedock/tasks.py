@@ -453,7 +453,7 @@ def fix_pods_timeline():
     raise_if_failure(pods, "Can't get pods")
     pods = {
         pod['metadata']['labels']['kuberdock-pod-uid']:
-        k8s_json_object_hook(pod) for pod in pods.get('items', []) }
+        k8s_json_object_hook(pod) for pod in pods.get('items', [])}
     now = datetime.utcnow().replace(microsecond=0)
     t.append(time.time())
 

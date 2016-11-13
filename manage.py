@@ -34,6 +34,7 @@ from kubedock.updates.kuberdock_upgrade import get_available_updates
 from kubedock.updates.helpers import get_maintenance
 from kubedock import tasks
 from kubedock.kapi import licensing
+from kubedock.kapi import restricted_ports
 from kubedock.kapi.pstorage import check_namespace_exists, STORAGE_CLASS
 from kubedock.kapi import ippool
 from kubedock.kapi.node_utils import (
@@ -89,6 +90,10 @@ class Creator(Command):
         add_users_and_roles(password)
 
         generate_menu(aws)
+
+        # reject outgoing not authorized smtp packets
+        # to prevent spamming from containers
+        restricted_ports.set_port(25, 'tcp')
 
         # Fix packages id next val
         db.engine.execute("SELECT setval('packages_id_seq', 1, false)")

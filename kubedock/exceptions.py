@@ -242,9 +242,22 @@ class PVResizeFailed(APIError):
 class AllowedPortsException(object):
 
     class OpenPortError(APIError):
+        type = 'AllowedPortsException.OpenPortError'
         message_template = 'Error opening port: {message}'
 
     class ClosePortError(APIError):
+        type = 'AllowedPortsException.ClosePortError'
+        message_template = 'Error closing port: {message}'
+
+
+class RestrictedPortsException(object):
+
+    class OpenPortError(APIError):
+        type = 'RestrictedPortsException.OpenPortError'
+        message_template = 'Error opening port: {message}'
+
+    class ClosePortError(APIError):
+        type = 'RestrictedPortsException.ClosePortError'
         message_template = 'Error closing port: {message}'
 
 

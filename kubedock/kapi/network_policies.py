@@ -9,6 +9,7 @@ from ..utils import get_calico_ip_tunnel_address
 from ..exceptions import RegisteredHostError, SubsystemtIsNotReadyError
 from .. import settings
 from ..settings import (
+    CALICO_NETWORK,
     ELASTICSEARCH_REST_PORT,
     ELASTICSEARCH_PUBLISH_PORT,
     MASTER_IP, KD_NODE_HOST_ENDPOINT_ROLE
@@ -236,4 +237,23 @@ def get_node_allowed_ports_rule(ports, protocol):
         "action": "allow",
         "dst_ports": ports,
         "protocol": protocol,
+    }
+
+
+def get_pod_restricted_ports_policy(rules):
+    return {
+        "id": "kd-restricted-ports",
+        "inbound_rules": [],
+        "order": 5,
+        "outbound_rules": rules,
+        "selector": "has(kuberdock-pod-uid)"
+    }
+
+
+def get_pod_restricted_ports_rule(ports, protocol):
+    return {
+        "!dst_net": CALICO_NETWORK,
+        "action": "deny",
+        "dst_ports": ports,
+        "protocol": protocol
     }

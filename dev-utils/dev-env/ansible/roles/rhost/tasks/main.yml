@@ -14,7 +14,26 @@
   when: is_release_install
 
 - name: Deploy kcli on rhost
-  shell: echo "{{ admin_password }}" | bash kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" {{ add_testing_repo }} chdir="{{ rhost_deploy_path }}"
+  shell: KD_PASSWORD=admin KD_USER=admin bash kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" {{ add_testing_repo }} chdir="{{ rhost_deploy_path }}"
+  ignore_errors: True
+  register: rhost_deploy_result
+  tags:
+      - rhost-deploy
+
+- name: Fetching kcli-deploy log
+  fetch: src=/var/log/kuberdock_client_deploy.log dest=/tmp/kuberdock_client_deploy.log fail_on_missing=yes flat=yes
+  when: rhost_deploy_result|failed
+  tags:
+      - rhost-deploy
+
+- set_fact:
+    deploy_log: "{{ lookup('file', '/tmp/kuberdock_client_deploy.log').split('\n') }}"
+  when: rhost_deploy_result|failed
+  tags:
+      - rhost-deploy
+
+- debug: var=deploy_log
+  when: rhost_deploy_result|failed
   tags:
       - deploy
   when: not is_release_install

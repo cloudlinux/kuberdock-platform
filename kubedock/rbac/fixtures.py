@@ -27,6 +27,7 @@ resources = {
     'timezone': ('get',),
     'domains': ('create', 'get', 'edit', 'delete'),
     'allowed-ports': ('get', 'create', 'delete'),
+    'restricted-ports': ('get', 'create', 'delete'),
 }
 
 permissions_base = {
@@ -87,6 +88,9 @@ permissions = {
         ('allowed-ports', 'get'): True,
         ('allowed-ports', 'create'): True,
         ('allowed-ports', 'delete'): True,
+        ('restricted-ports', 'get'): True,
+        ('restricted-ports', 'create'): True,
+        ('restricted-ports', 'delete'): True,
     }),
     'User': dict(permissions_base, **{
         ('pods', 'own'): True,

@@ -294,6 +294,11 @@ ETCD_ALLOWED_PORT_PREFIX = '/kuberdock-allowed-ports'
 ETCD_ALLOWED_PORT_KEY_PATH = ETCD_NETWORK_POLICY_NODES_KEY + \
                              ETCD_ALLOWED_PORT_PREFIX
 
+# Restricted ports
+ETCD_RESTRICTED_PORT_PREFIX = '/kuberdock-restricted-ports'
+ETCD_RESTRICTED_PORT_KEY_PATH = ETCD_NETWORK_POLICY_NODES_KEY + \
+                                ETCD_RESTRICTED_PORT_PREFIX
+
 # Role label for nodes calico host endpoints
 KD_NODE_HOST_ENDPOINT_ROLE = 'kdnode'
 

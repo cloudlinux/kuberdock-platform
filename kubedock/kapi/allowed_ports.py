@@ -12,7 +12,7 @@ from ..kapi.network_policies import (
 from ..settings import ETCD_ALLOWED_PORT_KEY_PATH, ETCD_HOST, ETCD_PORT
 
 
-ETCD_ERROR_MESSAGE = "Can't update port policy in etcd"
+ETCD_ERROR_MESSAGE = "Can't update allowed port policy in etcd"
 
 
 def _get_allowed_ports_rules():

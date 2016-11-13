@@ -8,6 +8,7 @@ from endpoints.pods import PodsClient
 from endpoints.predefined_apps import PredefinedAppsClient
 from endpoints.pricing import PricingClient
 from endpoints.pstorage import PStorageClient
+from endpoints.restricted_ports import RestrictedPortsClient
 from endpoints.system_settings import SystemSettingsClient
 from endpoints.users import UsersClient
 from transport import Transport
@@ -38,6 +39,7 @@ class KDClient(object):
         self.pods = PodsClient(self)
         self.predefined_apps = PredefinedAppsClient(self)
         self.pricing = PricingClient(self)
+        self.restricted_ports = RestrictedPortsClient(self)
         self.system_settings = SystemSettingsClient(self)
         self.users = UsersClient(self)
 

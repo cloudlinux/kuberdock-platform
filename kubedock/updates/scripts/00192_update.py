@@ -17,7 +17,7 @@ from kubedock.kapi.nodes import (
     get_dns_policy_config,
     get_node_token,
 )
-from kubedock.kapi import podcollection
+from kubedock.kapi import podcollection, restricted_ports
 from kubedock.kapi.helpers import (
     KUBERDOCK_POD_UID,
     KUBERDOCK_TYPE,
@@ -33,6 +33,7 @@ from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod
 from kubedock.predefined_apps.models import PredefinedApp
 from kubedock.rbac import fixtures
+from kubedock.restricted_ports.models import RestrictedPort
 from kubedock.settings import (
     ETCD_NETWORK_POLICY_SERVICE,
     MASTER_IP, NODE_DATA_DIR, NODE_TOBIND_EXTERNAL_IPS
@@ -79,6 +80,17 @@ new_permissions = [
     ('allowed-ports', 'Admin', 'get', True),
     ('allowed-ports', 'Admin', 'create', True),
     ('allowed-ports', 'Admin', 'delete', True),
+]
+
+# update 00201
+new_resources = [
+    'restricted-ports',
+]
+
+new_permissions = [
+    ('restricted-ports', 'Admin', 'get', True),
+    ('restricted-ports', 'Admin', 'create', True),
+    ('restricted-ports', 'Admin', 'delete', True),
 ]
 
 
@@ -232,6 +244,23 @@ def _update_00197_upgrade(upd):
     upd.print_log('Upgrade permissions')
     fixtures.add_permissions(resources=new_resources,
                              permissions=new_permissions)
+
+
+def _update_00201_upgrade(upd):
+    upd.print_log('Create table for RestrictedPort model if not exists')
+    RestrictedPort.__table__.create(bind=db.engine, checkfirst=True)
+    upd.print_log('Upgrade permissions')
+    fixtures.add_permissions(resources=new_resources,
+                             permissions=new_permissions)
+    upd.print_log('reject outgoing not authorized smtp packets '
+                  'to prevent spamming from containers')
+    try:
+        restricted_ports.del_port(25, 'tcp')
+    except restricted_ports.RestrictedPortsException.OpenPortError:
+        pass
+    finally:
+        restricted_ports.set_port(25, 'tcp')
+
 
 
 # update 00176 stuff bellow (update 00175 absorbed by 00176)
@@ -892,6 +921,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     _update_00186_upgrade()
     _update_00191_upgrade(upd, calico_network)
     _update_00197_upgrade(upd)
+    _update_00201_upgrade(upd)
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):

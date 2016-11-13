@@ -13,6 +13,7 @@ from subs import (
     predefined_apps,
     pricing,
     pstorage,
+    restricted_ports,
     system_settings,
     users,
 )
@@ -123,5 +124,6 @@ main.add_command(pods.pods)
 main.add_command(predefined_apps.pa)
 main.add_command(pricing.pricing)
 main.add_command(pstorage.pstorage)
+main.add_command(restricted_ports.rp)
 main.add_command(system_settings.ss)
 main.add_command(users.users)

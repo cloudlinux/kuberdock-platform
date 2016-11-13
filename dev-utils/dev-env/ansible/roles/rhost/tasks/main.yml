@@ -20,7 +20,6 @@
 
 - name: Deploy kcli on rhost
   shell: KD_PASSWORD=admin KD_USER=admin bash kcli-deploy.sh -k "{{ hostvars[groups['master'][0]].ansible_default_ipv4.address }}" {{ add_testing_repo }} chdir="{{ rhost_deploy_path }}"
-  register: rhost_deploy_result
   ignore_errors: True
   register: rhost_deploy_result
   tags:

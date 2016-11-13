@@ -35,7 +35,10 @@
 
 - name: User dotfiles
   include: dotfiles.yml
+  static: no
   when: dotfiles is defined and dotfiles and is_dev_install
+  tags:
+    - dotfiles
 
 - name: User hooks
   include: hook.yml

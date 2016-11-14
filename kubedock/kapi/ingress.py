@@ -147,6 +147,7 @@ def get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
     config = {
         "name": KUBERDOCK_INGRESS_POD_NAME,
         "podIP": ip,
+        "labels": {"app": "kube-lego"},
         "replicas": 1,
         "kube_type": Kube.get_internal_service_kube_type(),
         "node": None,
@@ -166,7 +167,7 @@ def get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
                 ],
                 "kubes": 5,
                 "image": "gcr.io/google_containers/"
-                         "nginx-ingress-controller:0.8.1",
+                         "nginx-ingress-controller:0.8.3",
                 "env": [
                     {
                         "name": "POD_NAME",
@@ -205,11 +206,19 @@ def get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
                 "name": "kube-lego",
                 "command": [],
                 "kubes": 3,
-                "image": "jetstack/kube-lego:0.0.4",
+                "image": "jetstack/kube-lego:0.1.3",
                 "env": [
                     {
                         "name": "LEGO_EMAIL",
                         "value": email
+                    },
+                    {
+                        "name": "LEGO_POD_IP",
+                        "valueFrom": {
+                            "fieldRef": {
+                                "fieldPath": "status.podIP"
+                            }
+                        }
                     },
                     {
                         "name": "LEGO_NAMESPACE",

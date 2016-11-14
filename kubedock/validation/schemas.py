@@ -471,6 +471,13 @@ new_pod_schema.update({
         'type': 'string', 'required': False,
         'allowed': ['stopped', 'unpaid']
     },
+    'labels': {
+        'internal_only': True,
+        'type': 'dict',
+        'nullable': True,
+        'keyschema': {'type': 'string'},
+        'valueschema': {'type': 'string'},
+    }
 })
 
 pod_dump_data_schema = copy(new_pod_schema)  # deepcopy doesn't work

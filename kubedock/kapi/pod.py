@@ -425,6 +425,7 @@ class Pod(object):
             }
         }
         pod_config = config['spec']['template']
+        self._merge_pod_labels(pod_config)
 
         # Internal services may run on any nodes, do not care of kube type of
         # the node. All other kube types must be binded to the appropriate
@@ -444,6 +445,10 @@ class Pod(object):
         if hasattr(self, 'domain'):
             pod_config['metadata']['labels']['kuberdock-domain'] = self.domain
         return config
+
+    def _merge_pod_labels(self, config):
+        for k, v in getattr(self, 'labels', {}).items():
+            config['metadata']['labels'][k] = v
 
     def _get_volumes_to_prefill(self):
         return [

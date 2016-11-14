@@ -615,6 +615,7 @@ class PersistentStorage(object):
         """
         raise NotImplementedError()
 
+
 def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False,
                 catch_exitcodes=None):
     try:
@@ -1071,9 +1072,12 @@ class CephStorage(PersistentStorage):
                 )
             )
         except NodeCommandError:
+            # FIXME: we use warning for all possible errors. This is wrong,
+            # we should check whether retcode == 17 (already exists case) and
+            # print correct message with appropriate level
             current_app.logger.warning(
-                u'Failed to create CEPH drive "%s", size = %s. '
-                u'Possibly it already exists',
+                u"Failed to create CEPH drive '%s', size = %s. "
+                u"Possibly it's already exists or other error has happened",
                 name, size)
             return 1
         return 0
@@ -1501,7 +1505,8 @@ class LocalStorage(PersistentStorage):
             item['node_id'] = pd_node_id
         return res
 
-    def run_on_pd_node(self, pd, command, *args, **kwargs):
+    @staticmethod
+    def run_on_pd_node(pd, command, *args, **kwargs):
         node = Node.query.filter(Node.id == pd.node_id).first()
         if not node:
             current_app.logger.debug(

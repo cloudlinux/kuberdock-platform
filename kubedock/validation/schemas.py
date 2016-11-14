@@ -255,7 +255,7 @@ pod_resolve_schema = {
         'empty': False,
         'required': False,
         'maxlength': 63,
-        'regex' : {
+        'regex': {
             'regex': "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]))+$",
             'message': 'invalid resolve name'
         },

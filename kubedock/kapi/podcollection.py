@@ -1183,7 +1183,8 @@ class PodCollection(object):
         # were not released, then it will free them. If PD's already free, then
         # this call will do nothing.
         PersistentDisk.free(pod.id)
-        if pod.status == POD_STATUSES.stopping and pod.k8s_status is None:
+        if (pod.status in (POD_STATUSES.stopping, POD_STATUSES.preparing,)
+                and pod.k8s_status is None):
             pod.set_status(POD_STATUSES.stopped, send_update=True)
             return pod.as_dict()
         elif pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
@@ -1715,13 +1716,20 @@ def prepare_and_run_pod(pod):
                 utils.send_event_to_role(
                     'notify:error',
                     {'message': msg.format(pod.domain, message)}, 'Admin')
-                pods = PodCollection()
-                pods.update(pod.id, {'command': 'stop'})
+                # "pod stop" will be called below
                 raise APIError(
                     u'Failed to create DNS record for pod "{}". '
                     u'Please, contact administrator'.format(pod.name))
     except Exception as err:
         current_app.logger.exception('Failed to run pod: %s', pod)
+        # We have to stop pod here to release all the things that was allocated
+        # during partial start
+        pods = PodCollection()
+        pods.update(pod.id, {'command': 'stop'})
+        # If we forget to do commit here all Pod's status changes will be lost
+        # with rollback on raise as well as other changes related to
+        # "teardown" part like releasing of PDs
+        db.session.commit()
         if isinstance(err, APIError):
             # We need to update db_pod in case if the pod status was changed
             # since the last retrieval from DB
@@ -1730,7 +1738,6 @@ def prepare_and_run_pod(pod):
                 utils.send_event_to_user(
                     'notify:error', {'message': err.message},
                     db_pod.owner_id)
-        pod.set_status(POD_STATUSES.stopped, send_update=True)
         raise
     pod.set_status(POD_STATUSES.pending, send_update=True)
     return pod.as_dict()

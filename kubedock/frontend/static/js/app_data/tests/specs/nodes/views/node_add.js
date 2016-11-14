@@ -15,7 +15,7 @@ describe('nodes.views.NodeAddStep', function(){
     describe('validate', function(){
         let view, notify, utils, resetRewired,
             sandbox = sinon.sandbox.create(),
-            setupInfo = { AWS : false, ZTF : false },
+            setupInfo = { AWS : false, ZFS : false },
             symbols = [
                 'hostname#',
                 'hostn%ame',
@@ -76,7 +76,7 @@ describe('nodes.views.NodeAddStep', function(){
     describe('changeKubeType', function(){
         let view,
             sandbox = sinon.sandbox.create(),
-            setupInfo = { AWS : false, ZTF : false };
+            setupInfo = { AWS : false, ZFS : false };
 
         view = new View({model: new Model.NodeModel(), setupInfo });
         view.ui = { 'nodeTypeSelect' : {val:sandbox.stub().returns('2')} };
@@ -96,7 +96,7 @@ describe('nodes.views.NodeAddStep', function(){
     describe('changeHostname', function(){
         let view,
             sandbox = sinon.sandbox.create(),
-            setupInfo = { AWS : false, ZTF : false };
+            setupInfo = { AWS : false, ZFS : false };
 
         view = new View({model: new Model.NodeModel(), setupInfo });
         view.ui = { 'node_name' : {val:sandbox.stub().returns('new.example.com')} };
@@ -113,10 +113,26 @@ describe('nodes.views.NodeAddStep', function(){
         });
     });
 
+    describe('changeLsDevices (ZFS)', function(){
+        let view,
+            sandbox = sinon.sandbox.create(),
+            setupInfo = { AWS : false, ZFS : true };
+
+        view = new View({model: new Model.NodeModel(), setupInfo });
+        view.ui = { 'block_device' : {val:sandbox.stub().returns(['dev/sda2'])} };
+
+        afterEach(function () { sandbox.restore(); });
+
+        it(`"lsdevices" should be equal "${view.ui.block_device.val()}" in model`, function() {
+            view.changeLsDevices();
+            expect(view.model.get('lsdevices')).to.be.equal(view.ui.block_device.val());
+        });
+    });
+
     describe('complete', function(){
         let App, fakeNodes, view, resetRewired, utils,
             sandbox = sinon.sandbox.create(),
-            setupInfo = { AWS : false, ZTF : false };
+            setupInfo = { AWS : false, ZFS : false };
 
         view = new View({model: new Model.NodeModel({}), setupInfo });
         view.ui = { 'node_name' : {val:sandbox.stub().returns('new.example.com'),

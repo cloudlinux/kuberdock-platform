@@ -1536,6 +1536,30 @@ body{
                 border-color: #e5e5e5;
             }
         }
+        .filter-option{
+            .label-kuberdock{
+                .border-radius(2px);
+                font-size: 0;
+                color: #1d1d1d;
+                font-weight: 400;
+                position: relative;
+                display: inline-block;
+                border: solid 1px #cecece;
+                padding: 6px 10px 6px 6px;
+                background-color: #e4f3ff;
+                &:after{
+                    top: 0;
+                    bottom: 0;
+                    width: 7px;
+                    content: '';
+                    right: -8px;
+                    margin: auto;
+                    height: 29px;
+                    position: absolute;
+                    background-color: #fff;
+                }
+            }
+        }
         &.btn-group{
             &.open{
                 background-color: #fff;
@@ -1574,6 +1598,14 @@ body{
                             border-color: #3197ee;
                             background-color: #f5fafe;
                         }
+                        .label{
+                            color: inherit;
+                            font-size: 12px;
+                            font-weight: 400;
+                            b{
+                                color: #0074bf;
+                            }
+                        }
                     }
                     &.selected{
                         a{
@@ -1585,15 +1617,28 @@ body{
                                 border-color: #3197ee;
                                 background-color: #f5fafe;
                             }
+                            span{
+                                &.text{
+                                    margin-right: 0;
+                                }
+                                &.check-mark{
+                                    line-height: 47px;
+                                    margin-top: 0 !important;
+                                }
+                            }
                         }
                     }
                     &.disabled{
+                        background-color: #f8f8f8;
+                        .label-kuberdock{
+                            color: #1d1d1d;
+                        }
                         a{
                             color: #c0c0c0;
                             border-color: transparent;
                             background-color: transparent;
                             &:hover{
-                                background-color: #F8F8F8;
+                                background-color: #f8f8f8;;
                             }
                         }
                     }

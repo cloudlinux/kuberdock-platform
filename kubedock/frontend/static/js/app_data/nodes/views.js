@@ -131,44 +131,57 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
         'nodeTypeSelect' : 'select.kube_type',
         'node_name'      : 'input#node_address',
         'selectpicker'   : '.selectpicker',
-        'add_field'      : '.add',
-        'remove_field'   : '.remove',
         'block_device'   : '.block-device',
         'input'          : 'input'
     },
 
     events:{
-        'click @ui.add_field'       : 'addField',
-        'click @ui.remove_field'    : 'removeField',
         'click @ui.nodeAddBtn'      : 'complete',
         'focus @ui.input'           : 'removeError',
         'change @ui.nodeTypeSelect' : 'changeKubeType',
+        'change @ui.node_name'      : 'changeHostname',
         'change @ui.block_device'   : 'changeLsDevices',
-        'change @ui.node_name'      : 'changeHostname'
+        'blur @ui.node_name'        : 'getLsdevices'
     },
 
     initialize(options){
         this.setupInfo = options.setupInfo;
-        if (!this.setupInfo.AWS && this.setupInfo.ZFS){
-            this.model.set('lsdevices', ['']);
+        if (this.setupInfo.ZFS && !this.setupInfo.AWS){
+            this.model.set('lsdevices', []);
         }
     },
 
-    changeKubeType(){ this.model.set('kube_type', Number(this.ui.nodeTypeSelect.val())); },
-    changeHostname(){ this.model.set('hostname', this.ui.node_name.val()); },
-
-    changeLsDevices(evt){
-        var target = $(evt.target),
-            index = target.parent().index() - 1;
-        this.model.get('lsdevices')[index] = target.val().trim();
+    getLsdevices(){
+        let nodename = this.ui.node_name.val().trim();
+        if (!this.setupInfo.AWS && this.setupInfo.ZFS && nodename){
+            utils.preloader.show();
+            $.ajax({
+                authWrap: true,
+                url: `/api/nodes/lsblk/${nodename}`,
+            }).always(utils.preloader.hide).fail(utils.notifyWindow)
+            .done((rs) => {
+                if (rs.status === 'OK'){
+                    this.lsdevices = rs.data;
+                    this.render();
+                }
+            }).fail(() => {
+                delete this.lsdevices;
+                this.render();
+            });
+        }
     },
+
+    changeHostname(){ this.model.set('hostname', this.ui.node_name.val()); },
+    changeLsDevices(){ this.model.set('lsdevices', this.ui.block_device.val()); },
+    changeKubeType(){ this.model.set('kube_type', Number(this.ui.nodeTypeSelect.val())); },
 
     templateHelpers(){
         return {
-            kubeTypes: App.kubeTypeCollection.filter(function(kube){
+            kubeTypes: App.kubeTypeCollection.filter((kube) => {
                 return kube.id !== -1;  // "Internal service" kube-type
             }),
-            setupInfo: this.setupInfo
+            setupInfo: this.setupInfo,
+            findLsdevice: this.lsdevices
         };
     },
 
@@ -178,18 +191,6 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
     },
 
     removeError(evt){ $(evt.target).removeClass('error'); },
-
-    addField(){
-        this.model.get('lsdevices').push('');
-        this.render();
-    },
-
-    removeField(evt){
-        var target = $(evt.target),
-            index = target.parents('.relative').index() - 1;
-        this.model.get('lsdevices').splice(index, 1);
-        this.render();
-    },
 
     validate(data){
         let pattern = /^(?=.{1,255}$)[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?(?:\.[0-9A-Z](?:(?:[0-9A-Z]|-){0,61}[0-9A-Z])?)*\.?$/i;  // eslint-disable-line max-len
@@ -216,7 +217,6 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
 
     complete() {
         let data = [],
-            that = this,
             zfs = this.setupInfo.ZFS,
             aws = this.setupInfo.AWS,
             hostname = this.ui.node_name.val();
@@ -228,34 +228,34 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
             data = {
                 hostname: hostname,
                 status: 'pending',
-                kube_type: that.model.get('kube_type'),
-                lsdevices: _.compact(that.model.get('lsdevices')),
+                kube_type: this.model.get('kube_type'),
+                lsdevices: _.compact(this.model.get('lsdevices')),
                 install_log: ''
             };
         } else {
             data = {
                 hostname: hostname,
                 status: 'pending',
-                kube_type: that.model.get('kube_type'),
+                kube_type: this.model.get('kube_type'),
                 install_log: ''
             };
         }
 
         if (this.validate(data)) {
-            App.getNodeCollection().done(function(nodeCollection){
+            App.getNodeCollection().done((nodeCollection) => {
                 utils.preloader.show();
                 nodeCollection.create(data, {
                     wait: true,
                     complete: utils.preloader.hide,
-                    success:  function(){
+                    success: () => {
                         App.navigate('nodes', {trigger: true});
                         utils.notifyWindow(
                             'Node "' + hostname + '" is added successfully',
                             'success'
                         );
                     },
-                    error: function(collection, response){
-                        that.ui.node_name.addClass('error');
+                    error:(collection, response) => {
+                        this.ui.node_name.addClass('error');
                         utils.notifyWindow(response);
                     },
                 });

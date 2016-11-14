@@ -14,13 +14,21 @@
             <div class="form-field row">
                 <div class="col-md-6 col-sm-12">
                     <label>Block devices for ZFS pool</label>
-                    <% _.each(lsdevices, function(device, index){ %>
-                        <div class="relative">
-                            <input class="find-input block-device" type="text" placeholder="Enter block device name" value="<%= device %>" />
-                            <%= index > 0 ? '<span class="remove">Remove item</span>' : '' %>
-                        </div>
-                    <% }); %>
-                    <span class="add"><span>Add more</span></span>
+                    <select class="selectpicker block-device" multiple data-live-search="true"
+                        <%= findLsdevice ? 'title="Select block device"' : 'disabled title="Enter node name to enable this field"' %> >
+                        <% _.each(findLsdevice, function(device){ %>
+                            <option
+                                value="<%= device.DEVICE %>"
+                                data-content="<span class='label label-kuberdock'>
+                                    <span>
+                                        <%= device.NAME %> (<%= Math.round(device.SIZE/1073741824) %>GB)
+                                        <%= device.MOUNTPOINT ? ' - mounted to <b>' +  device.MOUNTPOINT + '</b>' : '' %>
+                                    </span>
+                                </span>"
+                                <%= device.MOUNTPOINT ? 'disabled' : '' %>>
+                            </option>
+                        <% }) %>
+                    </select>
                 </div>
             </div>
         <% } %>

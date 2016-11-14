@@ -23,6 +23,7 @@ from pygments.lexers.python import PythonTracebackLexer
 from tests_integration.lib.exceptions import PublicPortWaitTimeoutException, \
     NonZeroRetCodeException
 from tests_integration.lib.timing import log_timing_ctx
+from tests_integration.lib.vendor.paramiko_expect import SSHClientInteraction
 
 NO_FREE_IPS_ERR_MSG = 'no free public IP-addresses'
 LOG = logging.getLogger(__name__)
@@ -67,6 +68,20 @@ def ssh_exec(ssh, cmd, timeout=None, check_retcode=True, get_pty=False):
 
     _proceed_exec_result(out, err, ret_code, check_retcode)
     return ret_code, out, err
+
+
+def ssh_exec_live(ssh, cmd, timeout=None, check_retcode=True):
+    LOG.debug(u"{}Calling SSH live: '{}'{}".format(Style.DIM, cmd,
+                                                   Style.RESET_ALL))
+    interact = SSHClientInteraction(ssh, timeout=timeout, display=True,
+                                    logger=logging.getLogger())
+    interact.expect('.*')
+    interact.send(cmd + "; exit $?")  # needed to not depend on prompt type
+    interact.tail()
+    ret_code = interact.channel.recv_exit_status()
+
+    _proceed_exec_result("", "", ret_code, check_retcode)
+    return ret_code, "", ""
 
 
 @contextmanager

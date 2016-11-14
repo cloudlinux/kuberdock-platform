@@ -62,9 +62,6 @@ class NetworkingUpgradedPipeline(UpgradedPipelineMixin, NetworkingPipeline):
         'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
     }
 
-    def post_create_hook(self):
-        super(NetworkingPipeline, self).post_create_hook()
-
 
 class NetworkingRhostCent6Pipeline(NetworkingPipeline):
     NAME = 'networking_rhost_cent6'
@@ -176,7 +173,6 @@ class MasterRestorePipeline(Pipeline):
 
 
 class ReleaseUpdatePipeline(Pipeline):
-    skip_reason = "Disabled until 1.5.0 Beta becomes Release"
     NAME = 'release_update'
     ROUTABLE_IP_COUNT = 3
     ENV = {
@@ -184,6 +180,35 @@ class ReleaseUpdatePipeline(Pipeline):
         'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch',
         'KD_INSTALL_TYPE': 'release',
     }
+
+    def post_create_hook(self):
+        self._add_beta_repos()  # TODO remove when 1.5.0 is released
+        # Upgrade itself is done later, in the mid of test
+        super(ReleaseUpdatePipeline, self).post_create_hook()
+
+    def _add_beta_repos(self):
+        all_hosts = ['master']
+        all_hosts.extend(self.cluster.node_names)
+        all_hosts.extend(self.cluster.rhost_names)
+        for host in all_hosts:
+            cmd = """cat > /etc/yum.repos.d/kube-cloudlinux-beta6.repo << EOF
+[kube-beta6]
+name=kube-beta-6
+baseurl=http://repo.cloudlinux.com/kuberdock-beta/6/x86_64/
+enabled=1
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+EOF"""
+            self.cluster.ssh_exec(host, cmd)
+            cmd = """cat > /etc/yum.repos.d/kube-cloudlinux-beta7.repo << EOF
+[kube-beta7]
+name=kube-beta-7
+baseurl=http://repo.cloudlinux.com/kuberdock-beta/7/x86_64/
+enabled=1
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+EOF"""
+            self.cluster.ssh_exec(host, cmd)
 
 
 class WebUIPipeline(Pipeline):

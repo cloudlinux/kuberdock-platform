@@ -39,7 +39,7 @@ export const PodWizardLayout = Backbone.Marionette.LayoutView.extend({
     },
     onBeforeShow: utils.preloader.show,
     onShow: utils.preloader.hide,
-    initializen(){
+    initialize(){
         this.listenTo(this.steps, 'show', function(view){
             _(['pod:save_changes', 'pod:pay_and_apply']).each(function(event){
                 this.listenTo(view, event, _.bind(this.trigger, this, event));

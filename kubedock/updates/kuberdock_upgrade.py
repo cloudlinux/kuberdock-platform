@@ -11,24 +11,25 @@ from datetime import datetime
 from importlib import import_module
 
 import requests
+import yum
 from fabric.api import env, run
 from flask.ext.migrate import Migrate
 from sqlalchemy import or_
 
-import yum
-from kubedock import settings
-from kubedock.api import create_app
-from kubedock.core import ConnectionPool
-from kubedock.nodes.models import Node
-from kubedock.updates import helpers
-from kubedock.updates.health_check import check_cluster
-from kubedock.updates.models import Updates, db
-from kubedock.utils import UPDATE_STATUSES, get_api_url
 
 if __name__ == '__main__' and __package__ is None:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(
         os.path.realpath(__file__)))))
 
+# all kubedock imports should be after sys.path manipulations
+from kubedock import settings                                           # noqa
+from kubedock.api import create_app                                     # noqa
+from kubedock.core import ConnectionPool                                # noqa
+from kubedock.nodes.models import Node                                  # noqa
+from kubedock.updates import helpers                                    # noqa
+from kubedock.updates.health_check import check_cluster                 # noqa
+from kubedock.updates.models import Updates, db                         # noqa
+from kubedock.utils import UPDATE_STATUSES, get_api_url                 # noqa
 
 
 class CLI_COMMANDS:

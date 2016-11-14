@@ -1,10 +1,7 @@
 import json
-import pipes
 
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.integration_test_utils import assert_raises, \
-    assert_eq, hooks
+from tests_integration.lib.utils import assert_raises, assert_eq, hooks
 from tests_integration.lib.pipelines import pipeline
 
 PREDEFINED_APPLICATION_FILES = {
@@ -138,8 +135,8 @@ def test_add_get_delete_predefined_application_template_by_name(cluster):
 @hooks(setup=_clear_pa_catalog)
 def test_add_get_delete_predefined_application_template_by_id(cluster):
     # Check that PA template can be added from the cmd line
-    _, template, _ = cluster.ssh_exec("master", "cat {}".format(
-                                PREDEFINED_APPLICATION_FILES["drupal"]))
+    _, template, _ = cluster.ssh_exec(
+        "master", "cat {}".format(PREDEFINED_APPLICATION_FILES["drupal"]))
     name = "my pa2"
     template = _pa_create(cluster, name, data=template, check_output=True)
 
@@ -274,8 +271,8 @@ def test_update_pa_template_by_name(cluster):
     _pa_update(cluster, f=PREDEFINED_APPLICATION_FILES["drupal"], name=name)
 
     template = _pa_get(cluster, file_only=True, name=name)
-    _, yaml, _ = cluster.ssh_exec("master", "cat {}".
-                                  format(PREDEFINED_APPLICATION_FILES["drupal"]))
+    _, yaml, _ = cluster.ssh_exec(
+        "master", "cat {}".format(PREDEFINED_APPLICATION_FILES["drupal"]))
     assert_eq(template, yaml)
 
 
@@ -295,8 +292,8 @@ def test_update_pa_template_by_id(cluster):
     _pa_update(cluster, f=PREDEFINED_APPLICATION_FILES["drupal"], id=id_)
 
     template = _pa_get(cluster, file_only=True, id=id_)
-    _, yaml, _ = cluster.ssh_exec("master", "cat {}".
-                                  format(PREDEFINED_APPLICATION_FILES["drupal"]))
+    _, yaml, _ = cluster.ssh_exec(
+        "master", "cat {}".format(PREDEFINED_APPLICATION_FILES["drupal"]))
     assert_eq(template, yaml)
 
 
@@ -324,8 +321,7 @@ def test_validating_yaml_before_updating_pa_template(cluster):
 def test_add_and_run_pa(cluster):
     name = "dokuwiki.yaml"
     _pa_create(cluster, name, f=PREDEFINED_APPLICATION_FILES["dokuwiki"])
-    pod = cluster.pods.create_pa(name, command="kdctl", owner="test_user",
-                                 rnd_str="kdctl", wait_ports=True,
+    pod = cluster.pods.create_pa(name, owner="test_user", wait_ports=True,
                                  wait_for_status='running', healthcheck=True)
     pod.delete()
 

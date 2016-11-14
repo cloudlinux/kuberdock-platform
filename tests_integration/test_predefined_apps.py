@@ -1,3 +1,4 @@
+from tests_integration.lib.utils import assert_eq
 from tests_integration.lib.pipelines import pipeline
 
 
@@ -67,27 +68,27 @@ def test_opencart_pa(cluster):
     check_pa(cluster, 'opencart.yaml')
 
 
-@pipeline('predefined_apps')
+@pipeline('predefined_apps', thread=2)
 def test_limesurvey_pa(cluster):
     check_pa(cluster, 'limesurvey.yaml')
 
 
-@pipeline('predefined_apps')
+@pipeline('predefined_apps', thread=2)
 def test_koken_pa(cluster):
     check_pa(cluster, 'koken.yaml')
 
 
-@pipeline('predefined_apps')
+@pipeline('predefined_apps', thread=2)
 def test_owncloud_pa(cluster):
     check_pa(cluster, 'owncloud.yaml')
 
 
-@pipeline('predefined_apps')
+@pipeline('predefined_apps', thread=2)
 def test_phpbb_pa(cluster):
     check_pa(cluster, 'phpbb.yaml')
 
 
-@pipeline('predefined_apps')
+@pipeline('predefined_apps', thread=2)
 def test_wordpress_pa(cluster):
     check_pa(cluster, 'wordpress.yaml')
 
@@ -112,7 +113,7 @@ def test_mongodb_pa(cluster):
     check_pa(cluster, 'mongodb.yaml')
 
 
-@pipeline('predefined_apps', thread=2, skip_reason="FIXME in AC-4988")
+@pipeline('predefined_apps', thread=2)
 def test_odoo_pa(cluster):
     check_pa(cluster, 'odoo.yaml')
 
@@ -125,3 +126,33 @@ def test_wordpresselastic_pa(cluster):
 @pipeline('predefined_apps', thread=2)
 def test_wordpressbackup_pa(cluster):
     check_pa(cluster, 'wordpress_with_backup.yaml')
+
+
+@pipeline('kubetype')
+def test_redis_pa_tiny(cluster):
+    pod = cluster.pods.create_pa('custom_redis.yaml', plan_id=0,
+                                 wait_ports=True,
+                                 wait_for_status='running',
+                                 healthcheck=True)
+    spec = pod.get_spec()
+    assert_eq(spec['containers'][0]['kubes'], 1)
+
+
+@pipeline('kubetype')
+def test_redis_pa_standard(cluster):
+    pod = cluster.pods.create_pa('custom_redis.yaml', plan_id=1,
+                                 wait_ports=True,
+                                 wait_for_status='running',
+                                 healthcheck=True)
+    spec = pod.get_spec()
+    assert_eq(spec['containers'][0]['kubes'], 2)
+
+
+@pipeline('kubetype')
+def test_redis_pa_highmem(cluster):
+    pod = cluster.pods.create_pa('custom_redis.yaml', plan_id=2,
+                                 wait_ports=True,
+                                 wait_for_status='running',
+                                 healthcheck=True)
+    spec = pod.get_spec()
+    assert_eq(spec['containers'][0]['kubes'], 4)

@@ -1,42 +1,24 @@
-import itertools
 import json
 import logging
 import os
 import pipes
-import subprocess
 import sys
 import time
-import urllib2
-from collections import namedtuple
 from contextlib import contextmanager
-from datetime import datetime
 
-import memcache
 import paramiko
-import redis
-import vagrant
 from ipaddress import IPv4Network
 
 from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
-    VmCreateError, VmProvisionError, NonZeroRetCodeException, \
-    ClusterUpgradeError
-from tests_integration.lib.exceptions import DiskNotFound, \
-    VagrantIsAlreadyUpException
-from tests_integration.lib.exceptions import StatusWaitException, \
-    UnexpectedKubectlResponse, PodIsNotRunning, \
-    IncorrectPodDescription, CannotRestorePodWithMoreThanOneContainer
-from tests_integration.lib.integration_test_utils import \
-    kube_type_to_int, wait_net_port, \
-    kube_type_to_str
-from tests_integration.lib.integration_test_utils import \
-    ssh_exec, assert_eq, assert_in, merge_dicts, retry, \
-    escape_command_arg, log_dict, get_rnd_low_string
+    NonZeroRetCodeException, ClusterUpgradeError
+from tests_integration.lib.exceptions import DiskNotFound
+from tests_integration.lib.infra_providers import InfraProvider
+from tests_integration.lib.pa import KDPAPod
+from tests_integration.lib.pod import KDPod
 from tests_integration.lib.timing import log_timing, log_timing_ctx
-
-OPENNEBULA = "opennebula"
-VIRTUALBOX = "virtualbox"
-PROVIDER = OPENNEBULA
-DEFAULT_WAIT_POD_TIMEOUT = 10 * 60
+from tests_integration.lib.utils import \
+    ssh_exec, assert_eq, assert_in, retry, \
+    escape_command_arg, get_rnd_low_string
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger("paramiko").setLevel(logging.WARNING)
@@ -44,122 +26,50 @@ LOG = logging.getLogger(__name__)
 
 
 class KDIntegrationTestAPI(object):
-    vm_names = {
-        "master": "kd_master",
-        "node1": "kd_node1",
-        "node2": "kd_node2",
-        "rhost1": "kd_rhost1",
-    }
-
-    def __init__(self, override_envs=None, out_cm=None, err_cm=None):
+    def __init__(self, provider):
+        # type: (InfraProvider) -> KDIntegrationTestAPI
         """
         API client for interaction with kuberdock cluster
-
-        :param override_envs: a dictionary of environment variables values
-        to override. Useful when your integration test requires additional
-        env variables or override ones taken from OS env.
         """
-        take_from_env = [
-            "HOME",
-            "PATH",
-            "SSH_AUTH_SOCK",
 
-            "DOCKER_TLS_VERIFY",
-            "DOCKER_HOST",
-            "DOCKER_CERT_PATH",
-
-            "VAGRANT_CWD",
-            "VAGRANT_NO_PARALLEL",
-            "VAGRANT_DOTFILE_PATH",
-
-            "ANSIBLE_CALLBACK_WHITELIST",
-
-            "KD_ONE_URL",
-            "KD_ONE_USERNAME",
-            "KD_ONE_PASSWORD",
-            "KD_ONE_PRIVATE_KEY",
-
-            "KD_MASTER_MEMORY",
-            "KD_MASTER_CPUS",
-            "KD_NODE_MEMORY",
-            "KD_NODE_CPUS",
-            "KD_NODES_COUNT",
-            "KD_NODE_TYPES",
-            "KD_NEBULA_TEMPLATE_ID",
-
-            "KD_RHOSTS_COUNT",
-            "KD_NEBULA_RHOST_TEMPLATE_ID",
-
-            "KD_ONE_PUB_IPS",
-            "KD_LICENSE",
-            "KD_INSTALL_TYPE",
-            "KD_TESTING_REPO",
-            "KD_FIXED_IP_POOLS",
-            "KD_TIMEZONE"
-
-            "KD_CEPH",
-            "KD_CEPH_USER",
-            "KD_CEPH_CONFIG",
-            "KD_CEPH_USER_KEYRING",
-            "KD_PD_NAMESPACE",
-
-            "KD_INSTALL_PLESK",
-            "KD_PLESK_LICENSE",
-        ]
-        kd_env = {e: os.environ.get(e)
-                  for e in take_from_env if os.environ.get(e)}
-
-        if override_envs is None:
-            override_envs = {}
-
-        kd_env = merge_dicts(kd_env, override_envs)
-
+        self._provider = provider
         self.kuberdock_root = '/var/opt/kuberdock'
-        self.vagrant = vagrant.Vagrant(quiet_stdout=False, quiet_stderr=False,
-                                       env=kd_env, out_cm=out_cm,
-                                       err_cm=err_cm)
-        self.kd_env = kd_env
         self.ip_pools = IPPoolList(self)
         self.pods = PodList(self)
         self.pas = PAList(self)
         self.nodes = NodeList(self)
         self.pvs = PVList(self)
         self.users = UserList(self)
-        self.created_at, self._ssh_connections = None, {}
+        self._ssh_connections = {}
 
-    @staticmethod
-    def _cut_vm_name_prefix(name):
-        return name.replace('kd_', '')
+    @property
+    def env(self):
+        return self._provider.env
+
+    @property
+    def created_at(self):
+        return self._provider.created_at
 
     @property
     def node_names(self):
-        names = (n.name for n in self.vagrant.status() if '_node' in n.name)
-        return [self._cut_vm_name_prefix(n) for n in names]
+        return self._provider.node_names
 
     def get_host_ip(self, hostname):
-        return self.vagrant.hostname('kd_{}'.format(hostname))
+        return self._provider.get_host_ip(hostname)
 
     def get_ssh(self, host):
-        host = self.vm_names[host]
+        host = self._provider.vm_names[host]
         if host in self._ssh_connections:
             return self._ssh_connections[host]
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
-        if PROVIDER == OPENNEBULA:
-            def_key = "".join([os.environ.get("HOME"), "/.ssh/id_rsa"])
-            key_file = os.environ.get("KD_ONE_PRIVATE_KEY", def_key)
-        else:
-            # NOTE: this won't give proper results inside docker, another
-            # reason why docker+vbox is not supported
-            key_file = self.vagrant.conf()["IdentityFile"]
-
         with log_timing_ctx("ssh.connect({})".format(host)):
-            ssh.connect(self.vagrant.hostname(host),
-                        port=int(self.vagrant.port(host)),
-                        username="root",
-                        key_filename=key_file)
+            ssh.connect(self._provider.get_hostname(host),
+                        port=self._provider.get_host_ssh_port(host),
+                        username=self._provider.ssh_user,
+                        key_filename=self._provider.ssh_key)
 
         self._ssh_connections[host] = ssh
         return ssh
@@ -187,41 +97,7 @@ class KDIntegrationTestAPI(object):
         _, main_ip, _ = self.ssh_exec('master', cmd)
 
         ip_pool = str(IPv4Network(unicode(main_ip), strict=False))
-        self.ip_pools.add(ip_pool, includes=self.kd_env['KD_ONE_PUB_IPS'])
-
-    def start(self, provider=PROVIDER):
-        if self._any_vm_is_running():
-            raise VagrantIsAlreadyUpException(
-                "Vagrant is already up. Either perform \"vagrant destroy\" "
-                "if you want to run tests on new cluster, or make sure you do "
-                "not pass BUILD_CLUSTER env variable if you want run tests on "
-                "the existing one.")
-
-        log_dict(self.kd_env, "Cluster settings:", hidden=('KD_ONE_PASSWORD',))
-
-        if provider == OPENNEBULA:
-            try:
-                with log_timing_ctx("vagrant up --no-provision"):
-                    retry(self.vagrant.up, tries=3, interval=15,
-                          provider=provider, no_provision=True)
-                self.created_at = datetime.utcnow()
-                self._log_vm_ips()
-            except subprocess.CalledProcessError:
-                raise VmCreateError('Failed to create VMs in OpenNebula')
-
-            try:
-                with log_timing_ctx("vagrant provision"):
-                    self.vagrant.provision()
-            except subprocess.CalledProcessError:
-                raise VmProvisionError('Failed Ansible provision')
-        else:
-            try:
-                with log_timing_ctx("vagrant up (with provision)"):
-                    self.vagrant.up(provider=provider)
-                self.created_at = datetime.utcnow()
-            except subprocess.CalledProcessError:
-                raise VmCreateError(
-                    'Failed either to create or provision VMs')
+        self.ip_pools.add(ip_pool, includes=self.env['KD_ONE_PUB_IPS'])
 
     @log_timing
     def upgrade(self, upgrade_to='latest', use_testing=False,
@@ -242,10 +118,6 @@ class KDIntegrationTestAPI(object):
             # while full log is still printed by ssh_exec logging
             raise ClusterUpgradeError('kuberdock-upgrade non-zero retcode')
 
-    @log_timing
-    def destroy(self):
-        self.vagrant.destroy()
-
     @contextmanager
     def temporary_stop_host(self, host):
         """
@@ -262,15 +134,11 @@ class KDIntegrationTestAPI(object):
 
     @log_timing
     def power_off(self, host):
-        vm_name = self.vm_names[host]
-        LOG.debug("VM Power Off: '{}'".format(vm_name))
-        self.vagrant.halt(vm_name=vm_name)
+        self._provider.power_off(host)
 
     @log_timing
     def power_on(self, host):
-        vm_name = self.vm_names[host]
-        LOG.debug("VM Power On: '{}'".format(vm_name))
-        retry(self.vagrant.up, tries=3, vm_name=vm_name)
+        self._provider.power_on(host)
 
     def get_host_status(self, host):
         _, out, _ = self.kdctl("nodes list", out_as_dict=True)
@@ -389,6 +257,7 @@ class KDIntegrationTestAPI(object):
         cmd = '. /etc/profile; ' + cmd
         return ssh_exec(ssh, cmd, check_retcode=check_retcode)
 
+    # TODO move to cluster.settings
     def set_system_setting(self, value, setting_id=None, name=None):
         cmd = "system-settings update "
         if setting_id:
@@ -406,34 +275,9 @@ class KDIntegrationTestAPI(object):
         _, data, _ = self.kdctl(cmd, out_as_dict=True)
         return data['data']['value']
 
-    def _any_vm_is_running(self):
-        return any(vm.state != "not_created" for vm in self.vagrant.status())
-
-    @log_timing
-    def _log_vm_ips(self):
-        for vm in self.vagrant.status():
-            LOG.debug("{} IP is: {}".format(
-                vm.name, self.vagrant.hostname(vm.name)))
-
     def _kcli_config_path(self, user):
         if user is not None:
             return '/etc/kubecli_{}.conf'.format(user)
-
-
-class RESTMixin(object):
-    # Expectations:
-    # self.public_ip
-
-    def do_GET(self, scheme="http", path='/'):
-        url = '{0}://{1}{2}'.format(scheme, self.public_ip, path)
-        LOG.debug("Issuing GET to {0}".format(url))
-        req = urllib2.urlopen(url)
-        res = unicode(req.read(), 'utf-8')
-        LOG.debug(u"Response:\n{0}".format(res))
-        return res
-
-    def do_POST(self, path='/', headers=None, body=""):
-        pass
 
 
 class UserList(object):
@@ -580,15 +424,21 @@ class IPPoolList(object):
             cmd += ' --node {}'.format(hostname)
         cmd += ' -e "{}"'.format(excludes)
         cmd += ' -i "{}"'.format(includes)
-        self.cluster.manage(cmd)
+        return self.cluster.manage(cmd)
 
     def delete(self, pool):
-        self.cluster.manage('delete-ip-pool -s {}'.format(pool['network']))
+        return self.cluster.manage(
+            'delete-ip-pool -s {}'.format(pool['network']))
 
     def clear(self):
         for p in self:
             self.delete(p)
         self.cluster.pods.forget_all()
+
+    def get(self, network):
+        for p in self:
+            if p['network'] == network:
+                return p
 
     def __iter__(self):
         _, pools, _ = self.cluster.manage('list-ip-pools', out_as_dict=True)
@@ -602,17 +452,24 @@ class PodList(object):
         self.cluster = cluster
 
     def create(self, image, name, kube_type="Standard", kubes=1,
-               open_all_ports=False, restart_policy="Always", pvs=None,
-               start=True, wait_ports=False, healthcheck=False,
-               wait_for_status=None, owner='test_user', password=None,
-               public_ports=None):
+               open_all_ports=False, ports_to_open=(),
+               restart_policy="Always", pvs=None, start=True, wait_ports=False,
+               healthcheck=False, wait_for_status=None, owner='test_user',
+               password=None):
+        """
+        Create new pod in kuberdock
+        :param open_all_ports: if true, open all ports of image (does not mean
+        these are Public IP ports, depends on a cluster setup)
+        :param ports_to_open: if open_all_ports is False, open only the ports
+        from this list
+        :return: object via which Kuberdock pod can be managed
+        """
         assert_in(kube_type, ("Tiny", "Standard", "High memory"))
         assert_in(restart_policy, ("Always", "Never", "OnFailure"))
 
         pod = KDPod.create(self.cluster, image, name, kube_type, kubes,
                            open_all_ports, restart_policy, pvs, owner,
-                           password=(owner or password),
-                           public_ports=public_ports)
+                           owner or password, ports_to_open)
         if start:
             pod.start()
         if wait_for_status:
@@ -625,18 +482,23 @@ class PodList(object):
 
     def create_pa(self, template_name, plan_id=1, wait_ports=False,
                   healthcheck=False, wait_for_status=None, owner='test_user',
-                  rnd_str='test_data_'):
+                  command="kcli2", rnd_str='test_data_'):
+        """Create new pod with predefined application in the Kuberdock.
+
+        :param rnd_str: string which will be applied to the name of
+            persistent volumes, which will be created with the pod
+        :return: object via which Kuberdock pod can be managed
+
+        """
         pod = KDPAPod.create(
-            self.cluster, template_name, plan_id, owner,
+            self.cluster, template_name, plan_id, owner, command,
             rnd_str=get_rnd_low_string(prefix=rnd_str, length=5))
+
         if wait_for_status:
             pod.wait_for_status(wait_for_status)
         if wait_ports:
             pod.wait_for_ports()
         if healthcheck:
-            LOG.info("Waiting 15 sec. Needed to starting application"
-                     " correctly")
-            time.sleep(15)
             pod.healthcheck()
 
         return pod
@@ -673,536 +535,6 @@ class PodList(object):
                 self.cluster.kcli(u'delete {}'.format(name), user=user)
 
 
-class KDPod(RESTMixin):
-    # Image or PA name
-    SRC = None
-    Port = namedtuple('Port', 'port proto')
-
-    def __init__(self, cluster, image, name, kube_type, kubes,
-                 open_all_ports, restart_policy, pvs, owner,
-                 public_ports=None):
-        self.cluster = cluster
-        self.name = name
-        self.image = image
-        self.kube_type = kube_type
-        self.kubes = kubes
-        self.restart_policy = restart_policy
-        self.owner = owner
-        self.pvs = pvs
-        self.open_all_ports = open_all_ports
-
-    @property
-    def containers(self):
-        return self.get_spec().get('containers', [])
-
-    @property
-    def public_ip(self):
-        spec = self.get_spec()
-        return spec.get('public_ip')
-
-    @property
-    def ports(self):
-        def _get_ports(containers):
-            all_ports = itertools.chain(
-                *[c['ports'] for c in containers])
-            return [port['containerPort']
-                    for port in all_ports if port.get('isPublic') is True]
-
-        spec = self.get_spec()
-        return _get_ports(spec['containers'])
-
-    @classmethod
-    def create(cls, cluster, image, name, kube_type, kubes,
-               open_all_ports, restart_policy, pvs, owner, password,
-               public_ports=None):
-        """
-        Create new pod in kuberdock
-        :param open_all_ports: if true, open all ports of image (does not mean
-        these are Public IP ports, depends on a cluster setup)
-        :return: object via which Kuberdock pod can be managed
-        """
-
-        if public_ports is None:
-            public_ports = []
-
-        def _get_image_ports(img):
-            _, out, _ = cluster.kcli(
-                'image_info {}'.format(img), out_as_dict=True, user=owner)
-
-            return [
-                cls.Port(int(port['number']), port['protocol'])
-                for port in out['ports']]
-
-        def _ports_to_dict(ports):
-            """
-            :return: list of dictionaries with ports, necessary for
-            creation of general pod via kcli2
-            """
-            ports_list = []
-            for port in ports:
-                ports_list.append(
-                    dict(containerPort=port.port,
-                         hostPort=port.port,
-                         isPublic=open_all_ports or port.port in public_ports,
-                         protocol=port.proto))
-            return ports_list
-
-        escaped_name = pipes.quote(name)
-        kube_types = {
-            "Tiny": 0,
-            "Standard": 1,
-            "High memory": 2
-        }
-        pod_spec = dict(kube_type=kube_types[kube_type],
-                        restartPolicy=restart_policy,
-                        name=escaped_name)
-        container = dict(kubes=kubes, image=image,
-                         name=get_rnd_low_string(length=11))
-        ports = retry(_get_image_ports, img=image)
-        container.update(ports=_ports_to_dict(ports))
-        if pvs is not None:
-            container.update(volumeMounts=[pv.volume_mount_dict for pv in pvs])
-            pod_spec.update(volumes=[pv.volume_dict for pv in pvs])
-        pod_spec.update(containers=[container])
-        pod_spec = json.dumps(pod_spec, ensure_ascii=False)
-
-        _, out, _ = cluster.kcli2(u"pods create '{}'".format(pod_spec),
-                                  out_as_dict=True,
-                                  user=owner,
-                                  password=(password or owner))
-        this_pod_class = cls._get_pod_class(image)
-        return this_pod_class(cluster, image, name, kube_type, kubes,
-                              open_all_ports, restart_policy, pvs, owner,
-                              public_ports)
-
-    @classmethod
-    def restore(cls, cluster, user, file_path=None, pod_dump=None,
-                pv_backups_location=None, pv_backups_path_template=None,
-                flags=None, return_as_json=False):
-        """
-        Restore pod using "kdctl pods restore" command
-        :return: instance of KDPod object.
-        """
-
-        def get_image(file_path=None, pod_dump=None):
-            if pod_dump is None:
-                _, pod_dump, _ = cluster.ssh_exec("master",
-                                                  "cat {}".format(file_path))
-            pod_dump = json.loads(pod_dump)
-            container = pod_dump['pod_data']["containers"]
-            if len(container) > 1:
-                # In current implementation of KDPod class we cannot
-                # manage consisting of more than on container, therefore
-                # creation of such container is prohibited
-                raise CannotRestorePodWithMoreThanOneContainer(
-                    "Unfortunately currently we cannot restore pod with more "
-                    "than one container. KDPod class should be overwritten to "
-                    "allow correct managing such containers to nake this "
-                    "operation possible."
-                )
-            return pipes.quote(container[0]["image"])
-
-        owner = pipes.quote(user)
-        if return_as_json:
-            cmd = "-j "
-        else:
-            cmd = ""
-        if file_path and pod_dump:
-            raise IncorrectPodDescription(
-                "Only file_path OR only pod_description should be "
-                "privoded. Hoverwer provided both parameters."
-            )
-        elif file_path:
-            image = get_image(file_path=file_path)
-            cmd += u"pods restore -f {}" \
-                .format(file_path)
-        elif pod_dump:
-            image = get_image(pod_dump=pod_dump)
-            cmd += u"pods restore \'{}\'" \
-                .format(pod_dump)
-        else:
-            raise IncorrectPodDescription(
-                "Either file_path or pod_description should not be empty")
-
-        if pv_backups_location is not None:
-            cmd += " --pv-backups-location={}".format(pv_backups_location)
-
-        if pv_backups_path_template is not None:
-            cmd += " --pv-backups-path-template={}".format(
-                pv_backups_path_template)
-
-        if flags is not None:
-            cmd += " {}".format(flags)
-        cmd += " --owner {}".format(owner)
-        _, pod_description, _ = cluster.kdctl(cmd, out_as_dict=True)
-        data = pod_description['data']
-        name = data['name']
-        kube_type = kube_type_to_str(data['kube_type'])
-        restart_policy = data['restartPolicy']
-        this_pod_class = cls._get_pod_class(image)
-        return this_pod_class(
-            cluster, "", name, kube_type, "", True, restart_policy, "", owner)
-
-    @classmethod
-    def _get_pod_class(cls, image):
-        pod_classes = {c.SRC: c for c in cls.__subclasses__()}
-        return pod_classes.get(image, cls)
-
-    def command(self, command):
-        data = dict(command=command)
-        return self.cluster.kcli2(
-            u"pods update --name {} '{}'".format(self.name, json.dumps(data)),
-            user=self.owner,
-            out_as_dict=True)
-
-    def start(self):
-        self.command("start")
-
-    def stop(self):
-        self.command("stop")
-
-    def delete(self):
-        self.cluster.kcli2(
-            u"pods delete --name {}".format(self.escaped_name),
-            user=self.owner)
-
-    def redeploy(self, wipeOut=False, applyEdit=False):
-        commands = {}
-        if wipeOut is True:
-            commands['wipeOut'] = wipeOut
-        if applyEdit is True:
-            commands['applyEdit'] = applyEdit
-
-        data = {
-            'command': 'redeploy', 'commandOptions': commands
-        }
-        self.cluster.kcli2(
-            u"pods update --name {} '{}'".format(
-                self.escaped_name, json.dumps(data), user=self.owner))
-
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
-        ports = ports or self.ports
-        self._wait_for_ports(ports, timeout)
-
-    def _wait_for_ports(self, ports, timeout):
-        # NOTE: we still don't know if this is in a routable network, so
-        # open_all_ports does not exactly mean wait_for_ports pass.
-        # But for sure it does not make sense to wait if no ports open.
-        if not self.open_all_ports:
-            raise Exception("Cannot wait for ports on a pod with no ports open"
-                            "(must pass open_all_ports=True)")
-        for p in ports:
-            wait_net_port(self.public_ip, p, timeout)
-
-    def wait_for_status(self, status, tries=50, interval=5, delay=0):
-        """
-        Wait till POD's status changes to the given one
-
-        :param status: the desired status to wait for
-        :param tries: number of tries to check the status for
-        :param interval: delay between the tries in seconds
-        :param delay: the initial delay before a first check
-        :return:
-        """
-        time.sleep(delay)
-        for _ in range(tries):
-            if self.status == status:
-                return
-            time.sleep(interval)
-        raise StatusWaitException()
-
-    @property
-    def info(self):
-        try:
-            _, out, _ = self.cluster.kubectl(
-                u'get pod {}'.format(self.escaped_name), out_as_dict=True,
-                user=self.owner)
-            return out[0]
-        except KeyError:
-            raise UnexpectedKubectlResponse()
-
-    @property
-    def status(self):
-        return self.info['status']
-
-    @property
-    def escaped_name(self):
-        return pipes.quote(self.name)
-
-    @property
-    def ssh_credentials(self):
-        return retry(self._get_creds, tries=10, interval=1)
-
-    def _get_creds(self):
-        direct_access = self.get_spec()['direct_access']
-        links = [v.split('@') for v in direct_access['links'].values()]
-        return {
-            'password': direct_access['auth'],
-            'users': [v[0] for v in links],
-            'hosts': [v[1] for v in links]
-        }
-
-    def get_container_ip(self, container_id):
-        """
-        Returns internal IP of a given container within the current POD
-        """
-        _, out, _ = self.docker_exec(container_id, 'hostname --ip-address')
-        return out
-
-    def get_spec(self):
-        _, out, _ = self.cluster.kubectl(
-            u"describe pods {}".format(self.escaped_name), out_as_dict=True,
-            user=self.owner)
-        return out
-
-    def get_dump(self):
-        cmd = u"pods dump {pod_id}".format(pod_id=self.pod_id)
-        _, out, _ = self.cluster.kdctl(cmd, out_as_dict=True)
-        rv = out['data']
-        return rv
-
-    @property
-    def pod_id(self):
-        return self.get_spec()['id']
-
-    def docker_exec(self, container_id, command, detached=False):
-        if self.status != 'running':
-            raise PodIsNotRunning()
-
-        node_name = self.info['host']
-        args = '-d' if detached else ''
-        docker_cmd = u'exec {} {} bash -c {}'.format(
-            args, container_id, pipes.quote(command))
-        return self.cluster.docker(docker_cmd, node_name)
-
-    def healthcheck(self):
-        LOG.warning(
-            "This is a generic KDPod class health check. Inherit KDPod and "
-            "implement health check for {0} image.".format(self.image))
-        self._generic_healthcheck()
-
-    def _generic_healthcheck(self):
-        spec = self.get_spec()
-        assert_eq(spec['kube_type'], kube_type_to_int(self.kube_type))
-        for container in spec['containers']:
-            assert_eq(container['kubes'], self.kubes)
-        assert_eq(spec['restartPolicy'], self.restart_policy)
-        assert_eq(spec['status'], "running")
-        return spec
-
-    def change_kubes(self, kubes, container_name=None, container_image=None):
-        pod_spec = self.get_spec()
-        edit_data = {
-            "command": "edit",
-            "commandOptions": {},
-            "edited_config": {
-                "containers": pod_spec['containers'],
-                "kube_type": pod_spec["kube_type"],
-                "name": "",
-                "node": None,
-                "replicas": pod_spec["replicas"],
-                "restartPolicy": pod_spec['restartPolicy'],
-                "status": pod_spec['status'],
-                "volumes": pod_spec['volumes']
-            }
-        }
-        if not (container_name is None) ^ (container_image is None):
-            raise ValueError('You need to specify either the container_name'
-                             ' or container image')
-
-        if container_name is not None:
-            def predicate(c):
-                return c['name'] == container_name
-        elif container_image is not None:
-            def predicate(c):
-                return c['image'] == container_image
-
-        try:
-            container = next(c for c in
-                             edit_data['edited_config']['containers']
-                             if predicate(c))
-            container['kubes'] = kubes
-        except StopIteration:
-            LOG.error("Pod {} does not have {} container".format(
-                self.name, container_name))
-
-        _, out, _ = self.cluster.kcli2(
-            "pods update --name '{}' '{}'".format(self.name,
-                                                  json.dumps(edit_data)),
-            out_as_dict=True, user=self.owner)
-        LOG.debug("Pod {} updated".format(out))
-        self.redeploy(applyEdit=True)
-        self.kubes = kubes
-
-
-class _NginxPod(KDPod):
-    SRC = "nginx"
-
-    def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_POD_TIMEOUT):
-        # Though nginx also has 443, it is not turned on in a clean image.
-        ports = ports or [80]
-        self._wait_for_ports(ports, timeout)
-
-    def healthcheck(self):
-        if not self.open_all_ports:
-            raise Exception(
-                "Cannot perform nginx healthcheck without public IP"
-                "(must pass open_all_ports=True)")
-        self._generic_healthcheck()
-        assert_in("Welcome to nginx!", self.do_GET())
-
-
-class KDPAPod(KDPod):
-    def __init__(self, cluster, pod_name, plan_id, kube_type, restart_policy,
-                 owner):
-        self.cluster = cluster
-        self.name = pod_name
-        self.plan_id = plan_id
-        self.owner = owner
-        self.open_all_ports = True
-        self.kube_type = kube_type
-        self.restart_policy = restart_policy
-
-    @classmethod
-    def create(cls, cluster, template_name, plan_id, owner, rnd_str=None):
-
-        pa_data = cluster.pas.get_by_name(template_name)
-        pa_id = pa_data['id']
-        data = json.dumps({'PD_RAND': rnd_str or 'test_data_random'})
-        _, pod_description, _ = cluster.kcli2(
-            "predefined-apps create-pod {} {} '{}'".format(
-                pa_id, plan_id, data),
-            out_as_dict=True)
-
-        data = pod_description['data']
-        pod_name = data['name']
-        kube_type = kube_type_to_str(data['kube_type'])
-        restart_policy = data['restartPolicy']
-        this_pod_class = cls._get_pod_class(template_name)
-        return this_pod_class(cluster, pod_name, plan_id, kube_type,
-                              restart_policy, owner)
-
-    def _generic_healthcheck(self):
-        spec = self.get_spec()
-        assert_eq(spec['kube_type'], kube_type_to_int(self.kube_type))
-        assert_eq(spec['restartPolicy'], self.restart_policy)
-        assert_eq(spec['status'], "running")
-        return spec
-
-
-class _RedisPaPod(KDPAPod):
-    SRC = 'redis.yaml'
-
-    def healthcheck(self):
-        spec = self._generic_healthcheck()
-        assert_eq(len(spec['containers']), 1)
-        assert_eq(spec['containers'][0]['image'], 'redis:3')
-        r = redis.StrictRedis(host=self.public_ip, port=6379, db=0)
-        r.set('foo', 'bar')
-        assert_eq(r.get('foo'), 'bar')
-
-
-class _DokuwikiPaPod(KDPAPod):
-    SRC = 'dokuwiki.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        assert_in("Welcome to your new DokuWiki",
-                  self.do_GET(path='/doku.php?id=wiki:welcome'))
-
-
-class _DrupalPaPod(KDPAPod):
-    SRC = 'drupal.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        # Change assertion string after fix AC-4487
-        page = self.do_GET(path='/core/install.php')
-        assert_in("Drupal", page)
-
-
-class _ElasticsearchPaPod(KDPAPod):
-    SRC = 'elasticsearch.yaml'
-
-    def wait_for_ports(self):
-        "Elastic PA isn't listen public ip"
-        pass
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-
-
-class _RedminePaPods(KDPAPod):
-    SRC = 'redmine.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        assert_in("Redmine", self.do_GET())
-
-
-class _JoomlaPaPod(KDPAPod):
-    SRC = 'joomla.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        page = self.do_GET(path='/installation/index.php')
-        assert_in(u"Joomla! - Open Source Content Management", page)
-
-
-class _MemcachedPaPod(KDPAPod):
-    SRC = 'memcached.yaml'
-
-    def healthcheck(self):
-        spec = self._generic_healthcheck()
-        assert_eq(len(spec['containers']), 1)
-        assert_eq(spec['containers'][0]['image'], 'memcached:1')
-        mc = memcache.Client(['{host}:11211'.format(host=self.public_ip)],
-                             debug=0)
-        mc.set("foo", "bar")
-        assert_eq(mc.get("foo"), "bar")
-
-
-class _Gallery3PaPod(KDPAPod):
-    SRC = 'gallery3.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        page = self.do_GET(path='/installer/')
-        assert_in(u"Installing Gallery is easy.  "
-                  "We just need a place to put your photos", page)
-
-
-class _MagentoPaPod(KDPAPod):
-    SRC = 'magento.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        page = self.do_GET(path='/index.php/install/')
-        assert_in(u"Magento is a trademark of Magento Inc.", page)
-
-
-class _MantisPaPod(KDPAPod):
-    SRC = 'mantis.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        page = self.do_GET(path='/admin/install.php')
-        assert_in(u"Administration - Installation - MantisBT", page)
-
-
-class _MybbPaPod(KDPAPod):
-    SRC = 'mybb.yaml'
-
-    def healthcheck(self):
-        self._generic_healthcheck()
-        page = self.do_GET(path='/install/index.php')
-        assert_in(u"MyBB Installation Wizard", page)
-
-
-class VagrantIsAlreadyUpException(Exception):
-    pass
-
-
 class PV(object):
     def __init__(self, cluster, kind, name, mount_path, size, owner=None):
         self.cluster = cluster
@@ -1222,31 +554,31 @@ class PV(object):
                                  .format(inits.keys()))
 
     def _create_new(self, size):
-        """
-        Create new PV in Kuberdock.
+        """Create new PV in Kuberdock.
 
         Create Python object which models PV in Kuberdock
         and also create new PV in the Kuberdock.
+
         """
         self.size = size
         self.cluster.kcli(u"drives add --size {} {}".format(
             self.size, self.name), self.owner)
 
     def _create_dummy(self, size):
-        """
-        Create Python object, which models PV.
+        """Create Python object, which models PV.
 
         Don't create PV in the Kuberdock. This object will be used
         for creation of new PV in Kuberdock together with pod.
+
         """
         self.size = size
 
     def _load_existing(self, size):
-        """
-        Find PV in Kuberdock.
+        """Find PV in Kuberdock.
 
         Create Python obejct which models PV and link it to PV which
         already exist in Kuberdock.
+
         """
         # TODO: Currently this method is never used. May be it will be
         # TODO: in use, when we start testing PAs. If it will not
@@ -1274,7 +606,8 @@ class PV(object):
     def volume_dict(self):
         """
         :return: dictionary contain description of volume, necessary for
-        creation of general pod via kcli2
+            creation of general pod via kcli2
+
         """
         persistent_disk = dict(pdName=self.name, pdSize=self.size)
         return dict(name=self.volume_name, persistentDisk=persistent_disk)
@@ -1283,6 +616,7 @@ class PV(object):
     def volume_mount_dict(self):
         """
         :return: dictionary contain description of volume mount, necessary for
-        creation of general pod via kcli2
+            creation of general pod via kcli2
+
         """
         return dict(mountPath=self.mount_path, name=self.volume_name)

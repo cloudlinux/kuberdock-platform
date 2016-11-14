@@ -1,0 +1,93 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  name: $APP_NAME|default:redis| Enter your application name$
+kuberdock:
+  packageID: 0
+  preDescription: |
+    You are installing the application [b]Redis[/b].
+    Redis is an open source key-value store that functions as a data structure server.
+    Choose the amount of resources or use recommended parameters set by default.
+    First choose package.
+    When you click "Order now", you will get to order processing page.
+  postDescription: |
+    You have installed [b]Redis![/b]
+    Please find more information about Redis software on the official website [url]http://redis.io/[/url]
+    To access [b]Redis[/b] use:
+    [b]Host:[/b] %PUBLIC_ADDRESS%
+    [b]Port:[/b] $REDIS_HOST_PORT$
+
+  # required for cPanel to do proxy to user`s domain
+  # proxy:
+    # root:
+      # container: redis
+      # domain: $APP_DOMAIN|default:user_domain_list|Select application domain$
+  appPackages:
+    - name: S
+      goodFor: beginner
+      publicIP: true
+      pods:
+        -
+          name: $APP_NAME$
+          kubeType: 0
+          containers:
+            - name: redis
+              kubes: 1
+          persistentDisks:
+            - name: redis-persistent-storage
+              pdSize: 1
+    - name: M
+      recommended: yes
+      goodFor: regular use
+      publicIP: true
+      pods:
+        -
+          name: $APP_NAME$
+          kubeType: 1
+          containers:
+            - name: redis
+              kubes: 2
+          persistentDisks:
+            - name: redis-persistent-storage
+              pdSize: 2
+    - name: L
+      goodFor: business
+      publicIP: true
+      pods:
+        -
+          name: $APP_NAME$
+          kubeType: 2
+          containers:
+            - name: redis
+              kubes: 4
+          persistentDisks:
+            - name: redis-persistent-storage
+              pdSize: 4
+spec:
+  template:
+    metadata:
+      labels:
+        name: $APP_NAME$
+    spec:
+      volumes:
+        - name: redis-persistent-storage
+          persistentDisk:
+            pdName: redis_$PD_RAND|default:autogen|PD rand$
+      restartPolicy: "Always"
+      containers:
+        -
+          name: redis
+          image: redis:3
+          ports:
+            - containerPort: 6379
+              podPort: $REDIS_HOST_PORT|default:6379|Enter Redis host port$
+              isPublic: True
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 1
+          volumeMounts:
+            - mountPath: /data
+              name: redis-persistent-storage
+          workingDir: /data
+

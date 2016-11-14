@@ -10,8 +10,8 @@ from contextlib import contextmanager
 from shutil import rmtree
 from colorama import Style, Fore
 
-from tests_integration.lib.integration_test_utils import (
-    retry, ssh_exec, get_ssh, get_rnd_string)
+from tests_integration.lib.utils import retry, ssh_exec, get_ssh, \
+    get_rnd_string
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.exceptions import FileTransferValidationFailed
 

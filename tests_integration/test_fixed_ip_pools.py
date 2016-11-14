@@ -1,5 +1,5 @@
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.integration_test_utils import \
+from tests_integration.lib.utils import \
     NO_FREE_IPS_ERR_MSG, assert_raises, assert_eq, \
     pod_factory
 from tests_integration.lib.pipelines import pipeline

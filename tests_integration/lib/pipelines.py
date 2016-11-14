@@ -1,15 +1,12 @@
 import os
 from collections import defaultdict
 from functools import wraps
-from ipaddress import IPv4Network
 from shutil import rmtree
 
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
-from tests_integration.lib.integration_test_utils import set_eviction_timeout
+from tests_integration.lib.utils import set_eviction_timeout, get_rnd_string
 from tempfile import NamedTemporaryFile, mkdtemp
-
-from tests_integration.lib.integration_test_utils import get_rnd_string
 
 
 class MainPipeline(Pipeline):
@@ -43,6 +40,10 @@ class NetworkingPipeline(Pipeline):
 
     def set_up(self):
         super(NetworkingPipeline, self).set_up()
+        self.cluster.recreate_routable_ip_pool()
+
+    def post_create_hook(self):
+        super(NetworkingPipeline, self).post_create_hook()
         self.cluster.preload_docker_image('nginx')
         # NOTE: Preload these imaeges so that wordpress_elasticsearch PA
         # starts quicker. Remove 'wordpress', 'mysql' and 'elasticsearch'
@@ -50,7 +51,6 @@ class NetworkingPipeline(Pipeline):
         self.cluster.preload_docker_image('wordpress:4')
         self.cluster.preload_docker_image('kuberdock/mysql:5.7')
         self.cluster.preload_docker_image('elasticsearch:1.7.3')
-        self.cluster.recreate_routable_ip_pool()
         self.cluster.wait_for_service_pods()
 
 
@@ -63,9 +63,7 @@ class NetworkingUpgradedPipeline(UpgradedPipelineMixin, NetworkingPipeline):
     }
 
     def post_create_hook(self):
-        super(NetworkingUpgradedPipeline, self).post_create_hook()
-        self.cluster.ssh_exec(
-            'rhost1', 'echo admin | bash /rhost_deploy/kcli-deploy.sh -C -u admin')
+        super(NetworkingPipeline, self).post_create_hook()
 
 
 class NetworkingRhostCent6Pipeline(NetworkingPipeline):
@@ -94,7 +92,8 @@ class CephPipeline(Pipeline):
     NAME = 'ceph'
     ROUTABLE_IP_COUNT = 2
     ENV = {
-        'KD_NODES_COUNT': '1',
+        'KD_NODES_COUNT': '3',
+        'KD_NODE_TYPES': 'node1=Standard,node2=Tiny,node3=High memory',
         'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',
         'KD_CEPH': '1',
         'KD_CEPH_USER': 'jenkins',
@@ -116,11 +115,20 @@ class CephUpgradedPipeline(UpgradedPipelineMixin, CephPipeline):
 
 class KubeTypePipeline(Pipeline):
     NAME = 'kubetype'
-    ROUTABLE_IP_COUNT = 2
+    ROUTABLE_IP_COUNT = 3
     ENV = {
-        'KD_NODES_COUNT': '2',
-        'KD_NODE_TYPES': 'node1=standard,node2=tiny'
+        'KD_NODES_COUNT': '3',
+        'KD_NODE_TYPES': 'node1=Standard,node2=Tiny,node3=High memory',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
     }
+
+    def post_create_hook(self):
+        super(KubeTypePipeline, self).post_create_hook()
+        self.cluster.wait_for_service_pods()
+        sftp = self.cluster.get_sftp('master')
+        sftp.put('tests_integration/assets/custom_redis.yaml',
+                 '/root/custom_redis.yaml')
+        self.cluster.pas.add('custom_redis.yaml', '/root/custom_redis.yaml')
 
 
 class MovePodsPipeline(Pipeline):
@@ -155,11 +163,6 @@ class PodRestorePipeline(Pipeline):
         self.cluster.recreate_routable_ip_pool()
 
 
-# TODO: Drop in 1.4 release
-class PodRestoreUpgradedPipeline(UpgradedPipelineMixin, PodRestorePipeline):
-    NAME = 'pod_restore_upgraded'
-
-
 class MasterRestorePipeline(Pipeline):
     NAME = 'master_backup_restore'
     ROUTABLE_IP_COUNT = 2
@@ -173,26 +176,14 @@ class MasterRestorePipeline(Pipeline):
 
 
 class ReleaseUpdatePipeline(Pipeline):
+    skip_reason = "Disabled until 1.5.0 Beta becomes Release"
     NAME = 'release_update'
-    ROUTABLE_IP_COUNT = 1
+    ROUTABLE_IP_COUNT = 3
     ENV = {
         'KD_NODES_COUNT': '1',
-        'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,ippool',
+        'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch',
         'KD_INSTALL_TYPE': 'release',
     }
-
-    # TODO: Delete when 1.4.0 released
-    def post_create_hook(self):
-        super(ReleaseUpdatePipeline, self).post_create_hook()
-        cmd = """
-        MAIN_INTERFACE=$(ip route get 8.8.8.8 | egrep 'dev\s+.+?\s+src' -o | awk '{print $2}');  # noqa
-        ip addr show dev $MAIN_INTERFACE | awk 'NR==3 { print $2 }'
-        """
-        _, main_ip, _ = self.cluster.ssh_exec('master', cmd)
-
-        ip_pool = str(IPv4Network(unicode(main_ip), strict=False))
-        cmd = 'create-ip-pool -s {}'.format(ip_pool)
-        self.cluster.manage(cmd)
 
 
 class WebUIPipeline(Pipeline):
@@ -293,6 +284,14 @@ class SSHPipeline(Pipeline):
                 elif os.path.exists(self.cluster.temp_files[key]):
                     os.unlink(self.cluster.temp_files[key])
 
+
+class PACatalogPipeline(Pipeline):
+    NAME = 'PA_catalog'
+    ROUTABLE_IP_COUNT = 1
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
+    }
 
 pipelines = defaultdict(list)
 

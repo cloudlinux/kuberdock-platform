@@ -18,7 +18,7 @@ from tests_integration.lib.pa import KDPAPod
 from tests_integration.lib.pod import KDPod
 from tests_integration.lib.timing import log_timing, log_timing_ctx
 from tests_integration.lib.utils import \
-    ssh_exec, assert_eq, assert_in, retry, \
+    ssh_exec, ssh_exec_live, assert_eq, assert_in, retry, \
     escape_command_arg, get_rnd_low_string
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -56,13 +56,29 @@ class KDIntegrationTestAPI(object):
     def node_names(self):
         return self._provider.node_names
 
+    @property
+    def rhost_names(self):
+        return self._provider.rhost_names
+
     def get_host_ip(self, hostname):
         return self._provider.get_host_ip(hostname)
 
     def get_ssh(self, host):
+        def is_alive(conn):
+            transport = conn.get_transport()
+            if transport and transport.is_active():
+                try:
+                    transport.send_ignore()  # healthcheck
+                    return True
+                except EOFError:
+                    pass  # dead
+            return False
+
         host = self._provider.vm_names[host]
         if host in self._ssh_connections:
-            return self._ssh_connections[host]
+            cached = self._ssh_connections[host]
+            if is_alive(cached):
+                return cached
 
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -123,12 +139,22 @@ class KDIntegrationTestAPI(object):
             args += ' --skip-health-check'
         try:
             self.ssh_exec("master",
-                          "yes | /usr/bin/kuberdock-upgrade {}".format(args))
+                          "yes | /usr/bin/kuberdock-upgrade {}".format(args),
+                          live=True)
         except NonZeroRetCodeException:
             # This is needed because NonZeroRetCode will carry whole upgrade
             # log in stdout, which is huge. We replace it with short message
             # while full log is still printed by ssh_exec logging
             raise ClusterUpgradeError('kuberdock-upgrade non-zero retcode')
+
+    @log_timing
+    def upgrade_rhosts(self, deploy_script_path, use_testing=False):
+        for rhost in self.rhost_names:
+            cmd = ['bash', deploy_script_path]
+            if use_testing:
+                cmd.append('-t')
+            cmd.append('--upgrade')
+            self.ssh_exec(rhost, " ".join(cmd), live=True)
 
     @contextmanager
     def temporary_stop_host(self, host):
@@ -263,11 +289,14 @@ class KDIntegrationTestAPI(object):
     def docker(self, cmd, node="node1"):
         return self.ssh_exec(node, u"docker {}".format(cmd))
 
-    def ssh_exec(self, node, cmd, check_retcode=True):
-        ssh = self.get_ssh(node)
+    def ssh_exec(self, node, cmd, check_retcode=True, live=False):
         # Forcibly source profile, so all additional ENV variables are exported
         cmd = '. /etc/profile; ' + cmd
-        return ssh_exec(ssh, cmd, check_retcode=check_retcode)
+        ssh = self.get_ssh(node)
+        if live:
+            return ssh_exec_live(ssh, cmd, check_retcode=check_retcode)
+        else:
+            return ssh_exec(ssh, cmd, check_retcode=check_retcode)
 
     # TODO move to cluster.settings
     def set_system_setting(self, value, setting_id=None, name=None):

@@ -9,7 +9,20 @@ class ConfigMapClient(object):
         return self._process_response(
             self._k8s_query.get(['configmaps', name], ns=namespace))
 
+    def patch(self, name, data, metadata=None, namespace='default'):
+        config = self._prepare_config(data, metadata)
+
+        return self._process_response(self._k8s_query.patch(
+            ['configmaps', name], json.dumps(config), ns=namespace))
+
     def create(self, data, metadata=None, namespace='default'):
+        config = self._prepare_config(data, metadata)
+
+        return self._process_response(self._k8s_query.post(
+            ['configmaps'], json.dumps(config), ns=namespace, rest=True))
+
+    @staticmethod
+    def _prepare_config(data, metadata):
         config = {
             'apiVersion': 'v1',
             'kind': 'ConfigMap',
@@ -22,8 +35,7 @@ class ConfigMapClient(object):
         if metadata is not None:
             config['metadata'] = metadata
 
-        return self._process_response(self._k8s_query.post(
-            ['configmaps'], json.dumps(config), ns=namespace, rest=True))
+        return config
 
     @classmethod
     def _process_response(cls, resp):
@@ -33,6 +45,8 @@ class ConfigMapClient(object):
         if resp['kind'] == 'Status' and resp['status'] == 'Failure':
             if resp['code'] == 404:
                 raise ConfigMapNotFound()
+            elif resp['code'] == 409:
+                raise ConfigMapAlreadyExists()
             raise K8sApiError(resp)
 
         raise UnexpectedResponse(resp)
@@ -43,6 +57,10 @@ class UnexpectedResponse(Exception):
 
 
 class ConfigMapNotFound(KeyError):
+    pass
+
+
+class ConfigMapAlreadyExists(Exception):
     pass
 
 

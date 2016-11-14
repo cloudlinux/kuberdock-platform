@@ -25,12 +25,15 @@
   file: path="{{ master_rpms_dir }}" state=directory
 
 - include: dev_predeploy.yml
+  static: no
   when: is_dev_install
 
 - include: qa_predeploy.yml
+  static: no
   when: is_qa_install
 
 - include: release_predeploy.yml
+  static: no
   when: is_release_install
 
 - name: Running cleanup (deploy.sh --cleanup)

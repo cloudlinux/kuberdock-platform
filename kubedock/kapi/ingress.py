@@ -2,10 +2,14 @@ from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
 from .podcollection import PodCollection
+from .configmap import ConfigMapClient, ConfigMapNotFound
+from .helpers import KubeQuery
 from ..billing.models import Kube
 from ..constants import (
     KUBERDOCK_BACKEND_POD_NAME,
     KUBERDOCK_INGRESS_POD_NAME,
+    KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
+    KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE,
 )
 from ..exceptions import APIError
 from ..pods.models import Pod, IPPool
@@ -152,7 +156,10 @@ def get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
                     "/nginx-ingress-controller",
                     "--default-backend-service={0}/{1}".format(
                         backend_ns, backend_svc
-                    )
+                    ),
+                    "--nginx-configmap={}/{}".format(
+                        KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE,
+                        KUBERDOCK_INGRESS_CONFIG_MAP_NAME),
                 ],
                 "kubes": 5,
                 "image": "gcr.io/google_containers/"
@@ -250,8 +257,37 @@ def check_cluster_email():
     raise APIError('Email for external services is empty')
 
 
+def create_ingress_nginx_configmap():
+    client = ConfigMapClient(KubeQuery())
+    default_nginx_settings = {'server-name-hash-bucket-size': '128'}
+
+    try:
+        client.get(KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
+                   namespace=KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
+        return
+    except ConfigMapNotFound:
+        pass
+    except Exception:
+        current_app.logger.exception(
+            'Could not check if ConfigMap for Ingress Controller exists')
+        raise APIError('Could not create configuration resource for Ingress '
+                       'Controller')
+
+    try:
+        client.create(
+            data=default_nginx_settings,
+            metadata={'name': KUBERDOCK_INGRESS_CONFIG_MAP_NAME},
+            namespace=KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
+    except Exception:
+        current_app.logger.exception(
+            'Could not create ConfigMap for Ingress Controller')
+        raise APIError('Could not create configuration resource for Ingress '
+                       'Controller')
+
+
 def prepare_ip_sharing():
     """Create all pods for IP Sharing"""
     check_cluster_email()
     create_default_backend_pod()
+    create_ingress_nginx_configmap()
     create_ingress_controller_pod()

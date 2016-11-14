@@ -20,7 +20,7 @@ from kubedock.kapi.nodes import (
     get_dns_policy_config,
     get_node_token,
 )
-from kubedock.kapi import podcollection, restricted_ports
+from kubedock.kapi import podcollection, restricted_ports, ingress, configmap
 from kubedock.kapi.pstorage import CephStorage, get_ceph_credentials
 from kubedock.kapi.helpers import (
     KUBERDOCK_POD_UID,
@@ -28,6 +28,7 @@ from kubedock.kapi.helpers import (
     LOCAL_SVC_TYPE,
     Services,
     replace_pod_config,
+    KubeQuery,
 )
 from kubedock.kapi.node_utils import complete_calico_node_config
 from kubedock.kapi.nodes import get_kuberdock_logs_pod_name
@@ -43,7 +44,7 @@ from kubedock.settings import (
     ETCD_NETWORK_POLICY_SERVICE,
     MASTER_IP, NODE_DATA_DIR, NODE_TOBIND_EXTERNAL_IPS
 )
-from kubedock import settings
+from kubedock import settings, constants
 from kubedock.system_settings import keys
 from kubedock.system_settings.models import SystemSettings
 from kubedock.updates import helpers
@@ -351,6 +352,58 @@ def _update_00201_upgrade(upd):
         pass
     finally:
         restricted_ports.set_port(25, 'tcp')
+
+
+def _update_00203_upgrade(upd):
+    def _update_ingress_container(config):
+        config_map_cmd = "--nginx-configmap={}/{}".format(
+            constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE,
+            constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAME)
+
+        for c in config['containers']:
+            if c['name'] == 'nginx-ingress':
+                if config_map_cmd not in c['command']:
+                    c['command'].append(config_map_cmd)
+                    return True
+        return False
+
+    def _create_or_update_ingress_config():
+        client = configmap.ConfigMapClient(KubeQuery())
+        try:
+            client.get(
+                constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
+                namespace=constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
+
+            client.patch(constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
+                data={'server-name-hash-bucket-size': '128'},
+                namespace=constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
+
+        except configmap.ConfigMapNotFound:
+            ingress.create_ingress_nginx_configmap()
+
+
+    owner = User.get_internal()
+    pod = Pod.query.filter_by(
+        name=constants.KUBERDOCK_INGRESS_POD_NAME, owner=owner).first()
+
+    if pod is None:
+        upd.print_log('Ingress POD hasn\'t been created yet. Skipping')
+        return
+
+    _create_or_update_ingress_config()
+
+    config = pod.get_dbconfig()
+    if not _update_ingress_container(config):
+        upd.print_log('Ingress contoller RC is up-to-date. Skipping')
+        return
+
+    collection = PodCollection()
+
+    replace_pod_config(pod, config)
+    collection.patch_running_pod(pod.id, {
+        'spec': {'containers': config['containers']}
+    }, restart=True)
+
 
 
 
@@ -1137,6 +1190,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     _update_00191_upgrade(upd, calico_network)
     _update_00197_upgrade(upd)
     _update_00201_upgrade(upd)
+    _update_00203_upgrade(upd)
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):

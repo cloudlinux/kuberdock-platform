@@ -1492,7 +1492,7 @@ define([
                                     layoutView.pager.show(new Pager.PaginatorView({view: view}));
                                 });
                         });
-                        App.contents.show(layoutView);
+                        App.rootLayout.contents.show(layoutView);
                     });
             });
         },

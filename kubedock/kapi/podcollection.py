@@ -1058,7 +1058,9 @@ class PodCollection(object):
 
         if not current_app.config['FIXED_IP_POOLS']:
             self._assign_public_ip(pod, db_pod, db_config)
-        db.session.commit()
+            # prepare_and_run_pod_task read config from db in async task
+            # public_ip could not have time to save before read
+            db.session.commit()
 
         if async_pod_create:
             prepare_and_run_pod_task.delay(pod)

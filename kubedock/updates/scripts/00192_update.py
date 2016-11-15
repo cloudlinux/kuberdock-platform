@@ -501,15 +501,23 @@ def _master_k8s_node():
 
 
 def _master_calico(calico_network):
-    helpers.local(
-        'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl pool add '
-        '{} --ipip --nat-outgoing'.format(calico_network)
-    )
-    helpers.local(
-        'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl node '
-        '--ip="{0}" --node-image=kuberdock/calico-node:0.22.0-kd1'
-        .format(MASTER_IP)
-    )
+    with quiet():
+        rv = helpers.local(
+            'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl pool add '
+            '{} --ipip --nat-outgoing'.format(calico_network)
+        )
+        if rv.failed:
+            raise helpers.UpgradeError("Can't add calicoctl pool")
+        rv = helpers.local('docker pull kuberdock/calico-node:0.22.0-kd1')
+        if rv.failed:
+            raise helpers.UpgradeError("Can't pull calicoctl image")
+        rv = helpers.local(
+            'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl node '
+            '--ip="{0}" --node-image=kuberdock/calico-node:0.22.0-kd1'
+            .format(MASTER_IP)
+        )
+        if rv.failed:
+            raise helpers.UpgradeError("Can't start calico node")
 
 
 def _master_k8s_extensions():
@@ -767,8 +775,10 @@ def _node_calico(with_testing, node_name, node_ip):
     )
     with quiet():
         # pull image separately to get reed of calicoctl timeouts
-        run('docker pull kuberdock/calico-node:0.22.0-kd1')
-        run(
+        rv = run('docker pull kuberdock/calico-node:0.22.0-kd1')
+        if rv.failed:
+            raise helpers.UpgradeError("Can't pull calicoctl image")
+        rv = run(
             'ETCD_AUTHORITY="{0}:2379" '
             'ETCD_SCHEME=https '
             'ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt '
@@ -780,6 +790,8 @@ def _node_calico(with_testing, node_name, node_ip):
             '--node-image=kuberdock/calico-node:0.22.0-kd1'
             .format(MASTER_IP, node_name, node_ip)
         )
+        if rv.failed:
+            raise helpers.UpgradeError("Can't start calico node")
 
 
 def _create_calico_config():

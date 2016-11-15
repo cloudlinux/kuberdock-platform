@@ -180,9 +180,7 @@ class TestLogQuery(unittest.TestCase):
                 'filter': {'and': self.filters + list(time_filters)}}},
             self.size,
             {'time_nano': {
-                'order': 'desc',
-                'missing': '@timestamp',
-                'unmapped_type': 'string'
+                'order': 'desc'
             }},
             self.host
         )

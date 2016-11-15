@@ -443,7 +443,7 @@ def get_kuberdock_logs_config(node, name, kube_type,
             {
                 "command": ["./run.sh"],
                 "kubes": collector_kubes,
-                "image": "kuberdock/fluentd:1.5",
+                "image": "kuberdock/fluentd:1.8",
                 "name": "fluentd",
                 "env": [
                     {

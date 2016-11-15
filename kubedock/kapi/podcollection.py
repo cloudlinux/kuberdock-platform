@@ -748,10 +748,9 @@ class PodCollection(object):
                     "name": namespace
                 }
             }
-            self.k8squery.post(
+            rv = self.k8squery.post(
                 ['namespaces'], json.dumps(config), rest=True, ns=False)
-            # TODO where raise ?
-            # current_app.logger.debug(rv)
+            podutils.raise_if_failure(rv, "Could not add namespaces")
 
             # Add main ns policy
             _get_network_policy_api().post(
@@ -775,12 +774,14 @@ class PodCollection(object):
 
     def _get_namespace(self, namespace):
         data = self.k8squery.get(ns=namespace)
-        if data.get('code') == 404:
+        failed, _ = podutils.is_failed_k8s_answer(data)
+        if failed:
             return None
         return data
 
     def _get_namespaces(self):
         data = self.k8squery.get(['namespaces'], ns=False)
+        podutils.raise_if_failure(data, "Could not get namespaces")
         namespaces = [i['metadata']['name'] for i in data.get('items', {})]
         if self.owner is None:
             return namespaces
@@ -812,6 +813,7 @@ class PodCollection(object):
         # TODO: apply namespaces here
         replicas = []
         data = self.k8squery.get(['replicationControllers'])
+        podutils.raise_if_failure(data, "Could not get replicas")
 
         for item in data['items']:
             try:
@@ -841,14 +843,19 @@ class PodCollection(object):
 
         if namespaces:
             for namespace in namespaces:
-                data.extend(self.k8squery.get(['pods'], ns=namespace)['items'])
+                pods = self.k8squery.get(['pods'], ns=namespace)
+                podutils.raise_if_failure(pods, "Could not get pods")
+                data.extend(pods.get('items', {}))
                 replicas = self.k8squery.get(
                     ['replicationcontrollers'], ns=namespace)
+                podutils.raise_if_failure(replicas, "Could not get replicas")
                 replicas_data.extend(replicas['items'])
         else:
             pods = self.k8squery.get(['pods'])
+            podutils.raise_if_failure(pods, "Could not get pods")
             data.extend(pods.get('items', {}))
             replicas = self.k8squery.get(['replicationcontrollers'])
+            podutils.raise_if_failure(replicas, "Could not get replicas")
             replicas_data.extend(replicas.get('items', {}))
 
         pod_names = defaultdict(set)

@@ -333,9 +333,10 @@ class TestPodCollectionMakeNamespace(unittest.TestCase, TestCaseMixin):
             self.test_ns)
         self.assertEquals(post_.called, False)
 
+    @mock.patch.object(podcollection.podutils, 'raise_if_failure')
     @mock.patch.object(podcollection, '_get_network_policy_api')
     @mock.patch.object(podcollection.KubeQuery, 'post')
-    def test_pod_make_namespace_new_created(self, post_, np_api_mock):
+    def test_pod_make_namespace_new_created(self, post_, np_api_mock, raise_):
         """
         Test that _make_namespace create new ns
         :type post_: mock.Mock

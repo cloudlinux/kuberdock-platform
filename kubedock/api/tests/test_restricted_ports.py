@@ -6,7 +6,7 @@ import mock
 from kubedock.testutils.testcases import APITestCase
 
 
-class FakeAllowedPort(object):
+class FakeRestrictedPort(object):
 
     def __init__(self, port, protocol):
         self.port = port
@@ -16,31 +16,31 @@ class FakeAllowedPort(object):
         return {'port': self.port, 'protocol': self.protocol}
 
 
-class TestAllowedPorts(APITestCase):
+class TestRestrictedPorts(APITestCase):
     ports = [
         {
-            'port': 8000,
+            'port': 25,
             'protocol': 'tcp',
         },
         {
-            'port': 8001,
+            'port': 53,
             'protocol': 'udp',
         },
     ]
-    kuberdock_nodes_tier = [FakeAllowedPort(**port) for port in ports]
-    url = '/allowed-ports'
+    kuberdock_nodes_tier = [FakeRestrictedPort(**port) for port in ports]
+    url = '/restricted-ports'
 
-    @mock.patch('kubedock.kapi.allowed_ports.AllowedPort')
-    def test_get_ports(self, allowed_port_mock):
-        allowed_port_mock.query = self.kuberdock_nodes_tier
+    @mock.patch('kubedock.kapi.restricted_ports.RestrictedPort')
+    def test_get_ports(self, restricted_port_mock):
+        restricted_port_mock.query = self.kuberdock_nodes_tier
         response = self.admin_open()
         self.assert200(response)
         self.assertEqual(response.json['data'], self.ports)
 
-    @mock.patch('kubedock.kapi.allowed_ports.db')
-    @mock.patch('kubedock.kapi.allowed_ports.AllowedPort')
-    @mock.patch('kubedock.kapi.allowed_ports.etcd.Client')
-    def test_set_port(self, etcd_client_mock, allowed_port_mock, db_mock):
+    @mock.patch('kubedock.kapi.restricted_ports.db')
+    @mock.patch('kubedock.kapi.restricted_ports.RestrictedPort')
+    @mock.patch('kubedock.kapi.restricted_ports.etcd.Client')
+    def test_set_port(self, etcd_client_mock, restricted_port_mock, db_mock):
         response = self.admin_open(method='POST')
         self.assertAPIError(response, 400, 'ValidationError',
                             {u'protocol': u'required field',
@@ -69,10 +69,10 @@ class TestAllowedPorts(APITestCase):
         response = self.admin_open(method='POST',
                                    json={'port': 8000, 'protocol': 'tcp'})
         self.assertAPIError(response, 400,
-                            'AllowedPortsException.OpenPortError',
-                            {u'message': u'Port already opened'})
+                            'RestrictedPortsException.ClosePortError',
+                            {u'message': u'Port already closed'})
 
-        allowed_port_mock.query.filter_by.return_value.first.return_value = \
+        restricted_port_mock.query.filter_by.return_value.first.return_value = \
             None
         response = self.admin_open(method='POST',
                                    json={'port': 8002, 'protocol': 'tcp'})
@@ -87,14 +87,14 @@ class TestAllowedPorts(APITestCase):
         self.assertAPIError(
             response,
             400,
-            'AllowedPortsException.OpenPortError',
-            {u'message': u"Can't update allowed port policy in etcd"},
+            'RestrictedPortsException.ClosePortError',
+            {u'message': u"Can't update restricted port policy in etcd"},
         )
 
-    @mock.patch('kubedock.kapi.allowed_ports.db')
-    @mock.patch('kubedock.kapi.allowed_ports.AllowedPort')
-    @mock.patch('kubedock.kapi.allowed_ports.etcd.Client')
-    def test_del_port(self, etcd_client_mock, allowed_port_mock, db_mock):
+    @mock.patch('kubedock.kapi.restricted_ports.db')
+    @mock.patch('kubedock.kapi.restricted_ports.RestrictedPort')
+    @mock.patch('kubedock.kapi.restricted_ports.etcd.Client')
+    def test_del_port(self, etcd_client_mock, restricted_port_mock, db_mock):
         with self.assertRaises(AssertionError) as context:
             self.admin_open(self.item_url('wrong-port-number', 'tcp'),
                             method='DELETE')
@@ -116,15 +116,15 @@ class TestAllowedPorts(APITestCase):
         self.assertAPIError(response, 400, 'ValidationError',
                             {u'protocol': u'unallowed value !WRONG!'})
 
-        allowed_port_mock.query.filter_by.return_value.first.return_value = \
+        restricted_port_mock.query.filter_by.return_value.first.return_value = \
             None
         response = self.admin_open(self.item_url('8000', 'tcp'),
                                    method='DELETE')
         self.assertAPIError(response, 400,
-                            'AllowedPortsException.ClosePortError',
-                            {u'message': u"Port doesn't opened"})
+                            'RestrictedPortsException.OpenPortError',
+                            {u'message': u"Port doesn't closed"})
 
-        allowed_port_mock.query.filter_by.return_value.first.return_value = \
+        restricted_port_mock.query.filter_by.return_value.first.return_value = \
             self.ports[0]
         response = self.admin_open(self.item_url('8000', 'tcp'),
                                    method='DELETE')
@@ -138,8 +138,8 @@ class TestAllowedPorts(APITestCase):
         self.assertAPIError(
             response,
             400,
-            'AllowedPortsException.ClosePortError',
-            {u'message': u"Can't remove allowed ports policy from etcd"},
+            'RestrictedPortsException.OpenPortError',
+            {u'message': u"Can't remove restricted ports policy from etcd"},
         )
 
 

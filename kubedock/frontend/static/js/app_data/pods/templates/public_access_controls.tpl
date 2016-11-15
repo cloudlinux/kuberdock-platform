@@ -4,7 +4,7 @@
         <input id="public-access-type-ip" class="public-access-type"
                 value="ip" type="radio" name="public-access-type"
                 <%= typeof domain == 'undefined' || domain == null ? 'checked' : '' %>>
-        <span></span><i><%= isAWS ? 'Random domain' : 'Public IP' %></i>
+        <span></span><i><%= isAWS ? 'Standard domain' : 'Public IP' %></i>
     </label>
     <label class="custom margin-bottom-3 radio-inline">
         <input id="public-access-type-domain" class="public-access-type"

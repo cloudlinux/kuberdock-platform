@@ -5,9 +5,7 @@
                 <th class="col-md-3">Container port</th>
                 <th class="col-md-3">Protocol</th>
                 <th class="col-md-2">Pod port</th>
-                <th class="col-md-2" title="Public IP will require additional payment">
-                    Public <% if (!isAWS) { %><sup>*</sup><% } %>
-                </th>
+                <th class="col-md-2">Public <sup>*</sup></th>
                 <th class="col-md-2">Actions</th>
             </tr>
         </thead>

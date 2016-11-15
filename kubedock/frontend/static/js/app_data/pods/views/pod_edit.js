@@ -407,14 +407,6 @@ export const PortCollection = Backbone.Marionette.CompositeView.extend({
         'click @ui.publicAccessType': 'visibleDomainControl',
     },
 
-    initialize(options){ this.isAWS = options.isAWS; },
-
-    templateHelpers(){
-        return {
-            isAWS: this.isAWS,
-        };
-    },
-
     addItem(evt){ this.collection.add(new Model.Port()); },
 });
 
@@ -726,8 +718,7 @@ export const WizardPortsSubView = Backbone.Marionette.LayoutView.extend({
     onBeforeShow(){
         this.ports.show(new PortCollection({
             model: this.model,
-            collection: this.model.get('ports'),
-            isAWS: this.isAWS,
+            collection: this.model.get('ports')
         }), {replaceElement: true});
 
         if (this.domains.length){

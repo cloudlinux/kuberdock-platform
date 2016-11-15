@@ -48,6 +48,8 @@ from .kapi.node_utils import (
     setup_storage_to_aws_node, add_volume_to_node_ls,
     complete_calico_node_config)
 
+from .kapi.helpers import KubeQuery, raise_if_failure
+
 from .kd_celery import celery, exclusive_task
 
 
@@ -446,10 +448,12 @@ def fix_pods_timeline():
     css = ContainerState.query.filter(ContainerState.end_time.is_(None))
     t.append(time.time())
     # get pods from k8s
-    pods = requests.get(get_api_url('pods', namespace=False))
-    pods = {pod['metadata'].get('labels', {}).get('kuberdock-pod-uid'): pod
-            for pod in pods.json(object_hook=k8s_json_object_hook).get('items')
-            }
+    # we need to get only KuberDock pods
+    pods = KubeQuery().get(['pods'], {'labelSelector': 'kuberdock-pod-uid'})
+    raise_if_failure(pods, "Can't get pods")
+    pods = {
+        pod['metadata']['labels']['kuberdock-pod-uid']:
+        k8s_json_object_hook(pod) for pod in pods.get('items', []) }
     now = datetime.utcnow().replace(microsecond=0)
     t.append(time.time())
 

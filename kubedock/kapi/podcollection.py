@@ -1051,6 +1051,7 @@ class PodCollection(object):
 
         if not current_app.config['FIXED_IP_POOLS']:
             self._assign_public_ip(pod, db_pod, db_config)
+        db.session.commit()
 
         if async_pod_create:
             prepare_and_run_pod_task.delay(pod)
@@ -1108,9 +1109,7 @@ class PodCollection(object):
                                    new_ip=utils.int2ip(ip_address)))
                     for user_id in send_to_ids:
                         utils.send_event_to_user(
-                            # TODO: change event_name to 'notify:warning' when
-                            # it will be implemented
-                            event_name='notify:error', data={'message': msg},
+                            event_name='notify:warning', data={'message': msg},
                             user_id=user_id)
 
                 network = IPPool.get_network_by_ip(ip_address)

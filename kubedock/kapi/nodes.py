@@ -689,7 +689,7 @@ def get_policy_agent_config(master, token):
             {
                 "command": [],
                 "kubes": 1,
-                "image": "kuberdock/k8s-policy-agent:v0.1.4-kd",
+                "image": "kuberdock/k8s-policy-agent:v0.1.4-kd2",
                 "name": "policy-agent",
                 "env": [
                     {

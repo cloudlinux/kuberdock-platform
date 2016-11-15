@@ -76,6 +76,7 @@ class Pod(object):
 
     def __init__(self, data=None):
         self.k8s_status = None
+        self.certificate = None
         owner = None
         if data is not None:
             for c in data['containers']:

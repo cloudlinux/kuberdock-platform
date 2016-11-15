@@ -426,6 +426,14 @@ edited_pod_config_schema = {
             }
         }
     },
+    'certificate': {
+        'type': 'dict',
+        'nullable': True,
+        'schema': {
+            'cert': {'type': 'string', 'nullable': True},
+            'key': {'type': 'string', 'nullable': True},
+        }
+    },
     'serviceAccount': {
         'type': 'boolean',
         'required': False,

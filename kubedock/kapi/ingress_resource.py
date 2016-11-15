@@ -1,4 +1,5 @@
 """Functions to manage ingress resources."""
+import base64
 import json
 
 from .helpers import KubeQuery
@@ -51,7 +52,7 @@ def create_ingress_http(namespace, domain, service):
     kq.post(['ingresses'], json.dumps(config), rest=True, ns=namespace)
 
 
-def create_ingress_https(namespace, domain, service):
+def create_ingress_https(namespace, domain, service, certificate=None):
     """
     Create Ingress resource for HTTPS and HTTP
 
@@ -73,9 +74,6 @@ def create_ingress_https(namespace, domain, service):
     config = {
         "metadata": {
             "name": name,
-            "annotations": {
-                "kubernetes.io/tls-acme": "true"
-            }
         },
         "kind": "Ingress",
         "spec": {
@@ -106,10 +104,29 @@ def create_ingress_https(namespace, domain, service):
         }
     }
 
+    if certificate is None:
+        config['metadata']['annotations'] = {
+            "kubernetes.io/tls-acme": "true"
+        }
+    else:
+        secret = {
+            "kind": "Secret",
+            "apiVersion": "v1",
+            "metadata": {
+                "name": name,
+            },
+            "data": {
+                "tls.crt": base64.encodestring(certificate['cert']),
+                "tls.key": base64.encodestring(certificate['key']),
+            },
+            "type": "Opaque"
+        }
+        KubeQuery().post(['secrets'], json.dumps(secret), ns=namespace, rest=True)
+
     kq.post(['ingresses'], json.dumps(config), rest=True, ns=namespace)
 
 
-def create_ingress(containers, namespace, domain, service):
+def create_ingress(containers, namespace, domain, service, certificate=None):
     """
     Create Ingress resource based on containers ports
 
@@ -133,7 +150,7 @@ def create_ingress(containers, namespace, domain, service):
                 http = port_number == 80 or http
                 https = port_number == 443 or https
     if https:
-        create_ingress_https(namespace, domain, service)
+        create_ingress_https(namespace, domain, service, certificate)
     elif http:
         create_ingress_http(namespace, domain, service)
     else:

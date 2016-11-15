@@ -1,10 +1,12 @@
 import time
+import logging
+from urllib2 import HTTPError
 
-from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.integration_test_utils import \
-    NO_FREE_IPS_ERR_MSG, assert_raises, assert_eq, get_rnd_string
+from tests_integration.lib.utils import (
+    assert_eq, gen_rnd_ceph_pv_name, assert_raises)
 from tests_integration.lib.pipelines import pipeline
+
+LOG = logging.getLogger(__name__)
 
 
 @pipeline('main')
@@ -28,25 +30,50 @@ def test_a_pv_created_together_with_pod(cluster):
     # type: (KDIntegrationTestAPI) -> None
     # We have issue related to using non-unique disk names within
     # same CEPH pool (AC-3831). That is why name is randomized.
-    pv_name = _gen_rnd_ceph_pv_name()
+    pv_name = gen_rnd_ceph_pv_name()
 
-    mount_path = '/nginxpv'
+    mount_path = '/usr/share/nginx/html'
 
     # It is possible to create an nginx pod together with new PV
     pv = cluster.pvs.add("dummy", pv_name, mount_path)
     pod = cluster.pods.create("nginx", "test_nginx_pod_1", pvs=[pv],
-                              start=True, wait_for_status='running')
-    assert pv.exists()
+                              start=True, wait_for_status='running',
+                              wait_ports=True, open_all_ports=True)
+    assert_eq(pv.exists(), True)
+
+    c_id = pod.get_container_id(container_image='nginx')
+    pod.docker_exec(c_id,
+                    'echo -n TEST > {path}/test.txt'.format(path=mount_path))
+    ret = pod.do_GET(path='/test.txt')
+    assert_eq('TEST', ret)
     pod.delete()
 
     # It is possible to create an nginx pod using existing PV
     pod = cluster.pods.create("nginx", "test_nginx_pod_2", pvs=[pv],
-                              start=True, wait_for_status='running')
+                              start=True, wait_for_status='running',
+                              wait_ports=True, open_all_ports=True)
+    ret = pod.do_GET(path='/test.txt')
+    assert_eq('TEST', ret)
     pod.delete()
 
     # It's possible to remove PV created together with pod
     pv.delete()
-    assert not pv.exists()
+    assert_eq(pv.exists(), False)
+
+    # Create another PV with the same name
+    pv = cluster.pvs.add('dummy', pv_name, mount_path)
+    pod = cluster.pods.create(
+        'nginx', 'test_nginx_pod_3', pvs=[pv], start=True,
+        wait_for_status='running', wait_ports=True, open_all_ports=True)
+    assert_eq(pv.exists(), True)
+
+    # '/test.txt' is not on newly created PV, we expect HTTP Error 404
+    with assert_raises(HTTPError, 'HTTP Error 404: Not Found'):
+        pod.do_GET(path='/test.txt')
+
+    pod.delete()
+    pv.delete()
+    assert_eq(pv.exists(), False)
 
 
 @pipeline('main')
@@ -55,7 +82,7 @@ def test_a_pv_created_together_with_pod(cluster):
 @pipeline('ceph_upgraded')
 def test_a_pv_created_separately(cluster):
     # type: (KDIntegrationTestAPI) -> None
-    pv_name = _gen_rnd_ceph_pv_name()
+    pv_name = gen_rnd_ceph_pv_name()
     pv_size = 2
     mount_path = '/nginxpv'
 
@@ -118,25 +145,6 @@ def test_recreate_pod_with_real_ip(cluster):
     pod.delete()
 
 
-@pipeline('networking')
-@pipeline('networking_upgraded')
-def test_pod_ip_resource(cluster):
-    # type: (KDIntegrationTestAPI) -> None
-    # It's not possible to create a POD with public IP with no IP pools
-    cluster.ip_pools.clear()
-    with assert_raises(NonZeroRetCodeException, NO_FREE_IPS_ERR_MSG):
-        cluster.pods.create("nginx", "test_nginx_pod_2",
-                            open_all_ports=True,
-                            start=True)
-
-    assert_eq(cluster.pods.filter_by_owner(), [])
-
-    # It's still possible to create a pod without a public IP
-    cluster.pods.create("nginx", "test_nginx_pod_3",
-                        start=True, open_all_ports=False,
-                        wait_for_status='running')
-
-
 @pipeline('main', skip_reason="FIXME in AC-4974")
 @pipeline('main_upgraded', skip_reason="FIXME in AC-4974")
 def test_nginx_kublet_resize(cluster):
@@ -149,7 +157,3 @@ def test_nginx_kublet_resize(cluster):
     pod.wait_for_ports()
     time.sleep(15)
     pod.healthcheck()
-
-
-def _gen_rnd_ceph_pv_name():
-    return get_rnd_string(prefix="integr_test_disk_")

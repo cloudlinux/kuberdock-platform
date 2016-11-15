@@ -10,7 +10,7 @@ from xmlrpclib import ProtocolError
 
 from tests_integration.lib.exceptions import OpenNebulaError, NotEnoughFreeIPs
 from tests_integration.lib.timing import log_timing, log_timing_ctx
-
+from tests_integration.lib.utils import log_begin, log_end
 
 LOG = logging.getLogger(__name__)
 

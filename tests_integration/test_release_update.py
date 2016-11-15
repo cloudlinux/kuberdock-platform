@@ -18,29 +18,21 @@ def test_release_update(cluster):
         6. Waiting pod became running
         7. Check health of all pods
     """
-    # Step 1, 2, 3, 4
 
-    # TODO After release 1.4 add open_all_ports=True, wait_ports=True,
-    # healthcheck=True
     pod1 = cluster.pods.create("nginx", u"test_nginx_pod_1",
-                               open_all_ports=False, start=True,
-                               wait_for_status='running')
+                               open_all_ports=True, start=True)
     pod2 = cluster.pods.create("nginx", u"тест_нжинкс_под_2",
-                               open_all_ports=False, start=True,
-                               wait_for_status='running')
+                               open_all_ports=True, start=True)
     pod3 = cluster.pods.create("nginx", u"測試nginx的莢1",
-                               open_all_ports=False, start=True,
-                               wait_for_status='running')
-    # Step 5
+                               open_all_ports=True, start=True)
+    def healthcheck_all():
+        for p in (pod1, pod2, pod3):
+            p.wait_for_status("running")
+            p.wait_for_ports()
+            p.healthcheck()
+    healthcheck_all()
+
     cluster.upgrade('/tmp/prebuilt_rpms/kuberdock.rpm',
                     use_testing=True, skip_healthcheck=True)
-    # Step 6
-    pod1.wait_for_status('running')
-    pod2.wait_for_status('running')
-    pod3.wait_for_status('running')
-    # Step 7
-    # TODO: Turned off till release 1.4, because 1.3 can only exclude IPs from
-    # one /24 network
-    # pod1.healthcheck()
-    # pod2.healthcheck()
-    # pod3.healthcheck()
+
+    healthcheck_all()

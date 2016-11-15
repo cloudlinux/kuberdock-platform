@@ -1718,7 +1718,8 @@ def prepare_and_run_pod(pod, db_pod, db_config):
                     pod.domain, 'A')
             if ok:
                 ok, message = ingress_resource.create_ingress(
-                    pod.containers, pod.namespace, pod.domain, pod.service)
+                    pod.containers, pod.namespace, pod.domain, pod.service,
+                    pod.certificate)
             if not ok:
                 msg = u'Failed to run pod with domain "{}": {}'
                 utils.send_event_to_role(

@@ -470,10 +470,12 @@ class TestPodCollection(DBTestCase, TestCaseMixin):
                       'namespace': 'Unnamed-1-namespace-md5',
                       'owner': self.user, 'containers': [],
                       'k8s_status': None,
+                      'certificate': None,
                       'volumes': []},
                      {'id': 2, 'name': 'Unnamed-2',
                       'namespace': 'Unnamed-2-namespace-md5',
                       'k8s_status': None,
+                      'certificate': None,
                       'owner': self.user, 'containers': [], 'volumes': []}]
 
         self.pods_output = copy.deepcopy(self.pods)
@@ -599,6 +601,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
             self.test_pod.namespace,
             self.test_pod.domain,
             self.test_pod.service,
+            self.test_pod.certificate,
         )
         self.assertEqual(res, self.test_pod.as_dict.return_value)
 
@@ -793,6 +796,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
             self.test_pod.namespace,
             self.test_pod.domain,
             self.test_pod.service,
+            self.test_pod.certificate,
         )
         self.assertEqual(res, self.test_pod.as_dict.return_value)
 

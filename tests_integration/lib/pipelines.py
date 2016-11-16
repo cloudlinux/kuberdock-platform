@@ -394,6 +394,14 @@ class ZFSStorageUpgradedPipeline(UpgradedPipelineMixin, ZFSStoragePipeline):
 pipelines = defaultdict(list)
 
 
+class SharedIPPipeline(Pipeline):
+    NAME = 'shared_ip'
+    ROUTABLE_IP_COUNT = 1
+    ENV = {
+        'KD_NODES_COUNT': '1',
+    }
+
+
 def pipeline(name, thread=1, skip_reason=""):
     """
     Register that a test should be executed in a pipeline with a given name

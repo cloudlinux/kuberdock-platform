@@ -24,7 +24,7 @@ def _add_domain(cluster):
     dns_pod.wait_for_status("running")
 
     # TODO: remove retry when fix for AC-5096 is merged
-    retry(cluster.domains.add, name=creds["domain"], tries=30, interval=10)
+    retry(cluster.domains.add, name=creds["domain"], tries=5, interval=10)
     ingress_pod = KDPod.get_internal_pod(cluster, KUBERDOCK_INGRESS_POD_NAME)
     ingress_pod.wait_for_status("running")
 
@@ -35,7 +35,7 @@ def _remove_domain(cluster):
     cluster.set_system_setting("'No provider'", name="dns_management_system")
 
 
-@pipeline("main")
+@pipeline("shared_ip")
 @pipeline("main_aws")
 @hooks(setup=_add_domain, teardown=_remove_domain)
 def test_pod_with_domain_name(cluster):
@@ -83,3 +83,25 @@ def test_pod_with_domain_name(cluster):
     pod.wait_for_ports([80])
     pod.healthcheck()
     """
+
+
+@pipeline("shared_ip")
+@hooks(setup=_add_domain, teardown=_remove_domain)
+def test_pod_with_long_domain_name(cluster):
+    """
+     Tes that pod with domain name's length equaling 63 (kubernetes
+     limitation) symbols can be created and accessed
+    """
+    with open("tests_integration/assets/cpanel_credentials.json") as f:
+        creds = json.load(f)
+
+    # Adjusting pod name's length to make domain name's length equal 63. 53
+    # is 63 - 10 (length of "testuser-.")
+    pod_name = get_rnd_low_string(length=53 - len(creds["domain"]))
+
+    pod = cluster.pods.create("nginx", pod_name, ports_to_open=[80],
+                              wait_for_status="running", domain=creds["domain"],
+                              healthcheck=True, wait_ports=True)
+    assert_eq(pod.domain, "testuser-{}.{}".
+              format(pod_name, creds["domain"]))
+

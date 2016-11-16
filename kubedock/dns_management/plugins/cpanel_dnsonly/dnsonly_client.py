@@ -43,10 +43,12 @@ class Connect(object):
 
     def raise_for_status(self, response):
         try:
-            if any(r['status'] != 1 for r in response['result']):
-                raise exceptions.GenericPluginError(response['result'])
+            failures = [r for r in response['result'] if r['status'] != 1]
+            if failures:
+                message = '\n'.join(f['statusmsg'] for f in failures)
+                raise exceptions.GenericPluginError(message, response['result'])
         except KeyError:
-            raise exceptions.UnexpectedResponse(response)
+            raise exceptions.UnexpectedResponse(response=response)
 
 
 class API(object):
@@ -55,12 +57,17 @@ class API(object):
 
     def zones(self):
         for zone in self.connect.get('listzones')['zone']:
-            yield Zone(
-                name=zone['domain'],
-                info=self.connect.get('dumpzone', {
-                    'domain': zone['domain']
-                }),
-                connect=self.connect)
+            yield self.get_zone(zone['domain'])
+
+    def get_zone(self, domain):
+        response = self.connect.get('dumpzone', {'domain': domain})
+        try:
+            self.connect.raise_for_status(response)
+            return Zone(name=domain, info=response, connect=self.connect)
+        except exceptions.GenericPluginError as e:
+            if e.response[0]['statusmsg'] == 'Zone does not exist.':
+                raise exceptions.ZoneDoesNotExist(domain, e.response)
+            raise
 
 
 class Zone(object):

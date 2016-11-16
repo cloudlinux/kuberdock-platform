@@ -1,6 +1,7 @@
 from flask import current_app
 
 from .dnsonly_client import API
+from ... import exceptions
 
 
 def delete_type_A_record(domain, **kwargs):
@@ -12,15 +13,20 @@ def delete_type_A_record(domain, **kwargs):
         token for access to Cloudflare API
     :return: None
     """
-    _, _, main_domain = domain.partition('.')
+
+    main_domain = extract_main_domain(domain)
     api = API(**kwargs)
 
-    for zone in api.zones():
-        if zone.name == main_domain:
-            for dns_record in zone.records():
-                # dns record without end point
-                if dns_record.type == 'A' and domain == dns_record.name[:-1]:
-                    dns_record.delete()
+    try:
+        zone = api.get_zone(main_domain)
+    except exceptions.ZoneDoesNotExist:
+        raise ValueError("Zone for domain {} not found. "
+                         "Need to configure the zone".format(domain))
+
+    for dns_record in zone.records():
+        # dns record without end point
+        if dns_record.type == 'A' and domain == dns_record.name[:-1]:
+            dns_record.delete()
 
 
 def delete_type_CNAME_record(domain, **kwargs):
@@ -32,15 +38,14 @@ def delete_type_CNAME_record(domain, **kwargs):
         token and certtoken for access to Cloudflare API
     :return: None
     """
-    _, _, main_domain = domain.partition('.')
+    main_domain = extract_main_domain(domain)
     api = API(**kwargs)
 
-    for zone in api.zones():
-        if zone.name == main_domain:
-            for record in zone.records():
-                # dns record without end point
-                if record.type == 'CNAME' and domain == record.name[:-1]:
-                    record.delete()
+    zone = api.get_zone(main_domain)
+    for record in zone.records():
+        # dns record without end point
+        if record.type == 'CNAME' and domain == record.name[:-1]:
+            record.delete()
 
 
 def create_or_update_type_A_record(domain, new_ips, **kwargs):
@@ -53,57 +58,54 @@ def create_or_update_type_A_record(domain, new_ips, **kwargs):
     :param dict kwargs: additional params such as token for access WHM API
     :return:
     """
-    _, _, main_domain = domain.partition('.')
+    main_domain = extract_main_domain(domain)
     api = API(**kwargs)
 
-    for zone in api.zones():
-        if zone.name == main_domain:
-            for dns_record in zone.records():
-                # dns record without end point
-                if dns_record.type == 'A' and domain == dns_record.name[:-1]:
-                    if dns_record.address not in new_ips:
-                        # dnsonly can assign only one ip address
-                        # here you can use roundrobin for many ip addresses
-                        new_ip = new_ips[0]
+    try:
+        zone = api.get_zone(main_domain)
+    except exceptions.ZoneDoesNotExist:
+        raise ValueError("Zone for domain {} not found. "
+                         "Need to configure the zone".format(domain))
 
-                        dns_record.address = new_ip
-                        dns_record.edit()
-
-                        current_app.logger.debug(
-                            'Replace record in zone "{zone}" with '
-                            'domain "{domain}" '
-                            'and ip "{ips}"'.format(
-                                zone=zone.name, domain=domain, ips=new_ip
-                            ))
-
-                    else:
-                        current_app.logger.debug(
-                            'Domain "{domain}" with '
-                            'ip "{ips}" in zone "{zone}" '
-                            'already exists'.format(
-                                zone=zone.name, domain=domain, ips=new_ips
-                            ))
-
-                    break  # exit for loop after dns record was processed
-
-            else:
+    for dns_record in zone.records():
+        # dns record without end point
+        if dns_record.type == 'A' and domain == dns_record.name[:-1]:
+            if dns_record.address not in new_ips:
                 # dnsonly can assign only one ip address
                 # here you can use roundrobin for many ip addresses
                 new_ip = new_ips[0]
 
-                zone.add_a_record(domain, new_ip)
+                dns_record.address = new_ip
+                dns_record.edit()
+
                 current_app.logger.debug(
-                    'Create new record in zone "{zone}" with '
-                    '"{domain}" '
+                    'Replace record in zone "{zone}" with '
+                    'domain "{domain}" '
                     'and ip "{ips}"'.format(
+                        zone=zone.name, domain=domain, ips=new_ip
+                    ))
+
+            else:
+                current_app.logger.debug(
+                    'Domain "{domain}" with '
+                    'ip "{ips}" in zone "{zone}" '
+                    'already exists'.format(
                         zone=zone.name, domain=domain, ips=new_ips
                     ))
-            break  # exit for loop after dns zone was processed
-    else:
-        # this branch executes if for loop is not terminated by break
-        # e.g. there is no dns zone that we expect
-        raise ValueError("Zone for domain {} not found. "
-                         "Need to configure the zone".format(domain))
+
+            return
+
+    # dnsonly can assign only one ip address
+    # here you can use roundrobin for many ip addresses
+    new_ip = new_ips[0]
+
+    zone.add_a_record(domain, new_ip)
+    current_app.logger.debug(
+        'Create new record in zone "{zone}" with '
+        '"{domain}" '
+        'and ip "{ips}"'.format(
+            zone=zone.name, domain=domain, ips=new_ips
+        ))
 
 
 def create_or_update_type_CNAME_record(domain, target, **kwargs):
@@ -116,12 +118,12 @@ def create_or_update_type_CNAME_record(domain, target, **kwargs):
     :param dict kwargs: additional params such as token for access WHM API
     :return:
     """
-    _, _, main_domain = domain.partition('.')
+    main_domain = extract_main_domain(domain)
     api = API(**kwargs)
 
     try:
-        target_zone = next(z for z in api.zones() if z.name == main_domain)
-    except StopIteration:
+        target_zone = api.get_zone(main_domain)
+    except exceptions.ZoneDoesNotExist:
         raise ValueError("Zone for domain {} not found. "
                          "Need to configure the zone".format(domain))
 
@@ -155,7 +157,17 @@ def create_or_update_type_CNAME_record(domain, target, **kwargs):
 
 def check_if_zone_exists(domain, **kwargs):
     api = API(**kwargs)
-    for zone in api.zones():
-        if zone.name == domain:
-            return True
-    return False
+    try:
+        api.get_zone(domain)
+        return True
+    except exceptions.ZoneDoesNotExist:
+        return False
+
+
+def extract_main_domain(domain):
+    if domain.endswith('.'):
+        domain = domain[:-1]
+
+    _, _, main_domain = domain.partition('.')
+
+    return main_domain

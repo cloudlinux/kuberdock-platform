@@ -27,7 +27,6 @@ show_help() {
     echo "-t|--testing          : Use testing repositories"
     echo "-k|--kuberdock        : Specify KuberDock master hostname or IP address (if not specified '127.0.0.1' is used)"
     echo "-i|--ip-address       : Ip v4 address to use in calico-node"
-    echo "-C|--switch-to-calico : Switch Networking to Calico"
     echo "-h|--help             : Show this help"
     exit 0
 }
@@ -63,15 +62,6 @@ yum_wrapper() {
 }
 
 
-upgrade() {
-    yum_wrapper -y update flannel kubernetes-proxy kuberdock-cli kuberdock-plugin
-    sed -i "s/^#\?KUBE_PROXY_ARGS=.*$/KUBE_PROXY_ARGS=\"--proxy-mode userspace\"/" $PROXY_CONFIG_ARGS
-    do_and_log service flanneld restart
-    do_and_log service kube-proxy restart
-    exit 0
-}
-
-
 remove_flannel() {
     if [ "$VER" == "7" ];then
         do_and_log systemctl stop flanneld
@@ -104,6 +94,10 @@ register_host() {
 
 
 install_calico() {
+    if [ -z "$KD_HOST" ];then
+        KD_HOST=$(grep url /etc/kubecli.conf | cut -d= -f2 | xargs echo | sed 's/^https\?:\/\///')
+    fi
+
     if [ "$VER" == "7" ];then
         yum_wrapper -y install docker
         do_and_log systemctl enable docker
@@ -143,19 +137,40 @@ install_calico() {
 }
 
 
-switch_to_calico() {
-    if [ -z "$KD_HOST" ];then
-        KD_HOST=$(grep url /etc/kubecli.conf | cut -d= -f2 | xargs echo | sed 's/^https\?:\/\///')
+check_calico() {
+    if ! rpm -q docker >> /dev/null; then
+        return 1
     fi
-    remove_flannel
+    if ! docker ps | grep kuberdock/calico-node >> /dev/null; then
+        return 1
+    fi
+    return 0
+}
+
+
+switch_to_calico() {
+    if rpm -q flannel >> /dev/null; then
+        remove_flannel
+    fi
     install_calico
+}
+
+
+upgrade() {
+    yum_wrapper -y update kubernetes-proxy kuberdock-cli kuberdock-plugin
+
+    sed -i "s/^#\?KUBE_PROXY_ARGS=.*$/KUBE_PROXY_ARGS=\"--proxy-mode userspace\"/" $PROXY_CONFIG_ARGS
+    do_and_log service kube-proxy restart
+
+    check_calico || switch_to_calico
+
     exit 0
 }
 
 
 VER=$(cat /etc/redhat-release|sed -e 's/[^0-9]//g'|cut -c 1)
 
-TEMP=$(getopt -o k:u:i:tcCh,U -l kuberdock:,user:,calico-node-ip:,testing,calico,switch-to-calico,help,upgrade -n 'kcli-deploy.sh' -- "$@")
+TEMP=$(getopt -o k:u:i:th,U -l kuberdock:,user:,ip-address:,testing,help,upgrade -n 'kcli-deploy.sh' -- "$@")
 eval set -- "$TEMP"
 
 
@@ -172,10 +187,6 @@ while true;do
         ;;
         -i|--ip-address)
             SELF_IP=$2;shift 2;
-        ;;
-        -C|--switch-to-calico)
-            switch_to_calico
-            break
         ;;
         -h|--help)
             show_help;break

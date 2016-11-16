@@ -544,12 +544,12 @@ def _master_calico(calico_network):
         )
         if rv.failed:
             raise helpers.UpgradeError("Can't add calicoctl pool")
-        rv = helpers.local('docker pull kuberdock/calico-node:0.22.0-kd1')
+        rv = helpers.local('docker pull kuberdock/calico-node:0.22.0-kd2')
         if rv.failed:
             raise helpers.UpgradeError("Can't pull calicoctl image")
         rv = helpers.local(
             'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl node '
-            '--ip="{0}" --node-image=kuberdock/calico-node:0.22.0-kd1'
+            '--ip="{0}" --node-image=kuberdock/calico-node:0.22.0-kd2'
             .format(MASTER_IP)
         )
         if rv.failed:
@@ -811,7 +811,7 @@ def _node_calico(with_testing, node_name, node_ip):
     )
     with quiet():
         # pull image separately to get reed of calicoctl timeouts
-        rv = run('docker pull kuberdock/calico-node:0.22.0-kd1')
+        rv = run('docker pull kuberdock/calico-node:0.22.0-kd2')
         if rv.failed:
             raise helpers.UpgradeError("Can't pull calicoctl image")
         rv = run(
@@ -823,7 +823,7 @@ def _node_calico(with_testing, node_name, node_ip):
             'HOSTNAME="{1}" '
             '/opt/bin/calicoctl node '
             '--ip="{2}" '
-            '--node-image=kuberdock/calico-node:0.22.0-kd1'
+            '--node-image=kuberdock/calico-node:0.22.0-kd2'
             .format(MASTER_IP, node_name, node_ip)
         )
         if rv.failed:

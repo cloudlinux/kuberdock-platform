@@ -524,7 +524,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
             return_value={'metadata': {'name': self.test_service_name},
                           'spec': {'clusterIP': '1.1.1.1'}})
 
-        self.valid_config = '{"valid": "config"}'
+        self.valid_config = {"valid": "config"}
         self.test_pod = fake_pod(
             use_parents=(mock.Mock,),
             name='unnamed-1',
@@ -554,9 +554,10 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
     @mock.patch.object(podcollection, 'run_service')
     @mock.patch.object(podcollection.podutils, 'raise_if_failure')
     @mock.patch.object(podcollection.KubeQuery, 'post')
+    @mock.patch.object(podcollection.PodCollection, 'has_public_ports')
     def test_pod_prepare_and_run_task(
-            self, post_mock, raise_if_failure_mock, run_service_mock,
-            dbpod_mock, replace_pod_config_mock,
+            self, has_public_ports_mock, post_mock, raise_if_failure_mock,
+            run_service_mock, dbpod_mock, replace_pod_config_mock,
             create_or_update_record_mock, create_ingress_mock,
             try_update_rc_mock):
         """
@@ -565,6 +566,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         :type mk_ns: mock.Mock
         :type rif: mock.Mock
         """
+        has_public_ports_mock.return_value = True
         create_ingress_mock.return_value = (True, None)
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
         self.test_pod.kuberdock_resolve = []
@@ -743,8 +745,9 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
     @mock.patch.object(podcollection, 'run_service')
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection.KubeQuery, 'post')
+    @mock.patch.object(podcollection.PodCollection, 'has_public_ports')
     def test_pod_prepare_and_run_task_second_start(
-            self, post_, dbpod_mock, run_service_mock,
+            self, has_public_ports_mock, post_, dbpod_mock, run_service_mock,
             create_or_update_record_mock, create_ingress_mock,
             try_update_rc_mock):
         """
@@ -752,6 +755,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         :type post_: mock.Mock
         """
 
+        has_public_ports_mock.return_value = True
         create_ingress_mock.return_value = (True, None)
         dbpod_mock.query.get().get_dbconfig.return_value = {
             'volumes': [], 'service': self.test_service_name}
@@ -788,7 +792,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         )
         self.assertEqual(res, self.test_pod.as_dict.return_value)
 
-    def test_needs_public_ip(self):
+    def test_has_public_ports(self):
         test_conf = {
             'containers': [{
                 'ports': [{'hostPort': 1000, 'containerPort': 80,
@@ -803,8 +807,8 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
                           {'containerPort': 80, 'isPublic': False}],
             }]
         }
-        self.assertTrue(self.pod_collection.needs_public_ip(test_conf))
-        self.assertFalse(self.pod_collection.needs_public_ip(test_conf2))
+        self.assertTrue(self.pod_collection.has_public_ports(test_conf))
+        self.assertFalse(self.pod_collection.has_public_ports(test_conf2))
 
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
     @mock.patch.object(podcollection, 'prepare_and_run_pod_task')
@@ -826,7 +830,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
             self.test_pod, {'commandOptions': {'applyEdit': True}})
         self.pod_collection._apply_edit.assert_called_once_with(
             self.test_pod, DBPod.query.get(), config)
-        mock_db.session.commit.assert_called_once_with()
+        mock_db.session.commit.assert_called_with()
 
 
 class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
@@ -1063,10 +1067,10 @@ class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
         pod_ = podcollection.Pod.return_value
         self.assertTrue(pod_.forge_dockers.called)
 
-    @mock.patch.object(podcollection.PodCollection, 'needs_public_ip')
-    def test_pod_needs_public_ip_called(self, _npip):
+    @mock.patch.object(podcollection.PodCollection, 'has_public_ports')
+    def test_pod_has_public_ports_called(self, _mock):
         self.pod_collection.add(self.params)
-        self.assertTrue(_npip.called)
+        self.assertTrue(_mock.called)
 
     def test_pod_as_dict_called(self):
         self.pod_collection.add(self.params)

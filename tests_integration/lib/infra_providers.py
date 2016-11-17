@@ -103,6 +103,7 @@ class InfraProvider(object):
 
 
 class VagrantProvider(InfraProvider):
+    __metaclass__ = ABCMeta
 
     def __init__(self, env, provider_args):
         self.env = env
@@ -285,14 +286,22 @@ class AwsProvider(InfraProvider):
 
     def __init__(self, env, provider_args):
         self.env = env
-        self.ec2 = boto3.resource(
-            'ec2',
-            env['AWS_S3_REGION'],
-            aws_access_key_id=env['AWS_ACCESS_KEY_ID'],
-            aws_secret_access_key=env['AWS_SECRET_ACCESS_KEY']
-        )
+        self._ec2_cached = None
         self._host_to_id_cached = None
-        self.inventory = None
+        self._inventory = None
+
+    @property
+    def _ec2(self):
+        if self._ec2_cached:
+            return self._ec2_cached
+
+        self._ec2_cached = boto3.resource(
+            'ec2',
+            self.env['AWS_S3_REGION'],
+            aws_access_key_id=self.env['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=self.env['AWS_SECRET_ACCESS_KEY']
+        )
+        return self._ec2_cached
 
     @property
     def ssh_user(self):
@@ -304,7 +313,7 @@ class AwsProvider(InfraProvider):
 
     def _get_ec2_instance(self, name):
         try:
-            instance, = self.ec2.instances.filter(Filters=[
+            instance, = self._ec2.instances.filter(Filters=[
                 {"Name": 'tag:Name', "Values": [name, ]},
                 {
                     "Name": 'instance-state-name',
@@ -435,7 +444,7 @@ class AwsProvider(InfraProvider):
         if self._host_to_id_cached is not None:
             return self._host_to_id_cached
         else:
-            reservations = self.ec2.get_all_instances(filters={
+            reservations = self._ec2.get_all_instances(filters={
                 "tag:KubernetesCluster": self.env['KUBE_AWS_INSTANCE_PREFIX']})
             instances = [i for r in reservations for i in r.instances]
             result = {}
@@ -451,7 +460,7 @@ class AwsProvider(InfraProvider):
         log_dict(self.env, "Cluster settings:")
         LOG.debug("Running aws-kd-deploy.sh...")
 
-        if self.ec2 is None:
+        if self._ec2 is None:
             raise VmCreateError('Failed to connect AWS')
 
         self._check_rpms()
@@ -464,26 +473,26 @@ class AwsProvider(InfraProvider):
             )])
         log_dict(self.env, "Cluster settings:")
         LOG.debug("Generating inventory")
-        self.inventory = self._get_inventory()
+        self._inventory = self._get_inventory()
         LOG.debug("Running ansible provision...")
         skip_tags = ','.join(
             self.env['KD_DEPLOY_SKIP'].split(',') + ['non_aws', ])
         extra_vars = self.extra_vars
         local_exec_live([
             "ansible-playbook", "dev-utils/dev-env/ansible/main.yml", "-i",
-            self.inventory, "--skip-tags", skip_tags,
+            self._inventory, "--skip-tags", skip_tags,
             '--extra-vars="{0}"'.format(extra_vars)])
 
     @log_timing
     def destroy(self):
         LOG.debug("Running aws-kd-down.sh...")
         local_exec_live(['bash', 'aws-kd-deploy/cluster/aws-kd-down.sh'])
-        os.remove(self.inventory)
+        os.remove(self._inventory)
 
     def power_on(self, host):
         vm_id = self._host_to_id[self.vm_names[host]]
-        self.ec2.stop_instances(instance_ids=[vm_id])
+        self._ec2.stop_instances(instance_ids=[vm_id])
 
     def power_off(self, host):
         vm_id = self._host_to_id[self.vm_names[host]]
-        self.ec2.start_instances(instance_ids=[vm_id])
+        self._ec2.start_instances(instance_ids=[vm_id])

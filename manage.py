@@ -154,7 +154,7 @@ def wait_for_nodes(nodes_list, timeout, verbose=False):
                 else:
                     _print("Node '{}' state is 'troubles' but acceptable "
                            "troubles timeout '{}'s is not reached yet..".format(
-                            nhost, WAIT_TROUBLE_TIMEOUT))
+                               nhost, WAIT_TROUBLE_TIMEOUT))
             elif state == NODE_STATUSES.running:
                 host_list.remove(nhost)
             else:

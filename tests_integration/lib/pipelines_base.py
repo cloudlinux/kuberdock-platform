@@ -64,8 +64,8 @@ class Pipeline(object):
             'MASTER_SIZE': 'm3.medium',
             'NODE_SIZE': 'm3.medium',
             'NUM_NODES': '1',
-            'AWS_EBS_DEFAULT_SIZE': '5',
-            'KUBE_AWS_INSTANCE_PREFIX': 'jenkins-kd-',
+            'AWS_EBS_DEFAULT_SIZE': '3',
+            'KUBE_AWS_INSTANCE_PREFIX': 'jenkins-kd',
         }
         take_from_os = [
             "HOME",

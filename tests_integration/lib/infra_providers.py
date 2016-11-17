@@ -5,6 +5,7 @@ import subprocess
 import shutil
 import time
 import tempfile
+import json
 from abc import ABCMeta, abstractmethod, abstractproperty
 from contextlib import contextmanager
 from datetime import datetime
@@ -17,10 +18,12 @@ from exceptions import VmCreateError, VmProvisionError, VmNotFoundError
 from tests_integration.lib.nebula_ip_pool import NebulaIPPool
 from tests_integration.lib.timing import log_timing_ctx, log_timing
 from tests_integration.lib.utils import retry, all_subclasses, log_dict, \
-    suppress, local_exec_live
+    suppress, local_exec_live, local_exec
 
 LOG = logging.getLogger(__name__)
 logging.getLogger('boto').setLevel(logging.WARNING)
+logging.getLogger('boto3').setLevel(logging.WARNING)
+logging.getLogger('botocore').setLevel(logging.WARNING)
 
 INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
 CLUSTER_CREATION_MAX_DELAY = 120
@@ -64,6 +67,11 @@ class InfraProvider(object):
     @abstractproperty
     @property
     def vm_names(self):
+        pass
+
+    @abstractproperty
+    @property
+    def get_vm_hostname(self, name):
         pass
 
     @abstractproperty
@@ -112,8 +120,8 @@ class VagrantProvider(InfraProvider):
         @contextmanager
         def cm():
             # Vagrant uses subprocess.check_call to execute each command.
-            # Thus we need a context manager which will catch it's stdout/stderr
-            # output and save it somewhere we can access it later
+            # Thus we need a context manager which will catch it's
+            # stdout/stderr output and save it somewhere we can access it later
             yield self._vagrant_log
 
         self.vagrant = vagrant.Vagrant(
@@ -141,6 +149,9 @@ class VagrantProvider(InfraProvider):
             "node4": "kd_node4",
             "rhost1": "kd_rhost1",
         }
+
+    def get_vm_hostname(self, name):
+        return name
 
     @property
     def node_names(self):
@@ -286,10 +297,17 @@ class AwsProvider(InfraProvider):
     NAME = "aws"
 
     def __init__(self, env, provider_args):
-        self.env = env
+
         self._ec2_cached = None
         self._host_to_id_cached = None
         self._inventory = None
+
+        self.env = env
+        self.env["NUM_NODES"] = self.env['KD_NODES_COUNT']
+        if 'KD_TESTING_REPO' in self.env:
+            self.env["KUBE_AWS_USE_TESTING"] = "yes"
+        if 'KD_NODE_TYPES' in self.env:
+            self.env["KUBE_AWS_NODE_TYPES"] = self._get_node_types()
 
     @property
     def _ec2(self):
@@ -350,6 +368,10 @@ class AwsProvider(InfraProvider):
                 pass
         return result
 
+    def get_vm_hostname(self, name):
+        instance = self._get_ec2_instance(self.vm_names[name])
+        return instance.private_dns_name
+
     @property
     def node_names(self):
         result = []
@@ -387,7 +409,9 @@ class AwsProvider(InfraProvider):
                     hostname=name)
             for host, host_ip in hosts.items():
                 inv.write('kd_{0} ansible_host={1} '
-                          'ansible_ssh_user=centos\n'.format(host, host_ip))
+                          'ansible_ssh_user=centos '
+                          'ansible_ssh_private_key_file={2}\n'.format(
+                              host, host_ip, self.ssh_key))
             inv.write('[master]\nkd_master\n')
             hosts.pop('master')
             inv.write('[node]\n{0}'.format(
@@ -424,9 +448,8 @@ class AwsProvider(InfraProvider):
             ("testing", 'KD_TESTING_REPO'),
         ]
         env = self.env
-        return ' '.join(
-            "{0}={1}".format(var_name, env[key]) for
-            var_name, key in keys_map if key in env)
+        return json.dumps(dict((var_name, env[key]) for
+                          var_name, key in keys_map if key in env))
 
     def _check_rpms(self):
         install_type = self.env['KD_INSTALL_TYPE']
@@ -475,15 +498,13 @@ class AwsProvider(InfraProvider):
             raise VmCreateError('Failed to connect AWS')
 
         self._check_rpms()
-        node_types = self._get_node_types()
-        local_exec_live([
+
+        # FIXME local_exec_live does not work here because of syntax like
+        # sudo yum -y update | cat" < <(cat) 2>"$LOG"
+        local_exec([
             "bash", "-c",
-            "KUBE_AWS_USE_TESTING={0} NUM_NODES={1} "
-            "KUBE_AWS_NODE_TYPES=\"{2}\" "
-            "aws-kd-deploy/cluster/aws-kd-deploy.sh".format(
-                "yes" if self.env.get('KD_TESTING_REPO') else "no",
-                self.env['KD_NODES_COUNT'], node_types
-            )])
+            "aws-kd-deploy/cluster/aws-kd-deploy.sh"], env=self.env)
+
         log_dict(self.env, "Cluster settings:")
         LOG.debug("Generating inventory")
         self._inventory = self._get_inventory()
@@ -492,14 +513,16 @@ class AwsProvider(InfraProvider):
             self.env['KD_DEPLOY_SKIP'].split(',') + ['non_aws', ])
         extra_vars = self.extra_vars
         local_exec_live([
-            "ansible-playbook", "dev-utils/dev-env/ansible/main.yml", "-i",
-            self._inventory, "--skip-tags", skip_tags,
-            '--extra-vars="{0}"'.format(extra_vars)])
+            "ansible-playbook", "dev-utils/dev-env/ansible/main.yml",
+            "-i", self._inventory, "--skip-tags", skip_tags,
+            "--extra-vars", extra_vars], env=self.env)
 
     @log_timing
     def destroy(self):
         LOG.debug("Running aws-kd-down.sh...")
-        local_exec_live(['bash', 'aws-kd-deploy/cluster/aws-kd-down.sh'])
+        # FIXME local_exec_live does not work
+        local_exec(['bash', 'aws-kd-deploy/cluster/aws-kd-down.sh'],
+                   env=self.env)
         os.remove(self._inventory)
 
     def power_on(self, host):

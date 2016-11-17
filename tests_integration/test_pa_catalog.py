@@ -110,7 +110,6 @@ def _pa_delete(cluster, **kwarg):
 
 
 @pipeline("PA_catalog")
-@pipeline("PA_catalog_aws")
 @hooks(setup=_clear_pa_catalog)
 def test_add_get_delete_predefined_application_template_by_name(cluster):
     # Check that PA template can be added from the file
@@ -133,7 +132,6 @@ def test_add_get_delete_predefined_application_template_by_name(cluster):
 
 
 @pipeline("PA_catalog")
-@pipeline("PA_catalog_aws")
 @hooks(setup=_clear_pa_catalog)
 def test_add_get_delete_predefined_application_template_by_id(cluster):
     # Check that PA template can be added from the cmd line
@@ -158,7 +156,6 @@ def test_add_get_delete_predefined_application_template_by_id(cluster):
 
 
 @pipeline("PA_catalog")
-@pipeline("PA_catalog_aws")
 @hooks(setup=_clear_pa_catalog)
 def test_add_predefined_application_template_with_origin(cluster):
     name = "my pa with origin"
@@ -168,7 +165,6 @@ def test_add_predefined_application_template_with_origin(cluster):
 
 
 @pipeline("PA_catalog")
-@pipeline("PA_catalog_aws")
 @hooks(setup=_clear_pa_catalog)
 def test_validate_yaml(cluster):
     # Check that --validate flag prevents creating invalid PA template
@@ -190,7 +186,6 @@ def test_validate_yaml(cluster):
 
 
 @pipeline("PA_catalog", skip_reason="FIXME in AC-4743")
-@pipeline("PA_catalog_aws", skip_reason="FIXME in AC-4743")
 @hooks(setup=_clear_pa_catalog)
 def get_only_yaml_part_of_pa_template(cluster):
     _, template, _ = cluster.ssh_exec("master", "cat {}".format(
@@ -204,7 +199,6 @@ def get_only_yaml_part_of_pa_template(cluster):
 
 
 @pipeline("PA_catalog")
-@pipeline("PA_catalog_aws")
 @hooks(setup=_clear_pa_catalog)
 def test_listing_pa_templates(cluster):
 
@@ -264,7 +258,6 @@ def test_listing_pa_templates(cluster):
 
 
 @pipeline("PA_catalog", skip_reason="FIXME in AC-4743")
-@pipeline("PA_catalog_aws", skip_reason="FIXME in AC-4743")
 @hooks(setup=_clear_pa_catalog)
 def test_update_pa_template_by_name(cluster):
     """Check that PA template can be updated.
@@ -284,7 +277,6 @@ def test_update_pa_template_by_name(cluster):
 
 
 @pipeline("PA_catalog", skip_reason="FIXME in AC-4743")
-@pipeline("PA_catalog_aws", skip_reason="FIXME in AC-4743")
 @hooks(setup=_clear_pa_catalog)
 def test_update_pa_template_by_id(cluster):
     """Check that PA template can be updated.
@@ -306,7 +298,6 @@ def test_update_pa_template_by_id(cluster):
 
 
 @pipeline("PA_catalog", skip_reason="FIXME in AC-4743")
-@pipeline("PA_catalog_aws", skip_reason="FIXME in AC-4743")
 @hooks(setup=_clear_pa_catalog)
 def test_validating_yaml_before_updating_pa_template(cluster):
     name = "my pa"
@@ -326,7 +317,6 @@ def test_validating_yaml_before_updating_pa_template(cluster):
 
 
 @pipeline("PA_catalog")
-@pipeline("PA_catalog_aws")
 @hooks(setup=_clear_pa_catalog)
 def test_add_and_run_pa(cluster):
     name = "dokuwiki.yaml"

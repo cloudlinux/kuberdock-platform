@@ -49,6 +49,9 @@ def local_exec(cmd, env=None, shell=False, check_retcode=True):
     LOG.debug("{}Executing locally: '{}'{}".format(Style.DIM, " ".join(cmd),
                                                    Style.RESET_ALL))
     if env is not None:
+        # Sanitize env because it doees not digest non string values
+        env = dict((key, str(value)) for key, value in env.items())
+        # Unite the system and custom environments
         env = dict(os.environ, **env)
     proc = subprocess.Popen(cmd, env=env, stderr=subprocess.PIPE,
                             stdout=subprocess.PIPE, shell=shell)
@@ -62,6 +65,14 @@ def local_exec(cmd, env=None, shell=False, check_retcode=True):
 
 
 def local_exec_live(cmd, env=None, check_retcode=True):
+    _log = logging.getLogger()
+
+    if env is not None:
+        # Sanitize env because it doees not digest non string values
+        env = dict((key, str(value)) for key, value in env.items())
+        # Unite the system and custom environments
+        env = dict(os.environ, **env)
+
     def execute():
         LOG.debug("Executing locally: '{}'".format(" ".join(cmd)))
         popen = subprocess.Popen(cmd, env=env, bufsize=1,
@@ -78,7 +89,7 @@ def local_exec_live(cmd, env=None, check_retcode=True):
             raise NonZeroRetCodeException(ret_code=ret_code)
 
     for l in execute():
-        print(l, end="")
+        _log.debug(l)
 
 
 def ssh_exec(ssh, cmd, timeout=None, check_retcode=True, get_pty=False):

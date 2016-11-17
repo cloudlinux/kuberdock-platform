@@ -208,11 +208,13 @@ def jenkins_accept_connections(sock_server, handler, bind_ip='0.0.0.0',
     sock_server.allow_reuse_address = True
     server = sock_server((bind_ip, port), handler)
     server.connection_list = []
-    server_thread = threading.Thread(target=server.serve_forever)
+    thread_name = threading.current_thread().name + '_accepted_connections'
+    server_thread = threading.Thread(name=thread_name,
+                                     target=server.serve_forever)
     try:
         server_thread.start()
         if isinstance(sock_server, SocketServer.TCPServer):
-            wait_net_port(bind_ip, port)
+            wait_net_port(bind_ip, port, 3, 1)
         LOG.debug('{}Starting SocketServer in a new thread{}'.format(
             Fore.CYAN, Style.RESET_ALL))
         yield server.connection_list

@@ -3,7 +3,6 @@ from tests_integration.lib.utils import local_exec
 
 
 @pipeline('web_ui')
-@pipeline('web_ui_aws')
 def test_web_ui(cluster):
     master_ip = cluster.get_host_ip("master")
     env = {

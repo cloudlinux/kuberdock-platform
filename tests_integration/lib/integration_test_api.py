@@ -273,6 +273,9 @@ class KDIntegrationTestAPI(object):
         kcli_cmd.extend(['kubectl', cmd])
         return self.ssh_exec('master', ' '.join(kcli_cmd))
 
+    def get_hostname(self, name):
+        return self._provider.get_vm_hostname(name)
+
     def kdctl(self, cmd, out_as_dict=False):
         rc, out, err = self.ssh_exec("master", u"kdctl -k {}".format(cmd))
         if out_as_dict:
@@ -391,7 +394,8 @@ class NodeList(object):
         return KDNode(self.cluster, self.get_node_data(node_name))
 
     def get_node_data(self, name):
-        _, out, _ = self.cluster.kdctl("nodes get --hostname {}".format(name),
+        hostname = self.cluster.get_hostname(name)
+        _, out, _ = self.cluster.kdctl("nodes get --hostname {}".format(hostname),
                                        out_as_dict=True)
         return out["data"]
 

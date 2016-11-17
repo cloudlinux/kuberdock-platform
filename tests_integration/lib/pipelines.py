@@ -293,6 +293,18 @@ class PACatalogPipeline(Pipeline):
         'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
     }
 
+
+class ZFSStoragePipeline(Pipeline):
+    NAME = 'zfs'
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'KD_USE_ZFS': '1',
+    }
+
+
+class ZFSStorageUpgradedPipeline(UpgradedPipelineMixin, ZFSStoragePipeline):
+    NAME = 'zfs_upgraded'
+
 pipelines = defaultdict(list)
 
 

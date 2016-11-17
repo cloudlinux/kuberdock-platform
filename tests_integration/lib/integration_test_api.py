@@ -332,14 +332,15 @@ class PVList(object):
 
     def clear(self):
         for user in self.cluster.users.get_kd_users():
-            for pv in self.filter(user):
+            for pv in self.filter(owner=user):
                 name = escape_command_arg(pv['name'])
-                self.cluster.kcli(u'drives delete {0}'.format(name), user=user)
+                self.cluster.kcli2('pstorage delete --name {}'.format(name),
+                                   user=user)
 
     def filter(self, owner=None):
-        _, pvs, _ = self.cluster.kcli("drives list", out_as_dict=True,
-                                      user=owner)
-        return pvs
+        _, pvs, _ = self.cluster.kcli2('pstorage list', out_as_dict=True,
+                                       user=owner)
+        return pvs['data']
 
 
 class NodeList(object):
@@ -632,9 +633,22 @@ class PV(object):
             if pv['name'] == name:
                 return pv
 
-    def delete(self):
-        self.cluster.kcli(
-            "drives delete {0}".format(self.name), user=self.owner)
+    def _make_kcli2_cmd(self, command, **params):
+        LOG.debug('{}'.format(params))
+        if not params:
+            return 'pstorage {} --name {}'.format(command, self.name)
+
+        if not ('id' in params) ^ ('name' in params):
+            raise ValueError("You must specify either 'id' or 'name'")
+
+        return 'pstorage {} {}'.format(
+            command,
+            ' '.join('--{}={}'.format(k, v) for k, v in params.items()))
+
+    def delete(self, **kwargs):
+        cmd = self._make_kcli2_cmd('delete', **kwargs)
+        _, out, _ = self.cluster.kcli2(cmd, out_as_dict=True, user=self.owner)
+        return out
 
     def exists(self):
         return self._get_by_name(self.name) is not None
@@ -657,3 +671,8 @@ class PV(object):
 
         """
         return dict(mountPath=self.mount_path, name=self.volume_name)
+
+    def info(self, **kwargs):
+        cmd = self._make_kcli2_cmd('get', **kwargs)
+        _, out, _ = self.cluster.kcli2(cmd, out_as_dict=True, user=self.owner)
+        return out['data']

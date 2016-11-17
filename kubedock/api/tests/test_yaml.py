@@ -43,6 +43,100 @@ spec:
     ports:
     - containerPort: 80"""
 
+_FILLED_WORDPRESS_YAML = """
+apiVersion: v1
+kind: ReplicationController
+kuberdock:
+  appPackage:
+    goodFor: regular use
+    kubeType: 1
+    name: M
+  kuberdock_template_id: 4
+  packageID: 0
+  postDescription: |
+    You have installed [b]WordPress![/b]
+    Please find more information about WordPress software on the official
+    website [url]https://wordpress.com[/url]
+    To access [b]WordPress[/b] use this link:
+    [url]http://%PUBLIC_ADDRESS%[/url]
+  preDescription: |
+    You are installing the application [b]WordPress[/b].
+    The WordPress rich content management system can utilize plugins, widgets,
+     and themes.
+    All the components needed for this application correct work will also be
+    installed: [b]MySQL[/b] server.
+    Choose the amount of resources or use recommended parameters set by
+    default.
+    First choose package.
+    When you click "Order now", you will get to order processing page.
+metadata:
+  name: wordpress
+spec:
+  template:
+    metadata:
+      labels:
+        name: wordpress
+    spec:
+      containers:
+      - env:
+        - name: MYSQL_DATABASE
+          value: wordpress
+        - name: MYSQL_USER
+          value: wordpress
+        - name: MYSQL_PASSWORD
+          value: pi2m1rqd
+        - name: MYSQL_ROOT_PASSWORD
+          value: cf0hio15
+        - name: MYSQL_AUTO_MEMORY_ALLOCATE
+          value: innodb
+        image: kuberdock/mysql:5.7
+        kubes: 6
+        name: mysql
+        ports:
+        - containerPort: 3306
+        readinessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 3306
+        volumeMounts:
+        - mountPath: /var/lib/mysql
+          name: mysql-persistent-storage
+      - env:
+        - name: WORDPRESS_DB_USER
+          value: wordpress
+        - name: WORDPRESS_DB_PASSWORD
+          value: pi2m1rqd
+        - name: WORDPRESS_DB_HOST
+          value: 127.0.0.1
+        image: wordpress:4.4.0
+        kubes: 4
+        name: wordpress
+        ports:
+        - containerPort: 80
+          isPublic: true
+        readinessProbe:
+          initialDelaySeconds: 5
+          tcpSocket:
+            port: 80
+        volumeMounts:
+        - mountPath: /var/www/html
+          name: wordpress-persistent-storage
+        workingDir: /var/www/html
+      resolve:
+      - mysql
+      - wordpress
+      restartPolicy: Always
+      volumes:
+      - name: mysql-persistent-storage
+        persistentDisk:
+          pdName: wordpress_mysql_lvrtz3hu
+          pdSize: 1
+      - name: wordpress-persistent-storage
+        persistentDisk:
+          pdName: wordpress_www_lvrtz3hu
+          pdSize: 1
+"""
+
 
 class YamlURL(object):
     post = '/yamlapi/'.format
@@ -258,3 +352,31 @@ class TestYamlAPI(APITestCase):
         })
 
         self.assertEqual(pod.template_version_id, version_id_2)
+
+    @mock.patch.object(yaml_api, 'PredefinedApp')
+    def test_fill_template(self, mock_pa):
+        mock_pa.get().get_filled_template_for_plan.return_value = \
+            _FILLED_WORDPRESS_YAML
+        template_id = 1
+        plan_id = 1
+        url = self.item_url('fill', template_id, plan_id)
+        response = self.open(url, 'POST', auth=self.userauth)
+        mock_pa.get()\
+            .get_filled_template_for_plan.assert_called_with(plan_id, {},
+                                                             as_yaml=True)
+        self.assertEqual(response.json, {'data': _FILLED_WORDPRESS_YAML,
+                                         'status': 'OK'})
+
+    @mock.patch.object(yaml_api, 'PredefinedApp')
+    def test_fill_template_raw(self, mock_pa):
+        mock_pa.get().get_filled_template_for_plan.return_value = \
+            _FILLED_WORDPRESS_YAML
+        template_id = 1
+        plan_id = 1
+        url = '{}?raw=true'.format(self.item_url('fill', template_id,
+                                                 plan_id))
+        response = self.open(url, 'POST', auth=self.userauth)
+        mock_pa.get()\
+            .get_filled_template_for_plan.assert_called_with(plan_id, {},
+                                                             as_yaml=True)
+        self.assertEqual(response.data, _FILLED_WORDPRESS_YAML)

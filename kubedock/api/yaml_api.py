@@ -1,5 +1,5 @@
 import yaml
-from flask import Blueprint, Response
+from flask import Blueprint, Response, jsonify
 from flask.views import MethodView
 
 from kubedock.api.utils import use_kwargs
@@ -13,7 +13,7 @@ from kubedock.login import auth_required
 from kubedock.rbac import check_permission
 from kubedock.utils import KubeUtils, register_api, send_event_to_user
 from kubedock.validation.coerce import extbool
-from kubedock.validation.schemas import owner_optional_schema
+from kubedock.validation.schemas import owner_optional_schema, boolean
 
 yamlapi = Blueprint('yaml_api', __name__, url_prefix='/yamlapi')
 
@@ -67,11 +67,16 @@ register_api(yamlapi, YamlAPI, 'yamlapi', '/', 'pod_id')
 
 
 @yamlapi.route('/fill/<int:template_id>/<int:plan_id>', methods=['POST'])
-@use_kwargs({}, allow_unknown=True)
-def fill_template(template_id, plan_id, **params):
+@use_kwargs({'raw': boolean},
+            allow_unknown=True)
+@auth_required
+def fill_template(template_id, plan_id, raw=False, **params):
     app = PredefinedApp.get(template_id)
     filled = app.get_filled_template_for_plan(plan_id, params, as_yaml=True)
-    return Response(filled, content_type='application/x-yaml')
+    if raw:
+        return Response(filled, content_type='application/x-yaml')
+    else:
+        return jsonify({'status': 'OK', 'data': filled})
 
 
 # TODO Apps API instead of "/create/", "/switch/", and "/update/":

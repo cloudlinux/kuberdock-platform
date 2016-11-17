@@ -539,6 +539,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
             }]
         )
 
+    @mock.patch.object(podcollection.helpers, 'replace_pod_config')
     @mock.patch.object(podcollection, '_try_to_update_existing_rc')
     @mock.patch.object(podcollection.ingress_resource, 'create_ingress')
     @mock.patch.object(podcollection.dns_management,
@@ -551,7 +552,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
     def test_pod_prepare_and_run_task(
             self, has_public_ports_mock, post_mock, raise_if_failure_mock,
             run_service_mock, dbpod_mock, create_or_update_type_A_record_mock,
-            create_ingress_mock, try_update_rc_mock):
+            create_ingress_mock, try_update_rc_mock, replace_pod_config_mock):
         """
         Test first _start_pod in usual case
         :type post_: mock.Mock
@@ -580,7 +581,8 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
             ns=self.test_pod.namespace)
         self.assertTrue(raise_if_failure_mock.called)
-        dbpod.set_dbconfig.assert_called_once_with(dbpod_config, save=False)
+        replace_pod_config_mock.assert_called_once_with(
+            self.test_pod, dbpod.get_dbconfig.return_value)
         self.test_pod.set_status.assert_called_with(
             POD_STATUSES.pending, send_update=True)
         create_or_update_type_A_record_mock.assert_called_once_with(

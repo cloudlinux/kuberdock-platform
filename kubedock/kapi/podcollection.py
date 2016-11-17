@@ -1664,8 +1664,10 @@ def prepare_and_run_pod(pod, db_pod, db_config):
             db_config['service'] = pod.service = local_svc['metadata']['name']
             db_config['podIP'] = LocalService().get_clusterIP(local_svc)
 
-        with utils.atomic():
-            db_pod.set_dbconfig(db_config, save=False)
+        try:
+            helpers.replace_pod_config(pod, db_config)
+        except Exception:
+            raise PodStartFailure('Error saving Pod config to Database')
 
         config = pod.prepare()
         k8squery = KubeQuery()

@@ -375,6 +375,7 @@ def replace_pod_config(pod, data):
         db.session.commit()
     except Exception:  # TODO: Fix too broad exception
         db.session.rollback()
+        raise
 
 
 class K8sSecretsClient(object):

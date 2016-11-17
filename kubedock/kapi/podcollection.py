@@ -952,7 +952,7 @@ class PodCollection(object):
                 pod.status = pod.k8s_status or pod.db_status
 
             for container in pod.containers:
-                if container['state'] == 'terminated':
+                if container.get('state', '') == 'terminated':
                     if container.get('exitCode') == 0:
                         container['state'] = 'succeeded'
                     else:

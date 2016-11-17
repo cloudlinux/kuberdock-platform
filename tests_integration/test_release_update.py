@@ -35,5 +35,6 @@ def test_release_update(cluster):
 
     cluster.upgrade('/tmp/prebuilt_rpms/kuberdock.rpm',
                     use_testing=True, skip_healthcheck=True)
+    cluster.upgrade_rhosts('/tmp/git-kcli-deploy.sh', use_testing=True)
 
     healthcheck_all()

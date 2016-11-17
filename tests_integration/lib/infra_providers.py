@@ -73,6 +73,11 @@ class InfraProvider(object):
 
     @abstractproperty
     @property
+    def rhost_names(self):
+        pass
+
+    @abstractproperty
+    @property
     def any_vm_exists(self):
         pass
 
@@ -138,6 +143,11 @@ class VagrantProvider(InfraProvider):
     @property
     def node_names(self):
         names = (n.name for n in self.vagrant.status() if '_node' in n.name)
+        return [n.replace('kd_', '') for n in names]
+
+    @property
+    def rhost_names(self):
+        names = (n.name for n in self.vagrant.status() if '_rhost' in n.name)
         return [n.replace('kd_', '') for n in names]
 
     @property
@@ -340,6 +350,10 @@ class AwsProvider(InfraProvider):
             except VmNotFoundError:
                 pass
         return result
+
+    @property
+    def rhost_names(self):
+        pass
 
     @property
     def any_vm_exists(self):

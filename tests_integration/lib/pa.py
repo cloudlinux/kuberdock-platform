@@ -45,13 +45,18 @@ class KDPAPod(KDPod):
         pa_data = cluster.pas.get_by_name(template_name)
         pa_id = pa_data['id']
         data = json.dumps({'PD_RAND': rnd_str})
-        owner_option = ""
+
+        base_command = "predefined-apps create-pod {} {} '{}'".format(
+            pa_id, plan_id, data)
+
         if command == "kdctl":
-            owner_option = " --owner {}".format(owner)
-        _, pod_description, _ = commands[command](
-            "predefined-apps create-pod {} {} '{}'{}".format(
-                pa_id, plan_id, data, owner_option),
-            out_as_dict=True)
+            _, pod_description, _ = commands[command](
+                "{} --owner {}".format(base_command, owner),
+                out_as_dict=True)
+        elif command == "kcli2":
+            _, pod_description, _ = commands[command](
+                base_command, user=owner,
+                out_as_dict=True)
 
         data = pod_description['data']
         pod_name = data['name']

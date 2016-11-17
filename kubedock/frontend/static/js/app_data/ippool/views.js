@@ -72,8 +72,7 @@ export const SubnetsListItemView = Marionette.ItemView.extend({
             let network = this.model.get('network');
             utils.modalDialogDelete({
                 title: 'Delete subnet',
-                body: "Are you sure you want to delete subnet '" +
-                    network + "'?",
+                body: `Are you sure you want to delete subnet "${network}"?`,
                 small: true,
                 show: true,
                 footer: {
@@ -82,9 +81,9 @@ export const SubnetsListItemView = Marionette.ItemView.extend({
                         that.model.destroy({wait: true})
                             .always(utils.preloader.hide)
                             .fail(utils.notifyWindow)
-                            .success(function(){
-                                utils.notifyWindow('Subnet "' + network +
-                                                   '" deleted', 'success');
+                            .success(() => {
+                                utils.notifyWindow(`Subnet "${network}" deleted`,
+                                                   'success');
                             });
 
                     },

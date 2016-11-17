@@ -75,16 +75,18 @@ let notifyList = {};  // Notify messages counter
  * or if you want to change default behaviour for jqXHR object.
  */
 export const notifyWindow = function(data, type){
-    var msg;
+    let msg,
+        errorMessage = data.responseJSON && (data.responseJSON.data ||
+                                             data.responseJSON.message);
     if (typeof data == "string") {
         msg = data;
     } else if (data.statusText === 'abort' || type === 'abort') {
         return;
-    } else if (!data.responseJSON || !data.responseJSON.data) {
+    } else if (!errorMessage) {
         msg = data.responseText;
         if (data.status >= 500 && data.getResponseHeader &&  // nginx error page
                 data.getResponseHeader('content-type') === 'text/html'){
-            var error;
+            let error;
             if (data.status === 504) error = 'Timeout error';
             else if (data.status === 502) error = 'Server is unavailable';
             else if (data.status === 500) error = 'Internal server error';
@@ -94,8 +96,7 @@ export const notifyWindow = function(data, type){
                   'problem appears again.';
         }
     } else {
-        msg = typeof data.responseJSON.data == 'string' ? data.responseJSON.data
-            : JSON.stringify(data.responseJSON.data);
+        msg = typeof errorMessage == 'string' ? errorMessage : JSON.stringify(errorMessage);
         if (!type)
             type = data.responseJSON.status === 'ok' ? 'success' : 'error';
     }
@@ -104,7 +105,7 @@ export const notifyWindow = function(data, type){
     if (type === 'error') {
         // do not hide error messages automatically
         // also, group identical messages
-        var notifyElement = notifyList[msg];
+        let notifyElement = notifyList[msg];
         if (!notifyElement){  // new message
             $.notify({message: msg, count: 1}, {autoHide: false,
                                                 clickToHide: false,

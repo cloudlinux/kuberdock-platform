@@ -440,7 +440,7 @@ class PodCollection(object):
             # save domain to _domain if there are no public ports after edit
             if 'domain' in config:
                 config['_domain'] = config.pop('domain', None)
-                pod.set_dbconfig(config, save=False)
+            pod.set_dbconfig(config, save=False)
             return
         domain_name = config.get('domain', None) or config.get('_domain', None)
         if domain_name is None:

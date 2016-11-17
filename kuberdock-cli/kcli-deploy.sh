@@ -98,14 +98,17 @@ install_calico() {
         KD_HOST=$(grep url /etc/kubecli.conf | cut -d= -f2 | xargs echo | sed 's/^https\?:\/\///')
     fi
 
-    if [ "$VER" == "7" ];then
-        yum_wrapper -y install docker
-        do_and_log systemctl enable docker
-        do_and_log systemctl start docker
-    else
-        yum_wrapper -y install docker-io
-        do_and_log chkconfig docker on
-        do_and_log service docker start
+    # Probably Plesk already has installed docker
+    if [ -z $(rpm -qa docker-engine) ]; then
+        if [ "$VER" == "7" ];then
+            yum_wrapper -y install docker
+            do_and_log systemctl enable docker
+            do_and_log systemctl start docker
+        else
+            yum_wrapper -y install docker-io
+            do_and_log chkconfig docker on
+            do_and_log service docker start
+        fi
     fi
 
     yum_wrapper -y install calicoctl-0.22.0

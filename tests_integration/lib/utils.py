@@ -1,3 +1,4 @@
+from __future__ import print_function
 import os
 import re
 import time
@@ -43,9 +44,9 @@ def _proceed_exec_result(out, err, ret_code, check_retcode):
             stdout=out, stderr=err, ret_code=ret_code)
 
 
-def local_exec(cmd, env=None, shell=False, timeout=None, check_retcode=True):
-    LOG.debug("{}Calling local: '{}'{}".format(Style.DIM, cmd,
-                                               Style.RESET_ALL))
+def local_exec(cmd, env=None, shell=False, check_retcode=True):
+    LOG.debug("{}Executing locally: '{}'{}".format(Style.DIM, " ".join(cmd),
+                                                   Style.RESET_ALL))
     if env is not None:
         env = dict(os.environ, **env)
     proc = subprocess.Popen(cmd, env=env, stderr=subprocess.PIPE,
@@ -57,6 +58,26 @@ def local_exec(cmd, env=None, shell=False, timeout=None, check_retcode=True):
         out.decode('ascii', 'ignore'), err.decode('ascii', 'ignore'),
         ret_code, check_retcode)
     return ret_code, out, err
+
+
+def local_exec_live(cmd, env=None, check_retcode=True):
+    def execute():
+        LOG.debug("Executing locally: '{}'".format(" ".join(cmd)))
+        popen = subprocess.Popen(cmd, env=env, bufsize=1,
+                                 stdout=subprocess.PIPE,
+                                 stderr=subprocess.STDOUT,
+                                 universal_newlines=True)
+        stdout_lines = iter(popen.stdout.readline, "")
+        for stdout_line in stdout_lines:
+            yield stdout_line
+        popen.stdout.close()
+
+        ret_code = popen.wait()
+        if check_retcode and ret_code != 0:
+            raise NonZeroRetCodeException(ret_code=ret_code)
+
+    for l in execute():
+        print(l, end="")
 
 
 def ssh_exec(ssh, cmd, timeout=None, check_retcode=True, get_pty=False):
@@ -77,7 +98,10 @@ def get_ssh(host, user, password, look_for_keys=True):
         try:
             ssh.connect(host, username=user, password=password, timeout=5,
                         look_for_keys=look_for_keys)
-        except AuthenticationException:
+        except AuthenticationException as err:
+            LOG.error("{0} for host={1} username={2} password={3}".format(
+                repr(err), host, user, password
+            ))
             raise
         except Exception as e:
             LOG.error(str(e))
@@ -186,7 +210,8 @@ def merge_dicts(*dictionaries):
     return result
 
 
-def log_dict(d, prefix="", hidden=tuple()):
+def log_dict(d, prefix="", hidden=('KD_ONE_PASSWORD', 'AWS_ACCESS_KEY_ID',
+                                   'AWS_SECRET_ACCESS_KEY')):
     safe_d = {}
     for k, v in d.items():
         if k in hidden:
@@ -393,9 +418,10 @@ def set_eviction_timeout(cluster, timeout):
     conf.close()
     tmp_file.close()
 
-    sftp._request(CMD_EXTENDED, 'posix-rename@openssh.com', tmp_filename,
-                  conf_filename)
-    cluster.ssh_exec('master', 'systemctl restart kube-controller-manager')
+    cluster.ssh_exec('master', 'sudo mv {0} {1}'.format(tmp_filename,
+                                                        conf_filename))
+    cluster.ssh_exec('master',
+                     'sudo systemctl restart kube-controller-manager')
 
 
 def wait_for(func, tries=50, interval=10, fail_silently=False):

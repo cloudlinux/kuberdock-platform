@@ -3,9 +3,6 @@
 - include: check_rpms.yml
   when: not is_release_install
 
-- name: Clean repositry cache
-  command: yum clean all
-
 # Needed for integration tests. Once CI images are updated, this can be
 # removed.
 - name: Ensure netcat is installed
@@ -29,7 +26,7 @@
   when : ansible_default_ipv4.address=="10.0.2.15"
 
 - name: "Build hosts file"
-  lineinfile: dest=/etc/hosts line="{{ hostvars[item].ansible_default_ipv4.address }} {{ hostvars[item].ansible_hostname }}" state=present
+  lineinfile: dest=/etc/hosts line="{{ hostvars[item].ansible_default_ipv4.address }} {{ hostvars[item].ansible_fqdn or hostvars[item].ansible_hostname }}" state=present
   when: hostvars[item].ansible_default_ipv4.address is defined
   with_items: "{{ groups.all }}"
 

@@ -51,7 +51,7 @@ class RESTMixin(object):
             url = '{0}://{1}{2}'.format(scheme, self.host, path)
         LOG.debug('Expecting for response code {code} on url {url}, '
                   'total retries: {tries}'.format(
-                      code=code, url=url, tries=tries))
+                      code=code, url=url, tries=tries, port=port))
 
         def check(*args, **kwargs):
             req = urllib2.urlopen(url, timeout=timeout)
@@ -90,7 +90,12 @@ class KDPod(RESTMixin):
     @property
     def domain(self):
         spec = self.get_spec()
-        return spec.get('domain')
+        domain = spec.get('domain')
+
+        # There is no domain in aws case
+        if domain is None:
+            domain = spec.get('public_aws')
+        return domain
 
     @property
     def host(self):

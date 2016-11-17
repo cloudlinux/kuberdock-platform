@@ -3,11 +3,15 @@
 - set_fact:
     ntypes: "{{ ntypes | default({}) | combine( {item.split('=')[0]: item.split('=')[1]}) }}"
   with_items: "{{ (node_types | default('')).split(',') }}"
+  tags:
+    - non_aws
 
 - set_fact:
     kube_type: '--kube-type="{{ ntypes[ansible_hostname] }}"'
   when:
       ansible_hostname in ntypes
+  tags:
+    - non_aws
 
 - name: Add node to master
   shell: python "{{ master_kd_src_path }}/manage.py" add-node --hostname {{ ansible_hostname }} {{ kube_type | default("") }} --do-deploy {{ add_testing_repo }} --docker-options="{{ docker_options|default('')}}" {{ zfs_node_params }}
@@ -15,8 +19,9 @@
   delegate_to: "{{ groups['master'][0] }}"
   tags:
     - deploy
+    - non_aws
 
-- set_fact: _hostname={{ hostvars[item].ansible_hostname }}
+- set_fact: _hostname={{ hostvars[item].ansible_fqdn or hostvars[item].ansible_hostname }}
   with_items: "{{ groups['node'] }}"
   register: _hostnames
   tags:
@@ -36,6 +41,7 @@
   ignore_errors: True
   tags:
     - node_deploy
+
 
 - name: Fetching node deploy log
   fetch: src="{{ node_deploy_log_file }}" dest={{ node_deploy_log_file_dst }} fail_on_missing=yes flat=yes
@@ -60,3 +66,15 @@
   when: wait_for_nodes_result|failed
   tags:
     - node_deploy
+
+- group: name=docker state=present
+- name: Adding existing user to group docker
+  user:
+    name: '{{ ansible_user }}'
+    groups: docker
+    append: true
+  register: docker_user
+
+- name: Restart docker
+  service: name=docker state=restarted
+  when: docker_user.changed

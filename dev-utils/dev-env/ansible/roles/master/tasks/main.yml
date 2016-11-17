@@ -4,7 +4,7 @@
 - debug: msg="Install type - {{ install_type }}"
 
 - name: Inject shared SSH pub keys
-  authorized_key: user=root key={{ item }}
+  authorized_key: user={{ ansible_user }} key={{ item }}
   when: add_ssh_pub_keys
   with_items: "{{ lookup('file', ssh_pub_keys_path).splitlines() }}"
 
@@ -20,6 +20,8 @@
 
 - name: start haveged
   service: name=haveged state=started
+  tags:
+    - non_aws
 
 - name: Create master RPMs directory
   file: path="{{ master_rpms_dir }}" state=directory
@@ -27,6 +29,8 @@
 - include: dev_predeploy.yml
   static: no
   when: is_dev_install
+  tags:
+    - non_aws
 
 - include: qa_predeploy.yml
   static: no
@@ -40,26 +44,33 @@
   shell: echo "yes" | bash deploy.sh --cleanup chdir="{{ master_rpms_dir }}" | while IFS= read -r line; do echo "$(date) $line"; done
   register: cleanup_result
   tags:
-      - cleanup
+    - cleanup
+    - non_aws
 
 - set_fact:
     cleanup_log: "{{ cleanup_result.stdout.split('\n') }}"
   when: add_timestamps
   tags:
-      - cleanup
+    - non_aws
+    - cleanup
 
 - debug: var=cleanup_log
   when: add_timestamps
   tags:
-      - cleanup
+    - cleanup
+    - non_aws
 
 - include: ceph.yml
   when: use_ceph
 
 - include: zfs.yml
   when: use_zfs
+  tags:
+    - non_aws
 
 - include: deploy.yml
+  tags:
+    - non_aws
 
 - name: Reset password
   shell: python "{{ master_kd_src_path }}/manage.py" reset-password --set "{{ admin_password }}"
@@ -85,8 +96,14 @@
   tags:
     - ippool
 
+- name: Get existing users
+  become_user: postgres
+  command: psql -d kuberdock -t -c "select username from users;"
+  register: users_stdout
+
 - name: Create users
   shell: python "{{ master_kd_src_path }}/manage.py" create-user -u {{ item }} -p {{ item }} -r User
+  when: item not in "{{ users_stdout.stdout.split('\n') }}'"
   with_items:
       - test_user
       - alt_test_user
@@ -99,6 +116,8 @@
     - timezone
 
 - include: predefined_apps.yml
+
 - include: kdctl.yml
+
 - include: kcli.yml
 

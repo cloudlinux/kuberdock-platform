@@ -2,21 +2,25 @@ import logging
 import os
 import random
 import subprocess
+import shutil
 import time
+import tempfile
 from abc import ABCMeta, abstractmethod, abstractproperty
 from contextlib import contextmanager
 from datetime import datetime
 from tempfile import NamedTemporaryFile
 
 import vagrant
+import boto3.ec2
 
-from exceptions import VmCreateError, VmProvisionError
+from exceptions import VmCreateError, VmProvisionError, VmNotFoundError
 from tests_integration.lib.nebula_ip_pool import NebulaIPPool
 from tests_integration.lib.timing import log_timing_ctx, log_timing
 from tests_integration.lib.utils import retry, all_subclasses, log_dict, \
-    suppress
+    suppress, local_exec_live
 
 LOG = logging.getLogger(__name__)
+logging.getLogger('boto').setLevel(logging.WARNING)
 
 INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
 CLUSTER_CREATION_MAX_DELAY = 120
@@ -207,12 +211,12 @@ class OpenNebulaProvider(VagrantProvider):
     @property
     def ssh_key(self):
         def_key = "".join([os.environ.get("HOME"), "/.ssh/id_rsa"])
-        return os.environ.get("KD_ONE_PRIVATE_KEY", def_key)
+        return self.env.get("KD_ONE_PRIVATE_KEY", def_key)
 
     def start(self):
         self._rnd_sleep()
         self._reserve_ips()
-        log_dict(self.env, "Cluster settings:", hidden=('KD_ONE_PASSWORD',))
+        log_dict(self.env, "Cluster settings:")
 
         LOG.debug("Running vagrant up...")
         try:
@@ -270,50 +274,202 @@ class AwsProvider(InfraProvider):
     NAME = "aws"
 
     def __init__(self, env, provider_args):
-        self.env = self._aws_env(env)
-
-    def _aws_env(self, env):
-        pass
+        self.env = env
+        self.ec2 = boto3.resource(
+            'ec2',
+            env['AWS_S3_REGION'],
+            aws_access_key_id=env['AWS_ACCESS_KEY_ID'],
+            aws_secret_access_key=env['AWS_SECRET_ACCESS_KEY']
+        )
+        self._host_to_id_cached = None
+        self.inventory = None
 
     @property
     def ssh_user(self):
-        pass
+        return "centos"
 
     @property
     def ssh_key(self):
-        pass
+        return self.env['AWS_SSH_KEY']
+
+    def _get_ec2_instance(self, name):
+        try:
+            instance, = self.ec2.instances.filter(Filters=[
+                {"Name": 'tag:Name', "Values": [name, ]},
+                {
+                    "Name": 'instance-state-name',
+                    "Values": ["pending", "running", "shutting-down",
+                               "stopping", "stopped"]}
+            ])
+        except ValueError:
+            raise VmNotFoundError("No vm with name `{0}`".format(name))
+        return instance
 
     def get_hostname(self, host):
-        pass
+        instance = self._get_ec2_instance(host)
+        return instance.public_dns_name
 
     def get_host_ssh_port(self, host):
-        pass
+        return 22
 
     @property
     def vm_names(self):
-        pass
+        prefix = self.env["KUBE_AWS_INSTANCE_PREFIX"]
+        result = {
+            "master": "{0}-master".format(prefix),
+            "node1": "{0}-minion-1".format(prefix),
+            "node2": "{0}-minion-2".format(prefix),
+            "node3": "{0}-minion-3".format(prefix),
+            # "rhost1": "kd_rhost1",
+        }
+        for instance in result.values():
+            try:
+                host = self._get_ec2_instance(instance).private_dns_name
+                result[host] = instance
+            except VmNotFoundError:
+                pass
+        return result
 
     @property
     def node_names(self):
-        pass
+        result = []
+        for name in ['node1', 'node2', 'node3']:
+            try:
+                self._get_ec2_instance(self.vm_names[name])
+                result.append(name)
+            except VmNotFoundError:
+                pass
+        return result
 
     @property
     def any_vm_exists(self):
         pass
 
     def get_host_ip(self, hostname):
-        pass
+        if hostname not in self.vm_names:
+            raise VmNotFoundError("Host with name `{0}` not found.")
+        instance = self._get_ec2_instance(self.vm_names[hostname])
+        result = instance.public_ip_address
+        if result is None:
+            raise VmCreateError("No IP assigned to `{0}`".format(hostname))
+        return result
+
+    def _get_inventory(self):
+        with tempfile.NamedTemporaryFile(prefix="inv-", delete=False) as inv:
+            hosts = {}
+            for name in ['master', ] + self.node_names:
+                hosts[name] = retry(
+                    self.get_host_ip, tries=3, interval=20,
+                    hostname=name)
+            for host, host_ip in hosts.items():
+                inv.write('kd_{0} ansible_host={1} '
+                          'ansible_ssh_user=centos\n'.format(host, host_ip))
+            inv.write('[master]\nkd_master\n')
+            hosts.pop('master')
+            inv.write('[node]\n{0}'.format(
+                '\n'.join("kd_{0}".format(node) for node in hosts)))
+            return inv.name
+
+    @property
+    def extra_vars(self):
+        keys_map = [
+            ("add_ssh_pub_keys", 'KD_ADD_SHARED_PUB_KEYS'),
+            ("install_type", 'KD_INSTALL_TYPE'),
+            ("host_builds_path", 'KD_BUILD_DIR'),
+            ("dotfiles", 'KD_DOT_FILES'),
+            ("hook", 'KD_MASTER_HOOK'),
+            ("license_path", 'KD_LICENSE'),
+            ("no_wsgi", 'KD_NO_WSGI'),
+            ("git_ref", 'KD_GIT_REF'),
+            ("public_ips", 'KD_ONE_PUB_IPS'),
+            ("fixed_ip_pools", 'KD_FIXED_IP_POOLS'),
+            ("use_ceph", 'KD_CEPH'),
+            ("ceph_user", 'KD_CEPH_USER'),
+            ("ceph_config", 'KD_CEPH_CONFIG'),
+            ("ceph_user_keyring", 'KD_CEPH_USER_KEYRING'),
+            ("pd_namespace", 'KD_PD_NAMESPACE'),
+            ("node_types", 'KD_NODE_TYPES'),
+            ("timezone", 'KD_TIMEZONE'),
+            ("install_plesk", 'KD_INSTALL_PLESK'),
+            ("plesk_license", 'KD_PLESK_LICENSE'),
+            ("use_zfs", 'KD_USE_ZFS'),
+            ("install_whmcs", 'KD_INSTALL_WHMCS'),
+            ("whmcs_license", 'KD_WHMCS_LICENSE'),
+            ("whmcs_domain_name", 'KD_WHMCS_DOMAIN_NAME'),
+            ("add_timestamps", 'KD_ADD_TIMESTAMPS'),
+            ("testing", 'KD_TESTING_REPO'),
+        ]
+        env = self.env
+        return ' '.join(
+            "{0}={1}".format(var_name, env[key]) for
+            var_name, key in keys_map if key in env)
+
+    def _check_rpms(self):
+        install_type = self.env['KD_INSTALL_TYPE']
+        if install_type == 'release':
+            if os.path.exists('./kuberdock.rpm'):
+                raise VmCreateError("Kuberdock rpm found.")
+        else:
+            rpm_location = './builds/kuberdock.rpm'
+            if os.path.exists(rpm_location):
+                shutil.copy(rpm_location, ".")
+            else:
+                raise VmCreateError("No kuberdock package.")
+
+    @property
+    def _host_to_id(self):
+        if self._host_to_id_cached is not None:
+            return self._host_to_id_cached
+        else:
+            reservations = self.ec2.get_all_instances(filters={
+                "tag:KubernetesCluster": self.env['KUBE_AWS_INSTANCE_PREFIX']})
+            instances = [i for r in reservations for i in r.instances]
+            result = {}
+            for instance in instances:
+                inst_name = instance.tags['Name']
+                inst_id = instance.id
+                result[inst_name] = inst_id
+            LOG.debug("Host to ip maping: {0}".format(result))
+            return result
 
     @log_timing
     def start(self):
-        pass
+        log_dict(self.env, "Cluster settings:")
+        LOG.debug("Running aws-kd-deploy.sh...")
+
+        if self.ec2 is None:
+            raise VmCreateError('Failed to connect AWS')
+
+        self._check_rpms()
+        local_exec_live([
+            "bash", "-c",
+            "yes | KUBE_AWS_USE_TESTING={0} NUM_NODES={1} "
+            "aws-kd-deploy/cluster/aws-kd-deploy.sh".format(
+                "yes" if self.env.get('KD_TESTING_REPO') else "no",
+                self.env['KD_NODES_COUNT'],
+            )])
+        log_dict(self.env, "Cluster settings:")
+        LOG.debug("Generating inventory")
+        self.inventory = self._get_inventory()
+        LOG.debug("Running ansible provision...")
+        skip_tags = ','.join(
+            self.env['KD_DEPLOY_SKIP'].split(',') + ['non_aws', ])
+        extra_vars = self.extra_vars
+        local_exec_live([
+            "ansible-playbook", "dev-utils/dev-env/ansible/main.yml", "-i",
+            self.inventory, "--skip-tags", skip_tags,
+            '--extra-vars="{0}"'.format(extra_vars)])
 
     @log_timing
     def destroy(self):
-        pass
+        LOG.debug("Running aws-kd-down.sh...")
+        local_exec_live(['bash', 'aws-kd-deploy/cluster/aws-kd-down.sh'])
+        os.remove(self.inventory)
 
     def power_on(self, host):
-        pass
+        vm_id = self._host_to_id[self.vm_names[host]]
+        self.ec2.stop_instances(instance_ids=[vm_id])
 
     def power_off(self, host):
-        pass
+        vm_id = self._host_to_id[self.vm_names[host]]
+        self.ec2.start_instances(instance_ids=[vm_id])

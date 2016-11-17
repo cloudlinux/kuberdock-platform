@@ -5,6 +5,7 @@ from tests_integration.lib.pipelines import pipeline
 
 
 @pipeline('move_pods')
+@pipeline('move_pods_aws')
 def test_pods_with_local_storage_stop(cluster):
     # type: (KDIntegrationTestAPI) -> None
     """
@@ -21,6 +22,7 @@ def test_pods_with_local_storage_stop(cluster):
 
 
 @pipeline('move_pods')
+@pipeline('move_pods_aws')
 def test_pods_move_on_failure(cluster):
     # type: (KDIntegrationTestAPI) -> None
     """
@@ -36,6 +38,7 @@ def test_pods_move_on_failure(cluster):
 
 
 @pipeline('move_pods')
+@pipeline('move_pods_aws')
 def test_error_start_with_shutdown_local_storage(cluster):
     # type: (KDIntegrationTestAPI) -> None
     """
@@ -69,6 +72,7 @@ def test_error_start_with_shutdown_local_storage(cluster):
 
 
 @pipeline('move_pods')
+@pipeline('move_pods_aws')
 def test_error_with_shutdown_local_storage(cluster):
     # type: (KDIntegrationTestAPI) -> None
     """
@@ -99,6 +103,7 @@ def test_error_with_shutdown_local_storage(cluster):
 
 
 @pipeline('move_pods')
+@pipeline('move_pods_aws')
 def test_pod_not_start_with_pv_on_shut_down_host(cluster):
     # type: (KDIntegrationTestAPI) -> None
     """

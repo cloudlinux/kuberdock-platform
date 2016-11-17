@@ -11,6 +11,8 @@
   with_items: "{{ _rpm_exist.results }}"
   no_log: True
 
+- debug: var=result
+
 - fail: msg="There is not any {{ item }}*.rpm file is not found."
   when: (result.{{ item }}.matched <= 0)
   with_items: "{{ rpms_to_check }}"
@@ -25,3 +27,5 @@
 
 - name: Unpack deploy.sh
   command: "bash {{ master_rpms_dir }}/get_rpm_deploy_script.sh {{ master_rpms_dir }} {{ master_rpms_dir }}"
+  tags:
+    - non_aws

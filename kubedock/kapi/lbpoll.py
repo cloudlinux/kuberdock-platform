@@ -20,6 +20,7 @@ class LoadBalanceService(Services):
 
     def get_template(self, pod_id, ports):
         template = super(LoadBalanceService, self).get_template(pod_id, ports)
+
         template['spec']['type'] = 'LoadBalancer'
         return template
 

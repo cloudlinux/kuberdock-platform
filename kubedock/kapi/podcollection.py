@@ -1881,11 +1881,13 @@ def run_service(pod):
 
     """
     ports, public_ports = get_ports(pod)
+    domain = getattr(pod, 'domain', None)
     publicIP = getattr(pod, 'public_ip', None)
     if publicIP == 'true':
         publicIP = None
     public_svc = ingress_public_ports(pod.id, pod.namespace,
-                                      public_ports, pod.owner, publicIP)
+                                      public_ports, pod.owner, publicIP,
+                                      domain)
     cluster_ip = getattr(pod, 'podIP', None)
     local_svc = ingress_local_ports(pod.id, pod.namespace, ports, cluster_ip)
     return local_svc, public_svc
@@ -1909,15 +1911,27 @@ def ingress_local_ports(pod_id, namespace, ports, cluster_ip=None):
         return rv
 
 
-def ingress_public_ports(pod_id, namespace, ports, owner, publicIP=None):
+def ingress_public_ports(pod_id, namespace, ports, owner, publicIP=None,
+                         domain=None):
     """Ingress public ports with cloudprovider specific methods
     :param pod_id: pod id
     :param namespace: pod namespace
     :param ports: list of ports to ingress, see get_ports
     :param owner: pod owner
     :param publicIP: publicIP to ingress. Optional.
-
+    :param domain: domain of a pod. Optional, only used in shared IP case
     """
+    # For now in shared IP case a pod needs to have a rechable 80 port
+    # Which ingress frontend uses to proxy traffic. It does not need the public
+    # service, but needs a public port policy
+    if domain:
+        shared_ip_ports = [{'name': 'c0-p80',
+                            'protocol': 'TCP',
+                            'port': '80',
+                            'targetPort': '80'}]
+        set_public_ports_policy(namespace, shared_ip_ports, owner)
+        return
+
     svc = get_service_provider()
     services = svc.get_by_pods(pod_id)
     if not services and ports:

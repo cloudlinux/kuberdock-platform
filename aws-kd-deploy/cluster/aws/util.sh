@@ -174,6 +174,13 @@ function get_instance_private_ip {
     --query Reservations[].Instances[].NetworkInterfaces[0].PrivateIpAddress
 }
 
+function get_instance_name {
+  local instance_id=$1
+  $AWS_CMD describe-instances \
+    --instance-ids ${instance_id} \
+    --query "Reservations[].Instances[].Tags[?Key=='Name'].Value[]"
+}
+
 # Gets a security group id, by name ($1)
 function get_security_group_id {
   local name=$1
@@ -247,8 +254,11 @@ function find-running-minions () {
   done
 }
 
+
 function detect-nodes () {
   find-running-minions
+  get-node-names
+  get-node-types
 
   # This is inefficient, but we want NODE_NAMES / NODE_IDS to be ordered the same as KUBE_NODE_IP_ADDRESSES
   KUBE_NODE_IP_ADDRESSES=()
@@ -1154,6 +1164,31 @@ function deploy-master(){
     CUR_MASTER_KUBERNETES=$(ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" "${SSH_USER}@${KUBE_MASTER_IP}" rpm -q kubernetes-master --qf "%{version}-%{release}")
 }
 
+function get-node-names(){
+    KUBE_NODE_NAMES=()
+    for (( i=0; i<${#NODE_NAMES[@]}; i++)); do
+        node_tag_name=$(get_instance_name ${NODE_NAMES[$i]})
+        KUBE_NODE_NAMES+=("${node_tag_name}")
+    done
+}
+
+
+function get-node-types(){
+    KUBE_NODE_TYPES=()
+    IFS=';' types_list=($KUBE_AWS_NODE_TYPES); unset IFS
+    for (( i=0; i<${#NODE_NAMES[@]}; i++)); do
+        local node_type="Standard"
+        for item in "${types_list[@]}"; do
+            KEY="${item%%=*}"
+            VALUE="${item##*=}"
+            if [[ ${KUBE_NODE_NAMES[$i]} == "$KEY" ]]; then
+                node_type="$VALUE"
+            fi
+        done
+        KUBE_NODE_TYPES+=("${node_type}")
+    done
+}
+
 function deploy-nodes() {
     echo "start node deploy"
     echo $SSH_USER
@@ -1166,11 +1201,11 @@ function deploy-nodes() {
       ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "sudo cp /home/${SSH_USER}/kuberdock-files/* /" < <(cat) 2>"$LOG"
       ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "sudo mkdir -p /var/lib/kuberdock/scripts" < <(cat) 2>"$LOG"
       ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_NODE_IP_ADDRESSES[$i]}" "sudo cp /id_rsa.pub /root/.ssh/authorized_keys" < <(cat) 2>"$LOG"
-      echo "Adding node"
+      echo "Adding node (${KUBE_NODE_TYPES[$i]})"
       if [[ ${TESTING} == "yes" ]]; then
-      ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "sudo python /var/opt/kuberdock/manage.py add-node --hostname=${NODE_HOSTNAME} --do-deploy --testing" < <(cat) 2>"$LOG"
+      ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "sudo python /var/opt/kuberdock/manage.py add-node --hostname=${NODE_HOSTNAME} --do-deploy --testing --kube-type=\"${KUBE_NODE_TYPES[$i]}\"" < <(cat) 2>"$LOG"
       else
-      ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "sudo python /var/opt/kuberdock/manage.py add-node --hostname=${NODE_HOSTNAME} --do-deploy" < <(cat) 2>"$LOG"
+      ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "sudo python /var/opt/kuberdock/manage.py add-node --hostname=${NODE_HOSTNAME} --do-deploy --kube-type=\"${KUBE_NODE_TYPES[$i]}\"" < <(cat) 2>"$LOG"
       fi
     done
 

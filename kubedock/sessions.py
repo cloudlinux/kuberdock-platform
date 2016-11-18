@@ -14,6 +14,8 @@ from .kapi.users import UserCollection, User
 from .system_settings.models import SystemSettings
 from .core import db
 from .login import create_identifier, get_remote_addr
+from .utils import randstr
+from .validation.validators import V
 
 
 def get_secret_key():
@@ -47,6 +49,11 @@ def add_and_auth_user(data):
                     data['package'] = package.name
             if 'rolename' not in data:
                 data['rolename'] = 'User'
+            if 'password' not in data:
+                data['password'] = randstr(20, secure=True)
+            if 'email' not in data and V().validate(
+                    {'email': username}, {'email': {'type': 'email'}}):
+                data['email'] = username
             if 'active' not in data:
                 data['active'] = True
             user = UserCollection().create(data, return_object=True)

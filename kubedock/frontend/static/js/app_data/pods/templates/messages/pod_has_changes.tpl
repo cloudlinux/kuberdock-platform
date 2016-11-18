@@ -18,9 +18,11 @@
         <% if (typeof template_plan_name != 'undefined' && template_plan_name &&
                (typeof forbidSwitchingAppPackage == 'undefined' || !forbidSwitchingAppPackage)){ %>
             <p>
-                Warnging: if you apply this edit, you won't be able to
-                <a href='#pods/<%- id %>/switch-package'>switch packages</a>
-                for this pod.
+                <span class="warning">
+                    Warnging: if you apply this edit, you won't be able to
+                    <a href='#pods/<%- id %>/switch-package'>switch packages</a>
+                    for this pod.
+                </span>
             </p>
         <% } %>
     </p>

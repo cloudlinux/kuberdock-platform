@@ -26,6 +26,7 @@ LOG = logging.getLogger(__name__)
 class RESTMixin(object):
     # Expectations:
     # self.public_ip
+    HTTP_PORT = None
 
     def do_GET(self, scheme="http", path='/', port=None, timeout=5):
         if port:
@@ -43,6 +44,7 @@ class RESTMixin(object):
 
     def wait_http_resp(self, scheme="http", path='/', port=None, code=200,
                        timeout=3, tries=60, internal=3):
+        port = port or self.HTTP_PORT
         if port:
             url = '{0}://{1}:{2}{3}'.format(scheme, self.public_ip, port, path)
         else:

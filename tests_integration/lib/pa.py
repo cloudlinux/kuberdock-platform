@@ -119,11 +119,12 @@ class _ElasticsearchPaPod(KDPAPod):
 
 class _RedminePaPods(KDPAPod):
     SRC = 'redmine.yaml'
+    HTTP_PORT = 3000
 
     def healthcheck(self):
         self._generic_healthcheck()
         self.wait_http_resp()
-        assert_in("Redmine", self.do_GET())
+        assert_in("Redmine", self.do_GET(port=self.HTTP_PORT))
 
 
 class _JoomlaPaPod(KDPAPod):

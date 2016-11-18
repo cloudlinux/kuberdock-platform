@@ -28,7 +28,7 @@ def test_elasticsearch_pa(cluster):
     check_pa(cluster, 'elasticsearch.yaml')
 
 
-@pipeline('predefined_apps', skip_reason="FIXME in AC-4994")
+@pipeline('predefined_apps')
 def test_redmine_pa(cluster):
     check_pa(cluster, 'redmine.yaml')
 

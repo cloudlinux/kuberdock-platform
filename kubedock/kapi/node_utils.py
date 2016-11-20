@@ -142,6 +142,8 @@ def get_status(node, k8s_node=None):
                         'Possible reasons:\n'
                         '1) node is down or rebooting more than 1 minute\n'
                         '2) kubelet.service on node is down\n'
+                        '3) Some error has happened in Kuberdock during node '
+                        'deploy. See Kuberdock server logs\n'
                         '======================================'.format(
                             condition.get('message', 'empty')
                         )
@@ -167,7 +169,8 @@ def get_status(node, k8s_node=None):
                 res_node_status = NODE_STATUSES.pending
                 node_status_message = (
                     'Node is a member of KuberDock cluster but '
-                    'does not provide information about its condition\n'
+                    'does not provide information about its condition. '
+                    "This status shouldn't last too long.\n"
                     'Possible reasons:\n'
                     '1) node is in installation progress on final step\n'
                     '======================================'
@@ -178,15 +181,18 @@ def get_status(node, k8s_node=None):
             node_status_message = (
                 'Node is not a member of KuberDock cluster\n'
                 'Possible reasons:\n'
-                'Node is in installation progress\n'
+                '1) Node is in installation progress\n'
+                '2) Some error has happened in Kuberdock during node deploy. '
+                'See Kuberdock server logs\n'
             )
         else:
             res_node_status = NODE_STATUSES.troubles
             node_status_message = (
                 'Node is not a member of KuberDock cluster\n'
                 'Possible reasons:\n'
-                '1) error during node installation\n'
-                '2) no connection between node and master '
+                '1) Some error has happened in Kuberdock during node deploy. '
+                'See Kuberdock server logs\n'
+                '2) No connection between node and master '
                 '(firewall, node reboot, etc.)\n'
             )
 

@@ -551,7 +551,7 @@ MASTER_TOBIND_FLANNEL=""
 MASTER_IP=""
 
 if [ $IFACE_NUM -eq 0 ]; then    # no working interfaces found...
-    read -p "No interfaces found. Enter inner network interface IP: " MASTER_IP
+    read -p "No interfaces found. Enter master server IP address to communicate with the nodes (it should be an address of the cluster network): " MASTER_IP
     if [ -z "$MASTER_IP" ]; then
         log_it echo "No IP addresses obtained. Exit"
         exit 1
@@ -568,7 +568,7 @@ else
         MASTER_IP=$FIRST_IP
         MASTER_TOBIND_FLANNEL=$FIRST_IFACE
     else
-        read -p "Enter inner network interface IP address [$FIRST_IP]: " MASTER_IP
+        read -p "Enter master server IP address to communicate with the nodes (it should be an address of the cluster network) [$FIRST_IP]: " MASTER_IP
         if [ -z "$MASTER_IP" ]; then
             MASTER_IP=$FIRST_IP
             MASTER_TOBIND_FLANNEL=$FIRST_IFACE

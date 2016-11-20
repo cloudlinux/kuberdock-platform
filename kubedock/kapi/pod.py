@@ -432,7 +432,7 @@ class Pod(object):
         if hasattr(self, 'public_ip') and self.public_ip:
             pod_config['metadata']['labels']['kuberdock-public-ip'] = \
                 self.public_ip
-        if hasattr(self, 'domain'):
+        if hasattr(self, 'domain') and self.domain:
             pod_config['metadata']['labels']['kuberdock-domain'] = self.domain
         return config
 

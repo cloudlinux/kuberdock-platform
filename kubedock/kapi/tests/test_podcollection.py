@@ -111,7 +111,8 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         """
         db_pod = self.fixtures.pod(owner=self.internal_user)
         pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id,
-                       use_parents=(mock.Mock,))
+                       use_parents=(mock.Mock,),
+                       domain='someuser-somepod.somehost.some')
         get_pod_config.return_value = None
         delete_type_A_record_mock.return_value = (True, None)
 
@@ -150,7 +151,8 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         """
         db_pod = self.fixtures.pod(owner=self.user)
         pod = fake_pod(owner=db_pod.owner, id=db_pod.id,
-                       use_parents=(mock.Mock,))
+                       use_parents=(mock.Mock,),
+                       domain='someuser-somepod.somehost.some')
         get_pod_config.return_value = None
         delete_type_A_record_mock.return_value = (True, None)
 
@@ -185,7 +187,8 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         """
         db_pod = self.fixtures.pod(owner=self.user)
         pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id,
-                       public_ip=True, use_parents=(mock.Mock,))
+                       public_ip=True, use_parents=(mock.Mock,),
+                       domain='someuser-somepod.somehost.some')
         get_pod_config_mock.return_value = 'fs'
         delete_type_A_record_mock.return_value = (True, None)
 
@@ -212,7 +215,8 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         remove_ip_mock.reset_mock()
         db_pod = self.fixtures.pod(owner=self.user)
         pod = fake_pod(sid='s', owner=db_pod.owner, id=db_pod.id,
-                       set_status=lambda *a, **kw: None)
+                       set_status=lambda *a, **kw: None,
+                       domain='someuser-somepod.somehost.some')
         pc_get_by_id_mock.return_value = pod
         self.app.delete(pod.id)
         self.assertFalse(remove_ip_mock.called)
@@ -1037,7 +1041,8 @@ class TestPodCollectionAdd(DBTestCase, TestCaseMixin):
             'sid': mock.ANY,
             'status': 'stopped',
             'containers': (),
-            'volumes': []
+            'volumes': [],
+            'public_access_type': 'public_ip'
         })
 
     def test_pod_compose_persistent_called(self):

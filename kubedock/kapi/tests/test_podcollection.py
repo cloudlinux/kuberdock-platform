@@ -833,7 +833,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         self.pod_collection._start_pod(
             self.test_pod, {'commandOptions': {'applyEdit': True}})
         self.pod_collection._apply_edit.assert_called_once_with(
-            self.test_pod, DBPod.query.get(), config)
+            self.test_pod, DBPod.query.get(), config, internal_edit=False)
         mock_db.session.commit.assert_called_with()
 
 
@@ -2047,6 +2047,7 @@ class TestPodCollectionEdit(DBTestCase, TestCaseMixin):
         )
 
         orig_pod = podcollection.Pod(config)
+        orig_pod.status = 'stopped'
         self.db_pod.set_dbconfig(config)
         self.podcollection._apply_edit(orig_pod, self.db_pod, config)
         new_config = self.db_pod.get_dbconfig()

@@ -994,14 +994,15 @@ class PodCollection(object):
         return len(replicas)
 
     @utils.atomic()
-    def _apply_edit(self, pod, db_pod, db_config):
+    def _apply_edit(self, pod, db_pod, db_config, internal_edit=True):
         if db_config.get('edited_config') is None:
             return pod, db_config
 
         old_pod = pod
         old_saved_domain = db_config.get('_domain', None)
         db_config = db_config['edited_config']
-        db_config['forbidSwitchingAppPackage'] = 'the pod was edited'
+        if not internal_edit:
+            db_config['forbidSwitchingAppPackage'] = 'the pod was edited'
         db_config['podIP'] = getattr(old_pod, 'podIP', None)
         db_config['service'] = getattr(old_pod, 'service', None)
         db_config['postDescription'] = getattr(
@@ -1038,6 +1039,7 @@ class PodCollection(object):
             pod.public_ip = None
         pod.name = db_pod.name
         pod.kube_type = db_pod.kube_id
+        pod.status = old_pod.status
         pod.forge_dockers()
         return pod, db_pod.get_dbconfig()
 
@@ -1056,7 +1058,9 @@ class PodCollection(object):
         db_pod = DBPod.query.get(pod.id)
         db_config = db_pod.get_dbconfig()
         if command_options.get('applyEdit'):
-            pod, db_config = self._apply_edit(pod, db_pod, db_config)
+            internal_edit = command_options.get('internalEdit', False)
+            pod, db_config = self._apply_edit(pod, db_pod, db_config,
+                                              internal_edit=internal_edit)
             db.session.commit()
 
         async_pod_create = data.get('async-pod-create', True)

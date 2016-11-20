@@ -9,7 +9,7 @@ from kubedock.login import auth_required
 from kubedock.utils import atomic, KubeUtils
 from kubedock.billing.models import Package, Kube
 from kubedock.system_settings.models import SystemSettings
-from kubedock.kapi.apps import PredefinedApp, start_pod_from_yaml
+from kubedock.kapi.apps import PredefinedApp, AppInstance, start_pod_from_yaml
 from kubedock.kapi.podcollection import PodCollection
 import json
 
@@ -113,8 +113,7 @@ def switch_app_package(billing_driver, pod_id, plan_id):
     transaction = db.session.begin_nested()
     with atomic():
         old_pod = PodCollection(owner).get(pod_id, as_json=True)
-        PredefinedApp.update_pod_to_plan(
-            pod_id, plan_id, async=False, dry_run=True)
+        AppInstance(pod_id).update_plan(plan_id, async=False, dry_run=True)
         pod = PodCollection(owner).get(pod_id, as_json=True)
     transaction.rollback()
 

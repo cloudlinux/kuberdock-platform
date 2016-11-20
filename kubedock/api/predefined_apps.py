@@ -119,7 +119,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
             app = PredefinedApp.update(app_id, new_version=True, **params)
         else:
             app = PredefinedApp.create(**params)
-        return app.to_dict()
+        return dict(app.to_dict(), templates=app.templates)
 
     @KubeUtils.jsonwrap
     @maintenance_protected
@@ -134,7 +134,7 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
         params = _purged_unknown_and_null(params, edit_params_schema)
         params.update(template=template)
         app = PredefinedApp.update(app_id, version_id=version_id, **params)
-        return app.to_dict()
+        return dict(app.to_dict(), templates=app.templates)
 
     @KubeUtils.jsonwrap
     @maintenance_protected

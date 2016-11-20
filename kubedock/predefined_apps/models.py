@@ -138,6 +138,8 @@ class PredefinedApp(BaseModelMixin, db.Model):
         return app_template
 
     def to_dict(self, include=None, exclude=()):
+        versions = [version for version in self.templates.filter_by(
+                    is_deleted=False)]
         data = {
             'id': self.id,
             'name': self.name,
@@ -146,8 +148,8 @@ class PredefinedApp(BaseModelMixin, db.Model):
             'template': self.template,
             'created': self.created,
             'modified': self.modified,
-            'templates': [x.to_dict() for x in self.templates.filter_by(
-                is_deleted=False)]
+            'activeVersionID': next(v.id for v in versions if v.active),
+            'templates': [v.to_dict() for v in versions]
         }
         return {key: val for key, val in data.items() if key not in exclude}
 

@@ -89,10 +89,10 @@ def update_plan_async(*args, **kwargs):
 
 
 class PredefinedApp(object):
-    """Object that handles all predefined app related routines"""
+    """Object that handles all predefined app template related routines"""
 
     FIELDS = ('id', 'name', 'template', 'origin', 'qualifier', 'created',
-              'modified', 'plans')
+              'modified', 'plans', 'activeVersionID')
 
     FIELD_VERSION = ('active', 'switchingPackagesAllowed')
 
@@ -212,17 +212,15 @@ class PredefinedApp(object):
         return cls(**dbapp.to_dict())
 
     def get_filled_template_for_plan(self, plan_id, values, as_yaml=False,
-                                     with_id=True, user=None):
+                                     with_id=True):
         """
         Returns template filled with values for particular plan
         :param plan_id: int -> plan index in appPackage list
         :param values: dict -> values for filling templates
         :param as_yaml: bool -> if True returns template as YAML
         :param with_id: bool -> if True add template_id to pod config
-        :param user: obj -> user to take ownership of the pod
         :return: dict or YAML document(string)
         """
-        self._check_permissions(user)
         filled = self._get_filled_template_for_plan(plan_id, values)
         self._expand_plans(filled, with_info=False)
         plans = filled.setdefault('kuberdock', {}).pop('appPackages', [{}])
@@ -233,7 +231,7 @@ class PredefinedApp(object):
         return self._apply_package(filled, plans[0])
 
     def get_filled_template_for_plan_by_name(self, name, values, as_yaml=False,
-                                             with_id=True, user=None):
+                                             with_id=True):
         """
         Wrapper helper function that finds plan by name and calls
         'get_filled_template_for_plan' for found plan
@@ -241,12 +239,10 @@ class PredefinedApp(object):
         :param values: dict -> values for filling templates
         :param as_yaml: bool -> if True returns template as YAML
         :param with_id: bool -> if True add template_id to pod config
-        :param user: obj -> user to take ownership of the pod
         :return: dict or YAML document(string)
         """
-        idx = self._get_plan_by_name(name, index_only=True)
-        return self.get_filled_template_for_plan(idx, values, as_yaml, with_id,
-                                                 user)
+        idx = self.get_plan_by_name(name, index_only=True)
+        return self.get_filled_template_for_plan(idx, values, as_yaml, with_id)
 
     def get_loaded_plans(self):
         """
@@ -423,51 +419,19 @@ class PredefinedApp(object):
         db.session.flush()
         return cls(**app.to_dict())
 
-    @classmethod
-    def update_pod_to_plan(cls, pod_id, plan_id, values=None, async=True,
-                           dry_run=False, user=None):
-        """
-        Class method that updates predefined app pod to a particular plan
-        :param pod_id: string -> uuid, pod (database) ID
-        :param plan_id: int -> plan ID
-        :param values: dict -> values to fill defaults
-        :param async: bool -> not to wait for result if async
-        :param user: obj -> user on behalf of whom action is taken
-        """
-        app, pod = cls._get_instance_from_pod(pod_id)
-        cls._check_permissions(user, pod)
-        filled = app.get_filled_template_for_plan(plan_id, values)
-        app._update_pod_config(pod, filled, async, dry_run=dry_run)
-        return app.get_plan(plan_id)
-
-    @classmethod
-    def update_pod_to_plan_by_name(cls, pod_id, plan_name, values=None,
-                                   async=True, dry_run=False, user=None):
-        """
-        Class method that updates predefined app pod to a particular plan
-        :param pod_id: string -> uuid, pod (database) ID
-        :param plan_name: string -> plan name
-        :param values: dict -> values to fill defaults
-        :param async: bool -> not to wait for result if async
-        :param user: obj -> user on behalf of whom action is taken
-        """
-        app, pod = cls._get_instance_from_pod(pod_id)
-        cls._check_permissions(user, pod)
-        filled = app.get_filled_template_for_plan_by_name(plan_name, values)
-        app._update_pod_config(pod, filled, async, dry_run=dry_run)
-        return app.get_plan(app._get_plan_by_name(plan_name, index_only=True))
-
+    # TODO: move to AppInstance
     @classmethod
     def get_plans_info_for_pod(cls, pod_id, user=None):
         """
         Class method that returns info about packages available for the pod.
         :param pod_id: string -> uuid, pod (database) ID
         """
-        app, pod = cls._get_instance_from_pod(pod_id)
-        check_permission('get' if pod.owner == user else 'get_non_owned',
-                         'pods').check()
+        app_instance = AppInstance(pod_id, user)
+        perm = 'get' if app_instance.db_pod.owner == user else 'get_non_owned'
+        check_permission(perm, 'pods').check()
 
-        return app._get_plans_info_for_pod(pod)
+        return app_instance.predefined_app._get_plans_info_for_pod(
+            app_instance.db_pod)
 
     def _get_plans_info_for_pod(self, pod):
         """
@@ -490,31 +454,6 @@ class PredefinedApp(object):
                         pd['pdSize'] = disks_size[pd['name']]
             self._calculate_info(plan)
         return plans
-
-    @staticmethod
-    def _check_permissions(user, pod=None):
-        """
-        Makes some checks to make sure user is allowed requested action
-        An exception is expected to be raised when check failed
-        :param user: obj -> usually current user object
-        :param
-        """
-        if user is None:
-            return
-        if pod is not None:
-            check_permission('own', 'pods', user=pod.owner).check()
-            if pod.owner == user:
-                check_permission('edit', 'pods').check()
-            else:
-                check_permission('edit_non_owned', 'pods').check()
-
-        if user.is_administrator():
-            return
-        if not has_billing():
-            return
-        if not user.fix_price:
-            return
-        raise PermissionDenied
 
     @staticmethod
     def _dump_yaml(applied):
@@ -999,7 +938,7 @@ class PredefinedApp(object):
                     'Exactly one package must be "recommended"')
         return plans
 
-    def _get_plan_by_name(self, name, index_only=False):
+    def get_plan_by_name(self, name, index_only=False):
         """
         Returns either plan or plan index by name
         :param name: str -> plan name to be resolved (e.g. 'S')
@@ -1055,20 +994,6 @@ class PredefinedApp(object):
 
         self._preprocessed_template = preprocessed
         return self._preprocessed_template
-
-    @classmethod
-    def _get_instance_from_pod(cls, pod_id):
-        """
-        Helper method that returns instance by pod_id if pod created from PA
-        :param pod_id: str -> pod UUID
-        :return: tuple (obj, dict) -> PredefinedApp instance, pod config
-        """
-        pod = Pod.query.get(pod_id)
-        if pod is None:
-            raise NotFound('Pod not found')
-        if pod.template_id is None:
-            raise PredefinedAppExc.NotPredefinedAppPod
-        return cls.get(pod.template_id), pod
 
     def _get_template_spec(self, tpl=None):
         """
@@ -1274,6 +1199,130 @@ class PredefinedApp(object):
                     return False
                 return True
             return value
+
+
+class AppInstance(object):
+    """Object that handles all predefined app instance related routines"""
+
+    def __init__(self, pod_id, user=None):
+        """
+        :param pod_id: id of the instance
+        :type pod_id: str
+        :param user: user that performs all actions (may be owner or admin)
+        :type user: kubedock.users.models.User
+        """
+        self.pod_id = pod_id
+        self.user = user
+        self.predefined_app, self.db_pod = self.get_template_from_pod_id()
+
+    def get_template_from_pod_id(self):
+        """
+        Helper method that returns PredefinedApp instance and DBPod by pod_id.
+
+        :returns: PredefinedApp instance, pod model
+        :rtype: (kubedock.kapi.apps.PredefinedApp, kubedock.pods.models.Pod)
+        :raises: NotFound, PredefinedAppExc.NotPredefinedAppPod
+        """
+        if hasattr(self, 'db_pod') and hasattr(self, 'predefined_app'):
+            return self.predefined_app, self.db_pod
+        pod = Pod.query.get(self.pod_id)
+        if pod is None:
+            raise NotFound('Pod not found')
+        if pod.template_id is None:
+            raise PredefinedAppExc.NotPredefinedAppPod
+        return PredefinedApp.get(pod.template_id), pod
+
+    def update_plan(self, plan_id, values=None, async=True, dry_run=False):
+        """
+        Update predefined app pod to a particular plan.
+        :param plan_id: int -> plan ID
+        :param values: dict -> values to fill defaults
+        :param async: bool -> not to wait for result if async
+        """
+        self._check_permissions()
+        filled = self.predefined_app.get_filled_template_for_plan(
+            plan_id, values)
+        self.predefined_app._update_pod_config(
+            self.db_pod, filled, async, dry_run=dry_run)
+        return self.predefined_app.get_plan(plan_id)
+
+    def update_plan_by_name(self, plan_name, values=None, async=True,
+                            dry_run=False):
+        """
+        Update predefined app pod to a particular plan.
+        :param plan_name: string -> plan name
+        :param values: dict -> values to fill defaults
+        :param async: bool -> not to wait for result if async
+        """
+        plan_id = self.predefined_app.get_plan_by_name(
+            plan_name, index_only=True)
+        return self.update_plan(plan_id, values, async, dry_run)
+
+    def _check_permissions(self):
+        """
+        Makes some checks to make sure user is allowed requested action
+        An exception is expected to be raised when check failed
+        :raises: PermissionDenied
+        """
+        if not self.user:
+            return
+
+        if self.db_pod.owner == self.user:
+            check_permission('edit', 'pods').check()
+        else:
+            check_permission('edit_non_owned', 'pods').check()
+
+        if (not self.user.is_administrator() and has_billing() and
+                self.user.fix_price):
+            raise PermissionDenied
+
+    def check_for_updates(self):
+        """Compare current version and the active version"""
+        current_version_id = self.db_pod.template_version_id
+        active_version_id = self.predefined_app.activeVersionID
+        return {
+            'updateAvailable': current_version_id != active_version_id,
+            'currentVersionID': current_version_id,
+            'activeVersionID': active_version_id,
+        }
+
+    def update_version(self):
+        """
+        Update the pod by saving new config as `edited_config` and applying
+            those changes.
+        """
+        update = self.check_for_updates()
+        if not update['updateAvailable']:
+            return
+        pod_collection = PodCollection(self.db_pod.owner)
+
+        plan_id = self.predefined_app.get_plan_by_name(
+            self.db_pod.template_plan_name, index_only=True)
+        app_variables = self.db_pod.get_dbconfig().get('appVariables', {})
+
+        pod_data = self.predefined_app.get_filled_template_for_plan(
+            plan_id, app_variables, with_id=False)
+        if not isinstance(pod_data, list):
+            pod_data = [pod_data]  # should be list of docs
+        not_editable_attributes = {
+            'appVariables',
+            'name',
+            'kuberdock_template_id',
+            'kuberdock_plan_name',
+            'kuberdock_template_version_id',
+        }
+        pod_data = {k: v for k, v in dispatch_kind(pod_data).items()
+                    if k not in not_editable_attributes}
+
+        pod_collection.edit(pod_collection._get_by_id(self.db_pod.id),
+                            {'edited_config': pod_data})
+        self.db_pod.template_version_id = update['activeVersionID']
+
+        pod_collection.update(self.db_pod.id, {
+            'command': 'redeploy', 'commandOptions': {
+                'applyEdit': True,
+                'internalEdit': True,
+            }})
 
 
 def start_pod_from_yaml(pod_data, user=None, template_id=None, dry_run=False):

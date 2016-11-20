@@ -227,3 +227,132 @@ class K8SAPIStubs(object):
 
     def build_api_url(self, *args, **kwargs):
         return get_api_url(*args, **kwargs)
+
+
+VALID_TEMPLATE1 = """---
+apiVersion: v1
+kind: ReplicationController
+kuberdock:
+  icon: http://icons.iconarchive.com/wordpress-icon.png
+  name: Wordpress app
+  packageID: 0
+  postDescription: Some \$test %PUBLIC_ADDRESS%
+  preDescription: Some pre description
+  template_id: 1
+  appPackages:
+    - name: S
+      recommended: yes
+      goodFor: up to 100 users
+      publicIP: false
+      pods:
+        - name: $APP_NAME$
+          kubeType: 0
+          containers:
+            - name: mysql
+              kubes: 1
+            - name: wordpress
+              kubes: 2
+          persistentDisks:
+            - name: wordpress-persistent-storage
+              pdSize: 1
+            - name: mysql-persistent-storage$VAR_IN_NAME$
+              pdSize: $MYSQL_PD_SIZE|default:2|MySQL persistent disk size$
+    - name: M
+      goodFor: up to 100K visitors
+      publicIP: true
+      pods:
+        - name: $APP_NAME$
+          kubeType: 0
+          containers:
+            - name: mysql
+              kubes: 2
+            - name: wordpress
+              kubes: 4
+          persistentDisks:
+            - name: wordpress-persistent-storage
+              pdSize: 2
+            - name: mysql-persistent-storage$VAR_IN_NAME$
+              pdSize: 3
+metadata:
+  name: $APP_NAME|default:WordPress|App name$
+spec:
+  template:
+    metadata:
+      labels:
+        name: $APP_NAME$
+    spec:
+      volumes:
+        - name: mysql-persistent-storage$VAR_IN_NAME|default:autogen|v$
+          persistentDisk:
+            pdName: wordpress_mysql_$PD_RAND|default:autogen|PD rand$
+        - name: wordpress-persistent-storage
+          persistentDisk:
+            pdName: wordpress_www_$PD_RAND$
+      containers:
+        -
+          env:
+            -
+              name: WORDPRESS_DB_NAME
+              value: wordpress
+            -
+              name: WORDPRESS_DB_USER
+              value: wordpress
+            -
+              name: WORDPRESS_DB_PASSWORD
+              value: paSd43
+            -
+              name: WORDPRESS_DB_HOST
+              value: 127.0.0.1
+            -
+              name: WP_ENV1
+              value: $WPENV1|default:1|test var 1 1$
+            -
+              name: WP_ENV2
+              value: $WPENV1$
+            -
+              name: WP_ENV3
+              value: $WPENV1$
+            -
+              name: WP_ENV4
+              value: $WPENV1|default:2|test var 1 2$
+          image: wordpress:4.6
+          name: wordpress
+          ports:
+            -
+              containerPort: 80
+              hostPort: 80
+              isPublic: True
+          volumeMounts:
+            - mountPath: /var/www/html
+              name: wordpress-persistent-storage
+
+        -
+          args: []
+
+          env:
+            -
+              name: MYSQL_ROOT_PASSWORD
+              value: wordpressdocker
+            -
+              name: MYSQL_DATABASE
+              value: wordpress
+            -
+              name: MYSQL_USER
+              value: wordpress
+            -
+              name: MYSQL_PASSWORD
+              value: paSd43
+            -
+              name: TEST_AUTOGEN1
+              value: $TESTAUTO1|default:autogen|test auto1$
+          image: mysql:5.7
+          name: mysql
+          ports:
+            -
+              containerPort: 3306
+          volumeMounts:
+            - mountPath: /var/lib/mysql
+              name: mysql-persistent-storage$VAR_IN_NAME$
+
+      restartPolicy: Always
+"""

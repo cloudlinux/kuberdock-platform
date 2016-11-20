@@ -2,6 +2,7 @@ import unittest
 
 import mock
 
+from kubedock.testutils.fixtures import VALID_TEMPLATE1
 from kubedock.testutils.testcases import APITestCase
 from kubedock.validation import V
 
@@ -18,99 +19,8 @@ class PredefinedAppsTestCase(APITestCase):
     """Tests for /api/predefined-apps endpoint"""
     url = '/predefined-apps'
 
-    _NO_VERSION_TEMPLATE_REDIS_YAML = """
-apiVersion: v1
-kind: ReplicationController
-metadata:
-  name: $APP_NAME|default:redis| Enter your application name$
-kuberdock:
-  packageID: 0
-  preDescription: |
-    You are installing the application [b]Redis[/b].
-    Redis is an open source key-value store that functions as a data structure server.
-    Choose the amount of resources or use recommended parameters set by default.
-    First choose package.
-    When you click "Order now", you will get to order processing page.
-  postDescription: |
-    You have installed [b]Redis![/b]
-    Please find more information about Redis software on the official website [url]http://redis.io/[/url]
-    To access [b]Redis[/b] use:
-    [b]Host:[/b] %PUBLIC_ADDRESS%
-    [b]Port:[/b] $REDIS_HOST_PORT$
-  # required for cPanel to do proxy to user`s domain
-  # proxy:
-    # root:
-      # container: redis
-      # domain: $APP_DOMAIN|default:user_domain_list|Select application domain$
-  appPackages:
-    - name: S
-      goodFor: beginner
-      publicIP: true
-      pods:
-        -
-          name: $APP_NAME$
-          kubeType: 0
-          containers:
-            - name: redis
-              kubes: 1
-          persistentDisks:
-            - name: redis-persistent-storage
-              pdSize: 1
-    - name: M
-      recommended: yes
-      goodFor: regular use
-      publicIP: true
-      pods:
-        -
-          name: $APP_NAME$
-          kubeType: 1
-          containers:
-            - name: redis
-              kubes: 1
-          persistentDisks:
-            - name: redis-persistent-storage
-              pdSize: 1
-    - name: L
-      goodFor: business
-      publicIP: true
-      pods:
-        -
-          name: $APP_NAME$
-          kubeType: 2
-          containers:
-            - name: redis
-              kubes: 1
-          persistentDisks:
-            - name: redis-persistent-storage
-              pdSize: 2
-spec:
-  template:
-    metadata:
-      labels:
-        name: $APP_NAME$
-    spec:
-      volumes:
-        - name: redis-persistent-storage
-          persistentDisk:
-            pdName: redis_$PD_RAND|default:autogen|PD rand$
-      restartPolicy: "Always"
-      containers:
-        -
-          name: redis
-          image: redis
-          ports:
-            - containerPort: 6379
-              podPort: $REDIS_HOST_PORT|default:6379|Enter Redis host port$
-              isPublic: True
-          readinessProbe:
-            tcpSocket:
-              port: 6379
-            initialDelaySeconds: 1
-          volumeMounts:
-            - mountPath: /data
-              name: redis-persistent-storage
-          workingDir: /data
-"""
+    _NO_VERSION_TEMPLATE_YAML = VALID_TEMPLATE1.replace(
+        'image: wordpress:4.6', 'image: wordpress')
 
     def setUp(self):
         self.name = 'test yaml app'
@@ -413,17 +323,17 @@ spec:
         response = self.admin_open(
             "%s/?validate=true" % self.url, method='POST',
             json={'name': self.name,
-                  'template': self._NO_VERSION_TEMPLATE_REDIS_YAML})
+                  'template': self._NO_VERSION_TEMPLATE_YAML})
 
         error_details = {
-            u'schemaErrors':
-                {u'spec':
-                     {u'anyof': u'no definitions validated',
-                      u'definition 1': {u'template': {u'spec': {u'containers':
-                          {u'0': {
-                              u'image': V.ERROR_SHOULD_NOT_USE_LATEST}}}}},
-                      u'definition 0': {
-                          u'containers': u'required field'}}}}
+            u'schemaErrors': {u'spec': {
+                u'anyof': u'no definitions validated',
+                u'definition 1': {u'template': {u'spec': {u'containers': {
+                    u'0': {u'image': V.ERROR_SHOULD_NOT_USE_LATEST},
+                }}}},
+                u'definition 0': {u'containers': u'required field'},
+            }},
+        }
 
         self.assertAPIError(response, 400, 'ValidationError',
                             details=error_details)

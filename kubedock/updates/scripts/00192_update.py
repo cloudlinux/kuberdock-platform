@@ -12,6 +12,8 @@ from fabric.context_managers import cd, quiet
 
 from kubedock.allowed_ports.models import AllowedPort
 from kubedock.core import db, ssh_connect
+from kubedock.domains.models import BaseDomain, PodDomain
+from kubedock.exceptions import DomainNotFound
 from kubedock.kapi.nodes import (
     KUBERDOCK_DNS_POD_NAME,
     create_policy_pod,
@@ -30,7 +32,8 @@ from kubedock.kapi.helpers import (
 from kubedock.kapi.node_utils import complete_calico_node_config
 from kubedock.kapi.nodes import get_kuberdock_logs_pod_name
 from kubedock.kapi.podutils import raise_if_failure
-from kubedock.kapi.podcollection import PodCollection, PodNotFound, run_service
+from kubedock.kapi.podcollection import PodCollection, PodNotFound, \
+    run_service, PublicAccessType
 from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod
 from kubedock.predefined_apps.models import PredefinedApp
@@ -94,6 +97,67 @@ new_permissions = [
     ('restricted-ports', 'Admin', 'create', True),
     ('restricted-ports', 'Admin', 'delete', True),
 ]
+
+
+def _add_public_access_type(upd):
+    upd.print_log('Update pod configs')
+    pods = Pod.all()
+    for pod in pods:
+        db_config = pod.get_dbconfig()
+        pod.set_dbconfig(db_config, save=False)
+
+        if 'public_access_type' in db_config:
+            continue
+
+        elif (db_config.get('public_ip', None)
+                or db_config.get('public_ip_before_freed', None)):
+            db_config['public_access_type'] = PublicAccessType.PUBLIC_IP
+
+        elif db_config.get('public_aws', None):
+            db_config['public_access_type'] = PublicAccessType.PUBLIC_AWS
+
+        elif db_config.get('domain', None):
+            db_config['public_access_type'] = PublicAccessType.DOMAIN
+
+            if not db_config.get('base_domain', None):
+                domain = db_config['domain']
+
+                base_domain = BaseDomain.query.filter_by(name=domain).first()
+
+                if base_domain:
+                    db_config['base_domain'] = domain
+                    db_config.pop('domain')
+
+                else:
+                    sub_domain_part, base_domain_part = domain.split('.', 1)
+
+                    base_domain = BaseDomain.query.filter_by(
+                        name=base_domain_part).first()
+
+                    if base_domain is None:
+                        raise DomainNotFound(
+                            "Can't find BaseDomain for requested domain {0}"
+                            .format(domain)
+                        )
+
+                    pod_domain = PodDomain.query.filter_by(
+                        name=sub_domain_part, domain_id=base_domain.id,
+                        pod_id=pod.id
+                    ).first()
+
+                    if not pod_domain:
+                        raise DomainNotFound(
+                            "Can't find PodDomain for requested domain {0}"
+                            .format(domain)
+                        )
+
+                    db_config['base_domain'] = base_domain.name
+                    db_config['domain'] = domain
+
+        else:
+            db_config['public_access_type'] = PublicAccessType.PUBLIC_IP
+
+        pod.set_dbconfig(db_config, save=False)
 
 
 def _update_nonfloating_config(upd):
@@ -1022,6 +1086,7 @@ def checkout_calico_network():
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
+    _add_public_access_type(upd)
     _update_nonfloating_config(upd)
     _update_00200_upgrade(upd)  # db migration
     calico_network = checkout_calico_network()

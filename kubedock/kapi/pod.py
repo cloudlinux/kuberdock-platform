@@ -10,14 +10,13 @@ import pstorage
 from . import helpers
 from . import podutils
 from .helpers import KubeQuery, K8sSecretsClient, K8sSecretsBuilder
-from .images import Image
 from .. import billing
 from .. import settings
 from ..billing.models import Kube
 from ..exceptions import APIError, ServicePodDumpError
 from ..pods.models import (db, PersistentDisk, PersistentDiskStatuses,
                            Pod as DBPod)
-from ..utils import POD_STATUSES
+from ..utils import POD_STATUSES, nested_dict_utils
 
 ORIGIN_ROOT = 'originroot'
 OVERLAY_PATH = u'/var/lib/docker/overlay/{}/root'
@@ -30,6 +29,7 @@ class PodOwner(dict):
     """Inherited from dict so as it will be presented as dict in
     `as_dict` method.
     """
+
     def __init__(self, id, username):
         super(PodOwner, self).__init__(id=id, username=username)
         self.id = id
@@ -92,10 +92,11 @@ class Pod(object):
 
     def set_owner(self, owner):
         """Set owner field as a named tuple with minimal necessary fields.
+
         It is needed to pass Pod object to async celery task, to prevent
         DetachedInstanceError, because of another session in celery task.
-        :param owner: object of 'User' model
 
+        :param owner: object of 'User' model
         """
         if owner is not None:
             self.owner = PodOwner(id=owner.id, username=owner.username)
@@ -104,9 +105,7 @@ class Pod(object):
 
     @staticmethod
     def populate(data):
-        """
-        Create Pod object using Pod from Kubernetes
-        """
+        """Create Pod object using Pod from Kubernetes."""
         pod = Pod()
         metadata = data.get('metadata', {})
         status = data.get('status', {})
@@ -143,15 +142,15 @@ class Pod(object):
                         continue
                     for container in pod.containers:
                         if container['name'] == pod_item['name']:
-                            state, stateDetails = pod_item.pop(
+                            state, state_details = pod_item.pop(
                                 'state').items()[0]
                             pod_item['state'] = state
-                            pod_item['startedAt'] = stateDetails.get(
+                            pod_item['startedAt'] = state_details.get(
                                 'startedAt')
                             if state == 'terminated':
-                                pod_item['exitCode'] = stateDetails.get(
+                                pod_item['exitCode'] = state_details.get(
                                     'exitCode')
-                                pod_item['finishedAt'] = stateDetails.get(
+                                pod_item['finishedAt'] = state_details.get(
                                     'finishedAt')
                             container_id = pod_item.get(
                                 'containerID',
@@ -177,6 +176,7 @@ class Pod(object):
 
     def dump(self):
         """Get full information about pod.
+
         ATTENTION! Do not use it in methods allowed for user! It may contain
         secret information. FOR ADMINS ONLY!
         """
@@ -202,10 +202,9 @@ class Pod(object):
             '/usr/lib/kdtools',
         ]
         volumes = getattr(self, 'volumes', [])
-        p_vols = (vol for vol in volumes if
-                  'name' in vol and
-                  'hostPath' in vol and
-                  vol['hostPath']['path'] not in sys_vol)
+        p_vols = (vol for vol in volumes
+                  if 'name' in vol and 'hostPath' in vol
+                  and vol['hostPath']['path'] not in sys_vol)
         result = {vol['name']: vol['hostPath']['path'] for vol in p_vols}
         ceph_vols = (vol for vol in volumes if 'rbd' in vol)
         result.update({vol['name']: 'ceph' for vol in ceph_vols})
@@ -296,7 +295,7 @@ class Pod(object):
                             if item['name'] not in clean_vols]
 
     def _handle_persistent_storage(self, volume, volume_public, reuse_pv):
-        """Prepare volume with persistent storage
+        """Prepare volume with persistent storage.
 
         :param volume: volume for k8s api
             (storage specific attributes will be added).
@@ -345,7 +344,8 @@ class Pod(object):
         return json.dumps(
             {c.get('name'): c.get('kubes', 1) for c in self.containers})
 
-    def extract_volume_annotations(self, volumes):
+    @staticmethod
+    def extract_volume_annotations(volumes):
         if not volumes:
             return []
         res = [vol.pop('annotation') for vol in volumes if 'annotation' in vol]
@@ -369,13 +369,9 @@ class Pod(object):
             container['volumeMounts'] = [
                 item for item in container.get('volumeMounts', [])
                 if item['name'] in existing_vols]
-            containers.append(
-                self._prepare_container(container, kube_type, volumes)
-            )
+            containers.append(self._prepare_container(container, kube_type))
         add_kdtools(containers, volumes)
-        add_kdenvs(containers, [
-            ("KUBERDOCK_SERVICE", service),
-        ])
+        add_kdenvs(containers, [("KUBERDOCK_SERVICE", service), ])
         if not service_account:
             add_serviceaccount_stub(containers, volumes)
 
@@ -437,14 +433,22 @@ class Pod(object):
             }
         else:
             pod_config['spec']['nodeSelector'] = {}
-        if hasattr(self, 'node') and self.node:
-            pod_config['spec']['nodeSelector']['kuberdock-node-hostname'] = \
-                self.node
-        if hasattr(self, 'public_ip') and self.public_ip:
-            pod_config['metadata']['labels']['kuberdock-public-ip'] = \
-                self.public_ip
-        if hasattr(self, 'domain'):
-            pod_config['metadata']['labels']['kuberdock-domain'] = self.domain
+
+        node = getattr(self, 'node', None)
+        if node:
+            nested_dict_utils.set(
+                pod_config, 'spec.nodeSelector.kuberdock-node-hostname', node)
+
+        public_ip = getattr(self, 'public_ip', None)
+        if public_ip:
+            nested_dict_utils.set(
+                pod_config, 'metadata.labels.kuberdock-public-ip', public_ip)
+
+        domain = getattr(self, 'domain', None)
+        if domain:
+            nested_dict_utils.set(
+                pod_config, 'metadata.labels.kuberdock-domain', domain)
+
         return config
 
     def _merge_pod_labels(self, config):
@@ -457,7 +461,7 @@ class Pod(object):
             for c in self.containers
             for v in c.get('volumeMounts', [])
             if v.pop('kdCopyFromImage', False)
-        ]
+            ]
 
     def _update_volume_path(self, name, vid):
         if vid is None:
@@ -470,7 +474,7 @@ class Pod(object):
             except KeyError:
                 continue
 
-    def _prepare_container(self, data, kube_type=None, volumes=None):
+    def _prepare_container(self, data, kube_type=None):
         data = deepcopy(data)
         # Strip non-kubernetes params
         data.pop('sourceUrl', None)
@@ -480,9 +484,6 @@ class Pod(object):
 
         if not data.get('name'):
             data['name'] = podutils.make_name_from_image(data.get('image', ''))
-
-        if volumes is None:
-            volumes = []
 
         try:
             kubes = int(data.pop('kubes'))
@@ -604,8 +605,8 @@ def add_kdtools(containers, volumes):
 
 
 def add_serviceaccount_stub(containers, volumes):
-    """
-    Add Service Account stub for Pods that do not needed it.
+    """Add Service Account stub for Pods that do not needed it.
+
     It's a workaround to prevent access from non-service pods to k8s services.
     TODO: Probably there is a better way to do this.
     See: http://kubernetes.io/docs/admin/service-accounts-admin/
@@ -617,7 +618,6 @@ def add_serviceaccount_stub(containers, volumes):
     :type volumes: list
 
     TODO: Why do we need this?
-
     """
 
     volume_name = 'serviceaccount-stub-' + uuid.uuid4().hex
@@ -633,8 +633,7 @@ def add_serviceaccount_stub(containers, volumes):
 
 
 def add_kdenvs(containers, envs):
-    """
-    Add KuberDock related Environment Variables to Pod Containers
+    """Add KuberDock related Environment Variables to Pod Containers.
 
     :param containers: Pod Containers
     :type containers: list

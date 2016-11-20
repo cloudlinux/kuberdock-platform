@@ -43,9 +43,16 @@ class CLI_COMMANDS:
 
 
 FAILED_MESSAGE = """\
-Cluster was left in a maintenance mode, please contact to support team for help.
+Cluster was left in a maintenance mode.
+You could do one of the following:
+1) Contact our support for help (strongly recommended)
+2) Remove the error causes and resume the upgrade with {0} {2}
+Second way is appropriate in case when you really sure that the problem was \
+trivial and specific to your cluster (like temporary network unavailability \
+of some nodes).
 Use {0} {1} on|off to manually switch cluster work mode (careful!)\
-""".format(os.path.basename(__file__), CLI_COMMANDS.set_maintenance)
+""".format(os.path.basename(__file__), CLI_COMMANDS.set_maintenance,
+           CLI_COMMANDS.resume_upgrade)
 
 
 SUCCESSFUL_DOWNGRADE_MESSAGE = """\

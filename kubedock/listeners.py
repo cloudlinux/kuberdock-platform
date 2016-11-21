@@ -8,6 +8,7 @@ from paramiko.ssh_exception import SSHException
 from websocket import (create_connection, WebSocketException,
                        WebSocketConnectionClosedException)
 
+from sqlalchemy.exc import DataError
 from flask import current_app
 from .core import ConnectionPool, ssh_connect, db
 from .billing.models import Kube
@@ -298,28 +299,27 @@ def process_events_event(data, app):
         return
     reason = event['reason']
     pod_id = obj.get('namespace')
-    if reason == 'Started':
-        with app.app_context():
-            mark_restore_as_finished(pod_id)
-        return
 
-    if reason == 'FailedMount':
-        # TODO: must be removed after Attach/Detach Controller
-        # is added in k8s 1.3 version.
-        with app.app_context():
+    with app.app_context():
+        pod = None
+        try:
             pod = Pod.query.get(pod_id)
-            if pod is None:
-                unregistered_pod_warning(pod_id)
-                return
+        except DataError:
+            current_app.logger.warning("Error while get pod from db",
+                                       exc_info=True)
+        if pod is None:
+            unregistered_pod_warning(pod_id)
+            return
+        if reason == 'Started':
+            mark_restore_as_finished(pod_id)
+            return
+        if reason == 'FailedMount':
+            # TODO: must be removed after Attach/Detach Controller
+            # is added in k8s 1.3 version.
             storage = STORAGE_CLASS()
             for pd in pod.persistent_disks:
                 storage.unlock_pd(pd)
-    elif reason == 'FailedScheduling':
-        with app.app_context():
-            pod = Pod.query.get(pod_id)
-            if pod is None:
-                unregistered_pod_warning(pod_id)
-                return
+        elif reason == 'FailedScheduling':
             pod_name = pod.name
             user = User.query.filter(User.id == pod.owner_id).first()
             if user is None:

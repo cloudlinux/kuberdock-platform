@@ -291,25 +291,26 @@ def delete_node(node_id=None, node=None, force=False, verbose=True):
     except OSError:
         pass
 
-    message = 'Node successfully deleted.'
     try:
         cleanup_node_network_policies(hostname)
     except:
-        err = "Failed to cleanup network policies for the node: {}".format(
+        error_message = "Failed to cleanup network policies for the node: {}".format(
             hostname)
-        current_app.logger.exception(err)
-        message += '\n{}'.format(err)
+        current_app.logger.exception(error_message)
+        send_event_to_role('notify:error',
+                           {'message': error_message}, 'Admin')
 
     if ls_clean_error:
-        message += \
-            '\nWarning: Failed to clean Local storage volumes on the node.\n'\
-            'You have to clean it manually if needed:\n{}'.format(
-                ls_clean_error)
+        error_message = 'Failed to clean Local storage volumes on ' \
+                        'the node.\nYou have to clean it manually if needed:' \
+                        '\n{}'.format(ls_clean_error)
         if verbose:
-            current_app.logger.warning(message)
+            current_app.logger.warning(error_message)
+        send_event_to_role('notify:warning',
+                           {'message': error_message}, 'Admin')
     send_event_to_role('node:deleted', {
         'id': node_id,
-        'message': message
+        'message': 'Node successfully deleted.'
     }, 'Admin')
 
 

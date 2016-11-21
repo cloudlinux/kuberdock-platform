@@ -655,7 +655,7 @@
                     setRes(domPlan, 'plan-price', plan.info.prefix +
                         nbsp + plan.info.price.toFixed(2));
                     setRes(domPlan, 'plan-price-suffix', plan.info.suffix);
-                    setRes(domPlan, 'plan-cpu', plan.info.cpu + nbsp + kt.cpu_units);
+                    setRes(domPlan, 'plan-cpu', parseFloat(plan.info.cpu.toFixed(4)) + nbsp + kt.cpu_units);
                     setRes(domPlan, 'plan-memory', plan.info.memory + nbsp + kt.memory_units);
                     setRes(domPlan, 'plan-disk', plan.info.diskSpace + nbsp + kt.disk_space_units);
                     setRes(domPlan, 'plan-pd', plan.info.totalPD + nbsp + 'GB');

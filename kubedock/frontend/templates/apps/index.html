@@ -1318,8 +1318,7 @@
                     setRes(document, 'plan-price', plan.info.prefix +
                         nbsp + plan.info.price.toFixed(2));
                     setRes(document, 'plan-period', '/' + plan.info.period);
-                    setRes(domPlan, 'plan-cpu', plan.info.cpu.toFixed(4).replace(
-                        /\.?0+$/, '') + nbsp + kt.cpu_units);
+                    setRes(domPlan, 'plan-cpu', parseFloat(plan.info.cpu.toFixed(4)) + nbsp + kt.cpu_units);
                     setRes(domPlan, 'plan-memory', plan.info.memory + nbsp + kt.memory_units);
                     setRes(domPlan, 'plan-disk', plan.info.diskSpace + nbsp + kt.disk_space_units);
                     setRes(domPlan, 'plan-pd', plan.info.totalPD + nbsp + 'GB');

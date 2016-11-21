@@ -444,16 +444,26 @@ class AwsProvider(InfraProvider):
         if self._host_to_id_cached is not None:
             return self._host_to_id_cached
         else:
-            reservations = self._ec2.get_all_instances(filters={
-                "tag:KubernetesCluster": self.env['KUBE_AWS_INSTANCE_PREFIX']})
-            instances = [i for r in reservations for i in r.instances]
+            instances = self._ec2.instances.filter(Filters=[{
+                "Name": "tag:KubernetesCluster",
+                "Values": [self.env['KUBE_AWS_INSTANCE_PREFIX'], ]
+            }])
             result = {}
             for instance in instances:
-                inst_name = instance.tags['Name']
+                tags = dict((tag['Key'], tag['Value'])
+                            for tag in instance.tags)
                 inst_id = instance.id
-                result[inst_name] = inst_id
+                result[tags['Name']] = inst_id
             LOG.debug("Host to ip maping: {0}".format(result))
             return result
+
+    def _get_node_types(self):
+        node_types = self.env.get('KD_NODE_TYPES')
+        parsed_types = (pair.split('=') for pair
+                        in node_types.split(','))
+        converted = ((self.vm_names[node], "%s" % size)
+                     for node, size in parsed_types)
+        return ';'.join("=".join(item) for item in converted)
 
     @log_timing
     def start(self):
@@ -464,12 +474,14 @@ class AwsProvider(InfraProvider):
             raise VmCreateError('Failed to connect AWS')
 
         self._check_rpms()
+        node_types = self._get_node_types()
         local_exec_live([
             "bash", "-c",
-            "yes | KUBE_AWS_USE_TESTING={0} NUM_NODES={1} "
+            "KUBE_AWS_USE_TESTING={0} NUM_NODES={1} "
+            "KUBE_AWS_NODE_TYPES=\"{2}\" "
             "aws-kd-deploy/cluster/aws-kd-deploy.sh".format(
                 "yes" if self.env.get('KD_TESTING_REPO') else "no",
-                self.env['KD_NODES_COUNT'],
+                self.env['KD_NODES_COUNT'], node_types
             )])
         log_dict(self.env, "Cluster settings:")
         LOG.debug("Generating inventory")

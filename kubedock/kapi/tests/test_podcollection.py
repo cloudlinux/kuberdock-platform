@@ -543,6 +543,9 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
             }]
         )
 
+    @mock.patch.object(podcollection, 'db')
+    @mock.patch.object(podcollection.PodCollection, 'update')
+    @mock.patch.object(podcollection.utils, 'send_event_to_user')
     @mock.patch.object(podcollection.helpers, 'replace_pod_config')
     @mock.patch.object(podcollection, '_try_to_update_existing_rc')
     @mock.patch.object(podcollection.ingress_resource, 'create_ingress')
@@ -553,10 +556,11 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
     @mock.patch.object(podcollection.podutils, 'raise_if_failure')
     @mock.patch.object(podcollection.KubeQuery, 'post')
     @mock.patch.object(podcollection.PodCollection, 'has_public_ports')
-    def test_pod_prepare_and_run_task(
+    def test_pod_prepare_and_run(
             self, has_public_ports_mock, post_mock, raise_if_failure_mock,
             run_service_mock, dbpod_mock, create_or_update_type_A_record_mock,
-            create_ingress_mock, try_update_rc_mock, replace_pod_config_mock):
+            create_ingress_mock, try_update_rc_mock, replace_pod_config_mock,
+            send_event_to_user_mock, podcollection_update_mock, db_mock):
         """
         Test first _start_pod in usual case
         :type post_: mock.Mock
@@ -576,8 +580,8 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         try_update_rc_mock.return_value = False
 
         # Actual call
-        res = podcollection.prepare_and_run_pod_task(self.test_pod, dbpod,
-                                                     dbpod_config)
+        res = podcollection.prepare_and_run_pod(self.test_pod, dbpod,
+                                                dbpod_config)
 
         run_service_mock.assert_called_once_with(self.test_pod)
         self.test_pod.prepare.assert_called_once_with()
@@ -599,6 +603,21 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
             self.test_pod.service,
         )
         self.assertEqual(res, self.test_pod.as_dict.return_value)
+        send_event_to_user_mock.assert_not_called()
+
+        # Test user notification was send in case of some k8s error,
+        # and the pod was stopped
+
+        # This is checked to send or not to send notification to a user
+        dbpod.is_deleted = False
+        raise_if_failure_mock.side_effect = podcollection.PodStartFailure()
+        with self.assertRaises(podcollection.PodStartFailure):
+            podcollection.prepare_and_run_pod(self.test_pod, dbpod,
+                                              dbpod_config)
+        podcollection_update_mock.assert_called_once_with(
+            self.test_pod.id, {'command': 'stop'}
+        )
+        self.assertTrue(send_event_to_user_mock.called)
 
     @mock.patch.object(kapi_pod, 'DBPod')
     @mock.patch.object(podcollection, 'DBPod')
@@ -637,7 +656,7 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
 
         node_available_mock.assert_called_once_with(pod)
         mk_ns.assert_called_once_with(pod.namespace)
-        run_pod_mock.delay.assert_called_once_with(pod, db_pod, db_config)
+        run_pod_mock.delay.assert_called_once_with(pod, db_pod.id, db_config)
         self.assertEqual(pod.status, POD_STATUSES.preparing)
 
     @mock.patch.object(podcollection, 'DBPod')
@@ -774,8 +793,8 @@ class TestPodCollectionStartPod(TestCase, TestCaseMixin):
         try_update_rc_mock.return_value = False
 
         # Actual call
-        res = podcollection.prepare_and_run_pod_task(self.test_pod, dbpod,
-                                                     dbpod_config)
+        res = podcollection.prepare_and_run_pod(self.test_pod, dbpod,
+                                                dbpod_config)
 
         self.test_pod.prepare.assert_called_once_with()
         post_.assert_called_once_with(

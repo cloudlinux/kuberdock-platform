@@ -18,3 +18,5 @@ customer_password: some_password
 domain: example.com
 domain_login: jdoe_domain
 domain_password: some_password
+
+plesk_license_param: ""

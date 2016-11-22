@@ -1185,7 +1185,7 @@ class PodCollection(object):
             db.session.commit()
 
         if async_pod_create:
-            prepare_and_run_pod_task.delay(pod, db_pod, db_config)
+            prepare_and_run_pod_task.delay(pod, db_pod.id, db_config)
         else:
             prepare_and_run_pod(pod, db_pod, db_config)
         return pod.as_dict()
@@ -1776,7 +1776,8 @@ def fix_relative_mount_paths(containers):
 
 
 @celery.task(ignore_results=True)
-def prepare_and_run_pod_task(pod, db_pod, db_config):
+def prepare_and_run_pod_task(pod, pod_id, db_config):
+    db_pod = DBPod.query.get(pod_id)
     return prepare_and_run_pod(pod, db_pod, db_config)
 
 
@@ -1848,9 +1849,13 @@ def prepare_and_run_pod(pod, db_pod, db_config):
             # We need to update db_pod in case if the pod status was changed
             # since the last retrieval from DB
             db.session.refresh(db_pod)
-            if not isinstance(err, PodStartFailure) or not db_pod.is_deleted:
+            if isinstance(err, PodStartFailure):
+                err_msg = u'{}. Please, contact administrator.'.format(err)
+            else:
+                err_msg = err.message
+            if not db_pod.is_deleted:
                 utils.send_event_to_user(
-                    'notify:error', {'message': err.message},
+                    'notify:error', {'message': err_msg},
                     db_pod.owner_id)
         raise
     pod.set_status(POD_STATUSES.pending, send_update=True)

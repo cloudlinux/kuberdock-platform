@@ -2,6 +2,7 @@ import json
 import os
 import re
 import socket
+import ConfigParser
 from StringIO import StringIO
 
 from itertools import chain
@@ -990,15 +991,29 @@ def get_calico_network(host_nets):
             return str(net)
 
 
-def upgrade(upd, with_testing, *args, **kwargs):
-    _update_nonfloating_config(upd)
-    _update_00200_upgrade(upd)  # db migration
+def checkout_calico_network():
+    cp = ConfigParser.ConfigParser()
+    cp.read(KUBERDOCK_MAIN_CONFIG)
+    try:
+        v = cp.get('main', 'CALICO_NETWORK')
+    except ConfigParser.Error:
+        v = None
+    if v:
+        return v
     nets = helpers.local("ip -o -4 addr | grep -vP '\slo\s' | awk '{print $4}'")
     calico_network = get_calico_network(nets)
     if not calico_network:
         raise helpers.UpgradeError("Can't find suitable network for Calico")
-    with open(KUBERDOCK_MAIN_CONFIG, 'a') as f:
-        f.write("CALICO_NETWORK = {}\n".format(calico_network))
+    cp.set('main', 'CALICO_NETWORK', calico_network)
+    with open(KUBERDOCK_MAIN_CONFIG, 'wb') as configfile:
+        cp.write(configfile)
+    return calico_network
+
+
+def upgrade(upd, with_testing, *args, **kwargs):
+    _update_nonfloating_config(upd)
+    _update_00200_upgrade(upd)  # db migration
+    calico_network = checkout_calico_network()
     settings.CALICO_NETWORK = calico_network
     _update_00176_upgrade(upd)
     _update_00185_upgrade()

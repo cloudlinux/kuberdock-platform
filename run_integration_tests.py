@@ -78,7 +78,12 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
     try:
         pipeline = Pipeline.from_name(pipeline_name)
     except Exception as e:
-        raise e
+        pipe_log("Failed to run Pipeline.from_name({})".format(
+            pipeline_name))
+        pipe_log('{}'.format(
+            ''.join(traceback.format_exception(*sys.exc_info()))
+        ))
+        raise
     if pipeline.skip_reason:
         pipe_log('SKIPPING CLUSTER ({})'.format(pipeline.skip_reason),
                  Fore.YELLOW)

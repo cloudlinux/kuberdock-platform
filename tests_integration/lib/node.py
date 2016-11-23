@@ -56,7 +56,8 @@ class KDNode(object):
         Reboot the node, wait till it get "pending" state, wait till is
         available again
         """
-        self.cluster.ssh_exec(self.name, "reboot", check_retcode=False)
+        self.cluster.ssh_exec(self.name, "reboot", check_retcode=False,
+                              sudo=True)
 
         try:
             wait_for_status_not_equal(self, "running", tries=24, interval=5)
@@ -66,7 +67,7 @@ class KDNode(object):
             # has rebooted
             pass
 
-        wait_for_status(self, "running", tries=24, interval=5)
+        wait_for_status(self, "running", tries=24, interval=10)
 
     @property
     def info(self):

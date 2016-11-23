@@ -131,7 +131,7 @@ export VAGRANT_CWD=dev-utils/dev-env/
 
 # Use ZFS
 # default: nothing
-#export USE_ZFS=1
+#export KD_USE_ZFS=1
 
 # Install whmcs to rhost
 # default: False

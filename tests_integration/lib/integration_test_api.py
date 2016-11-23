@@ -4,23 +4,17 @@ import os
 import pipes
 import requests
 import sys
-import time
 from contextlib import contextmanager
 
 import paramiko
 from ipaddress import IPv4Network
 
-from exceptions import ServicePodsNotReady, NodeWasNotRemoved, \
-    NonZeroRetCodeException, ClusterUpgradeError
-from tests_integration.lib.exceptions import DiskNotFound
-from tests_integration.lib.infra_providers import InfraProvider
+from tests_integration.lib import exceptions
 from tests_integration.lib.node import KDNode
 from tests_integration.lib.pa import KDPAPod
 from tests_integration.lib.pod import KDPod
 from tests_integration.lib.timing import log_timing, log_timing_ctx
-from tests_integration.lib.utils import \
-    ssh_exec, ssh_exec_live, assert_eq, assert_in, retry, \
-    escape_command_arg, get_rnd_low_string
+from tests_integration.lib import utils
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger("paramiko").setLevel(logging.WARNING)
@@ -142,11 +136,12 @@ class KDIntegrationTestAPI(object):
             self.ssh_exec("master",
                           "yes | /usr/bin/kuberdock-upgrade {}".format(args),
                           live=True)
-        except NonZeroRetCodeException:
+        except exceptions.NonZeroRetCodeException:
             # This is needed because NonZeroRetCode will carry whole upgrade
             # log in stdout, which is huge. We replace it with short message
             # while full log is still printed by ssh_exec logging
-            raise ClusterUpgradeError('kuberdock-upgrade non-zero retcode')
+            raise exceptions.ClusterUpgradeError(
+                'kuberdock-upgrade non-zero retcode')
 
         try:
             # Nodes can be rebooted during upgrade, make sure SSH
@@ -205,7 +200,7 @@ class KDIntegrationTestAPI(object):
                     if s['hostname'] == host)
 
     def assert_pods_number(self, number):
-        assert_eq(len(self.pods.filter_by_owner()), number)
+        utils.assert_eq(len(self.pods.filter_by_owner()), number)
 
     @log_timing
     def preload_docker_image(self, image, node=None):
@@ -225,8 +220,8 @@ class KDIntegrationTestAPI(object):
         nodes = node if node is not None else self.node_names
         # TODO parallel execution on all nodes
         for node in nodes:
-            retry(self.docker, interval=5, tries=3,
-                  cmd='pull {}'.format(image), node=node)
+            utils.retry(self.docker, interval=5, tries=3,
+                        cmd='pull {}'.format(image), node=node)
 
     @log_timing
     def wait_ssh_conn(self, hosts, tries=20, interval=10):
@@ -244,16 +239,16 @@ class KDIntegrationTestAPI(object):
                 'pods list --owner kuberdock-internal', out_as_dict=True)
             statuses = (pod['status'] for pod in response['data'])
             if not all(s == 'running' for s in statuses):
-                raise ServicePodsNotReady()
+                raise exceptions.ServicePodsNotReady()
 
-        retry(_check_service_pods, tries=40, interval=15)
+        utils.retry(_check_service_pods, tries=40, interval=15)
 
     @log_timing
     def healthcheck(self):
         # Not passing for now: AC-3199
         rc, _, _ = self.ssh_exec("master",
                                  "kuberdock-upgrade health-check-only")
-        assert_eq(rc, 0)
+        utils.assert_eq(rc, 0)
 
     def kcli(self, cmd, out_as_dict=False, user=None):
         kcli_cmd = ['kcli', '-k']
@@ -321,14 +316,18 @@ class KDIntegrationTestAPI(object):
     def docker(self, cmd, node="node1"):
         return self.ssh_exec(node, u"docker {}".format(cmd))
 
-    def ssh_exec(self, node, cmd, check_retcode=True, live=False):
+    def ssh_exec(self, node, cmd, check_retcode=True, live=False,
+                 sudo=False):
+        if sudo:
+            cmd = 'sudo {}'.format(cmd)
         # Forcibly source profile, so all additional ENV variables are exported
         cmd = '. /etc/profile; ' + cmd
         ssh = self.get_ssh(node)
         if live:
-            return ssh_exec_live(ssh, cmd, check_retcode=check_retcode)
+            return utils.ssh_exec_live(ssh, cmd, check_retcode=check_retcode)
         else:
-            return ssh_exec(ssh, cmd, check_retcode=check_retcode)
+            return utils.ssh_exec(ssh, cmd, check_retcode=check_retcode,
+                                  get_pty=sudo)
 
     # TODO move to cluster.settings
     def set_system_setting(self, value, setting_id=None, name=None):
@@ -365,9 +364,9 @@ class UserList(object):
 
     def create(self, name, password, email, role="User", active="True",
                package="Standard package"):
-        name = escape_command_arg(name)
-        password = escape_command_arg(password)
-        email = escape_command_arg(email)
+        name = utils.escape_command_arg(name)
+        password = utils.escape_command_arg(password)
+        email = utils.escape_command_arg(email)
         user = {
             'active': active,
             'email': email,
@@ -381,7 +380,16 @@ class UserList(object):
 
     def delete(self, name):
         self.cluster.kdctl(
-            "users delete --id {}".format(escape_command_arg(name)))
+            "users delete --id {}".format(utils.escape_command_arg(name)))
+
+    def get(self, **kwargs):
+        if not ('id' in kwargs) ^ ('name' in kwargs):
+            raise ValueError("You need to specify either 'id' or 'name'")
+
+        cmd = 'users get {}'.format(
+            ' '.join('--{}={}'.format(k, v) for k, v in kwargs.items()))
+        _, out, _ = self.cluster.kdctl(cmd, out_as_dict=True)
+        return out.get('data')
 
 
 class PVList(object):
@@ -394,7 +402,7 @@ class PVList(object):
     def clear(self):
         for user in self.cluster.users.get_kd_users():
             for pv in self.filter(owner=user):
-                name = escape_command_arg(pv['name'])
+                name = utils.escape_command_arg(pv['name'])
                 self.cluster.kcli2('pstorage delete --name {}'.format(name),
                                    user=user)
 
@@ -447,8 +455,8 @@ class PAList(object):
         :param file_path: path to the yaml-file on the master (not on the
         host!)
         """
-        name = escape_command_arg(name)
-        file_path = escape_command_arg(file_path)
+        name = utils.escape_command_arg(name)
+        file_path = utils.escape_command_arg(file_path)
         cmd = "predefined-apps create --name {} -f {}".format(name, file_path)
         if validate:
             cmd += " --validate"
@@ -526,8 +534,8 @@ class PodList(object):
         from this list
         :return: object via which Kuberdock pod can be managed
         """
-        assert_in(kube_type, ("Tiny", "Standard", "High memory"))
-        assert_in(restart_policy, ("Always", "Never", "OnFailure"))
+        utils.assert_in(kube_type, ("Tiny", "Standard", "High memory"))
+        utils.assert_in(restart_policy, ("Always", "Never", "OnFailure"))
 
         pod = KDPod.create(self.cluster, image, name, kube_type, kubes,
                            open_all_ports, restart_policy, pvs, owner,
@@ -554,7 +562,7 @@ class PodList(object):
         """
         pod = KDPAPod.create(
             self.cluster, template_name, plan_id, owner, command,
-            rnd_str=get_rnd_low_string(prefix=rnd_str, length=5))
+            rnd_str=utils.get_rnd_low_string(prefix=rnd_str, length=5))
 
         if wait_for_status:
             pod.wait_for_status(wait_for_status)
@@ -581,7 +589,7 @@ class PodList(object):
             _, pods, _ = self.cluster.kcli('list', out_as_dict=True, user=user)
 
             for pod in pods:
-                name = escape_command_arg(pod['name'])
+                name = utils.escape_command_arg(pod['name'])
                 self.cluster.kcli(u'forget {}'.format(name), user=user)
 
     def filter_by_owner(self, owner='test_user'):
@@ -593,7 +601,7 @@ class PodList(object):
     def clear(self):
         for user in self.cluster.users.get_kd_users():
             for pod in self.cluster.pods.filter_by_owner(user):
-                name = escape_command_arg(pod['name'])
+                name = utils.escape_command_arg(pod['name'])
                 self.cluster.kcli(u'delete {}'.format(name), user=user)
 
 
@@ -628,7 +636,7 @@ class PV(object):
         self.name = name
         self.owner = owner
         self.mount_path = mount_path
-        self.volume_name = get_rnd_low_string(length=11)
+        self.volume_name = utils.get_rnd_low_string(length=11)
         inits = {
             "new": self._create_new,
             "existing": self._load_existing,
@@ -672,7 +680,8 @@ class PV(object):
         # TODO: it can be removed together with exception
         pv = self._get_by_name(self.name)
         if not pv:
-            raise DiskNotFound(u"Disk {0} doesn't exist".format(self.name))
+            raise exceptions.DiskNotFound(
+                u"Disk {0} doesn't exist".format(self.name))
         self.size = pv['size']
 
     def _get_by_name(self, name):

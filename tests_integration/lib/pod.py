@@ -3,18 +3,12 @@ import json
 import logging
 import pipes
 import sys
-import time
 import urllib2
 
 from collections import namedtuple
 
-from tests_integration.lib.exceptions import \
-    CannotRestorePodWithMoreThanOneContainer, IncorrectPodDescription, \
-    PodIsNotRunning, UnexpectedKubectlResponse
-
-from tests_integration.lib.utils import assert_eq, assert_in, all_subclasses, \
-    get_rnd_low_string, kube_type_to_int, kube_type_to_str, retry,\
-    wait_for_status, wait_net_port
+from tests_integration.lib import utils
+from tests_integration.lib import exceptions
 
 
 DEFAULT_WAIT_PORTS_TIMEOUT = 6 * 60
@@ -59,7 +53,7 @@ class RESTMixin(object):
             req = urllib2.urlopen(url, timeout=timeout)
             assert req.code == code
 
-        retry(check, tries=tries, internal=internal)
+        utils.retry(check, tries=tries, internal=internal)
 
 
 class KDPod(RESTMixin):
@@ -153,8 +147,8 @@ class KDPod(RESTMixin):
                         restartPolicy=restart_policy,
                         name=escaped_name)
         container = dict(kubes=kubes, image=image,
-                         name=get_rnd_low_string(length=11))
-        ports = retry(_get_image_ports, img=image)
+                         name=utils.get_rnd_low_string(length=11))
+        ports = utils.retry(_get_image_ports, img=image)
         container.update(ports=_ports_to_dict(ports))
         if pvs is not None:
             container.update(volumeMounts=[pv.volume_mount_dict for pv in pvs])
@@ -191,7 +185,7 @@ class KDPod(RESTMixin):
                 # In current implementation of KDPod class we cannot
                 # manage consisting of more than on container, therefore
                 # creation of such container is prohibited
-                raise CannotRestorePodWithMoreThanOneContainer(
+                raise exceptions.CannotRestorePodWithMoreThanOneContainer(
                     "Unfortunately currently we cannot restore pod with more "
                     "than one container. KDPod class should be overwritten to "
                     "allow correct managing such containers to nake this "
@@ -205,7 +199,7 @@ class KDPod(RESTMixin):
         else:
             cmd = ""
         if file_path and pod_dump:
-            raise IncorrectPodDescription(
+            raise exceptions.IncorrectPodDescription(
                 "Only file_path OR only pod_description should be "
                 "privoded. Hoverwer provided both parameters."
             )
@@ -218,7 +212,7 @@ class KDPod(RESTMixin):
             cmd += u"pods restore \'{}\'" \
                 .format(pod_dump)
         else:
-            raise IncorrectPodDescription(
+            raise exceptions.IncorrectPodDescription(
                 "Either file_path or pod_description should not be empty")
 
         if pv_backups_location is not None:
@@ -234,7 +228,7 @@ class KDPod(RESTMixin):
         _, pod_description, _ = cluster.kdctl(cmd, out_as_dict=True)
         data = pod_description['data']
         name = data['name']
-        kube_type = kube_type_to_str(data['kube_type'])
+        kube_type = utils.kube_type_to_str(data['kube_type'])
         restart_policy = data['restartPolicy']
         this_pod_class = cls._get_pod_class(image)
         return this_pod_class(cluster, "", name, kube_type, "", True,
@@ -258,7 +252,7 @@ class KDPod(RESTMixin):
 
     @classmethod
     def _get_pod_class(cls, image):
-        pod_classes = {c.SRC: c for c in all_subclasses(cls)}
+        pod_classes = {c.SRC: c for c in utils.all_subclasses(cls)}
         return pod_classes.get(image, cls)
 
     def command(self, command):
@@ -308,10 +302,10 @@ class KDPod(RESTMixin):
 
     def _wait_for_ports(self, ports, timeout):
         for p in ports:
-            wait_net_port(self.host, p, timeout)
+            utils.wait_net_port(self.host, p, timeout)
 
     def wait_for_status(self, status, tries=50, interval=5, delay=0):
-        wait_for_status(self, status, tries, interval, delay)
+        utils.wait_for_status(self, status, tries, interval, delay)
 
     @property
     def node(self):
@@ -325,7 +319,7 @@ class KDPod(RESTMixin):
                 user=self.owner)
             return out[0]
         except KeyError:
-            raise UnexpectedKubectlResponse()
+            raise exceptions.UnexpectedKubectlResponse()
 
     @property
     def status(self):
@@ -349,7 +343,7 @@ class KDPod(RESTMixin):
 
     @property
     def ssh_credentials(self):
-        return retry(self._get_creds, tries=10, interval=1)
+        return utils.retry(self._get_creds, tries=10, interval=1)
 
     def _get_creds(self):
         direct_access = self.get_spec()['direct_access']
@@ -389,6 +383,7 @@ class KDPod(RESTMixin):
                 self.name, container_name))
             raise
 
+        utils.wait_for(lambda: container['containerID'] is not None)
         return container['containerID']
 
     def get_spec(self):
@@ -409,7 +404,7 @@ class KDPod(RESTMixin):
 
     def docker_exec(self, container_id, command, detached=False):
         if self.status != 'running':
-            raise PodIsNotRunning()
+            raise exceptions.PodIsNotRunning()
 
         node_name = self.info['host']
         args = '-d' if detached else ''
@@ -425,11 +420,12 @@ class KDPod(RESTMixin):
 
     def _generic_healthcheck(self):
         spec = self.get_spec()
-        assert_eq(spec['kube_type'], kube_type_to_int(self.kube_type))
+        utils.assert_eq(spec['kube_type'],
+                        utils.kube_type_to_int(self.kube_type))
         for container in spec['containers']:
-            assert_eq(container['kubes'], self.kubes)
-        assert_eq(spec['restartPolicy'], self.restart_policy)
-        assert_eq(spec['status'], "running")
+            utils.assert_eq(container['kubes'], self.kubes)
+        utils.assert_eq(spec['restartPolicy'], self.restart_policy)
+        utils.assert_eq(spec['status'], "running")
         return spec
 
     def __get_edit_data(self):
@@ -498,7 +494,7 @@ class KDPod(RESTMixin):
             out_as_dict=True, user=self.owner)
         LOG.debug("Pod {} updated".format(out))
         self.redeploy(applyEdit=True)
-        self.kube_type = kube_type_to_str(kube_type)
+        self.kube_type = utils.kube_type_to_str(kube_type)
 
 
 class _NginxPod(KDPod):
@@ -516,5 +512,5 @@ class _NginxPod(KDPod):
         self._generic_healthcheck()
         # if shared IP is used, 404 is returned in a response to GET on
         # pod's domain name for up to 40 seconds after pod is started
-        retry(self.do_GET, tries=5, interval=10)
-        assert_in("Welcome to nginx!", self.do_GET())
+        utils.retry(self.do_GET, tries=5, interval=10)
+        utils.assert_in("Welcome to nginx!", self.do_GET())

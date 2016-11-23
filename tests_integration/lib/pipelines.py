@@ -389,14 +389,58 @@ class DeleteNodePipeline(Pipeline):
 
 class ZFSStoragePipeline(Pipeline):
     NAME = 'zfs'
+    ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
         'KD_USE_ZFS': '1',
     }
 
+    def post_create_hook(self):
+        super(ZFSStoragePipeline, self).post_create_hook()
+        self.cluster.wait_for_service_pods()
+
+        # NOTE: We need to make sure that ZFS uses EBS volumes on AWS
+        for node in self.cluster.node_names:
+            self.cluster.ssh_exec(node, 'zpool status', sudo=True)
+
+        # Change default persistent disk removal schedule from 1hr to 1m, so
+        # that if a first attempt to remove a disk failes we don't have to
+        # wait for 1hr
+        self._change_delete_pd_schedule()
+
+    def _change_delete_pd_schedule(self):
+        conf_path = '/var/opt/kuberdock/kubedock/settings.py'
+
+        chmod_cmd = 'chmod a+rw {}'.format(conf_path)
+        self.cluster.ssh_exec('master', chmod_cmd, sudo=True)
+
+        new_schedule = (
+            'printf "%s\\n" '
+            '"CELERYBEAT_SCHEDULE[\'clean-deleted-persistent-drives\']'
+            '[\'schedule\'] = timedelta(minutes=1)" >> {}').format(conf_path)
+        self.cluster.ssh_exec('master', new_schedule, sudo=True)
+
+        # Change settings file permissions just in case.
+        chown_cmd = 'chown nginx:nginx {}'.format(conf_path)
+
+        self.cluster.ssh_exec('master', chown_cmd, sudo=True)
+        # Restart emperor
+        self.cluster.ssh_exec('master', 'systemctl restart emperor.uwsgi',
+                              sudo=True)
+
 
 class ZFSStorageUpgradedPipeline(UpgradedPipelineMixin, ZFSStoragePipeline):
     NAME = 'zfs_upgraded'
+
+
+class ZFSStorageAWSPipeline(ZFSStoragePipeline):
+    INFRA_PROVIDER = 'aws'
+    NAME = 'zfs_aws'
+
+
+class ZFSStorageAWSUpgradedPipeline(UpgradedPipelineMixin, ZFSStoragePipeline):
+    INFRA_PROVIDER = 'aws'
+    NAME = 'zfs_aws_upgraded'
 
 
 class SharedIPPipeline(Pipeline):

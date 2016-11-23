@@ -1,8 +1,6 @@
 import logging
 
-from colorama import Fore, Style
-
-from tests_integration.lib.utils import assert_eq, assert_raises
+from tests_integration.lib.utils import assert_eq, assert_raises, log_debug
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 
@@ -32,14 +30,12 @@ def assert_pv_states(pv_info, expected_states, pod_names=None):
         assert_eq(len([p for p in linked_pods if p['name'] == pod_name]), 1)
 
 
-def log_debug(msg):
-    LOG.debug('{}{}{}'.format(Fore.CYAN, msg, Style.RESET_ALL))
-
-
 @pipeline('main')
 @pipeline('main_upgraded')
 @pipeline('zfs')
 @pipeline('zfs_upgraded')
+@pipeline('zfs_aws')
+@pipeline('zfs_aws_upgraded')
 @pipeline('ceph', skip_reason='FIXME in AC-5206')
 @pipeline('ceph_upgraded', skip_reason='FIXME in AC-5206')
 def test_pv_states_and_deletion_via_kcli2(cluster):
@@ -64,7 +60,7 @@ def test_pv_states_and_deletion_via_kcli2(cluster):
         'nginx', pod_name, pvs=[pv1, pv2], start=True,
         wait_for_status='running')
 
-    log_debug('Get PV info via kcli2 using PV name')
+    log_debug('Get PV info via kcli2 using PV name', LOG)
     pv1_info = pv1.info()
     pv2_info = pv2.info()
     # Get 'disk1' and 'disk2' ids
@@ -83,7 +79,7 @@ def test_pv_states_and_deletion_via_kcli2(cluster):
                      expected_states=dict(forbidDeletion=True, in_use=True),
                      pod_names=[pod_name])
 
-    log_debug('Get PV info via kcli2 using PV id')
+    log_debug('Get PV info via kcli2 using PV id', LOG)
     pv1_info = pv1.info(id=pv1_id)
     pv2_info = pv2.info(id=pv2_id)
 
@@ -99,17 +95,17 @@ def test_pv_states_and_deletion_via_kcli2(cluster):
                      expected_states=dict(forbidDeletion=True, in_use=True),
                      pod_names=[pod_name])
 
-    log_debug("Try to delete PVs 'disk1' and 'disk2' with pod 'running'")
+    log_debug("Try to delete PVs 'disk1' and 'disk2' with pod 'running'", LOG)
     with assert_raises(NonZeroRetCodeException, 'Persistent disk is used.*'):
         pv1.delete(name=pv1_name)
 
     with assert_raises(NonZeroRetCodeException, 'Persistent disk is used.*'):
         pv2.delete(id=pv2_id)
 
-    log_debug('List PVs using kcli2')
+    log_debug('List PVs using kcli2', LOG)
     pv_list = cluster.pvs.filter()
 
-    log_debug("Make sure 'disk1' and 'disk2' are in the list")
+    log_debug("Make sure 'disk1' and 'disk2' are in the list", LOG)
     assert_eq(pv1_name in [pv['name'] for pv in pv_list], True)
     assert_eq(pv2_name in [pv['name'] for pv in pv_list], True)
 
@@ -117,7 +113,7 @@ def test_pv_states_and_deletion_via_kcli2(cluster):
     pod.stop()
     pod.wait_for_status('stopped')
 
-    log_debug("Try to delete PVs 'disk1' and 'disk2' with pod 'stopped'")
+    log_debug("Try to delete PVs 'disk1' and 'disk2' with pod 'stopped'", LOG)
     with assert_raises(NonZeroRetCodeException, 'Volume can not be deleted.'
                        ' Reason: Persistent Disk is linked by pods:.*'):
         pv1.delete(name=pv1_name)
@@ -127,7 +123,7 @@ def test_pv_states_and_deletion_via_kcli2(cluster):
         pv2.delete(id=pv2_id)
 
     # Get disk info once again
-    log_debug("Pod is stopped and 'in_use' should become 'False'")
+    log_debug("Pod is stopped and 'in_use' should become 'False'", LOG)
     pv1_info = pv1.info()
     pv2_info = pv2.info()
 
@@ -145,7 +141,7 @@ def test_pv_states_and_deletion_via_kcli2(cluster):
     pod.delete()
 
     log_debug("Pod is deleted and both 'forbidDeletion' and 'in_use' should "
-              "become 'False'")
+              "become 'False'", LOG)
     pv1_info = pv1.info()
     pv2_info = pv2.info()
 
@@ -158,18 +154,18 @@ def test_pv_states_and_deletion_via_kcli2(cluster):
                      expected_states=dict(forbidDeletion=False, in_use=False),
                      pod_names=[])
 
-    log_debug("Delete 'disk1' using '--name'")
+    log_debug("Delete 'disk1' using '--name'", LOG)
     res = pv1.delete(name=pv1_name)
     assert_eq(res['status'], 'OK')
 
-    log_debug("Delete 'disk2' using '--id'")
+    log_debug("Delete 'disk2' using '--id'", LOG)
     res = pv2.delete(id=pv2_id)
     assert_eq(res['status'], 'OK')
 
-    log_debug("Check that 'disk1' is deleted")
+    log_debug("Check that 'disk1' is deleted", LOG)
     with assert_raises(NonZeroRetCodeException, 'Error: Unknown name'):
         pv1.info()
 
-    log_debug("Check that 'disk2' is deleted")
+    log_debug("Check that 'disk2' is deleted", LOG)
     with assert_raises(NonZeroRetCodeException, 'Error: Unknown name'):
         pv2.info()

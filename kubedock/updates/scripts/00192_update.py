@@ -142,8 +142,8 @@ def _update_00176_upgrade(upd):
     _mark_volumes_as_prefilled(pas_to_upgrade, pods_to_upgrade)
 
 
-def _update_00176_upgrade_node(with_testing):
-    _upgrade_docker(with_testing)
+def _update_00176_upgrade_node(upd, with_testing):
+    _upgrade_docker(upd, with_testing)
 
 
 def _update_00179_upgrade_node(env):
@@ -223,7 +223,7 @@ def _update_00191_upgrade(upd, calico_network):
     _master_etcd_conf(etcd1)
     helpers.restart_service('etcd')
 
-    _master_docker()
+    _master_docker(upd)
     _master_firewalld()
     _master_k8s_node()
 
@@ -292,7 +292,7 @@ DOCKER = 'docker-{ver}'.format(ver=DOCKER_VERSION)
 SELINUX = 'docker-selinux-{ver}'.format(ver=DOCKER_VERSION)
 
 
-def _upgrade_docker(with_testing):
+def _upgrade_docker(upd, with_testing):
     def alter_config(line):
         if not re.match(r'OPTIONS=.*', line):
             return line
@@ -316,9 +316,17 @@ def _upgrade_docker(with_testing):
 
     run("cat << EOF > /etc/sysconfig/docker\n{}\nEOF".format(new_config))
 
-    res = helpers.restart_service('docker')
-    if res != 0:
+    # If we restart docker here then rest of node upgrade code will be
+    # executed with fresh new docker (don't know whether this is good or bad)
+    # and also will results in pods/containers restart at this moment, which
+    # will produce lots of events and load on node.
+    # If not, then docker will be old till node reboot at the end of upgrade.
+    # So we probably could comment restart part (known to work ~ok)
+    run("systemctl daemon-reload")
+    res = run("systemctl restart docker")
+    if res.failed:
         raise helpers.UpgradeError('Failed to restart docker. {}'.format(res))
+    upd.print_log(run("docker --version"))
 
 
 def contains_origin_root(container):
@@ -583,9 +591,12 @@ def _master_etcd_conf(etcd1):
     helpers.local('echo "{0}" > /etc/etcd/etcd.conf'.format(conf))
 
 
-def _master_docker():
-    helpers.local('systemctl reenable docker')
-    helpers.restart_service('docker')
+def _master_docker(upd):
+    helpers.local('systemctl daemon-reload')
+    upd.print_log(helpers.local('systemctl reenable docker'))
+    upd.print_log(helpers.restart_service('docker'))
+    # Just to be sure and see output in logs:
+    upd.print_log(helpers.local('docker info'))
 
 
 def _master_k8s_node():
@@ -1030,7 +1041,7 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
     _update_node_nonfloating_config(upd)
     _update_00174_upgrade_node(upd, with_testing)
-    _update_00176_upgrade_node(with_testing)
+    _update_00176_upgrade_node(upd, with_testing)
     _update_00179_upgrade_node(env)
     _update_00188_upgrade_node()
     _update_00191_upgrade_node(with_testing, env, **kwargs)

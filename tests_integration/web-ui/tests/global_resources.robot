@@ -23,14 +23,12 @@ Open Browser To Kuberdock Page
 Login Page Should Be Open
     Wait Until Page Contains Element    jquery=button:contains(Log in)
 
-
 Click
     [Arguments]    ${locator}    ${delay}=${DELAY}    ${timeout}=${TIMEOUT}
     [Documentation]
     ...  Wait until element is visible and animations are finished then click
     Sleep    ${delay}
     Wait Until Keyword Succeeds    ${timeout}    0.1s    Click Element    ${locator}
-
 
 Login into the Kuberdock as "${username}" with password "${password}"
     Input Text    css=#login-form-username-field    ${username}
@@ -50,7 +48,6 @@ Logout
     Click    jquery=.profile-menu span:contains(Logout)    1 s
     Login Page Should Be Open
 
-
 Breadcrumb Should Contain "${text}"
     Wait Until Page Contains Element    jquery=ul.breadcrumb:contains("${text}")
 
@@ -68,7 +65,6 @@ Breadcrumb Should Not Contain Button "${text}"
 Main View Should Be Open
     ${nodes}=    Run Keyword And Return Status    "Nodes" View Should Be Open
     Run Keyword Unless    ${nodes}    "Pods" View Should Be Open
-
 
 Page Should Not Contain Error Messages
     Page Should Not Contain Element    jquery=.notifyjs-container
@@ -92,7 +88,6 @@ Close Error Message "${text}"
 Click "${button}" In Modal Dialog
     Click    jquery=.modal.in button:contains("${button}")
 
-
 Go to the Users page
     Click    jquery=.navbar a:contains(Administration)    1 s
     Click    jquery=.navbar a:contains(Users)    1 s
@@ -102,6 +97,9 @@ Go to the Predefined Apps page
     Click    jquery=.navbar a:contains(Predefined Applications)
     "Predefined Apps" View Should Be Open
 
+Go to the Settings page
+    Click    jquery=.navbar a:contains(Settings)
+    "Settings" View Should Be Open
 
 Login as "${username}"
     Click    jquery=#userslist-table a:contains("${username}")

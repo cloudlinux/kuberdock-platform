@@ -77,19 +77,25 @@ export const AppLoader = Marionette.LayoutView.extend({
     },
 
     ui: {
-        uploader : 'input#app-upload',
-        display  : 'textarea#app-contents',
-        appname  : 'input#app-name',
-        save     : 'button.save-app',
-        cancel   : '.cancel-app',
-        origin   : 'input#app-origin'
+        img          : '.pa-img',
+        iconUploader : 'input#icon',
+        cancel       : '.cancel-app',
+        appname      : 'input#app-name',
+        save         : 'button.save-app',
+        origin       : 'input#app-origin',
+        uploader     : 'input#app-upload',
+        display      : 'textarea#app-contents',
+        visible      : '.visible',
+        removeIcon   : '.remove-icon'
     },
 
     events: {
-        'click @ui.save'      : 'saveApp',
-        'change @ui.uploader' : 'handleUpload',
-        'focus @ui.appname'   : 'removeError',
-        'focus @ui.display'   : 'removeError'
+        'click @ui.save'          : 'saveApp',
+        'change @ui.uploader'     : 'handleUpload',
+        'click @ui.removeIcon'    : 'removeIcon',
+        'focus @ui.appname'       : 'removeError',
+        'focus @ui.display'       : 'removeError',
+        'change @ui.iconUploader' : 'iconHandleUpload'
     },
 
     onDomRefresh(){
@@ -129,6 +135,28 @@ export const AppLoader = Marionette.LayoutView.extend({
         reader.readAsText(file);
     },
 
+    iconHandleUpload(){ this.readURL(this.ui.iconUploader); },
+
+    readURL(input) {
+        if (input[0].files && input[0].files[0]) {
+            let reader = new FileReader();
+
+            reader.onload = (e) => {
+                this.ui.img.removeClass('empty');
+                this.ui.img.attr('src', e.target.result);
+                this.model.set('icon', e.target.result);
+            };
+            reader.readAsDataURL(input[0].files[0]);
+        }
+    },
+
+    removeIcon(){
+        this.ui.iconUploader.val('');
+        this.model.set('icon', null);
+        this.ui.img.attr('src', '');
+        this.ui.img.addClass('empty');
+    },
+
     removeError(evt){
         let target = $(evt.target);
 
@@ -145,7 +173,8 @@ export const AppLoader = Marionette.LayoutView.extend({
         let target = $(env.target),
             name = this.ui.appname.val(),
             origin = this.ui.origin.val(),
-            template = this.ui.display.val();
+            template = this.ui.display.val(),
+            visible = this.ui.visible.prop('checked');
 
         if (name.length > 30){
             utils.scrollTo(this.ui.appname);
@@ -165,7 +194,12 @@ export const AppLoader = Marionette.LayoutView.extend({
             utils.scrollTo(this.ui.display);
             return;
         }
-        this.model.set({name: name, origin: origin, template: template});
+        this.model.set({
+            name: name,
+            origin: origin,
+            template: template,
+            search_available: visible
+        });
         if (target.hasClass('anyway')){
             this.trigger('app:saveAnyway', this.model);
         } else {

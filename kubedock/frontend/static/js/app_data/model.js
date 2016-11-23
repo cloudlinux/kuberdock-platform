@@ -1299,7 +1299,9 @@ define([
                 name: '',
                 plans: [],
                 template: '',
-                origin: 'kuberdock'
+                origin: 'kuberdock',
+                search_available: false,
+                icon: null
             };
         },
         urlRoot: '/api/predefined-apps/',

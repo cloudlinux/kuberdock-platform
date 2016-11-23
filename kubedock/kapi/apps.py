@@ -94,7 +94,8 @@ class PredefinedApp(object):
     """Object that handles all predefined app template related routines"""
 
     FIELDS = ('id', 'name', 'template', 'origin', 'qualifier', 'created',
-              'modified', 'plans', 'activeVersionID')
+              'modified', 'plans', 'activeVersionID', 'icon',
+              'search_available')
 
     FIELD_VERSION = ('active', 'switchingPackagesAllowed')
 

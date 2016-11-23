@@ -1,3 +1,4 @@
+import base64
 import re
 import socket
 from urlparse import urlparse
@@ -34,6 +35,15 @@ class V(cerberus.Validator):
 
     ERROR_SHOULD_NOT_USE_LATEST = "Tag \":latest\" should not be used "
     "otherwise,\n proper restore is not guaranteed."
+
+    ERROR_BASE64 = 'Invalid value for icon. Must be ' \
+                   'data:<mime type>;base64,<data>'
+
+    MAXIMUM_ICON_SIZE = 64
+    ERROR_TOO_LARGE_ICON = 'Too large icon. Maximum icon size {}Kb'\
+        .format(MAXIMUM_ICON_SIZE)
+    ERROR_BASE64_ENCODE = 'Image encode must be base64'
+    RE_ICON_VALIDATE = re.compile(r'^data:[^;]+;base64,(.*)$')
 
     # TODO: add readable error messages for regexps in old schemas
 
@@ -239,6 +249,19 @@ class V(cerberus.Validator):
             self._error(field, "Image URL must be in format [registry/]image")
         elif Image(value).tag == 'latest' and obj.get('validate_latest'):
             self._error(field, self.ERROR_SHOULD_NOT_USE_LATEST)
+
+    def _validate_icon(self, obj, field, value):
+        regexp_value = self.RE_ICON_VALIDATE.match(value)
+        if not regexp_value:
+            self._error(field, self.ERROR_BASE64)
+            return
+        try:
+            value = base64.b64decode(regexp_value.group(1))
+        except TypeError:
+            self._error(field, self.ERROR_BASE64_ENCODE)
+            return
+        if len(value) > self.MAXIMUM_ICON_SIZE * 1024:
+            self._error(field, self.ERROR_TOO_LARGE_ICON)
 
 
 def check_int_id(id):

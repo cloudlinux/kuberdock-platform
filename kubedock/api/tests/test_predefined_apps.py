@@ -34,7 +34,11 @@ class PredefinedAppsTestCase(APITestCase):
 
     def _test_get(self, auth):
         self.admin_open(method='POST',
-                        json={'name': self.name, 'template': self.template})
+                        json={'name': self.name, 'template': self.template,
+                              'icon': 'data:image/gif;base64,'
+                                      'R0lGODlhAQABAIAAAAUEBAAAACw'
+                                      'AAAAAAQABAAACAkQBADs='
+                              })
 
         # get list
         response = self.open(auth=auth)
@@ -135,6 +139,100 @@ class PredefinedAppsTestCase(APITestCase):
         updated_predefined_app = response.json['data']
         self.assertDictContainsSubset(new_app, updated_predefined_app)
         self.assertEqual(predefined_app['id'], updated_predefined_app['id'])
+
+    def test_post_with_image(self):
+        pa_image = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACw' \
+                   'AAAAAAQABAAACAkQBADs='
+        predefined_app = self.admin_open(
+            method='POST', json={'name': self.name,
+                                 'template': self.template,
+                                 'icon': pa_image
+                                 }).json['data']
+
+        # get by id
+        url = self.item_url(predefined_app['id'])
+        response = self.open(url, auth=self.userauth)
+        self.assert200(response)
+        predefined_app = response.json['data']
+        self.assertEqual(predefined_app['icon'], pa_image)
+
+    def test_put_with_image(self):
+        predefined_app = self.admin_open(
+            method='POST', json={'name': self.name,
+                                 'template': self.template},
+        ).json['data']
+
+        # update template
+        new_app = {'name': 'updated yaml template name',
+                   'template': 'updated yaml template',
+                   'icon': 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACw'
+                           'AAAAAAQABAAACAkQBADs='}
+        url = self.item_url(predefined_app['id'])
+        response = self.admin_open(url, method='PUT', json=new_app)
+        self.assert200(response)
+        response_validator.validate(response.json)
+        self.assertDictContainsSubset(new_app, response.json['data'])
+
+        # get by id
+        url = self.item_url(predefined_app['id'])
+        response = self.open(url, auth=self.userauth)
+        self.assert200(response)
+        updated_predefined_app = response.json['data']
+        self.assertEqual(predefined_app['id'], updated_predefined_app['id'])
+        self.assertDictContainsSubset(new_app, updated_predefined_app)
+
+    def test_post_with_visible_false(self):
+        predefined_app = self.admin_open(
+            method='POST', json={'name': self.name,
+                                 'template': self.template,
+                                 'search_available': False},
+        ).json['data']
+
+        self.assertFalse(predefined_app['search_available'])
+
+        # update template
+        new_app = {'name': 'updated yaml template name',
+                   'template': 'updated yaml template',
+                   'search_available': True}
+        url = self.item_url(predefined_app['id'])
+        response = self.admin_open(url, method='PUT', json=new_app)
+        self.assert200(response)
+        response_validator.validate(response.json)
+        self.assertDictContainsSubset(new_app, response.json['data'])
+
+        # get by id
+        url = self.item_url(predefined_app['id'])
+        response = self.open(url, auth=self.userauth)
+        self.assert200(response)
+        updated_predefined_app = response.json['data']
+        self.assertEqual(predefined_app['id'], updated_predefined_app['id'])
+        self.assertDictContainsSubset(new_app, updated_predefined_app)
+
+    def test_put_with_visible_false(self):
+        predefined_app = self.admin_open(
+            method='POST', json={'name': self.name,
+                                 'template': self.template},
+        ).json['data']
+
+        self.assertTrue(predefined_app['search_available'])
+
+        # update template
+        new_app = {'name': 'updated yaml template name',
+                   'template': 'updated yaml template',
+                   'search_available': False}
+        url = self.item_url(predefined_app['id'])
+        response = self.admin_open(url, method='PUT', json=new_app)
+        self.assert200(response)
+        response_validator.validate(response.json)
+        self.assertDictContainsSubset(new_app, response.json['data'])
+
+        # get by id
+        url = self.item_url(predefined_app['id'])
+        response = self.open(url, auth=self.userauth)
+        self.assert200(response)
+        updated_predefined_app = response.json['data']
+        self.assertEqual(predefined_app['id'], updated_predefined_app['id'])
+        self.assertDictContainsSubset(new_app, updated_predefined_app)
 
     def test_put_version(self):
         predefined_app = self.admin_open(

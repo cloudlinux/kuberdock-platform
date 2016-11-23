@@ -3,8 +3,8 @@
         <thead>
             <tr>
                 <th class="name">Name<b class="caret <%= sortingType.name == -1 ? 'rotate' : '' %>"></b></th>
-                <th>Link</th>
                 <th class="modified">Last change<b class="caret <%= sortingType.modified == -1 ? 'rotate' : '' %>"></b></th>
+                <th>Visible for users</th>
                 <th>Actions</th>
             </tr>
         </thead>

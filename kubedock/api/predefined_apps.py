@@ -4,9 +4,9 @@ from flask import Blueprint, Response, jsonify, request
 from flask.views import MethodView
 
 from kubedock.api.utils import use_kwargs
-from kubedock.validation import extbool, V
+from kubedock.validation import extbool, V, boolean
 from ..decorators import maintenance_protected
-from ..exceptions import APIError
+from ..exceptions import APIError, PredefinedAppExc
 from ..kapi.apps import PredefinedApp
 from ..login import auth_required
 from ..rbac import check_permission
@@ -17,11 +17,15 @@ predefined_apps = Blueprint('predefined_apps', __name__,
 
 create_params_schema = {
     'name': {'type': 'string', 'required': True, 'empty': False},
+    'icon': {'type': 'string', 'required': False, 'nullable': True,
+             'icon': True},
     'template': {'type': 'string', 'required': True, 'nullable': True},
     'origin': {'type': 'string', 'nullable': True},
     'validate': {'type': 'boolean', 'nullable': True, 'coerce': extbool},
     'switchingPackagesAllowed': {'type': 'boolean',
-                                 'nullable': True, 'coerce': extbool}
+                                 'nullable': True, 'coerce': extbool},
+    'search_available': {'type': 'boolean', 'coerce': extbool,
+                         'nullable': True},
 }
 
 create_version_params_schema = {
@@ -34,13 +38,16 @@ create_version_params_schema = {
 
 edit_params_schema = {
     'name': {'type': 'string', 'required': False, 'nullable': True},
+    'icon': {'type': 'string', 'required': False, 'nullable': True,
+             'icon': True},
     'template': {'type': 'string', 'required': False, 'nullable': True},
     'validate': {'type': 'boolean', 'required': False, 'nullable': True,
                  'coerce': extbool},
     'active': {'type': 'boolean', 'required': False, 'nullable': True,
                'coerce': extbool},
     'switchingPackagesAllowed': {'type': 'boolean', 'required': False,
-                                 'nullable': True, 'coerce': extbool}
+                                 'nullable': True, 'coerce': extbool},
+    'search_available': boolean,
 }
 
 
@@ -62,13 +69,10 @@ def _take_template_from_uploads_if_needed(fn):
     return wrapper
 
 
-def _purged_unknown_and_null(params, schema):
+def _purged_unknown(params, schema):
     """Purge unknown params and params with not set values"""
     params = {param: value for param, value in params.items()
-              if (param in schema and
-                  not (edit_params_schema[param].get('nullable', False) and
-                       value is None)  # skip null values
-                  )}
+              if param in schema}
     return params
 
 
@@ -114,7 +118,6 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
 
         if params.pop('validate', None):
             PredefinedApp.validate(params['template'])  # OK if no exception
-
         if app_id:
             app = PredefinedApp.update(app_id, new_version=True, **params)
         else:
@@ -131,9 +134,11 @@ class PredefinedAppsAPI(KubeUtils, MethodView):
         if validate and template is not None:
             PredefinedApp.validate(template)  # OK if no exception
         # TODO: with cerberus 1.0 use purge_unknown
-        params = _purged_unknown_and_null(params, edit_params_schema)
+        params = _purged_unknown(params, edit_params_schema)
         params.update(template=template)
         app = PredefinedApp.update(app_id, version_id=version_id, **params)
+        if not app:
+            raise PredefinedAppExc.NoSuchPredefinedApp
         return dict(app.to_dict(), templates=app.templates)
 
     @KubeUtils.jsonwrap

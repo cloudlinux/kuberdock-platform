@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime
 from hashlib import sha1
 
@@ -9,7 +10,7 @@ from ..models_mixin import BaseModelMixin
 class PredefinedApp(BaseModelMixin, db.Model):
     __tablename__ = 'predefined_apps'
 
-    CREATE_FIELDS = ['name', 'origin']
+    CREATE_FIELDS = ['name', 'origin', 'search_available', 'icon']
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True,
                    nullable=False)
@@ -22,6 +23,8 @@ class PredefinedApp(BaseModelMixin, db.Model):
     is_deleted = db.Column(db.Boolean, default=False, nullable=False)
     created = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
     modified = db.Column(db.DateTime, nullable=True, default=datetime.utcnow)
+    icon = db.Column(db.Text, nullable=True)
+    search_available = db.Column(db.Boolean, default=True)
 
     _new_version = None
     template_model = None
@@ -143,13 +146,15 @@ class PredefinedApp(BaseModelMixin, db.Model):
         data = {
             'id': self.id,
             'name': self.name,
+            'icon': self.icon,
             'qualifier': self.qualifier,
             'origin': self.origin,
             'template': self.template,
             'created': self.created,
             'modified': self.modified,
             'activeVersionID': next(v.id for v in versions if v.active),
-            'templates': [v.to_dict() for v in versions]
+            'templates': [v.to_dict() for v in versions],
+            'search_available': self.search_available,
         }
         return {key: val for key, val in data.items() if key not in exclude}
 

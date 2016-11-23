@@ -1,5 +1,55 @@
 /* predefined-app-main */
 .create-app{
+    .sidebar{
+        img{
+            margin: 0 auto 20px;
+            &.empty{
+                font-size: 0;
+                min-width: 112px;
+                min-height: 112px;
+                content: url('../img/emptyPaIcon.svg');
+                background: url('../img/emptyPaIcon.svg') center no-repeat;
+                ~ .edit-icon{ display: none; }
+                ~ .remove-icon{ display: none; }
+                ~ .add-icon{ display: block; }
+            }
+            ~ .add-icon{ display: none; }
+        }
+        .add-icon,
+        .edit-icon,
+        .remove-icon{
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 400;
+            line-height: 20px;
+            margin-bottom: 8px;
+        }
+        .add-icon{
+            .mdi('add_circle_outline',18px, @defaultIconColor, @defaultIconColorDarken);
+            &:hover span, a{color: @hoverStatusLineText; }
+        }
+        .edit-icon{
+            .mdi('edit',18px, @defaultIconColor, @defaultIconColorDarken);
+            &:hover span, a{color: @hoverStatusLineText; }
+        }
+        .remove-icon{
+            .mdi('delete',18px, @defaultIconColor, @defaultIconColorDarken);
+            &:hover span, a{color: @hoverStatusLineText; }
+        }
+    }
+    .visible-for-users{
+        .user-select(none);
+        font-weight: 400;
+        margin-bottom: 23px;
+        span{
+            display: inline-block;
+            vertical-align: middle;
+            + span{
+                margin-left: 5px;
+                line-height: 21px;
+            }
+        }
+    }
     .app-wrapper{
         &.error{
             .box-shadow(0 0 0 1px #ee6860);
@@ -167,16 +217,16 @@
             .box-shadow(0 5px 11px 0 rgba(0, 0, 0, 0.18));
             cursor: pointer;
         }
-        input[type="file"]{
-            .opacity(0);
-                top: 0;
-                width: 0;
-                right: 0;
-                height: 0;
-                border: none;
-                overflow: hidden;
-                position: absolute;
-        }
+    }
+    input[type="file"]{
+        .opacity(0);
+        top: 0;
+        width: 0;
+        right: 0;
+        height: 0;
+        border: none;
+        overflow: hidden;
+        position: absolute;
     }
     #app-contents{
         .kuberdock-scroll();

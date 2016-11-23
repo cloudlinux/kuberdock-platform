@@ -109,7 +109,13 @@ def process_pods_event(data, app, event_time=None, live=True):
         # fs limits
         containers = {}
         for container in pod['status'].get('containerStatuses', []):
-            if 'containerID' in container:
+            # Compose containers dict to set limits. Set limits only on running
+            # containers.
+            # We do not check field 'ready', because it may be not 'True' even
+            # a pod is running - it is possible when readiness probe fails, but
+            # a container is already running.
+            if ('containerID' in container and
+                    'running' in container.get('state', {})):
                 container_name = container['name']
                 container_id = container['containerID'].split('docker://')[-1]
                 containers[container_name] = container_id

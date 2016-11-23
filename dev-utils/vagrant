@@ -87,6 +87,26 @@ if [ -n "$HOOK" ]
     env_hook=""
 fi
 
+CEPH_CONFIG=${KD_CEPH_CONFIG:-""}
+if [ -n "$CEPH_CONFIG" ]
+  then
+    vol_ceph_config="-v $CEPH_CONFIG:/root/ceph.conf"
+    env_ceph_config="KD_CEPH_CONFIG=/root/ceph.conf"
+  else
+    vol_ceph_config=""
+    env_ceph_config=""
+fi
+
+CEPH_KEYRING=${KD_CEPH_USER_KEYRING:-""}
+if [ -n "$CEPH_KEYRING" ]
+  then
+    vol_ceph_keyring="-v $CEPH_KEYRING:/root/ceph.keyring"
+    env_ceph_keyring="KD_CEPH_USER_KEYRING=/root/ceph.keyring"
+  else
+    vol_ceph_keyring=""
+    env_ceph_keyring=""
+fi
+
 VAGRANT_DOTFILE_PATH=${VAGRANT_DOTFILE_PATH:-".vagrant"} # this is relative to Vagrantfile
 
 mkdir -p dev-utils/dev-env/$VAGRANT_DOTFILE_PATH/
@@ -98,6 +118,8 @@ echo $env_ssh_key >> $docker_env
 echo "$env_auth_sock" >> $docker_env
 echo $env_dotfiles >> $docker_env
 echo "$env_hook" >> $docker_env
+echo "$env_ceph_config" >> $docker_env
+echo "$env_ceph_keyring" >> $docker_env
 
 docker run --rm $arg_tty $arg_priv \
     -v $PWD:/AppCloud -w="/AppCloud" \
@@ -105,5 +127,7 @@ docker run --rm $arg_tty $arg_priv \
     $vol_auth_sock \
     $vol_dotfiles \
     $vol_hook \
+    $vol_ceph_config \
+    $vol_ceph_keyring \
     --env-file $docker_env \
     $IMG vagrant $@

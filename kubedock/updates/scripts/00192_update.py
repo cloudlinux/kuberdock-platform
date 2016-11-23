@@ -18,6 +18,7 @@ from kubedock.kapi.nodes import (
     get_node_token,
 )
 from kubedock.kapi import podcollection, restricted_ports
+from kubedock.kapi.pstorage import CephStorage, get_ceph_credentials
 from kubedock.kapi.helpers import (
     KUBERDOCK_POD_UID,
     KUBERDOCK_TYPE,
@@ -372,23 +373,74 @@ def _remove_lifecycle_section_from_pods(upd, pods, pas):
             upd.print_log('Skipping POD {}. Not found in K8S'.format(pod.id))
 
 
+def _connect_or_raise(host):
+    ssh, err = ssh_connect(host)
+    if err:
+        raise Exception(err)
+    return ssh
+
+
+def _get_mapped_ceph_devices(ssh):
+    _, o, _ = ssh.exec_command(
+        'rbd {} showmapped --format=json'.format(get_ceph_credentials()))
+
+    data = {
+        '{}/{}'.format(v['pool'], v['name']): v['device']
+        for v in json.loads(o.read()).values()
+    }
+
+    return data
+
+
+def _mark_ceph_storage_as_prefilled(storage, volumes):
+    ssh = _connect_or_raise(storage.get_node_ip())
+
+    temp_dir = ssh.exec_command('mktemp -d')[1].read().strip()
+    lock_path = os.path.join(temp_dir, '.kd_prefill_succeded')
+    mapped_devices = _get_mapped_ceph_devices(ssh)
+
+    for rbd in volumes:
+        block_device = mapped_devices.get(rbd, storage._map_drive(rbd))
+
+        commands = [
+            'mount {} {}'.format(block_device, temp_dir),
+            'touch {}'.format(lock_path),
+            'umount {}'.format(temp_dir),
+        ]
+
+        try:
+            for c in commands:
+                i, o, e = ssh.exec_command(c)
+                exit_status = o.channel.recv_exit_status()
+                if exit_status != 0:
+                    raise Exception(e.read())
+        finally:
+            if rbd not in mapped_devices:
+                storage._unmap_drive(block_device)
+
+
 def _mark_volumes_as_prefilled(pas, pods):
+    # Declare it here to cache the "first node"
+    storage = CephStorage()
+
     for pod in pods:
         prefilled_volumes = _extract_prefilled_volumes_from_pod(pas, pod)
         config = pod.get_dbconfig()
 
-        paths_to_volumes = [
-            v['hostPath']['path'] for v in config['volumes']
-            if v['name'] in prefilled_volumes]
+        volumes = [v for v in config['volumes'] if v['name'] in prefilled_volumes]
 
-        ssh, err = ssh_connect(pod.pinned_node)
+        if settings.CEPH:
+            drives = [
+                '{}/{}'.format(v['rbd']['pool'], v['rbd']['image'])
+                for v in volumes]
 
-        if err:
-            raise Exception(err)
+            _mark_ceph_storage_as_prefilled(storage, drives)
+        else:
+            ssh = _connect_or_raise(pod.pinned_node)
 
-        for path in paths_to_volumes:
-            lock_path = os.path.join(path, '.kd_prefill_succeded')
-            ssh.exec_command('touch {}'.format(lock_path))
+            for path in (v['hostPath']['path'] for v in volumes):
+                lock_path = os.path.join(path, '.kd_prefill_succeded')
+                ssh.exec_command('touch {}'.format(lock_path))
 
 
 def _extract_prefilled_volumes_from_pod(pas, pod):

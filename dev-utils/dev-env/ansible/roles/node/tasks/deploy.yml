@@ -5,7 +5,7 @@
   with_items: "{{ (node_types | default('')).split(',') }}"
 
 - set_fact:
-    kube_type: "--kube-type={{ ntypes[ansible_hostname] }}"
+    kube_type: "--kube-type=\"{{ ntypes[ansible_hostname] }}\""
   when:
       ansible_hostname in ntypes
 

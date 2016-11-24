@@ -1110,9 +1110,12 @@ function pre-deploy-node-hook(){
 
 function deploy-master(){
     echo "start kuberdock deploy"
-    echo $SSH_USER
-    echo $AWS_SSH_KEY
     ls -l $AWS_SSH_KEY
+
+    for _retry in $(seq 3); do
+        echo "Attempt $_retry to run connect $SSH_USER@$KUBE_MASTER_IP with key $AWS_SSH_KEY ..." && \
+        ssh -oStrictHostKeyChecking=no -o KbdInteractiveAuthentication=no -o PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey -o PasswordAuthentication=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "echo OK" && break || sleep 5;
+    done
 
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; sudo yum -y update | cat" < <(cat) 2>"$LOG"
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; sudo yum -y install wget rpm2cpio | cat" < <(cat) 2>"$LOG"

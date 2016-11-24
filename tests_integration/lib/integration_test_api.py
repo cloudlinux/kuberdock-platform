@@ -393,7 +393,7 @@ class NodeList(object):
             '' \
             ''
 
-        add_cmd = 'add-node --hostname {} --kube-type {} --do-deploy -t ' \
+        add_cmd = 'add-node --hostname {} --kube-type "{}" --do-deploy -t ' \
                   '--docker-options="{}"'.format(node_name, kube_type,
                                                  docker_options)
 

@@ -490,3 +490,29 @@ def highlight_code(code):
 
 def log_debug(msg, logger=LOG, color=Fore.CYAN):
     logger.debug('{}{}{}'.format(color, msg, Style.RESET_ALL))
+
+
+def enable_beta_repos(cluster):
+    all_hosts = ['master']
+    all_hosts.extend(cluster.node_names)
+    all_hosts.extend(cluster.rhost_names)
+    for host in all_hosts:
+        LOG.debug("Adding beta repos to {}".format(host))
+        cmd = """cat > /etc/yum.repos.d/kube-cloudlinux-beta6.repo << EOF
+[kube-beta6]
+name=kube-beta-6
+baseurl=http://repo.cloudlinux.com/kuberdock-beta/6/x86_64/
+enabled=1
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+EOF"""
+        cluster.ssh_exec(host, cmd)
+        cmd = """cat > /etc/yum.repos.d/kube-cloudlinux-beta7.repo << EOF
+[kube-beta7]
+name=kube-beta-7
+baseurl=http://repo.cloudlinux.com/kuberdock-beta/7/x86_64/
+enabled=1
+gpgcheck=1
+gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+EOF"""
+        cluster.ssh_exec(host, cmd)

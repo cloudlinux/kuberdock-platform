@@ -5,7 +5,8 @@ from shutil import rmtree
 
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
-from tests_integration.lib.utils import set_eviction_timeout, get_rnd_string
+from tests_integration.lib.utils import set_eviction_timeout, get_rnd_string, \
+    enable_beta_repos
 from tempfile import NamedTemporaryFile, mkdtemp
 
 
@@ -217,39 +218,22 @@ class ReleaseUpdatePipeline(Pipeline):
     }
 
     def post_create_hook(self):
-        self._add_beta_repos()  # TODO remove when 1.5.0 is released
+        enable_beta_repos(self.cluster)  # TODO remove when 1.5.0 is released
         # Upgrade itself is done later, in the mid of test
         super(ReleaseUpdatePipeline, self).post_create_hook()
-
-    def _add_beta_repos(self):
-        all_hosts = ['master']
-        all_hosts.extend(self.cluster.node_names)
-        all_hosts.extend(self.cluster.rhost_names)
-        for host in all_hosts:
-            cmd = """cat > /etc/yum.repos.d/kube-cloudlinux-beta6.repo << EOF
-[kube-beta6]
-name=kube-beta-6
-baseurl=http://repo.cloudlinux.com/kuberdock-beta/6/x86_64/
-enabled=1
-gpgcheck=1
-gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-EOF"""
-            self.cluster.ssh_exec(host, cmd)
-            cmd = """cat > /etc/yum.repos.d/kube-cloudlinux-beta7.repo << EOF
-[kube-beta7]
-name=kube-beta-7
-baseurl=http://repo.cloudlinux.com/kuberdock-beta/7/x86_64/
-enabled=1
-gpgcheck=1
-gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-EOF"""
-            self.cluster.ssh_exec(host, cmd)
 
 
 class ReleaseUpdatePipelineAWS(ReleaseUpdatePipeline):
     skip_reason = "AWS will be enabled in AC-5178"
     INFRA_PROVIDER = 'aws'
     NAME = 'release_update_aws'
+
+
+class ReleaseUpdateNoNodesPipeline(ReleaseUpdatePipeline):
+    NAME = 'release_update_no_nodes'
+    ENV = {
+        'KD_NODES_COUNT': '0',
+    }
 
 
 class WebUIPipeline(Pipeline):

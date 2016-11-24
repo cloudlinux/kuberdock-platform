@@ -452,6 +452,10 @@ new_pod_schema.update({
     'appVariables': {  # $VARIABLE$ to value mapping that was used to fill PA
         'type': 'dict',
     },
+    'appLastUpdate': {
+        'type': 'string',
+        'nullable': True,
+    },
     'kuberdock_template_id': {
         'type': 'integer',
         'min': 0,

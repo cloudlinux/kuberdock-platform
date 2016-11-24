@@ -1,5 +1,13 @@
-<div id="nav"></div>
-<div id="contents"></div>
+<div class="container">
+    <div class="row">
+        <div class="kd-sidebar col-sm-12 col-md-2"></div>
+        <div class="col-md-10 col-sm-12">
+            <div class="kd-topbar"></div>
+            <div class="kd-content"></div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -16,7 +24,6 @@
         </div>
     </div>
 </div>
-<div id="message-popup"></div>
 <div class="page-preloader">
     <div class="description">
         <h1>Loading data, please wait</h1>

@@ -935,6 +935,7 @@ class PodCollection(object):
                 pod.edited_config = db_pod_config.get('edited_config')
                 pod.forbidSwitchingAppPackage = db_pod_config.get(
                     'forbidSwitchingAppPackage')
+                pod.appLastUpdate = db_pod_config.get('appLastUpdate')
 
                 if db_pod_config.get('public_ip'):
                     pod.public_ip = db_pod_config['public_ip']

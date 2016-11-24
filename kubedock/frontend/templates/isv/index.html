@@ -8,10 +8,10 @@
 
         <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
 
-        <link rel="stylesheet" href="{{ url_for('static', filename='prepared-full.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='prepared-isv.css') }}">
     </head>
     <body>
-        <div class="pre-render">Please, wait...</div>
+        <div class="kd-isv-container">Please, wait...</div>
 
         {% if token %}
         <script>
@@ -21,7 +21,7 @@
 
         {% block app_js_asset %}
         <script src="{{ url_for('static', filename='prepared-init.js') }}"></script>
-        <script src="{{ url_for('static', filename='prepared-full.bundle.js') }}"></script>
+        <script src="{{ url_for('static', filename='prepared-isv.bundle.js') }}"></script>
         {% endblock %}
 
     </body>

@@ -1,10 +1,12 @@
 """Classes and utilities that handle predefined application"""
 import json
+import pytz
 import re
 import yaml
 import random
 from collections import Mapping, Sequence
 from copy import deepcopy
+from datetime import datetime
 from numbers import Number
 from string import digits, lowercase
 from types import NoneType
@@ -1404,6 +1406,7 @@ def process_pod(pod, rc, service, template_id=None):
         'appVariables': doc.get('appVariables', {}),  # $VAR$ to value mapping
         'name': doc.get('metadata', {}).get('name', ''),
         'restartPolicy': spec_body.get('restartPolicy', "Always"),
+        'certificate': spec_body.get('certificate'),
         'replicas': replicas,
         'kube_type': kdSection.get(
             'kubeType', plan.get('kubeType', Kube.get_default_kube_type())),
@@ -1417,6 +1420,8 @@ def process_pod(pod, rc, service, template_id=None):
     if new_pod.get('kuberdock_template_id') is not None:
         app = PredefinedAppModel.query.get(new_pod['kuberdock_template_id'])
         new_pod['kuberdock_template_version_id'] = app.get_template_object().id
+        created = datetime.utcnow().replace(tzinfo=pytz.UTC).isoformat()
+        new_pod['appLastUpdate'] = created
 
     if spec_body.get('domain'):
         new_pod['domain'] = spec_body.get('domain')

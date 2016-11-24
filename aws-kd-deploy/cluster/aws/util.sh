@@ -1175,7 +1175,7 @@ function get-node-names(){
 
 function get-node-types(){
     KUBE_NODE_TYPES=()
-    IFS=';' types_list=($KUBE_AWS_NODE_TYPES); unset IFS
+    IFS=';' types_list=(${KUBE_AWS_NODE_TYPES:-""}); unset IFS
     for (( i=0; i<${#NODE_NAMES[@]}; i++)); do
         local node_type="Standard"
         for item in "${types_list[@]}"; do

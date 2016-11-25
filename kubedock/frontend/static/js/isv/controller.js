@@ -2,7 +2,9 @@ import App from 'isv/app';
 // import Model from 'isv/model';
 import * as utils from 'app_data/utils';
 
-import {Details as AppDetailsView} from 'isv/application/views';
+import {Details as AppDetailsView,
+        Conf as AppConfView,
+        } from 'isv/application/views';
 import {Topbar, Sidebar} from 'isv/misc/views';
 
 const controller = {
@@ -28,15 +30,24 @@ const controller = {
                 // TODO: redirect to "order app" page
                 return;
             }
-            var detailsView = new AppDetailsView({model: pod});
+            let detailsView = new AppDetailsView({model: pod});
             this.showApplicationView(detailsView);
             utils.preloader2.hide();
         });
     },
 
     appConf(){
-        console.log('show appConf');
-        App.rootLayout.contents.empty();
+        utils.preloader2.show();
+        App.getPodCollection().done(podCollection => {
+            const pod = podCollection.at(0);
+            if (!pod){
+                utils.notifyWindow('Application not found');
+                return;
+            }
+            let confView = new AppConfView({model: pod});
+            this.showApplicationView(confView);
+            utils.preloader2.hide();
+        });
     },
 
     appBackups(){

@@ -213,6 +213,26 @@ Pod = Backbone.AssociatedModel.extend({
         };
     },
 
+    resetSshAccess(){
+        utils.preloader.show();
+        return new Promise(
+            (resolve, reject) => {
+                $.ajax({
+                    url: apiUrl(`podapi/${this.id}/reset_direct_access_pass`),
+                    authWrap: true,
+                })
+                .done((response) => {
+                    this.set('direct_access', response.data);
+                    utils.notifyWindow('SSH credentials are updated.', 'success');
+                    resolve(response);
+                })
+                .always(utils.preloader2.hide).fail((result) => {
+                    utils.notifyWindow(result);
+                    reject(result);
+                });
+            }
+        );
+    },
 
     command(command, commandOptions = {}){
         // patch should include previous `set`

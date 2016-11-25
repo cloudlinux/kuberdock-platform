@@ -122,6 +122,13 @@ TEST = False
 # When it set to true Kuberdock will execute hook on each restart
 PRE_START_HOOK_ENABLED = False
 
+# Until we do not have complete support of replicas, this feature will be
+# disabled by default to prevent possibility to break KD with Replicas in
+# unexpected places.
+# Even after this we should have some limit to max allowed replicas per Pod
+MAX_POD_REPLICAS = 1
+POD_REPLICATION_ENABLED = MAX_POD_REPLICAS > 1
+
 # more: http://docs.sqlalchemy.org/en/latest/dialects/#included-dialects
 DB_ENGINE = 'postgresql+psycopg2'
 DB_USER = 'kuberdock'

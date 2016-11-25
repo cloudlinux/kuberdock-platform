@@ -347,6 +347,7 @@ class PodCollection(object):
             in kubedock.validation
         """
         new_pod_data = data.get('edited_config')
+        reject_replica_with_pv(new_pod_data, key='volumes')
         original_db_pod = DBPod.query.get(original_pod.id)
         original_db_pod_config = original_db_pod.get_dbconfig()
 
@@ -694,7 +695,6 @@ class PodCollection(object):
             'synchronous_start': self._sync_start_pod,
             'stop': self._stop_pod,
             'redeploy': self._redeploy,
-            'resize': self._resize_replicas,
 
             # NOTE: the next three commands may look similar, but they do
             #   completely defferent things. Maybe we need to rename some of
@@ -914,43 +914,20 @@ class PodCollection(object):
                 rv, "Cannot delete NetworkPolicy for namespace: '{}'"
                     .format(namespace))
 
-    def _get_replicas(self, name=None):
-        # TODO: apply namespaces here
-        replicas = []
-        data = self.k8squery.get(['replicationControllers'])
-        podutils.raise_if_failure(data, "Could not get replicas")
-
-        for item in data['items']:
-            try:
-                replica_item = {
-                    'id': item['uid'],
-                    'sid': item['id'],
-                    'replicas': item['currentState']['replicas'],
-                    'replicaSelector': item['desiredState']['replicaSelector'],
-                    'name': item['labels']['kuberdock-pod-uid']}
-
-                if name is not None \
-                        and replica_item['replicaSelector'] != name:
-                    continue
-                replicas.append(replica_item)
-            except KeyError:
-                pass
-        return replicas
-
     def _get_pods(self, namespaces=None):
         # current_app.logger.debug(namespaces)
         if not hasattr(self, '_collection'):
             self._collection = {}
         pod_index = set()
 
-        data = []
+        pods_data = []
         replicas_data = []
 
         if namespaces:
             for namespace in namespaces:
                 pods = self.k8squery.get(['pods'], ns=namespace)
                 podutils.raise_if_failure(pods, "Could not get pods")
-                data.extend(pods.get('items', {}))
+                pods_data.extend(pods.get('items', {}))
                 replicas = self.k8squery.get(
                     ['replicationcontrollers'], ns=namespace)
                 podutils.raise_if_failure(replicas, "Could not get replicas")
@@ -958,14 +935,14 @@ class PodCollection(object):
         else:
             pods = self.k8squery.get(['pods'])
             podutils.raise_if_failure(pods, "Could not get pods")
-            data.extend(pods.get('items', {}))
+            pods_data.extend(pods.get('items', {}))
             replicas = self.k8squery.get(['replicationcontrollers'])
             podutils.raise_if_failure(replicas, "Could not get replicas")
             replicas_data.extend(replicas.get('items', {}))
 
         pod_names = defaultdict(set)
 
-        for item in data:
+        for item in pods_data:
             pod = Pod.populate(item)
             self.update_public_address(pod)
             pod_name = pod.sid
@@ -1084,18 +1061,6 @@ class PodCollection(object):
                     container['limits'] = billing.repr_limits(kubes,
                                                               pod.kube_type)
 
-    def _resize_replicas(self, pod, data):
-        # FIXME: not working for now
-        number = int(data.get('replicas', getattr(pod, 'replicas', 0)))
-        replicas = self._get_replicas(pod.id)
-        # TODO check replica numbers and compare to ones set in config
-        for replica in replicas:
-            rv = self.k8squery.put(
-                ['replicationControllers', replica.get('id', '')],
-                json.loads({'desiredState': {'replicas': number}}))
-            podutils.raise_if_failure(rv, "Could not resize a replica")
-        return len(replicas)
-
     @utils.atomic()
     def _apply_edit(self, pod, db_pod, db_config, internal_edit=True):
         if db_config.get('edited_config') is None:
@@ -1104,6 +1069,7 @@ class PodCollection(object):
         old_pod = pod
         old_config = db_config
         new_config = db_config['edited_config']
+        reject_replica_with_pv(new_config)
         if not internal_edit:
             new_config['forbidSwitchingAppPackage'] = 'the pod was edited'
         fields_to_copy = ['podIP', 'service', 'postDescription', 'public_ip',
@@ -1208,6 +1174,7 @@ class PodCollection(object):
             pod, db_config = self._apply_edit(pod, db_pod, db_config,
                                               internal_edit=internal_edit)
             db.session.commit()
+        reject_replica_with_pv(db_config)
 
         if pod.status == POD_STATUSES.unpaid:
             raise APIError("Pod is unpaid, we can't run it")
@@ -2294,3 +2261,14 @@ def pod_set_unpaid_state_task():
                                                 POD_STATUSES.unpaid]))
     for db_pod in q:
         PodCollection.stop_unpaid(PodCollection()._get_by_id(db_pod.id))
+
+
+def reject_replica_with_pv(config, key='volumes_public'):
+    """Check if pod have both persisten volumes and replicas more then 1
+    and raise APIError if so.
+    :param config: pods db config
+    """
+    have_pvs = any([True for volume in config.get(key, [])
+                    if 'persistentDisk' in volume])
+    if have_pvs and config['replicas'] > 1:
+        raise APIError("We don't support replications for pods with PV yet")

@@ -5,6 +5,7 @@ import pytz
 
 from kubedock.constants import DOMAINNAME_LENGTH
 from kubedock import certificate_utils
+from kubedock.settings import MAX_POD_REPLICAS
 from kubedock.users import User
 from OpenSSL import crypto
 
@@ -334,7 +335,7 @@ edited_pod_config_schema = {
         'nullable': True,
         'internal_only': True,
     },
-    'replicas': {'type': 'integer', 'min': 0, 'max': 1},
+    'replicas': {'type': 'integer', 'min': 0, 'max': MAX_POD_REPLICAS},
     'kube_type': dict(kube_type_schema, kube_type_in_user_package=True,
                       kube_type_exists=True, required=True),
     'kuberdock_resolve': pod_resolve_schema,
@@ -433,7 +434,7 @@ edited_pod_config_schema = {
                 'args': args_list_schema,
                 'kubes': kubes_qty_schema,
                 'image': container_image_name_schema,
-                'name': container_name_schema,
+                'name': dict(container_name_schema, required=True),
                 'env': env_schema,
                 'ports': {
                     'type': 'list',
@@ -809,14 +810,22 @@ predefined_app_schema = {
         'anyof': [{
             'match_volumes': True,
             'schema': dict(predefined_apps_spec_schema, **{
-                'replicas': {'type': 'integer', 'min': 1, 'max': 1},
+                'replicas': {
+                    'type': 'integer',
+                    'min': 1,
+                    'max': MAX_POD_REPLICAS,
+                },
             }),
         }, {
             'schema': {
                 'template': {
                     'type': 'dict',
                     'schema': {
-                        'replicas': {'type': 'integer', 'min': 1, 'max': 1},
+                        'replicas': {
+                            'type': 'integer',
+                            'min': 1,
+                            'max': MAX_POD_REPLICAS,
+                        },
                         'spec': {
                             'type': 'dict',
                             'match_volumes': True,

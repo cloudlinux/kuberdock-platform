@@ -1154,9 +1154,7 @@ class TestPodCollectionUpdate(unittest.TestCase, TestCaseMixin):
         # mock all these methods to prevent any accidental calls
         self.mock_methods(podcollection.PodCollection, '_get_namespaces',
                           '_get_pods', '_merge',
-                          '_start_pod', '_stop_pod', '_resize_replicas',
-                          # '_do_container_action'
-                          )
+                          '_start_pod', '_stop_pod')
 
         U = type('User', (), {'username': 'oergjh'})
         self.pod_collection = podcollection.PodCollection(U())
@@ -1206,19 +1204,12 @@ class TestPodCollectionUpdate(unittest.TestCase, TestCaseMixin):
             self.pod_collection.update(pod_id, pod_data)
             stop_pod_mock.assert_called_once_with(pod, {})
 
-        with patch_method('_resize_replicas') as resize_replicas_mock:
-            pod_data = {'command': 'resize'}
-            resize_replicas_mock.return_value = 12345  # new length
-            result = self.pod_collection.update(pod_id, pod_data)
-            self.assertEqual(result, resize_replicas_mock.return_value)
-            resize_replicas_mock.assert_called_once_with(pod, {})
-
         with patch_method('_change_pod_config') as change_pod_config_mock:
             pod_data = {'command': 'change_config'}
             self.pod_collection.update(pod_id, pod_data)
             change_pod_config_mock.assert_called_once_with(pod, {})
 
-        get_by_id_mock.assert_has_calls([mock.call(pod_id)] * 4)
+        get_by_id_mock.assert_has_calls([mock.call(pod_id)] * 3)
 
 
 @unittest.skip('Not supported')

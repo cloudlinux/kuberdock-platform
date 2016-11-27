@@ -15,6 +15,7 @@ from ..kapi.lbpoll import LoadBalanceService, get_service_provider
 from ..nodes.models import Node
 from ..domains.models import BaseDomain
 from ..pods.models import IPPool, PodIP, ip_network, Pod
+from ..users.models import User
 from ..settings import AWS, KUBERDOCK_INTERNAL_USER
 from ..constants import KUBERDOCK_INGRESS_POD_NAME
 
@@ -370,28 +371,24 @@ class IpAddrPool(object):
         :param net: network ('x.x.x.x/x') or anything for AWS
         """
         if AWS:
-            info = {
+            pods_data = list(
+                Pod.query.filter(Pod.status != 'deleted').join(User).
+                values(Pod.id, Pod.name, User.username))
+
+            lbs = LoadBalanceService()
+            names = lbs.get_dns_by_pods([i[0] for i in pods_data])
+
+            blocks = [(names[id_], names[id_], 'busy', name, username)
+                      for id_, name, username in pods_data if id_ in names]
+
+            return {
                 'id': 'aws',
                 'network': None,
                 'ipv6': False,
                 'node': None,
                 'free_host_count': 0,
-            }
-
-            all_pods = Pod.query.filter(Pod.status != 'deleted').all()
-            pods_data = [(i.id, i.name, i.owner.username) for i in all_pods
-                         if i.owner.username != KUBERDOCK_INTERNAL_USER]
-            lbs = LoadBalanceService()
-            names = lbs.get_dns_by_pods([i[0] for i in pods_data])
-            blocks = [(names[i[0]], names[i[0]], 'busy', i[1], i[2]) for i in
-                      pods_data
-                      if i[0] in names]
-
-            info.update({
                 'blocks': blocks,
-            })
-
-            return info
+            }
 
         ipPool = IPPool.filter_by(network=net).first()
         if ipPool is not None:

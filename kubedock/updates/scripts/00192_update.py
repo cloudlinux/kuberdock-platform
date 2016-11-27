@@ -207,6 +207,12 @@ def _update_00176_upgrade(upd):
 
 
 def _update_00176_upgrade_node(upd, with_testing):
+    _node_flannel()
+    # Moved flannel removal before docker upgrade because else docker will reuse
+    # old flannel IP 10.254.*.* (use one from docker0 iface) and save it to
+    # config /var/lib/docker/network/files/local-kv.db
+    run('sync')
+    run("systemctl stop docker && ip link del docker0")
     _upgrade_docker(upd, with_testing)
 
 
@@ -292,7 +298,7 @@ def _update_00191_upgrade(upd, calico_network):
     _master_k8s_node()
 
     if helpers.local('docker ps --format "{{.Names}}" | grep "^calico-node$"') != 'calico-node':
-        _master_calico(calico_network)
+        _master_calico(upd, calico_network)
 
     _master_k8s_extensions()
     helpers.restart_master_kubernetes()
@@ -308,13 +314,12 @@ def _update_00191_upgrade(upd, calico_network):
     _master_service_update()
 
 
-def _update_00191_upgrade_node(with_testing, env, **kwargs):
+def _update_00191_upgrade_node(upd, with_testing, env, **kwargs):
     helpers.remote_install(CONNTRACK_PACKAGE)
     _node_kube_proxy()
-    _node_flannel()
 
     if run('docker ps --format "{{.Names}}" | grep "^calico-node$"') != 'calico-node':
-        _node_calico(with_testing, env.host_string, kwargs['node_ip'])
+        _node_calico(upd, with_testing, env.host_string, kwargs['node_ip'])
 
     _node_policy_agent(env.host_string)
     _node_move_config()
@@ -669,26 +674,35 @@ def _master_k8s_node():
     helpers.restart_service('kube-proxy')
 
 
-def _master_calico(calico_network):
-    with quiet():
-        rv = helpers.local(
-            'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl pool add '
-            '{} --ipip --nat-outgoing'.format(calico_network)
-        )
-        if rv.failed:
-            raise helpers.UpgradeError(
-                "Can't add calicoctl pool: {}".format(rv))
+def _master_calico(upd, calico_network):
+    rv = helpers.local(
+        'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl pool add '
+        '{} --ipip --nat-outgoing'.format(calico_network)
+    )
+    if rv.failed:
+        raise helpers.UpgradeError(
+            "Can't add calicoctl pool: {}".format(rv))
+
+    for i in range(3):
+        helpers.local('sync')
         rv = helpers.local('docker pull kuberdock/calico-node:0.22.0-kd2')
-        if rv.failed:
-            raise helpers.UpgradeError(
-                "Can't pull calicoctl image: {}".format(rv))
-        rv = helpers.local(
-            'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl node '
-            '--ip="{0}" --node-image=kuberdock/calico-node:0.22.0-kd2'
-            .format(MASTER_IP)
-        )
-        if rv.failed:
-            raise helpers.UpgradeError("Can't start calico node: {}".format(rv))
+        if not rv.failed:
+            break
+        upd.print_log("Pull calico-node failed. Doing retry {}".format(i))
+        sleep(10)
+    if rv.failed:
+        raise helpers.UpgradeError(
+            "Can't pull calico-node image after 3 retries: {}".format(rv))
+
+    helpers.local("sync && sleep 5")
+    rv = helpers.local(
+        'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl node '
+        '--ip="{0}" --node-image=kuberdock/calico-node:0.22.0-kd2'
+        .format(MASTER_IP)
+    )
+    if rv.failed:
+        raise helpers.UpgradeError("Can't start calico node: {}".format(rv))
+    helpers.local("sync && sleep 5")
 
 
 def _master_k8s_extensions():
@@ -739,9 +753,10 @@ def _master_network_policy(upd, calico_network):
     )
 
     KD_HOST_ROLE = 'kdnode'
+    helpers.local("sync && sleep 5")
     upd.print_log('Trying to get master tunnel IP...')
-    retry_pause = 1
-    max_retries = 30
+    retry_pause = 3
+    max_retries = 10
     MASTER_TUNNEL_IP = retry(
         get_calico_ip_tunnel_address, retry_pause, max_retries)
     upd.print_log('Master tunnel IP is: {}'.format(MASTER_TUNNEL_IP))
@@ -903,34 +918,51 @@ def _node_kube_proxy():
     )
 
 
-RM_FLANNEL_COMMANDS = [
+RM_FLANNEL_COMMANDS_MASTER = [
+    'systemctl disable flanneld',
     'systemctl stop flanneld',
-    'systemctl stop kuberdock-watcher',
     'rm -f /etc/sysconfig/flanneld',
     'rm -f /etc/systemd/system/flanneld.service',
     'rm -f /etc/systemd/system/docker.service.d/flannel.conf',
+    'rm -f /run/flannel/subnet.env',
+    'ifdown br0',
+    'ip link del br0',
+    'rm -f /etc/sysconfig/network-scripts/ifcfg-kuberdock-flannel-br0',
+    'ip link del flannel.1',
+]
+
+RM_FLANNEL_COMMANDS_NODES = [
+    'systemctl disable kuberdock-watcher',
+    'systemctl stop kuberdock-watcher',
+    'systemctl disable flanneld',
+    'systemctl stop flanneld',
+    'rm -f /etc/sysconfig/flanneld',
+    'rm -f /etc/systemd/system/flanneld.service',
+    'rm -f /etc/systemd/system/docker.service.d/flannel.conf',
+    'rm -f /run/flannel/subnet.env',
+    'ip link del flannel.1',
 ]
 
 
 def _master_flannel():
-    for cmd in RM_FLANNEL_COMMANDS:
+    for cmd in RM_FLANNEL_COMMANDS_MASTER:
         helpers.local(cmd)
-    helpers.local('systemctl daemon-reload')
     helpers.install_package('flannel', action='remove')
+    helpers.local('systemctl daemon-reload')
 
 
 def _node_flannel():
-    for cmd in RM_FLANNEL_COMMANDS:
+    for cmd in RM_FLANNEL_COMMANDS_NODES:
         run(cmd)
     # disable kuberdock-watcher but do not remove Kuberdock Network Plugin
     # because it should be replaced by new one
     run('rm -f /etc/systemd/system/kuberdock-watcher.service')
-    run('systemctl daemon-reload')
     helpers.remote_install('flannel', action='remove')
     helpers.remote_install('ipset', action='remove')
+    run('systemctl daemon-reload')
 
 
-def _node_calico(with_testing, node_name, node_ip):
+def _node_calico(upd, with_testing, node_name, node_ip):
     helpers.remote_install(CALICO_CNI, with_testing)
     helpers.remote_install(CALICOCTL, with_testing)
 
@@ -942,26 +974,33 @@ def _node_calico(with_testing, node_name, node_ip):
         'python /var/lib/kuberdock/scripts/kubelet_args.py '
         '--network-plugin=cni --network-plugin-dir=/etc/cni/net.d'
     )
-    with quiet():
-        # pull image separately to get reed of calicoctl timeouts
+
+    # pull image separately to get reed of calicoctl timeouts
+    for i in range(3):
+        run('sync')
         rv = run('docker pull kuberdock/calico-node:0.22.0-kd2')
-        if rv.failed:
-            raise helpers.UpgradeError(
-                "Can't pull calicoctl image: {}".format(rv))
-        rv = run(
-            'ETCD_AUTHORITY="{0}:2379" '
-            'ETCD_SCHEME=https '
-            'ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt '
-            'ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt '
-            'ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key '
-            'HOSTNAME="{1}" '
-            '/opt/bin/calicoctl node '
-            '--ip="{2}" '
-            '--node-image=kuberdock/calico-node:0.22.0-kd2'
-            .format(MASTER_IP, node_name, node_ip)
-        )
-        if rv.failed:
-            raise helpers.UpgradeError("Can't start calico node: {}".format(rv))
+        if not rv.failed:
+            break
+        upd.print_log("Pull calico-node failed. Doing retry {}".format(i))
+        sleep(10)
+    if rv.failed:
+        raise helpers.UpgradeError(
+            "Can't pull calico-node image after 3 retries: {}".format(rv))
+
+    rv = run(
+        'ETCD_AUTHORITY="{0}:2379" '
+        'ETCD_SCHEME=https '
+        'ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt '
+        'ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt '
+        'ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key '
+        'HOSTNAME="{1}" '
+        '/opt/bin/calicoctl node '
+        '--ip="{2}" '
+        '--node-image=kuberdock/calico-node:0.22.0-kd2'
+        .format(MASTER_IP, node_name, node_ip)
+    )
+    if rv.failed:
+        raise helpers.UpgradeError("Can't start calico node: {}".format(rv))
 
 
 def _create_etcd_config():
@@ -973,6 +1012,7 @@ def _create_etcd_config():
     if etcd_conf not in config:
         new_fd = StringIO(config + '\n' + etcd_conf)
         put(new_fd, '/etc/kubernetes/config')
+
 
 def _create_calico_config():
     kube_config = StringIO()
@@ -1109,7 +1149,7 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     _update_00176_upgrade_node(upd, with_testing)
     _update_00179_upgrade_node(env)
     _update_00188_upgrade_node()
-    _update_00191_upgrade_node(with_testing, env, **kwargs)
+    _update_00191_upgrade_node(upd, with_testing, env, **kwargs)
     helpers.reboot_node(upd)
 
 

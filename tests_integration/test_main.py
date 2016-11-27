@@ -162,7 +162,7 @@ def test_nginx_kublet_resize(cluster):
                               wait_for_status='running')
     pod.change_kubes(kubes=2, container_image='nginx')
     pod.wait_for_ports()
-    time.sleep(15)
+    time.sleep(20)
     pod.healthcheck()
 
 @pipeline("main")

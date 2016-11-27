@@ -216,11 +216,11 @@ class KDIntegrationTestAPI(object):
                   cmd='pull {}'.format(image), node=node)
 
     @log_timing
-    def wait_ssh_conn(self, hosts):
+    def wait_ssh_conn(self, hosts, tries=20, interval=10):
         if not isinstance(hosts, (list, tuple)):
             hosts = [hosts]
         for host in hosts:
-            retry(self.ssh_exec, 10, interval=5,
+            retry(self.ssh_exec, tries, interval=interval,
                   node=host, cmd="echo OK")
             LOG.debug("SSH connection to host '{}' is OK.".format(host))
 

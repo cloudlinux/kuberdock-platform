@@ -15,7 +15,7 @@ from tests_integration.lib.utils import \
     assert_eq, assert_in, kube_type_to_int, wait_net_port, \
     retry, kube_type_to_str, get_rnd_low_string, all_subclasses
 
-DEFAULT_WAIT_PORTS_TIMEOUT = 5 * 60
+DEFAULT_WAIT_PORTS_TIMEOUT = 6 * 60
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)

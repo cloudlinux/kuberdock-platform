@@ -55,6 +55,7 @@ from ..pods.models import (
 from ..system_settings import keys as settings_keys
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
+from ..users.models import User
 from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils, nested_dict_utils
 
 # We use only 30 because useradd limits name to 32, and ssh client limits
@@ -1427,9 +1428,15 @@ class PodCollection(object):
         return pod.as_dict()
 
     def _redeploy(self, pod, data):
-        finish_redeploy.delay(pod.id, data)
+        owner_id = self.owner.id
+        command_options = data.get('commandOptions', {})
+        if command_options.get('async', True):
+            finish_redeploy.delay(pod.id, data)
+        else:
+            finish_redeploy(pod.id, data)
         # return updated pod
-        return PodCollection(owner=self.owner).get(pod.id, as_json=False)
+        return PodCollection(owner=User.get(owner_id)).get(pod.id,
+                                                           as_json=False)
 
     def exec_in_container(self, pod_id, container_name, command):
         k8s_pod = self._get_by_id(pod_id)

@@ -37,6 +37,7 @@ from ..users.models import User
 
 DEFAULT_BACKEND_CONFIG_FILE = 'default_backend_config.yaml'
 INGRESS_CONFIG_FILE = 'ingress_config.yaml'
+INGRESS_NGINX_SETTINGS_FILE = 'ingress_nginx_settings.yaml'
 
 
 def _find_template(template_name):
@@ -217,6 +218,10 @@ def _get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
     return config
 
 
+def _get_ingress_nginx_settings():
+    return _read_template(INGRESS_NGINX_SETTINGS_FILE, {})
+
+
 def _check_cluster_email():
     """Check if cluster email is not empty"""
     if SystemSettings.get_by_name(keys.EXTERNAL_SYSTEMS_AUTH_EMAIL):
@@ -226,11 +231,10 @@ def _check_cluster_email():
 
 def _create_ingress_nginx_configmap():
     client = ConfigMapClient(KubeQuery())
-    default_nginx_settings = {'server-name-hash-bucket-size': '128'}
 
     try:
         client.create(
-            data=default_nginx_settings,
+            data=_get_ingress_nginx_settings(),
             metadata={'name': KUBERDOCK_INGRESS_CONFIG_MAP_NAME},
             namespace=KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
         current_app.logger.debug('Nginx configmap created')

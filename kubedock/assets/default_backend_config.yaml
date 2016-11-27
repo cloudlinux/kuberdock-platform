@@ -5,7 +5,7 @@
 containers:
 - command: []
   env: []
-  image: gcr.io/google_containers/defaultbackend:1.0
+  image: kuberdock/defaultbackend:0.0.1
   kubes: 2
   name: default-http-backend
   ports:

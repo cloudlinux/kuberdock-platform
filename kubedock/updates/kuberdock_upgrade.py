@@ -261,7 +261,9 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
         # TODO return boolean whether this upgrade is compatible with
         # not upgraded nodes. For now - always is.
         upgrade_func(db_upd, with_testing)
+        db.session.add(db_upd)
     except Exception as e:
+        db.session.add(db_upd)
         db.session.rollback()
         db_upd.status = UPDATE_STATUSES.failed
         db_upd.capture_traceback(

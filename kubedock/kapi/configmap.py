@@ -3,6 +3,7 @@ import json
 
 class ConfigMapClient(object):
     def __init__(self, k8s_query):
+        """:type k8s_query: kubedock.kapi.helpers.KubeQuery"""
         self._k8s_query = k8s_query
 
     def get(self, name, namespace='default'):
@@ -37,17 +38,25 @@ class ConfigMapClient(object):
 
         return config
 
+    def delete(self, name, namespace):
+        resp = self._k8s_query.delete(['configmaps', name], ns=namespace)
+        return self._process_response(resp)
+
     @classmethod
     def _process_response(cls, resp):
         if resp['kind'] != 'Status':
             return resp
 
-        if resp['kind'] == 'Status' and resp['status'] == 'Failure':
-            if resp['code'] == 404:
-                raise ConfigMapNotFound()
-            elif resp['code'] == 409:
-                raise ConfigMapAlreadyExists()
-            raise K8sApiError(resp)
+        if resp['kind'] == 'Status':
+            if resp['status'] == 'Success':
+                return resp
+
+            if resp['status'] == 'Failure':
+                if resp['code'] == 404:
+                    raise ConfigMapNotFound()
+                elif resp['code'] == 409:
+                    raise ConfigMapAlreadyExists()
+                raise K8sApiError(resp)
 
         raise UnexpectedResponse(resp)
 

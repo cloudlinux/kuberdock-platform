@@ -448,6 +448,15 @@ class PodCollection(object):
         return False
 
     @staticmethod
+    def get_public_ports(conf):
+        return [
+            port
+            for container in conf.get('containers', [])
+            for port in container.get('ports', [])
+            if port.get('isPublic', False)
+            ]
+
+    @staticmethod
     @utils.atomic()
     def _prepare_for_public_address(pod, config):
         """Prepare pod for Public IP assigning"""
@@ -1041,55 +1050,88 @@ class PodCollection(object):
             return pod, db_config
 
         old_pod = pod
-        db_config = db_config['edited_config']
+        old_config = db_config
+        new_config = db_config['edited_config']
         if not internal_edit:
-            db_config['forbidSwitchingAppPackage'] = 'the pod was edited'
-        configs_to_copy = ['podIP', 'service', 'postDescription', 'public_ip',
-                           'public_aws', 'domain', 'base_domain',
-                           'public_access_type']
-        for k in configs_to_copy:
+            new_config['forbidSwitchingAppPackage'] = 'the pod was edited'
+        fields_to_copy = ['podIP', 'service', 'postDescription', 'public_ip',
+                          'public_aws', 'domain', 'base_domain',
+                          'public_access_type']
+        for k in fields_to_copy:
             v = getattr(old_pod, k, None)
             if v is not None:
-                db_config[k] = v
+                new_config[k] = v
 
         # re-check images, PDs, etc.
-        db_config, _ = self._preprocess_new_pod(
-            db_config, original_pod=old_pod)
+        new_config, _ = self._preprocess_new_pod(
+            new_config, original_pod=old_pod)
 
-        pod = Pod(db_config)
+        pod = Pod(new_config)
         pod.id = db_pod.id
         pod.set_owner(db_pod.owner)
         update_service(pod)
         db_pod = self._save_pod(pod, db_pod=db_pod)
-        db_config = db_pod.get_dbconfig()
-        access_type = db_config.get('public_access_type',
-                                    PublicAccessType.PUBLIC_IP)
-        if self.has_public_ports(db_config):
-            if access_type == PublicAccessType.PUBLIC_IP:
-                pod.public_ip = db_config['public_ip']
-            elif access_type == PublicAccessType.PUBLIC_AWS:
-                pod.public_aws = db_config['public_aws']
-            elif access_type == PublicAccessType.DOMAIN:
-                pod.domain = db_config['domain']
-            else:
-                _raise_unexpected_access_type(access_type)
-        else:
-            if access_type == PublicAccessType.PUBLIC_IP:
-                self._remove_public_ip(pod_id=db_pod.id)
-                pod.public_ip = None
-            elif access_type == PublicAccessType.PUBLIC_AWS:
-                pod.public_aws = None
-            elif access_type == PublicAccessType.DOMAIN:
-                self._remove_pod_domain(pod_id=db_pod.id,
-                                        pod_domain=db_config.get('domain'))
-                pod.domain = None
-            else:
-                _raise_unexpected_access_type(access_type)
         pod.name = db_pod.name
         pod.kube_type = db_pod.kube_id
         pod.status = old_pod.status
         pod.forge_dockers()
+        new_config = db_pod.get_dbconfig()
+        self._update_public_access(pod, old_config, new_config)
         return pod, db_pod.get_dbconfig()
+
+    def _update_public_access(self, pod, old_config, new_config):
+        if old_config == new_config:
+            return
+
+        access_type = old_config.get('public_access_type',
+                                     PublicAccessType.PUBLIC_IP)
+
+        if access_type == PublicAccessType.PUBLIC_IP:
+            self._update_public_ip(pod, old_config, new_config)
+
+        elif access_type == PublicAccessType.PUBLIC_AWS:
+            self._update_public_aws(pod, old_config, new_config)
+
+        elif access_type == PublicAccessType.DOMAIN:
+            self._update_domain(pod, old_config, new_config)
+
+        else:
+            _raise_unexpected_access_type(access_type)
+
+    def _update_public_ip(self, pod, old_config, new_config):
+        had_public_ports = self.has_public_ports(old_config)
+        has_public_ports = self.has_public_ports(new_config)
+
+        if had_public_ports and not has_public_ports:
+            self._remove_public_ip(pod.id)
+            pod.public_ip = None
+
+    def _update_public_aws(self, pod, old_config, new_config):
+        has_public_ports = self.has_public_ports(new_config)
+
+        if not has_public_ports:
+            pod.public_aws = None
+
+    def _update_domain(self, pod, old_config, new_config):
+        old_ports = {port.get('hostPort') or port['containerPort']: port
+                     for port in self.get_public_ports(old_config)}
+        new_ports = {port.get('hostPort') or port['containerPort']: port
+                     for port in self.get_public_ports(new_config)}
+
+        if old_ports == new_ports:
+            # nothing changes
+            pass
+
+        elif not new_ports:
+            # no opened ports
+            ingress_resource.remove_ingress(pod.namespace)
+            self._remove_pod_domain(pod.id, pod.domain)
+            pod.domain = None
+
+        else:
+            # ports changed, remove old ingress and create again
+            ingress_resource.remove_ingress(pod.namespace)
+            # new ones will be created at prepare_and_run_pod(...)
 
     def _sync_start_pod(self, pod, data=None):
         if data is None:

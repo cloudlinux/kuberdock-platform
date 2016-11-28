@@ -156,3 +156,8 @@ def create_ingress(containers, namespace, domain, service, certificate=None):
     else:
         return False, '80/tcp or 443/tcp Pod port needed to use IP Sharing'
     return True, None
+
+
+def remove_ingress(namespace):
+    kq = KubeQuery(base_url='apis/extensions', api_version='v1beta1')
+    kq.delete(['ingresses'], ns=namespace)

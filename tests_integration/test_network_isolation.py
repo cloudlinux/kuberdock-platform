@@ -9,9 +9,9 @@ from time import sleep
 from colorama import Style, Fore
 
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.utils import (
-    assert_raises, local_exec, assert_eq, wait_net_port)
+from tests_integration.lib import utils
 from tests_integration.lib.pipelines import pipeline
+from tests_integration.lib.vendor.paramiko_expect import SSHClientInteraction
 
 
 LOG = logging.getLogger(__name__)
@@ -21,6 +21,11 @@ HTTP_PORT = 80
 UDP_PORT = 2000
 CADVISOR_PORT = 4194
 ES_PORT = 9200
+TCP_PORT_TO_OPEN = 8000
+UDP_PORT_TO_OPEN = 8001
+SERVER_START_WAIT_TIMEOUT = 3
+JENKINS_TCP_SERVER_PORT = 23456
+JENKINS_UDP_SERVER_PORT = 23457
 
 
 CURL_RET_CODE_CONNECTION_FAILED = 7
@@ -37,10 +42,14 @@ HOST_UDP_CHECK_CMD = (
     'udp.settimeout(10); '
     'print(udp.recv(1024))\'')
 
-
-class Check:
-    Passes = 'passes'
-    Fails = 'fails'
+HOST_UP_UDP_SERVER_CMD = (
+    'python -c \'import socket as s; '
+    'udp = s.socket(s.AF_INET, s.SOCK_DGRAM); '
+    'udp.bind(("{bind_ip}", {bind_port})); '
+    'data, addr = udp.recvfrom(1024); '
+    'print(data); '
+    'udp.sendto("PONG", (addr[0], addr[1]))\''
+)
 
 
 def setup_pods(cluster):
@@ -119,7 +128,7 @@ def pod_check_node_tcp_port(pod, container_id, host, port=CADVISOR_PORT):
 
 
 def container_udp_server(pod, container_id):
-    sleep(3)
+    sleep(SERVER_START_WAIT_TIMEOUT)
     pod.docker_exec(
         container_id, 'netcat -lp 2000  -u -c \'/bin/echo PONG\'',
         detached=True)
@@ -127,26 +136,29 @@ def container_udp_server(pod, container_id):
 
 # Unregistered host checks.
 # NOTE: Jenkins will take a role of an unregistered host.
-def unregistered_host_port_check(pod_ip, port=HTTP_PORT):
-    local_exec('curl -m 5 -k {}:{}'.format(pod_ip, port), shell=True)
+def unregistered_host_port_check(host_ip, port=HTTP_PORT):
+    _, out, _ = utils.local_exec(
+        'curl -k -v -m5 {}:{}'.format(host_ip, port), shell=True)
+    return out.strip()
 
 
 def unregistered_host_udp_check(pod_ip, port=UDP_PORT):
     cmd = HOST_UDP_CHECK_CMD.format(pod_ip, port)
-    _, out, _ = local_exec(cmd, shell=True)
+    _, out, _ = utils.local_exec(cmd, shell=True)
 
     if out.strip() != 'PONG':
         raise NonZeroRetCodeException('No PONG received')
+    return out.strip()
 
 
 def unregistered_host_http_check(pod_ip):
-    local_exec('curl -m 5 -k http://{}'.format(pod_ip),
-               shell=True)
+    utils.local_exec('curl -m 5 -k http://{}'.format(pod_ip),
+                     shell=True)
 
 
 def unregistered_host_https_check(pod_ip):
-    local_exec('curl -m 5 -k https://{}'.format(pod_ip),
-               shell=True)
+    utils.local_exec('curl -m 5 -k https://{}'.format(pod_ip),
+                     shell=True)
 
 
 def unregistered_host_ssh_check(host):
@@ -202,7 +214,7 @@ def host_udp_check_pod(cluster, host, pod_ip, port=UDP_PORT):
 
 @contextmanager
 def jenkins_accept_connections(sock_server, handler, bind_ip='0.0.0.0',
-                               port=12347):
+                               port=JENKINS_TCP_SERVER_PORT):
     """
     Creates a simple TCP/UDP server in a different thread, recieves one packet
     and stops.
@@ -219,7 +231,7 @@ def jenkins_accept_connections(sock_server, handler, bind_ip='0.0.0.0',
     try:
         server_thread.start()
         if isinstance(sock_server, SocketServer.TCPServer):
-            wait_net_port(bind_ip, port)
+            utils.wait_net_port(bind_ip, port, timeout=3)
         LOG.debug('{}Starting SocketServer in a new thread{}'.format(
             Fore.CYAN, Style.RESET_ALL))
         yield server.connection_list
@@ -251,14 +263,20 @@ def _check_visible_ip(pod, specs, connection_list):
             'public IP\nExpected: {} Actual: {}{}'.format(
                 Fore.CYAN, pod.public_ip, connection_list[-1],
                 Style.RESET_ALL))
-        assert_eq(connection_list[-1], pod.public_ip)
+        utils.assert_eq(connection_list[-1], pod.public_ip)
     else:
         LOG.debug(
             '{}Check if pod IP is visible as node IP for pod without '
             'public IP\nExpected: {} Actual: {}{}'.format(
                 Fore.CYAN, specs[pod.name]['hostIP'], connection_list[-1],
                 Style.RESET_ALL))
-        assert_eq(connection_list[-1], specs[pod.name]['hostIP'])
+        utils.assert_eq(connection_list[-1], specs[pod.name]['hostIP'])
+
+
+def _get_jenkins_ip(cluster):
+    _, jenkins_ip, _ = cluster.ssh_exec(
+        'master', cmd='bash -c "echo \$SSH_CONNECTION" | cut -d " " -f 1')
+    return jenkins_ip
 
 
 def _get_node_ports(cluster, node_name):
@@ -319,10 +337,16 @@ def test_network_isolation_for_user_pods(cluster):
     # Container can reach it's public IP
     for pod in (p for p in pods.values() if p.public_ip):
         # TCP check
-        http_check(pod, container_ids[pod.name], specs[pod.name]['public_ip'])
+        http_check(pod, container_ids[pod.name], pod.public_ip)
         # UDP check
-        container_udp_server(pods[pod.name], container_ids[pod.name])
-        udp_check(pod, container_ids[pod.name], specs[pod.name]['podIP'])
+        if UDP_PORT in pod.ports:
+            container_udp_server(pods[pod.name], container_ids[pod.name])
+            udp_check(pod, container_ids[pod.name], pod.public_ip)
+        else:
+            container_udp_server(pod, container_ids[pod.name])
+            with utils.assert_raises(NonZeroRetCodeException):
+                udp_check(
+                    pod, container_ids[pod.name], pod.public_ip)
 
     # Docker container should have access to kubernetes over flannel
     for name, pod in pods.items():
@@ -369,7 +393,7 @@ def test_network_isolation_for_user_pods(cluster):
         if do_ping:
             ping(pods[src], container_ids[src], host)
         else:
-            with assert_raises(NonZeroRetCodeException):
+            with utils.assert_raises(NonZeroRetCodeException):
                 ping(pods[src], container_ids[src], host)
         # TCP check. port 80 is public
         http_check(pods[src], container_ids[src], host)
@@ -390,13 +414,13 @@ def test_network_isolation_for_user_pods(cluster):
         if do_ping:
             ping(pods[src], container_ids[src], host)
         else:
-            with assert_raises(NonZeroRetCodeException):
+            with utils.assert_raises(NonZeroRetCodeException):
                 ping(pods[src], container_ids[src], host)
         # TCP check. port 80 is public
         http_check(pods[src], container_ids[src], host)
         # UDP check. port 2000 is not public
         container_udp_server(pods[dst], container_ids[dst])
-        with assert_raises(NonZeroRetCodeException, 'No PONG received'):
+        with utils.assert_raises(NonZeroRetCodeException, 'No PONG received'):
             udp_check(pods[src], container_ids[src], host)
 
     # alt_test_user: iso2 -> test_user: iso3
@@ -409,13 +433,13 @@ def test_network_isolation_for_user_pods(cluster):
         # TCP check. port 80 is closed
         # Here we expect EXIT_CODE to be:
         # 7 (Failed to connect) or 28 (Connection timed out)
-        with assert_raises(
+        with utils.assert_raises(
                 NonZeroRetCodeException,
                 expected_ret_codes=CURL_CONNECTION_ERRORS):
             http_check(pods[src], container_ids[src], host)
         # UDP check. port 2000 is closed
         container_udp_server(pods[dst], container_ids[dst])
-        with assert_raises(NonZeroRetCodeException, 'No PONG received'):
+        with utils.assert_raises(NonZeroRetCodeException, 'No PONG received'):
             udp_check(pods[src], container_ids[src], host)
 
 
@@ -442,7 +466,7 @@ def test_network_isolation_nodes_from_pods(cluster):
             specs[name]['host'], CADVISOR_PORT, 'TCP')
         LOG.debug('{}{} {}{}'.format(Fore.CYAN, msg_head, msg_tail,
                                      Style.RESET_ALL))
-        with assert_raises(
+        with utils.assert_raises(
                 NonZeroRetCodeException,
                 expected_ret_codes=CURL_CONNECTION_ERRORS):
             # cadvisor port
@@ -454,7 +478,7 @@ def test_network_isolation_nodes_from_pods(cluster):
         LOG.debug('{}{} {}{}'.format(
             Fore.CYAN, msg_head, msg_tail, Style.RESET_ALL))
         host_udp_server(cluster, pods[name].info['host'])
-        with assert_raises(NonZeroRetCodeException, 'No PONG received'):
+        with utils.assert_raises(NonZeroRetCodeException, 'No PONG received'):
             udp_check(pods[name], container_ids[name], specs[name]['hostIP'])
 
         # Container can't access node's IP it was not created on
@@ -471,7 +495,7 @@ def test_network_isolation_nodes_from_pods(cluster):
         # 7 (Failed to connect) or 28 (Connection timed out)
         LOG.debug('{}{} {}{}'.format(
             Fore.CYAN, msg_head, msg_tail, Style.RESET_ALL))
-        with assert_raises(
+        with utils.assert_raises(
                 NonZeroRetCodeException,
                 expected_ret_codes=CURL_CONNECTION_ERRORS):
             # cadvisor port
@@ -484,7 +508,7 @@ def test_network_isolation_nodes_from_pods(cluster):
         host_udp_server(cluster, another_node)
         LOG.debug('{}{} {}{}'.format(
             Fore.CYAN, msg_head, msg_tail, Style.RESET_ALL))
-        with assert_raises(NonZeroRetCodeException, 'No PONG received'):
+        with utils.assert_raises(NonZeroRetCodeException, 'No PONG received'):
             udp_check(pods[name], container_ids[name], non_host_ip)
 
 
@@ -507,7 +531,7 @@ def test_network_isolation_pods_from_cluster(cluster):
         if do_ping:
             host_icmp_check_pod(cluster, 'rhost1', target_host)
         else:
-            with assert_raises(NonZeroRetCodeException):
+            with utils.assert_raises(NonZeroRetCodeException):
                 host_icmp_check_pod(cluster, 'rhost1', target_host)
         # TCP check
         host_http_check_pod(cluster, 'rhost1', target_host)
@@ -521,7 +545,7 @@ def test_network_isolation_pods_from_cluster(cluster):
         if do_ping:
             host_icmp_check_pod(cluster, 'master', target_host)
         else:
-            with assert_raises(NonZeroRetCodeException):
+            with utils.assert_raises(NonZeroRetCodeException):
                 host_icmp_check_pod(cluster, 'master', target_host)
         # TCP check
         host_http_check_pod(cluster, 'master', target_host)
@@ -547,7 +571,7 @@ def test_network_isolation_pods_from_cluster(cluster):
         if do_ping:
             host_icmp_check_pod(cluster, host_node, target_ip)
         else:
-            with assert_raises(NonZeroRetCodeException):
+            with utils.assert_raises(NonZeroRetCodeException):
                 host_icmp_check_pod(cluster, host_node, target_ip)
         # Host node TCP check
         host_http_check_pod(cluster, host_node, target_ip)
@@ -562,13 +586,13 @@ def test_network_isolation_pods_from_cluster(cluster):
         if do_ping:
             host_icmp_check_pod(cluster, another_node, target_ip)
         else:
-            with assert_raises(NonZeroRetCodeException):
+            with utils.assert_raises(NonZeroRetCodeException):
                 host_icmp_check_pod(cluster, another_node, target_ip)
         # Another node TCP check
         host_http_check_pod(cluster, another_node, target_ip)
         # Another node UDP check. port 2000 is not public
         container_udp_server(pods[target_pod], container_ids[target_pod])
-        with assert_raises(NonZeroRetCodeException):
+        with utils.assert_raises(NonZeroRetCodeException):
             host_udp_check_pod(cluster, another_node, target_ip)
 
     # ---------- Node has access to world -------------
@@ -586,7 +610,7 @@ def test_network_isolation_pods_from_cluster(cluster):
         for rec in _get_node_ports(cluster, node_name):
             if rec[0] == 'udp' or rec[1] == 22:
                 continue
-            with assert_raises(NonZeroRetCodeException):
+            with utils.assert_raises(NonZeroRetCodeException):
                 unregistered_host_port_check(node_ip, rec[1])
 
     # Unregistered host can access public ports only
@@ -605,7 +629,7 @@ def test_network_isolation_pods_from_cluster(cluster):
     unregistered_host_http_check(specs['iso2']['public_ip'])
     # UDP check (port 2000 is closed)
     container_udp_server(pods['iso2'], container_ids['iso2'])
-    with assert_raises(NonZeroRetCodeException):
+    with utils.assert_raises(NonZeroRetCodeException):
         unregistered_host_udp_check(specs['iso2']['public_ip'], port=UDP_PORT)
 
 
@@ -676,19 +700,17 @@ def test_intercontainer_communication(cluster):
 def test_SNAT_rules(cluster):
     container_ids, container_ips, pods, specs = setup_pods(cluster)
     # --------- Test that SNAT rules are applied correctly --------
-    _, jenkins_ip, _ = cluster.ssh_exec(
-        'master', cmd='bash -c "echo \$SSH_CONNECTION" | cut -d " " -f 1')
+    jenkins_ip = _get_jenkins_ip(cluster)
 
     LOG.debug('{}Test that SNAT rules work properly{}'.format(
         Fore.CYAN, Style.RESET_ALL))
     LOG_MSG = "Check SNAT rules for pod '{}' public IP: '{}' host node: '{}'"
 
-    TCP_SERVER_PORT = 12345
-    UDP_SERVER_PORT = 12346
     BIND_IP = '0.0.0.0'
 
-    POD_TCP_CMD = 'nc -z -v {} {}'.format(jenkins_ip, TCP_SERVER_PORT)
-    POD_UDP_CMD = 'nc -u -z -v {} {}'.format(jenkins_ip, UDP_SERVER_PORT)
+    POD_TCP_CMD = 'nc -z -v {} {}'.format(jenkins_ip, JENKINS_TCP_SERVER_PORT)
+    POD_UDP_CMD = 'nc -u -z -v {} {}'.format(jenkins_ip,
+                                             JENKINS_UDP_SERVER_PORT)
 
     for name, pod in pods.items():
         msg = LOG_MSG.format(name, pod.public_ip, specs[name]['host'])
@@ -700,7 +722,7 @@ def test_SNAT_rules(cluster):
         # Check if SNAT rules work properly for TCP connections
         with jenkins_accept_connections(
                 SocketServer.TCPServer, MyRequestHandler, BIND_IP,
-                TCP_SERVER_PORT) as connection_list:
+                JENKINS_TCP_SERVER_PORT) as connection_list:
             pod.docker_exec(container_ids[name], POD_TCP_CMD)
             _check_visible_ip(pod, specs, connection_list)
 
@@ -708,6 +730,124 @@ def test_SNAT_rules(cluster):
         # Check if SNAT rules work properly for UDP connections
         with jenkins_accept_connections(
                 SocketServer.UDPServer, MyRequestHandler, BIND_IP,
-                UDP_SERVER_PORT) as connection_list:
+                JENKINS_UDP_SERVER_PORT) as connection_list:
             pod.docker_exec(container_ids[name], POD_UDP_CMD)
             _check_visible_ip(pod, specs, connection_list)
+
+
+def allowed_ports_open(cluster, port, proto='tcp'):
+    _, out, _ = cluster.kdctl('allowed-ports open {port} {proto}'.format(
+        port=port, proto=proto), out_as_dict=True)
+    return out
+
+
+def allowed_ports_close(cluster, port, proto='tcp'):
+    _, out, _ = cluster.kdctl('allowed-ports close {port} {proto}'.format(
+        port=port, proto=proto), out_as_dict=True)
+    return out
+
+
+def allowed_ports_list(cluster):
+    _, out, _ = cluster.kdctl('allowed-ports list', out_as_dict=True)
+    return out['data']
+
+
+def assert_open_ports(cluster, port=TCP_PORT_TO_OPEN, proto='tcp'):
+    port_list = allowed_ports_list(cluster)
+    filtered = filter(lambda x: x['port'] == port and x['protocol'] == proto,
+                      port_list)
+    utils.assert_eq(filtered, [dict(port=port, protocol=proto)])
+
+
+@pipeline('networking')
+@pipeline('networking_upgraded')
+def test_open_custom_ports(cluster):
+    # TCP Port checks
+    _run_test_for_port_and_proto(cluster, port=TCP_PORT_TO_OPEN, proto='tcp')
+
+    # UDP port checks
+    _run_test_for_port_and_proto(cluster, port=UDP_PORT_TO_OPEN, proto='udp')
+
+
+def _run_test_for_port_and_proto(cluster, port, proto):
+    check_custom_port(cluster, port, proto, is_open=False)
+
+    utils.log_debug("Open port: '{proto}:{port}'".format(
+        port=port, proto=proto), LOG)
+    allowed_ports_open(cluster, port, proto)
+
+    utils.log_debug(
+        "Check that port: '{proto}:{port}' is listed as open".format(
+            proto=port, port=proto), LOG)
+    assert_open_ports(cluster, port, proto)
+
+    check_custom_port(cluster, port, proto, is_open=True)
+
+    utils.log_debug("Close port: '{proto}:{port}'".format(
+        port=port, proto=proto), LOG)
+    allowed_ports_close(cluster, port, proto)
+
+    utils.log_debug(
+        "Check that port: '{proto}:{port}' is NOT listed as open".format(
+            proto=proto, port=port), LOG)
+    with utils.assert_raises(AssertionError):
+        assert_open_ports(cluster, port, proto)
+
+    check_custom_port(cluster, port, proto, is_open=False)
+
+
+def check_custom_port(cluster, port, proto, is_open=False):
+    msg = "Check that port: '{proto}:{port}' on node '{node}' is '{state}'"
+    for node in cluster.node_names:
+        utils.log_debug(msg.format(proto=proto, port=port, node=node,
+                        state='open' if is_open else 'closed'), LOG)
+        node_ip = cluster.nodes.get_node_info(node).get('ip')
+        if proto == 'tcp' and is_open:
+            with paramiko_expect_http_server(cluster, node, port):
+                sleep(SERVER_START_WAIT_TIMEOUT)
+                res = unregistered_host_port_check(node_ip, port)
+                utils.assert_in('Directory listing for /', res)
+        elif proto == 'tcp' and not is_open:
+            with paramiko_expect_http_server(cluster, node, port), \
+                utils.assert_raises(NonZeroRetCodeException,
+                                    expected_ret_codes=CURL_CONNECTION_ERRORS):
+                sleep(SERVER_START_WAIT_TIMEOUT)
+                unregistered_host_port_check(node_ip, port)
+        elif proto == 'udp' and is_open:
+            with paramiko_expect_udp_server(cluster, node, port):
+                sleep(SERVER_START_WAIT_TIMEOUT)
+                out = unregistered_host_udp_check(node_ip, port)
+                utils.assert_eq('PONG', out)
+        else:
+            with paramiko_expect_udp_server(cluster, node, port), \
+                utils.assert_raises(
+                    NonZeroRetCodeException, 'socket.timeout: timed out'):
+                sleep(SERVER_START_WAIT_TIMEOUT)
+                unregistered_host_udp_check(node_ip, port)
+
+
+@contextmanager
+def paramiko_expect_http_server(cluster, node, port):
+    try:
+        utils.log_debug("Start HTTP server on node '{}' port '{}'".format(
+            node, port), LOG)
+        ssh = cluster.get_ssh(node)
+        server = SSHClientInteraction(ssh)
+        server.send('python -m SimpleHTTPServer {}'.format(port))
+        yield
+    finally:
+        server.close()
+
+
+@contextmanager
+def paramiko_expect_udp_server(cluster, node, port):
+    try:
+        utils.log_debug("Start UDP server on node '{}' port '{}'".format(
+            node, port), LOG)
+        ssh = cluster.get_ssh(node)
+        server = SSHClientInteraction(ssh)
+        server.send(HOST_UP_UDP_SERVER_CMD.format(bind_ip='0.0.0.0',
+                                                  bind_port=port))
+        yield
+    finally:
+        server.close()

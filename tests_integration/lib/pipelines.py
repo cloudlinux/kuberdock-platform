@@ -1,4 +1,5 @@
 import os
+import logging
 from collections import defaultdict
 from functools import wraps
 from shutil import rmtree
@@ -6,8 +7,13 @@ from shutil import rmtree
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
 from tests_integration.lib.utils import set_eviction_timeout, get_rnd_string, \
-    enable_beta_repos
+    enable_beta_repos, log_debug, assert_eq, assert_in
+from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tempfile import NamedTemporaryFile, mkdtemp
+
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.DEBUG)
 
 
 class MainPipeline(Pipeline):
@@ -26,6 +32,8 @@ class MainUpgradedPipeline(UpgradedPipelineMixin, MainPipeline):
 class NetworkingPipeline(Pipeline):
     NAME = 'networking'
     ROUTABLE_IP_COUNT = 2
+    TCP_PORT_TO_OPEN = 8002
+    UDP_PORT_TO_OPEN = 8003
     ENV = {
         'KD_NODES_COUNT': '2',
         'KD_RHOSTS_COUNT': '1',
@@ -53,6 +61,30 @@ class NetworkingPipeline(Pipeline):
         self.cluster.preload_docker_image('kuberdock/mysql:5.7')
         self.cluster.preload_docker_image('elasticsearch:1.7.3')
         self.cluster.wait_for_service_pods()
+        # NOTE: Open some custom ports and check that isolation is still
+        # working properly
+        self._open_custom_ports()
+
+    def _open_custom_ports(self):
+        try:
+            self.cluster.kdctl('allowed-ports open {} {}'.format(
+                self.TCP_PORT_TO_OPEN, 'tcp'))
+            self.cluster.kdctl('allowed-ports open {} {}'.format(
+                self.UDP_PORT_TO_OPEN, 'udp'))
+            _, out, _ = self.cluster.kdctl('allowed-ports list',
+                                           out_as_dict=True)
+            custom_ports = out['data']
+            # Make sure that two ports are opened
+            assert_eq(len(custom_ports), 2)
+
+            # Make sure that both ports opened correctly
+            assert_in(dict(port=self.TCP_PORT_TO_OPEN, protocol='tcp'),
+                      custom_ports)
+            assert_in(dict(port=self.UDP_PORT_TO_OPEN, protocol='udp'),
+                      custom_ports)
+
+        except (NonZeroRetCodeException, AssertionError) as e:
+            log_debug("Couldn't open ports. Reason: {}".format(e))
 
 
 class NetworkingUpgradedPipeline(UpgradedPipelineMixin, NetworkingPipeline):

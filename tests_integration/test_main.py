@@ -2,10 +2,8 @@ import logging
 import time
 from urllib2 import HTTPError
 
-from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
+from tests_integration.lib import utils
 from tests_integration.lib.pipelines import pipeline
-from tests_integration.lib.utils import (
-    assert_eq, gen_rnd_ceph_pv_name, assert_raises)
 
 LOG = logging.getLogger(__name__)
 
@@ -20,7 +18,7 @@ def test_cadvisor_errors(cluster):
     cmd = "journalctl --since '15 min ago' -m -t uwsgi | " \
           "grep -v 'ssl_stapling' | egrep 'warn|err' | tail -n 100"
     _, out, err = cluster.ssh_exec('master', cmd)
-    assert_eq((out + err).strip(), '')
+    utils.assert_eq((out + err).strip(), '')
 
 
 @pipeline('main')
@@ -31,7 +29,7 @@ def test_a_pv_created_together_with_pod(cluster):
     # type: (KDIntegrationTestAPI) -> None
     # We have issue related to using non-unique disk names within
     # same CEPH pool (AC-3831). That is why name is randomized.
-    pv_name = gen_rnd_ceph_pv_name()
+    pv_name = utils.gen_rnd_ceph_pv_name()
 
     mount_path = '/usr/share/nginx/html'
 
@@ -41,12 +39,13 @@ def test_a_pv_created_together_with_pod(cluster):
                               start=True, wait_for_status='running',
                               wait_ports=True, open_all_ports=True)
     assert_eq(pv.exists(), True)
+    utils.assert_eq(pv.exists(), True)
 
     c_id = pod.get_container_id(container_image='nginx')
     pod.docker_exec(c_id,
                     'echo -n TEST > {path}/test.txt'.format(path=mount_path))
     ret = pod.do_GET(path='/test.txt')
-    assert_eq('TEST', ret)
+    utils.assert_eq('TEST', ret)
     pod.delete()
 
     # It is possible to create an nginx pod using existing PV
@@ -54,27 +53,27 @@ def test_a_pv_created_together_with_pod(cluster):
                               start=True, wait_for_status='running',
                               wait_ports=True, open_all_ports=True)
     ret = pod.do_GET(path='/test.txt')
-    assert_eq('TEST', ret)
+    utils.assert_eq('TEST', ret)
     pod.delete()
 
     # It's possible to remove PV created together with pod
     pv.delete()
-    assert_eq(pv.exists(), False)
+    utils.assert_eq(pv.exists(), False)
 
     # Create another PV with the same name
     pv = cluster.pvs.add('dummy', pv_name, mount_path)
     pod = cluster.pods.create(
         'nginx', 'test_nginx_pod_3', pvs=[pv], start=True,
         wait_for_status='running', wait_ports=True, open_all_ports=True)
-    assert_eq(pv.exists(), True)
+    utils.assert_eq(pv.exists(), True)
 
     # '/test.txt' is not on newly created PV, we expect HTTP Error 404
-    with assert_raises(HTTPError, 'HTTP Error 404: Not Found'):
+    with utils.assert_raises(HTTPError, 'HTTP Error 404: Not Found'):
         pod.do_GET(path='/test.txt')
 
     pod.delete()
     pv.delete()
-    assert_eq(pv.exists(), False)
+    utils.assert_eq(pv.exists(), False)
 
 
 @pipeline('main')
@@ -83,14 +82,14 @@ def test_a_pv_created_together_with_pod(cluster):
 @pipeline('ceph_upgraded')
 def test_a_pv_created_separately(cluster):
     # type: (KDIntegrationTestAPI) -> None
-    pv_name = gen_rnd_ceph_pv_name()
+    pv_name = utils.gen_rnd_ceph_pv_name()
     pv_size = 2
     mount_path = '/nginxpv'
 
     # It is possible to create a separate PV
     pv = cluster.pvs.add("new", pv_name, mount_path, pv_size)
     assert pv.exists()
-    assert_eq(pv.size, pv_size)
+    utils.assert_eq(pv.size, pv_size)
 
     # It's possible to use separately created PV for nginx pod
     cluster.pods.create("nginx", "test_nginx_pod_3", pvs=[pv],

@@ -4,8 +4,8 @@
 
 
 Name:       kuberdock-manage
-Version:    0.1.0
-Release:    2%{?dist}
+Version:    0.2.0
+Release:    1%{?dist}
 Summary:    Kuberdock command line utilities
 Group:      System Environment/Libraries
 License:    CloudLinux Commercial License

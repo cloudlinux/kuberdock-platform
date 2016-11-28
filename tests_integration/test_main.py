@@ -1,10 +1,11 @@
-import time
 import logging
+import time
 from urllib2 import HTTPError
 
+from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
+from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.utils import (
     assert_eq, gen_rnd_ceph_pv_name, assert_raises)
-from tests_integration.lib.pipelines import pipeline
 
 LOG = logging.getLogger(__name__)
 
@@ -161,8 +162,8 @@ def test_nginx_kublet_resize(cluster):
                               start=True, wait_ports=True, healthcheck=True,
                               wait_for_status='running')
     pod.change_kubes(kubes=2, container_image='nginx')
-    pod.wait_for_ports()
     time.sleep(20)
+    pod.wait_for_ports()
     pod.healthcheck()
 
 @pipeline("main")

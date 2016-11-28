@@ -148,6 +148,14 @@ class KDIntegrationTestAPI(object):
             # while full log is still printed by ssh_exec logging
             raise ClusterUpgradeError('kuberdock-upgrade non-zero retcode')
 
+        try:
+            # Nodes can be rebooted during upgrade, make sure SSH
+            # is active before we return
+            self.wait_ssh_conn(self.node_names)
+        except Exception as e:
+            raise ClusterUpgradeError('Cannot SSH to one of the cluster VMs '
+                                      'after upgrade:\n{}'.format(repr(e)))
+
     @log_timing
     def upgrade_rhosts(self, deploy_script_path, use_testing=False):
         for rhost in self.rhost_names:
@@ -155,7 +163,18 @@ class KDIntegrationTestAPI(object):
             if use_testing:
                 cmd.append('-t')
             cmd.append('--upgrade')
-            self.ssh_exec(rhost, " ".join(cmd), live=True)
+            try:
+                self.ssh_exec(rhost, " ".join(cmd), live=True)
+            except NonZeroRetCodeException:
+                raise ClusterUpgradeError("Rhost '{}' upgrade failed")
+
+        try:
+            # Rhosts can be rebooted during upgrade, make sure SSH
+            # is active before we return
+            self.wait_ssh_conn(self.rhost_names)
+        except Exception as e:
+            raise ClusterUpgradeError('Cannot SSH to one of the rhost VMs '
+                                      'after upgrade:\n{}'.format(repr(e)))
 
     @contextmanager
     def temporary_stop_host(self, host):
@@ -208,6 +227,15 @@ class KDIntegrationTestAPI(object):
         for node in nodes:
             retry(self.docker, interval=5, tries=3,
                   cmd='pull {}'.format(image), node=node)
+
+    @log_timing
+    def wait_ssh_conn(self, hosts):
+        if not isinstance(hosts, (list, tuple)):
+            hosts = [hosts]
+        for host in hosts:
+            retry(self.ssh_exec, 10, interval=5,
+                  node=host, cmd="echo OK")
+            LOG.debug("SSH connection to host '{}' is OK.".format(host))
 
     @log_timing
     def wait_for_service_pods(self):

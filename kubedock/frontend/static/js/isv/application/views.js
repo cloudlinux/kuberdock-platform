@@ -9,7 +9,7 @@ import confContainerTpl from './templates/conf_container.tpl';
 // import 'jqplot';
 // import 'jqplot-axis-renderer';
 // import 'bootstrap-select';
-// import 'tooltip';
+import 'tooltip';
 
 
 export const Details = Marionette.ItemView.extend({
@@ -20,6 +20,12 @@ export const Details = Marionette.ItemView.extend({
         change: 'render',
     },
 
+    ui: {
+        tooltip : '[data-toggle="tooltip"]'
+    },
+
+    onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
+
     templateHelpers(){
         return {
             appLastUpdate: utils.localizeDatetime({
@@ -27,7 +33,7 @@ export const Details = Marionette.ItemView.extend({
                 formatString: 'YYYY-MM-DD HH:mm:ss (z)',
             }),
         };
-    },
+    }
 });
 
 export const ContainerConfig = Marionette.ItemView.extend({
@@ -39,6 +45,7 @@ export const ContainerConfig = Marionette.ItemView.extend({
     },
     ui: {
         copySshLink: '.copy-ssh-link',
+        tooltip : '[data-toggle="tooltip"]',
         copySshPassword: '.copy-ssh-password',
         resetSshPassword: '.reset-ssh-password',
     },
@@ -49,6 +56,7 @@ export const ContainerConfig = Marionette.ItemView.extend({
     triggers: {
         'click @ui.resetSshPassword': 'pod:resetSshPassword',
     },
+    onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
     copySshLink(){
         let sshPassword = this.model.get('link');
         if (sshPassword) {

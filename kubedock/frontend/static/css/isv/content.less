@@ -23,20 +23,67 @@
     }
     .storage{
         .mdi('storage', 80px, #bac1c7, #bac1c7);
-        &:hover{
-            cursor: default;
-        }
+        &:hover{ cursor: default; }
     }
     .layers{
         .mdi('layers', 80px, #bac1c7, #bac1c7);
-        &:hover{
-            cursor: default;
-        }
+        &:hover{ cursor: default; }
     }
     .info-outline{
         .mdi('info_outline', 80px, #bac1c7, #bac1c7);
-        &:hover{
-            cursor: default;
+        &:hover{ cursor: default; }
+    }
+    .copy-ssh-link,
+    .copy-password,
+    .copy-ssh-password{
+        .mdi('content_copy', 18px, #bac1c7, #103c5e);
+        vertical-align: top;
+        display: inline-block;
+    }
+    .reset-ssh-password{
+        .mdi('autorenew', 18px, #bac1c7, #103c5e);
+        vertical-align: top;
+        display: inline-block;
+    }
+    .settings-ethernet{
+        .mdi('settings_ethernet', 80px, #bac1c7, #bac1c7);
+        &:hover{ cursor: default; }
+    }
+    .container-info{
+        padding-top: 40px;
+    }
+    .statuses{
+        padding-left: 20px;
+        &:before{
+            top: 0;
+            bottom: 0;
+            margin: auto;
+        }
+    }
+    ul{
+        &.nav{
+            &.nav-tabs{
+                border-bottom: 1px solid #e4e4e4;
+                li{
+                    &.container-tab{
+                        .border-radiuses(3px, 0, 0, 3px);
+                        color: #1d1d1d;
+                        font-size: 14px;
+                        padding: 5px 15px;
+                        background-color: transparent;
+                        &:hover, &.active{
+                            font-weight: 700;
+                            background-color: #e4e4e4;
+                        }
+                        &:hover{
+                            cursor: pointer;
+                            &.active{
+                                cursor: default;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

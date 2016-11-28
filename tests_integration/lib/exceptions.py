@@ -116,3 +116,10 @@ class WrongCLICommand(Exception):
     """
 
     pass
+
+
+class KDIsNotSane(Exception):
+    """ Will be rised if some of sanity checks will fail.
+    For example, if pods list gathering API not responding for 2 sec.
+    """
+    pass

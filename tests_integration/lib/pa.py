@@ -1,6 +1,8 @@
 import json
 import logging
 import sys
+import time
+import re
 
 import memcache
 import pymongo
@@ -267,6 +269,45 @@ class _WordpressPaPod(KDPAPod):
         self.wait_http_resp()
         page = self.do_GET(path='/wp-admin/install.php')
         assert_in(u"WordPress &rsaquo; Installation", page)
+
+    def gen_workload(self, load_time):
+        body = {
+            'weblog_title': 'test',
+            'user_name': 'test',
+            'admin_password': 'tes_t123',
+            'admin_password2': 'tes_t123',
+            'admin_email': 'test@test.test',
+            'language': 'en_GB'
+        }
+        self.do_POST(path='/wp-admin/install.php?step=2', body=body,
+                     timeout=15)
+        opener = self.get_opener(path='/wp-login.php', body={
+            "log": 'test',
+            'pwd': 'tes_t123'
+        })
+        # Create posts
+        t0 = time.time() + load_time
+        while t0 > time.time():
+            resp = self.do_POST(path='/wp-admin/post-new.php',
+                                opener=opener, timeout=10)
+            nonce = re.search('name="_wpnonce" value="([a-z0-9]+)"', resp).group(1)
+            post_id = re.search("name='post_ID' value='([a-z0-9]+)'", resp).group(1)
+            body = {
+                "_wpnonce": nonce,
+                "post_title": "Scooby-Doo {0}".format(time.time()),
+                "user_ID": "1",
+                "post_author": "1",
+                "post_type": "post",
+                "content": "None",
+                "visibility": "public",
+                "action": "editpost",
+                "post_ID": post_id,
+                "post_author_override": "1",
+                "publish": "Publish"
+            }
+            self.do_POST(path='/wp-admin/post.php', body=body,
+                         opener=opener, timeout=10)
+            time.sleep(1)
 
 
 class _PhpMyAdminPaPod(KDPAPod):

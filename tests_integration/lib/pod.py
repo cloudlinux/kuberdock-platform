@@ -4,6 +4,8 @@ import logging
 import pipes
 import sys
 import urllib2
+import urllib
+import cookielib
 
 from tests_integration.lib import utils
 from tests_integration.lib import exceptions
@@ -22,27 +24,39 @@ class RESTMixin(object):
     # self.host
     HTTP_PORT = None
 
-    def do_GET(self, scheme="http", path='/', port=None, timeout=5):
+    def _build_url(self, scheme, port, path):
         if port:
             url = '{0}://{1}:{2}{3}'.format(scheme, self.host, port, path)
         else:
             url = '{0}://{1}{2}'.format(scheme, self.host, path)
+        return url
+
+    def do_GET(self, scheme="http", path='/', port=None, timeout=5):
+        url = self._build_url(scheme, port, path)
         LOG.debug("Issuing GET to {0}".format(url))
         req = urllib2.urlopen(url, timeout=timeout)
         res = unicode(req.read(), 'utf-8')
         LOG.debug(u"Response:\n{0}".format(res))
         return res
 
-    def do_POST(self, path='/', headers=None, body=""):
-        pass
+    def do_POST(self, scheme="http", path='/', port=None, timeout=5,
+                body=None, opener=None):
+        url = self._build_url(scheme, port, path)
+        LOG.debug("Issuing POST to {0}".format(url))
+
+        data = urllib.urlencode(body or {})
+        if opener:
+            req = opener.open(url, data=data, timeout=timeout)
+        else:
+            req = urllib2.urlopen(url, data=data, timeout=timeout)
+        res = unicode(req.read(), 'utf-8')
+        LOG.debug(u"Response:\n{0}".format(res))
+        return res
 
     def wait_http_resp(self, scheme="http", path='/', port=None, code=200,
                        timeout=3, tries=60, internal=3):
         port = port or self.HTTP_PORT
-        if port:
-            url = '{0}://{1}:{2}{3}'.format(scheme, self.host, port, path)
-        else:
-            url = '{0}://{1}{2}'.format(scheme, self.host, path)
+        url = self._build_url(scheme, port, path)
         LOG.debug('Expecting for response code {code} on url {url}, '
                   'total retries: {tries}'.format(
                       code=code, url=url, tries=tries, port=port))
@@ -52,6 +66,15 @@ class RESTMixin(object):
             assert req.code == code
 
         utils.retry(check, tries=tries, internal=internal)
+
+    def get_opener(self, scheme="http", path='/', port=None, timeout=5,
+                   body=None):
+        url = self._build_url(scheme, port, path)
+        cj = cookielib.CookieJar()
+        opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(cj))
+        login_data = urllib.urlencode(body)
+        opener.open(url, login_data)
+        return opener
 
 
 class Port(object):
@@ -114,8 +137,7 @@ class KDPod(RESTMixin):
 
     @classmethod
     def create(cls, cluster, image, name, kube_type, kubes, open_all_ports,
-               restart_policy, pvs, owner, password, domain, ports=None,
-               args=None):
+               restart_policy, pvs, owner, password, domain, ports=None):
         """
         Create new pod in kuberdock
         :param open_all_ports: if true, open all ports of image (does not mean
@@ -125,9 +147,6 @@ class KDPod(RESTMixin):
             port is public or not (a way to make some ports public).
             In case of 'None' - container image ports will be used and
             pod ports will default to container ports.
-        :param args: Override default container command args. Some containers
-            don't have one, which results in pod's succession before we can
-            even do anything with it.
         :return: object via which Kuberdock pod can be managed
         """
 
@@ -187,8 +206,6 @@ class KDPod(RESTMixin):
         if pvs is not None:
             container.update(volumeMounts=[pv.volume_mount_dict for pv in pvs])
             pod_spec.update(volumes=[pv.volume_dict for pv in pvs])
-        if args:
-            container.update(args=args)
         pod_spec.update(containers=[container], replicas=1)
         if domain:
             pod_spec["domain"] = domain
@@ -565,30 +582,15 @@ class KDPod(RESTMixin):
         self.redeploy(applyEdit=True)
         self.kube_type = utils.kube_type_to_str(kube_type)
 
-    def change_pod_ports(self, ports):
-        edit_data = self.__get_edit_data()
+    def get_stat(self):
+        self.cluster.kcli2(u"stats pod {}".format(self.pod_id))
 
-        for port in ports:
-            try:
-                target_port = next(
-                    p for container in edit_data['edited_config']['containers']
-                    for p in container['ports']
-                    if p['containerPort'] == port.container_port)
-                target_port['hostPort'] = port.port
-                target_port['isPublic'] = port.is_public
+    def get_container_stat(self, container):
+        self.cluster.kcli2(u"stats container {} {}".format(self.pod_id,
+                                                           container))
 
-            except StopIteration:
-                raise Exception(
-                    "Port '{port}:{proto}' was not found in pod port "
-                    "list".format(
-                        port=port.container_port, proto=port.proto))
-
-        _, out, _ = self.cluster.kcli2(
-            "pods update --name '{}' '{}'".format(self.name,
-                                                  json.dumps(edit_data)),
-            out_as_dict=True, user=self.owner)
-        LOG.debug("Pod {} updated".format(out))
-        self.redeploy(applyEdit=True)
+    def gen_workload(self, load_time):
+        pass
 
 
 class _NginxPod(KDPod):

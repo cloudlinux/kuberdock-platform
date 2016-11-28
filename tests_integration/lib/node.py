@@ -87,3 +87,6 @@ class KDNode(object):
 
     def wait_for_status(self, status, tries=50, interval=5, delay=0):
         utils.wait_for_status(self, status, tries, interval, delay)
+
+    def get_stat(self):
+        self.cluster.kcli2(u"stats node {}".format(self.name))

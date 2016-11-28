@@ -1126,9 +1126,9 @@ def checkout_calico_network():
 
 
 def upgrade(upd, with_testing, *args, **kwargs):
-    _add_public_access_type(upd)
     _update_nonfloating_config(upd)
     _update_00200_upgrade(upd)  # db migration
+    _add_public_access_type(upd)
     calico_network = checkout_calico_network()
     settings.CALICO_NETWORK = calico_network
     _update_00176_upgrade(upd)

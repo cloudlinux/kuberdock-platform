@@ -437,6 +437,9 @@ class KDPod(RESTMixin):
         elif container_image is not None:
             def predicate(c):
                 return c['image'] == container_image
+        else:
+            raise Exception('Neither container_name nor container_image '
+                            'was specified')
 
         try:
             container = next(c for c in

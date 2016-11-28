@@ -444,3 +444,13 @@ export const collectionEvent = (sse, collectionGetter, eventType = 'change') => 
         });
     };
 };
+
+
+export const promiseDOMReady = function(){
+    return new Promise(resolve => {
+        if (document.readyState === 'complete')
+            resolve();
+        else
+            document.addEventListener('DOMContentLoaded', resolve);
+    });
+};

@@ -9,9 +9,15 @@
         <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
 
         <link rel="stylesheet" href="{{ url_for('static', filename='prepared-isv.css') }}">
+
+        <style>
+            body {
+                background-color: #F8F8F8;
+            }
+        </style>
     </head>
     <body>
-        <div class="kd-isv-container">Please, wait...</div>
+        <div class="kd-isv-container container">Please, wait...</div>
 
         {% if token %}
         <script>

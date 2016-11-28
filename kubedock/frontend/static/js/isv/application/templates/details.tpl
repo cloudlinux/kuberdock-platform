@@ -15,7 +15,6 @@
         <p>Current package: <%- template_plan_name %></p>
         <p>Price: $29.95/month</p>
         <p>Due date: TODO</p>
-        <p>Go to billing (TODO?)</p>
     </div>
     <div class="hidden-xs col-sm-2 isv-block text-center info-outline">qwe</div>
     <div class="col-xs-12 col-sm-4 isv-block">

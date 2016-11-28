@@ -1,10 +1,8 @@
-<div class="container">
-    <div class="row">
-        <div class="kd-sidebar col-sm-12 col-md-2"></div>
-        <div class="col-md-10 col-sm-12">
-            <div class="kd-topbar"></div>
-            <div class="kd-content"></div>
-        </div>
+<div class="row">
+    <div class="kd-sidebar col-sm-12 col-md-2"></div>
+    <div class="col-md-10 col-sm-12">
+        <div class="kd-topbar"></div>
+        <div class="kd-content"></div>
     </div>
 </div>
 

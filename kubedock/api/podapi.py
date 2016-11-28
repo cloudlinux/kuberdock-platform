@@ -1,6 +1,7 @@
-from flask import Blueprint
+from flask import Blueprint, current_app
 from flask.views import MethodView
 
+from kubedock.billing import has_billing
 from .utils import use_kwargs
 from ..backups import pods as backup_pods
 from ..decorators import maintenance_protected
@@ -126,7 +127,12 @@ class PodsAPI(KubeUtils, MethodView):
             check_permission('delete_non_owned', 'pods').check()
 
         pods = PodCollection(owner)
-        return pods.delete(pod_id)
+        result = pods.delete(pod_id)
+        if has_billing():
+            current_billing = SystemSettings.get_by_name('billing_type')
+            billing = current_app.billing_factory.get_billing(current_billing)
+            billing.deletepod(pod_id=pod_id)
+        return result
 
 
 register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id')

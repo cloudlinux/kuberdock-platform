@@ -144,3 +144,14 @@ methods:
         endpoint: /includes/api.php
         return:
             - clientid
+    deletepod:
+        method: post
+        args:
+            - pod_id
+        params:
+            action: deletekuberdockpod
+            client_id: null          # filled in automatically
+            pod_id: pod_id
+        endpoint: /includes/api.php
+        return:
+            - results

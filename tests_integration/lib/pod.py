@@ -321,6 +321,41 @@ class KDPod(RESTMixin):
         except KeyError:
             raise exceptions.UnexpectedKubectlResponse()
 
+    def events(self, event_type=None, event_source=None, event_reason=None):
+        """Fetch events from pod namespace
+
+        Possible filters:
+            event_type: "type",
+            event_source: "from:name"
+
+        Example:
+            pod.events(event_type='warning',
+                       event_source='component:default-scheduler'
+                       event_reason='FailedScheduling')
+        """
+        try:
+            _, out, _ = self.cluster.true_kubectl(
+                u'get events --namespace {}'.format(self.pod_id),
+                out_as_dict=True)
+            events = out['items']
+        except KeyError:
+            raise exceptions.UnexpectedKubectlResponse()
+
+        def _filter(e):
+            if event_reason and e['reason'].lower() != event_reason.lower():
+                return
+
+            if event_type and e['type'].lower() != event_type.lower():
+                return
+
+            if event_source and e['source'][
+                    event_source.split(':')[0]] != event_source.split(':')[1]:
+                return
+
+            return True
+
+        return filter(_filter, events)
+
     @property
     def status(self):
         """Calculate web-UI status of the pod

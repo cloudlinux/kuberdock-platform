@@ -1,4 +1,5 @@
 from __future__ import print_function
+import collections
 import os
 import re
 import time
@@ -132,13 +133,14 @@ def ssh_exec_live(ssh, cmd, timeout=None, check_retcode=True):
 
 
 @contextmanager
-def get_ssh(host, user, password, look_for_keys=True):
+def get_ssh(host, user=None, password=None, look_for_keys=True,
+            key_filename=None):
     ssh = SSHClient()
     ssh.set_missing_host_key_policy(AutoAddPolicy())
     try:
         try:
             ssh.connect(host, username=user, password=password, timeout=5,
-                        look_for_keys=look_for_keys)
+                        look_for_keys=look_for_keys, key_filename=key_filename)
         except AuthenticationException as err:
             LOG.error("{0} for host={1} username={2} password={3}".format(
                 repr(err), host, user, password
@@ -174,6 +176,23 @@ def wait_net_port(ip, port, timeout, try_interval=2):
             s.close()
             return
     raise PublicPortWaitTimeoutException()
+
+
+def wait_ssh_conn(hosts, user=None, password=None, key_filename=None,
+                  tries=20, interval=10):
+    if not isinstance(hosts, collections.Iterable):
+        hosts = [hosts]
+
+    def _try_ssh():
+        with get_ssh(host=host, user=user, password=password,
+                     key_filename=key_filename) as ssh:
+            retry(ssh_exec, tries, interval,
+                  ssh=ssh, cmd="echo OK")
+        return True
+
+    for host in hosts:
+        retry(_try_ssh, tries, interval)
+        LOG.debug("SSH connection to host '{}' is OK.".format(host))
 
 
 KUBE_TYPE_TO_INT = {
@@ -548,7 +567,9 @@ def wait_for_status(obj, status, tries=50, interval=5, delay=0):
         if st == status:
             return
         time.sleep(interval)
-    raise StatusWaitException()
+    raise StatusWaitException(expected=status,
+                              actual=st,
+                              timeout=delay + (interval * _))
 
 
 def wait_for_status_not_equal(obj, status, tries=50, interval=5, delay=0):
@@ -563,13 +584,24 @@ def wait_for_status_not_equal(obj, status, tries=50, interval=5, delay=0):
     """
     time.sleep(delay)
     for _ in range(tries):
-        if obj.status != status:
+        st = obj.status
+        log_debug(
+            "Status: '{}', waiting for not status: '{}'".format(
+                st, status), LOG)
+
+        if st != status:
             return
         time.sleep(interval)
-    raise StatusWaitException()
+    raise StatusWaitException(expected=status,
+                              actual=st,
+                              timeout=delay + (interval * _))
 
 
 def log_debug(msg, logger=LOG, color=Fore.CYAN):
+    logger.debug('{}{}{}'.format(color, msg, Style.RESET_ALL))
+
+
+def log_info(msg, logger=LOG, color=Fore.MAGENTA):
     logger.debug('{}{}{}'.format(color, msg, Style.RESET_ALL))
 
 

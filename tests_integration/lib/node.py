@@ -2,8 +2,7 @@ import time
 
 from tests_integration.lib.exceptions import NodeWasNotRemoved, \
     StatusWaitException
-from tests_integration.lib.utils import wait_for_status, \
-    wait_for_status_not_equal
+from tests_integration.lib import utils
 
 
 class KDNode(object):
@@ -60,14 +59,15 @@ class KDNode(object):
                               sudo=True)
 
         try:
-            wait_for_status_not_equal(self, "running", tries=24, interval=5)
+            utils.wait_for_status_not_equal(
+                self, "running", tries=24, interval=5)
         except StatusWaitException:
             # If rebooted, node sometimes goes into "Troubles" and "Pending"
             # states, however sometimes Kuberdock doesn't "notice" that node
             # has rebooted
             pass
 
-        wait_for_status(self, "running", tries=24, interval=10)
+        utils.wait_for_status(self, "running", tries=24, interval=10)
 
     @property
     def info(self):
@@ -76,3 +76,12 @@ class KDNode(object):
     @property
     def status(self):
         return self.info["status"]
+
+    def resize(self, new_size):
+        self.cluster.resize(self.name, new_size)
+
+    def wait_ssh_conn(self):
+        self.cluster.wait_ssh_conn(self.name)
+
+    def wait_for_status(self, status, tries=50, interval=5, delay=0):
+        utils.wait_for_status(self, status, tries, interval, delay)

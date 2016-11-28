@@ -7,7 +7,16 @@ class PublicPortWaitTimeoutException(Exception):
 
 
 class StatusWaitException(Exception):
-    pass
+
+    def __init__(self, expected, actual, timeout):
+        super(StatusWaitException, self).__init__()
+        self.expected = expected
+        self.actual = actual
+        self.timeout = timeout
+
+    def __str__(self):
+        return "Wait {} but get {} status ({}s)".format(
+            self.expected, self.actual, self.timeout)
 
 
 class UnexpectedKubectlResponse(Exception):

@@ -6,6 +6,7 @@ import shutil
 import time
 import tempfile
 import json
+import socket
 from abc import ABCMeta, abstractmethod, abstractproperty
 from contextlib import contextmanager
 from datetime import datetime
@@ -13,12 +14,13 @@ from tempfile import NamedTemporaryFile
 
 import vagrant
 import boto3.ec2
+import oca
 
 from exceptions import VmCreateError, VmProvisionError, VmNotFoundError
 from tests_integration.lib.nebula_ip_pool import NebulaIPPool
 from tests_integration.lib.timing import log_timing_ctx, log_timing
 from tests_integration.lib.utils import retry, all_subclasses, log_dict, \
-    suppress, local_exec_live, local_exec
+    suppress, local_exec_live, local_exec, wait_ssh_conn, wait_for
 
 LOG = logging.getLogger(__name__)
 logging.getLogger('boto').setLevel(logging.WARNING)
@@ -27,6 +29,19 @@ logging.getLogger('botocore').setLevel(logging.WARNING)
 
 INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
 CLUSTER_CREATION_MAX_DELAY = 120
+
+
+class InstanceSize(object):
+
+    Small = {
+        "aws": {"instance_type": "m2.small"},
+        "opennebula": {"cpu": "1", "ram": "2048"}},
+    Medium = {
+        "aws": {"instance_type": "m3.medium"},
+        "opennebula": {"cpu": "2", "ram": "3072"}},
+    Large = {
+        "aws": {"instance_type": "m3.large"},
+        "opennebula": {"cpu": "4", "ram": "6144"}}
 
 
 class InfraProvider(object):
@@ -107,6 +122,10 @@ class InfraProvider(object):
 
     @abstractmethod
     def power_off(self, host):
+        pass
+
+    @abstractmethod
+    def resize(self, host, size):
         pass
 
 
@@ -191,6 +210,9 @@ class VagrantProvider(InfraProvider):
         LOG.debug("\n{}\n".format(log))
         self._vagrant_log.seek(0)
 
+    def resize(self, host, size):
+        raise NotImplementedError("Vagrant does not support VM resize")
+
 
 class VboxProvider(VagrantProvider):
     NAME = "virtualbox"
@@ -224,12 +246,32 @@ class OpenNebulaProvider(VagrantProvider):
     def __init__(self, env, provider_args):
         # type: (dict, dict) -> InfraProvider
         super(OpenNebulaProvider, self).__init__(env, provider_args)
+        self._oca_cached = None
         self.routable_ip_count = provider_args['routable_ip_count']
-        self.routable_ip_pool = NebulaIPPool.factory(
-            env['KD_ONE_URL'],
-            env['KD_ONE_USERNAME'],
-            env['KD_ONE_PASSWORD']
-        )
+        self.routable_ip_pool = NebulaIPPool(self._oca)
+
+    @property
+    def _oca(self):
+        if self._oca_cached:
+            return self._oca_cached
+
+        self._oca_cached = oca.Client(
+            '{user}:{password}'.format(user=self.env['KD_ONE_USERNAME'],
+                                       password=self.env['KD_ONE_PASSWORD']),
+            self.env['KD_ONE_URL'])
+        return self._oca_cached
+
+    def _get_oca_instance(self, name):
+        node_ip = socket.gethostbyname(self.get_hostname(self.vm_names[name]))
+        try:
+            vm_pool = oca.VirtualMachinePool(self._oca)
+            vm_pool.info()
+            oca_vm = (vm for vm in vm_pool if
+                      vm.template.xml_element.find(
+                          './CONTEXT/ETH0_IP').text == node_ip).next()
+            return oca_vm
+        except StopIteration:
+            raise VmNotFoundError("No vm with name `{0}`".format(name))
 
     @property
     def ssh_key(self):
@@ -266,7 +308,8 @@ class OpenNebulaProvider(VagrantProvider):
 
     def _rnd_sleep(self):
         delay = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
-        LOG.info("Sleep {}s to prevent Nebula from being flooded".format(delay))
+        LOG.info(
+            "Sleep {}s to prevent Nebula from being flooded".format(delay))
         time.sleep(delay)
 
     def _reserve_ips(self):
@@ -291,6 +334,43 @@ class OpenNebulaProvider(VagrantProvider):
             self.routable_ip_pool.free_reserved_ips()
         with suppress():
             self.vagrant.destroy()
+
+    def resize(self, host, size):
+        cpu = size[self.NAME]['cpu']
+        ram = size[self.NAME]['ram']
+        self.power_off(host)
+        vm = self._get_oca_instance(host)
+        template = ('<TEMPLATE><CPU>{cpu}</CPU>'
+                    '<VCPU>{cpu}</VCPU>'
+                    '<MEMORY>{ram}</MEMORY></TEMPLATE>').format(
+                        cpu=cpu, ram=ram)
+        self._oca.call('vm.resize', vm.id, template, False)
+        self.power_on(host)
+        wait_ssh_conn([self.get_host_ip(host)],
+                      user=self.ssh_user,
+                      key_filename=self.ssh_key)
+
+    def power_off(self, host):
+        LOG.debug("VM Power Off: '{}'".format(host))
+        vm = self._get_oca_instance(host)
+        vm.poweroff()
+
+        def is_shutdown():
+            vm.info()
+            return vm.state == 8
+
+        wait_for(is_shutdown)
+
+    def power_on(self, host):
+        LOG.debug("VM Power on: '{}'".format(host))
+        vm = self._get_oca_instance(host)
+        vm.resume()
+
+        def is_active():
+            vm.info()
+            return vm.state == vm.ACTIVE
+
+        wait_for(is_active)
 
 
 class AwsProvider(InfraProvider):
@@ -528,10 +608,23 @@ class AwsProvider(InfraProvider):
                    env=self.env)
         os.remove(self._inventory)
 
-    def power_on(self, host):
+    def power_off(self, host):
+        LOG.debug("VM Power Off: '{}'".format(host))
         vm_id = self._host_to_id[self.vm_names[host]]
         self._ec2.stop_instances(instance_ids=[vm_id])
 
-    def power_off(self, host):
+    def power_on(self, host):
+        LOG.debug("VM Power On: '{}'".format(host))
         vm_id = self._host_to_id[self.vm_names[host]]
         self._ec2.start_instances(instance_ids=[vm_id])
+
+    def resize(self, host, size):
+        instance_type = size[self.NAME]['install_type']
+        self.power_off(host)
+        instance = self._get_ec2_instance(host)
+        instance.modify_attribute(Attribute='instanceType',
+                                  Value=instance_type)
+        self.power_on(host)
+        wait_ssh_conn([self.get_host_ip(host)],
+                      user=self.ssh_user,
+                      key_filename=self.ssh_key)

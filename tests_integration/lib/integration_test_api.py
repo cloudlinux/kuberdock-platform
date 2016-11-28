@@ -196,6 +196,10 @@ class KDIntegrationTestAPI(object):
     def power_on(self, host):
         self._provider.power_on(host)
 
+    @log_timing
+    def resize(self, host, new_size):
+        self._provider.resize(host, new_size)
+
     def get_host_status(self, host):
         _, out, _ = self.kdctl("nodes list", out_as_dict=True)
         return next(s['status']
@@ -299,9 +303,16 @@ class KDIntegrationTestAPI(object):
         kcli_cmd.extend(['kubectl', cmd])
         return self.ssh_exec('master', ' '.join(kcli_cmd))
 
-    def true_kubectl(self, cmd):
-        rc, out, err = self.ssh_exec('master', ' '.join(('kubectl', cmd)))
-        return rc, out, err
+    def true_kubectl(self, cmd, out_as_dict=False):
+        kubectl_cmd = ['kubectl']
+
+        if out_as_dict:
+            kubectl_cmd.extend(['-o', 'json', cmd])
+            rc, out, err = self.ssh_exec('master', ' '.join(kubectl_cmd))
+            return rc, json.loads(out), err
+
+        kubectl_cmd.extend([cmd])
+        return self.ssh_exec('master', ' '.join(kubectl_cmd))
 
     def get_hostname(self, name):
         return self._provider.get_vm_hostname(name)

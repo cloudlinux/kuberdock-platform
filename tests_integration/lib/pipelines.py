@@ -465,6 +465,24 @@ class VerticalScalabilityPipeline(Pipeline):
     }
 
 
+class LoadTestingNodeResizePipeline(Pipeline):
+    NAME = 'load_testing_node_resize'
+    tags = ['load']
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'KD_NODE_TYPES': 'node1=Standard',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch'
+    }
+
+
+class LoadTestingNodeResizePipelineAWS(LoadTestingNodeResizePipeline):
+    NAME = 'load_testing_node_resize_aws'
+    INFRA_PROVIDER = 'aws'
+    ENV = {
+        'NODE_SIZE': 't2.medium'
+    }
+
+
 # How many pipelines can be created at time when running on infra provider.
 infra_provider_slots = {
     "opennebula": 25,

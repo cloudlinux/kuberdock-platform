@@ -1433,10 +1433,9 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
 
         blockIterator: function* (blockList, showExcluded, startId){
             let blockId = 0,
-                itemId = 0;
+                itemId = findStart(blockList, showExcluded, startId);
             let eof = () => blockId >= blockList.length;
             let intToIP = int => [24, 16, 8, 0].map(i => (int >> i) & 255).join('.');
-            findStart(startId);
             while (!eof()) {
                 if (!showExcluded) {
                     while (blockId < blockList.length &&
@@ -1457,19 +1456,19 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                     itemId++;
                 }
                 yield {
-                    ip: Number.isInteger(ip) ? intToIP(ip) : ip,
+                    ip: Number.isInteger(ip) ? intToIP(ip) : curBlock[0],
                     status: curBlock[2],
                     podName: curBlock[3],
                     userName: curBlock[4],
                 };
             }
 
-            function findStart(startId) {
-                var currentPos = 0;
+            function findStart(blockList, showExcluded, startId) {
+                let currentPos = 0;
                 for (var findBlockId = 0; findBlockId < blockList.length; findBlockId++) {
-                    var blockItem = blockList[findBlockId];
+                    let blockItem = blockList[findBlockId];
                     if (showExcluded || blockItem[2] !== 'blocked') {
-                        var blockLen = blockItem[1] - blockItem[0] + 1;
+                        let blockLen = blockItem[1] - blockItem[0] + 1;
                         if (currentPos + blockLen > startId) {
                             blockId = findBlockId;
                             break;
@@ -1478,7 +1477,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                         }
                     }
                 }
-                itemId = startId - currentPos;
+                return startId - currentPos;
             }
         },
         itemCount: function () {

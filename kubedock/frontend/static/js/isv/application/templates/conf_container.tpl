@@ -14,5 +14,6 @@
         <% } else { %>
             SSH access credentials are outdated.
         <% } %>
-        <span class="reset-ssh-password">[update]</span></div>
+        <span class="reset-ssh-password">[update]</span>
+    </div>
 </div>

@@ -1,6 +1,6 @@
 
 <div class="row">
-  <div class="col-sm-12">Credentials</div>
+  <h2 class="col-sm-12">Credentials</h2>
   <div class="col-sm-12 col-md-6">
     <div>Domain name: <a href="http://<%- domain %>"><%- domain %></a></div>
     <div>Admin username: Admin</div>
@@ -8,9 +8,8 @@
     <span>reset password</span>
   </div>
 </div>
-
 <div class="row">
-  <div class="col-sm-12">Details</div>
+  <h2 class="col-sm-12">Details</h2>
   <div class="col-sm-12 col-md-6">
     <div>Current package: <%- template_plan_name %></div>
     <div>Price: $29.95/month</div>

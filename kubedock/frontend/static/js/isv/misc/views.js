@@ -15,7 +15,6 @@ export const Sidebar = Marionette.ItemView.extend({
 
 
 export const Topbar = Marionette.ItemView.extend({
-    className: 'status-line',
     template: topbarTpl,
     onBeforeShow(){ utils.preloader2.show(); },
     onShow(){ utils.preloader2.hide(); },

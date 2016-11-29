@@ -460,11 +460,10 @@ class PodCollection(object):
                                  PublicAccessType.PUBLIC_IP)
 
         if access_type == PublicAccessType.PUBLIC_IP:
-            if config.get('public_ip', None):
-                return
-            IPPool.get_free_host(as_int=True)
-            # 'true' indicates that this Pod needs Public IP to be assigned
-            config['public_ip'] = pod.public_ip = 'true'
+            if not config.get('public_ip', None):
+                IPPool.get_free_host(as_int=True)
+                # 'true' indicates that this Pod needs Public IP to be assigned
+                config['public_ip'] = pod.public_ip = 'true'
 
         elif access_type == PublicAccessType.PUBLIC_AWS:
             config.setdefault('public_aws', UNKNOWN_ADDRESS)

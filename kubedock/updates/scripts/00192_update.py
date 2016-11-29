@@ -77,22 +77,22 @@ NODE_STORAGE_MANAGE_DIR = 'node_storage_manage'
 KD_INSTALL_DIR = '/var/opt/kuberdock'
 
 # update 00197
-new_resources = [
+allowed_ports_resources = [
     'allowed-ports',
 ]
 
-new_permissions = [
+allowed_ports_permissions = [
     ('allowed-ports', 'Admin', 'get', True),
     ('allowed-ports', 'Admin', 'create', True),
     ('allowed-ports', 'Admin', 'delete', True),
 ]
 
 # update 00201
-new_resources = [
+restricted_ports_resources = [
     'restricted-ports',
 ]
 
-new_permissions = [
+restricted_ports_permissions = [
     ('restricted-ports', 'Admin', 'get', True),
     ('restricted-ports', 'Admin', 'create', True),
     ('restricted-ports', 'Admin', 'delete', True),
@@ -333,16 +333,16 @@ def _update_00197_upgrade(upd):
     upd.print_log('Create table for AllowedPort model if not exists')
     AllowedPort.__table__.create(bind=db.engine, checkfirst=True)
     upd.print_log('Upgrade permissions')
-    fixtures.add_permissions(resources=new_resources,
-                             permissions=new_permissions)
+    fixtures.add_permissions(resources=allowed_ports_resources,
+                             permissions=allowed_ports_permissions)
 
 
 def _update_00201_upgrade(upd):
     upd.print_log('Create table for RestrictedPort model if not exists')
     RestrictedPort.__table__.create(bind=db.engine, checkfirst=True)
     upd.print_log('Upgrade permissions')
-    fixtures.add_permissions(resources=new_resources,
-                             permissions=new_permissions)
+    fixtures.add_permissions(resources=restricted_ports_resources,
+                             permissions=restricted_ports_permissions)
     upd.print_log('reject outgoing not authorized smtp packets '
                   'to prevent spamming from containers')
     try:

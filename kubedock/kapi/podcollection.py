@@ -748,7 +748,7 @@ class PodCollection(object):
         db_pod.set_dbconfig(db_config, save=True)
 
     @staticmethod
-    def add_custom_domain(pod_id, domain):
+    def add_custom_domain(pod_id, domain, certificate=None):
         if not pod_domains.validate_domain_reachability(domain):
             raise CustomDomainIsNotReady(domain)
 
@@ -758,7 +758,7 @@ class PodCollection(object):
 
         ingress_resource.add_custom_domain(
             db_pod.namespace, db_config['service'], db_config['containers'],
-            domain)
+            domain, certificate)
 
         db_pod.set_dbconfig(db_config, save=True)
 
@@ -1096,7 +1096,8 @@ class PodCollection(object):
             new_config['forbidSwitchingAppPackage'] = 'the pod was edited'
         fields_to_copy = ['podIP', 'service', 'postDescription', 'public_ip',
                           'public_aws', 'domain', 'base_domain',
-                          'public_access_type', 'appVariables']
+                          'appVariables',
+                          'custom_domain', 'public_access_type', 'certificate']
         for k in fields_to_copy:
             v = getattr(old_pod, k, None)
             if v is not None:

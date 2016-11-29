@@ -2,21 +2,26 @@
 import base64
 import json
 
+from ..domains.models import PodDomain
 from .helpers import KubeQuery
 
 
 class IngressResource(object):
-    def __init__(self, name):
+    def __init__(self, name, namespace=None):
         self.config = {
-            "metadata": {
-                "name": name,
+            'metadata': {
+                'name': name,
+                'annotations': {}
             },
-            "kind": "Ingress",
-            "spec": {
-                "tls": [],
-                "rules": []
+            'kind': 'Ingress',
+            'spec': {
+                'tls': [],
+                'rules': []
             }
         }
+
+        if namespace is not None:
+            self.config['metadata']['namespace'] = namespace
 
     def add_tls(self, secret_name, *domains):
         self.tls.append({
@@ -54,6 +59,13 @@ class IngressResource(object):
             else:
                 t['hosts'].remove(domain)
 
+    def disable_ssl_autogeneration(self):
+        self.config['metadata']['annotations'].pop(
+            'kubernetes.io/tls-acme', None)
+
+    def enable_ssl_autogeneration(self):
+        self.config['metadata']['annotations']['kubernetes.io/tls-acme'] = 'true'
+
     @classmethod
     def from_config(cls, config):
         obj = cls(config['metadata']['name'])
@@ -71,6 +83,10 @@ class IngressResource(object):
     @property
     def tls(self):
         return self.config['spec']['tls']
+
+    @property
+    def ssl_secret_name(self):
+        return 'https-{}'.format(self.name)
 
     @property
     def name(self):
@@ -120,10 +136,23 @@ class IngressResourceClient(object):
         self._process_response(response)
         return IngressResource.from_config(response)
 
+    def create(self, resource):
+        r = self.kq.post(['ingresses'], resource.json_config, rest=True,
+                         ns=resource.namespace)
+        self._process_response(r)
+
     def update(self, resource):
         response = self.kq.put(['ingresses', resource.name],
                                resource.json_config, ns=resource.namespace)
         self._process_response(response)
+
+    def update_or_create(self, resource):
+        try:
+            r = self.kq.post(['ingresses'], resource.json_config, rest=True,
+                             ns=resource.namespace)
+            self._process_response(r)
+        except IngressResourceAlreadyExists:
+            self.update(resource)
 
     @classmethod
     def _process_response(cls, resp):
@@ -150,18 +179,22 @@ def create_ingress_http(namespace, service, domain, custom_domain=None):
     :type service: str
     """
 
-    resource = IngressResource('http')
-    kq = KubeQuery(base_url='apis/extensions', api_version='v1beta1')
-    data = kq.get(['ingresses', resource.name], ns=namespace)
+    resource = IngressResource('http', namespace)
+    client = IngressResourceClient()
 
-    if data.get('code') != 404:
+    try:
+        client.get(resource.namespace, resource.name)
         return
+    except IngressResourceNotFound:
+        pass
 
     resource.add_http_rule(domain, service)
     if custom_domain is not None:
-        resource.add_http_rule(custom_domain, service)
+        c_resource = IngressResource('http-{}'.format(domain), namespace)
+        c_resource.add_http_rule(custom_domain, service)
+        client.create(c_resource)
 
-    kq.post(['ingresses'], resource.json_config, rest=True, ns=namespace)
+    client.create(resource)
 
 
 def create_ingress_https(namespace, service, domain, custom_domain=None,
@@ -177,29 +210,46 @@ def create_ingress_https(namespace, service, domain, custom_domain=None,
     :type service: str
     """
 
-    resource = IngressResource('https')
-    kq = KubeQuery(base_url='apis/extensions', api_version='v1beta1')
-    data = kq.get(['ingresses', resource.name], ns=namespace)
+    client = IngressResourceClient()
+    resource = IngressResource('https', namespace)
 
-    if data.get('code') != 404:
+    try:
+        client.get(resource.namespace, resource.name)
         return
+    except IngressResourceNotFound:
+        pass
+
+    pod_domain = PodDomain.find_by_full_domain(domain)
+    if pod_domain is None:
+        raise Exception('{} domain is not present in a db'.format(domain))
+
+    wildcard_cert = pod_domain.base_domain.certificate
+
+    if custom_domain is not None:
+        custom_r = IngressResource('https-{}'.format(custom_domain), namespace)
+        custom_r.add_http_rule(custom_domain, service)
+        custom_r.add_tls(custom_r.name, custom_domain)
+
+        if certificate is not None:
+            save_certificate_to_secret(certificate, custom_r.name, namespace)
+        else:
+            custom_r.enable_ssl_autogeneration()
+
+        client.create(custom_r)
 
     resource.add_http_rule(domain, service)
     resource.add_tls('https', domain)
+    resource.enable_ssl_autogeneration()
+    # Wildcard certificate is used in all cases except there is user provided
+    # certificate and there is no custom_domain specified
+    if certificate is not None and custom_domain is None:
+        save_certificate_to_secret(certificate, resource.name, namespace)
+        resource.disable_ssl_autogeneration()
+    elif wildcard_cert:
+        save_certificate_to_secret(wildcard_cert, resource.name, namespace)
+        resource.disable_ssl_autogeneration()
 
-    if custom_domain is not None:
-        resource.add_http_rule(custom_domain, service)
-        resource.add_tls('https-{}'.format(custom_domain), custom_domain)
-
-    if certificate is not None:
-        save_certificate_to_secret(certificate, 'https', namespace)
-    else:
-        # Request delayed certificate autogeneration via kube-lego
-        resource.config['metadata']['annotations'] = {
-            "kubernetes.io/tls-acme": "true"
-        }
-
-    kq.post(['ingresses'], resource.json_config, rest=True, ns=namespace)
+    client.create(resource)
 
 
 def save_certificate_to_secret(certificate, secret_name, namespace):
@@ -213,9 +263,14 @@ def save_certificate_to_secret(certificate, secret_name, namespace):
             "tls.crt": base64.encodestring(certificate['cert']),
             "tls.key": base64.encodestring(certificate['key']),
         },
-        "type": "Opaque"
+        "type": "kubernetes.io/tls"
     }
-    KubeQuery().post(['secrets'], json.dumps(secret), ns=namespace, rest=True)
+
+    kq = KubeQuery()
+    r = kq.post(['secrets'], json.dumps(secret), ns=namespace, rest=True)
+
+    if r.get('code') == 409:
+        kq.put(['secrets', secret_name], json.dumps(secret), ns=namespace, rest=True)
 
 
 def create_ingress(containers, namespace, service, domain, custom_domain=None,
@@ -259,7 +314,7 @@ def get_required_protocols(containers):
     return http, https
 
 
-def add_custom_domain(namespace, service, containers, domain):
+def add_custom_domain(namespace, service, containers, domain, certificate=None):
     """Adds a user provided domain to the existing ingress resources
     Containers param is used do determine if we should enable TLS or not
     """
@@ -271,15 +326,21 @@ def add_custom_domain(namespace, service, containers, domain):
     client = IngressResourceClient()
 
     if https:
-        resource = client.get(namespace, 'https')
-        resource.add_tls('https-{}'.format(domain), domain)
-    elif http:
-        resource = client.get(namespace, 'http')
+        resource = IngressResource('https-{}'.format(domain), namespace)
+        resource.add_tls(resource.name, domain)
+
+        if certificate is not None:
+            resource.disable_ssl_autogeneration()
+            save_certificate_to_secret(certificate, resource.name, resource.namespace)
+        else:
+            resource.enable_ssl_autogeneration()
+    else:
+        resource = IngressResource('http-{}'.format(domain), namespace)
 
     resource.add_http_rule(domain, service)
+    client.update_or_create(resource)
 
-    client.update(resource)
-
+    resource.add_http_rule(domain, service)
 
 def remove_custom_domain(namespace, service, containers, domain):
     """Removes a user provided domain from existin ingress resource
@@ -287,12 +348,10 @@ def remove_custom_domain(namespace, service, containers, domain):
     """
     http, https = get_required_protocols(containers)
 
-    client = IngressResourceClient()
     if https:
-        resource = client.get(namespace, 'https')
-        resource.delete_tls(domain)
+        name = 'https-{}'.format(domain)
     elif http:
-        resource = client.get(namespace, 'http')
+        name = 'http-{}'.format(domain)
 
-    resource.delete_http_rule(domain)
-    client.update(resource)
+    client = IngressResourceClient()
+    client.remove_by_name(namespace, name)

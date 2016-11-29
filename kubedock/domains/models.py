@@ -5,6 +5,7 @@ from sqlalchemy.dialects import postgresql
 
 from ..core import db
 from ..constants import DOMAINNAME_LENGTH
+from ..pods.models import Pod
 from ..models_mixin import BaseModelMixin
 
 
@@ -15,6 +16,19 @@ class BaseDomain(BaseModelMixin, db.Model):
     __tablename__ = 'base_domains'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(DOMAINNAME_LENGTH), nullable=False, unique=True)
+
+    # Wildcard certificate which is used in shared IP case if present
+    certificate_cert = db.Column(db.String(8192), nullable=True)
+    certificate_key = db.Column(db.String(8192), nullable=True)
+
+    @property
+    def certificate(self):
+        if self.certificate_cert and self.certificate_key:
+            return {'cert': self.certificate_cert, 'key': self.certificate_key}
+
+    @certificate.setter
+    def certificate(self, v):
+        self.certificate_cert, self.certificate_key = v['cert'], v['key']
 
     def __repr__(self):
         return '{0}(id={1}, name="{2}")'.format(
@@ -44,6 +58,8 @@ class PodDomain(db.Model):
     # Linked BaseDomain record
     base_domain = db.relationship(BaseDomain,
                                   backref=db.backref('pod_domains'))
+    # Linked Pod
+    pod = db.relationship(Pod, backref=db.backref('domains'))
 
     __table_args__ = (
         UniqueConstraint(domain_id, name),

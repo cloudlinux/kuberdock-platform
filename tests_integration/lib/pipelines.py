@@ -191,11 +191,11 @@ class MasterRestorePipeline(Pipeline):
     ROUTABLE_IP_COUNT = 2
     ENV = {
         'KD_NODES_COUNT': '1',
-        'KD_DEPLOY_SKIP': 'cleanup,ui_patch'
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch,node_deploy,ippool'
     }
 
-    def set_up(self):
-        self.cleanup()
+    def post_create_hook(self):
+        pass  # Do nothing
 
 
 class ReleaseUpdatePipeline(Pipeline):

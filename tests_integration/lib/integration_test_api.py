@@ -423,8 +423,9 @@ class NodeList(object):
 
     def get_node_data(self, name):
         hostname = self.cluster.get_hostname(name)
-        _, out, _ = self.cluster.kdctl("nodes get --hostname {}".format(hostname),
-                                       out_as_dict=True)
+        _, out, _ = self.cluster.kdctl(
+            "nodes get --hostname {}".format(hostname),
+            out_as_dict=True)
         return out["data"]
 
     def get_node_info(self, name):

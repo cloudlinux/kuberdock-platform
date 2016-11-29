@@ -1,13 +1,10 @@
+import socket
 import string
 
 from ..core import ExclusiveLockContextManager
-from ..domains.models import PodDomain, BaseDomain
-from ..exceptions import (
-    DomainNotFound,
-    InternalAPIError,
-    PodDomainExists,
-    PublicAccessAssigningError,
-)
+from ..domains.models import BaseDomain, PodDomain
+from ..exceptions import (DomainNotFound, InternalAPIError, PodDomainExists,
+                          PublicAccessAssigningError)
 from ..settings import PUBLIC_ACCESS_ASSIGNING_TIMEOUT
 from ..utils import domainize, randstr
 
@@ -32,8 +29,8 @@ def get_or_create_pod_domain(pod, domain_name):
       should exists in hoster added Domains and 'mypod' should be free
       in this domain zone)
     :type domain_name: string
-    :return: tuple of (kubedock.domains.models.PodDomain, created) where 
-    created is a boolean specifying whether a new PodDomain was created
+    :return: tuple of (kubedock.domains.models.PodDomain, created) where
+     created is a boolean specifying whether a new PodDomain was created
     :rtype: tuple
 
     """
@@ -157,3 +154,11 @@ def _get_unique_domain_name(basename, domain_id):
             res = new_name
             break
     return res
+
+
+def validate_domain_reachability(domain):
+    try:
+        socket.gethostbyname(domain)
+        return True
+    except:
+        return False

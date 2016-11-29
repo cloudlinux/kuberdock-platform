@@ -18,7 +18,8 @@ from helpers import (
     KubeQuery, K8sSecretsClient, K8sSecretsBuilder, LocalService)
 from images import Image
 from kubedock.exceptions import (
-    NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError, ServicePodDumpError)
+    NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError, ServicePodDumpError,
+    CustomDomainIsNotReady)
 from kubedock.kapi.lbpoll import get_service_provider
 from network_policies import (
     allow_public_ports_policy,
@@ -454,7 +455,7 @@ class PodCollection(object):
             for container in conf.get('containers', [])
             for port in container.get('ports', [])
             if port.get('isPublic', False)
-            ]
+        ]
 
     @staticmethod
     @utils.atomic()
@@ -478,8 +479,8 @@ class PodCollection(object):
             config.setdefault('public_aws', UNKNOWN_ADDRESS)
 
         elif access_type == PublicAccessType.DOMAIN:
-            domain_name = (config.get('domain', None)
-                           or config.get('base_domain'))
+            domain_name = (config.get('domain', None) or
+                           config.get('base_domain'))
             if not domain_name:
                 raise Exception(
                     'At least on of "domain" or "base_domain" must be set '
@@ -726,6 +727,33 @@ class PodCollection(object):
         helpers.mark_pod_as_deleted(pod_id)
 
     @staticmethod
+    def remove_custom_domain(pod_id, domain):
+        db_pod = DBPod.query.get(pod_id)  # type: DBPod
+        db_config = db_pod.get_dbconfig()  # type: dict
+
+        ingress_resource.remove_custom_domain(
+            db_pod.namespace, db_config['service'], db_config['containers'],
+            domain)
+
+        db_config.pop('custom_domain', None)
+        db_pod.set_dbconfig(db_config, save=True)
+
+    @staticmethod
+    def add_custom_domain(pod_id, domain):
+        if not pod_domains.validate_domain_reachability(domain):
+            raise CustomDomainIsNotReady(domain)
+
+        db_pod = DBPod.query.get(pod_id)  # type: DBPod
+        db_config = db_pod.get_dbconfig()  # type: dict
+        db_config['custom_domain'] = domain
+
+        ingress_resource.add_custom_domain(
+            db_pod.namespace, db_config['service'], db_config['containers'],
+            domain)
+
+        db_pod.set_dbconfig(db_config, save=True)
+
+    @staticmethod
     def _remove_pod_domain(pod_id, pod_domain):
         """:type pod_domain: str"""
         record_type = 'CNAME' if current_app.config['AWS'] else 'A'
@@ -733,7 +761,7 @@ class PodCollection(object):
         if not ok:
             current_app.logger.error(
                 u'Failed to delete DNS record for pod "{}": {}'
-                    .format(pod_id, message))
+                .format(pod_id, message))
             utils.send_event_to_role(
                 'notify:error', {'message': message}, 'Admin')
 
@@ -750,6 +778,7 @@ class PodCollection(object):
         db_pod = DBPod.query.get(pod_id)  # type: DBPod
         db_config = db_pod.get_dbconfig()  # type: dict
         db_config.pop('domain')
+        db_config.pop('custom_domain', None)
         db_config.setdefault('base_domain', base_domain)
         # ^^^ ensure for old-style db_config without this field
         db_pod.set_dbconfig(db_config, save=False)
@@ -1125,13 +1154,15 @@ class PodCollection(object):
 
         elif not new_ports:
             # no opened ports
-            ingress_resource.remove_ingress(pod.namespace)
+            client = ingress_resource.IngressResourceClient()
+            client.remove_by_name(pod.namespace)
             self._remove_pod_domain(pod.id, pod.domain)
             pod.domain = None
 
         else:
             # ports changed, remove old ingress and create again
-            ingress_resource.remove_ingress(pod.namespace)
+            client = ingress_resource.IngressResourceClient()
+            client.remove_by_name(pod.namespace)
             # new ones will be created at prepare_and_run_pod(...)
 
     def _sync_start_pod(self, pod, data=None):
@@ -1163,15 +1194,9 @@ class PodCollection(object):
             raise APIError("Pod is not stopped, we can't run it")
         if not self._node_available_for_pod(pod):
             raise NoSuitableNode()
+
         if hasattr(pod, 'domain'):
-            ok, message = dns_management.is_domain_system_ready()
-            if not ok:
-                raise SubsystemtIsNotReadyError(
-                    message,
-                    response_message=u'Pod cannot be started, because DNS '
-                                     u'management subsystem is misconfigured. '
-                                     u'Please, contact administrator.'
-                )
+            self._handle_shared_ip(pod)
 
         if pod.status == POD_STATUSES.succeeded \
                 or pod.status == POD_STATUSES.failed:
@@ -1191,6 +1216,20 @@ class PodCollection(object):
         else:
             prepare_and_run_pod(pod, db_pod, db_config)
         return pod.as_dict()
+
+    def _handle_shared_ip(self, pod):
+        ok, message = dns_management.is_domain_system_ready()
+        if not ok:
+            raise SubsystemtIsNotReadyError(
+                message,
+                response_message=u'Pod cannot be started, because DNS '
+                                 u'management subsystem is misconfigured. '
+                                 u'Please, contact administrator.'
+            )
+        custom_domain = getattr(pod, 'custom_domain', None)
+        if custom_domain:
+            if not pod_domains.validate_domain_reachability(custom_domain):
+                raise CustomDomainIsNotReady(domain=custom_domain)
 
     def assign_public_ip(self, pod_id, node=None):
         """Returns assigned ip"""
@@ -1290,8 +1329,8 @@ class PodCollection(object):
         # were not released, then it will free them. If PD's already free, then
         # this call will do nothing.
         PersistentDisk.free(pod.id)
-        if (pod.status in (POD_STATUSES.stopping, POD_STATUSES.preparing,)
-                and pod.k8s_status is None):
+        if (pod.status in (POD_STATUSES.stopping, POD_STATUSES.preparing,) and
+                pod.k8s_status is None):
             pod.set_status(POD_STATUSES.stopped, send_update=True)
             return pod.as_dict()
         elif pod.status not in (POD_STATUSES.stopped, POD_STATUSES.unpaid):
@@ -1307,6 +1346,12 @@ class PodCollection(object):
                             u'later.'.format(pod.name)))
                 else:
                     scale_replicationcontroller_task.apply_async((pod.id,))
+
+                # Remove ingresses if shared IP was used
+                if hasattr(pod, 'domain'):
+                    client = ingress_resource.IngressResourceClient()
+                    client.remove_by_name(pod.namespace)
+
                 return pod.as_dict()
                 # FIXME: else: ??? (what if pod has no "sid"?)
         elif raise_:
@@ -1824,8 +1869,10 @@ def prepare_and_run_pod(pod, db_pod, db_config):
                 ok, message = dns_management.create_or_update_record(
                     pod.domain, 'A')
             if ok:
+                custom_domain = getattr(pod, 'custom_domain', None)
                 ok, message = ingress_resource.create_ingress(
-                    pod.containers, pod.namespace, pod.domain, pod.service,
+                    pod.containers, pod.namespace, pod.service, pod.domain,
+                    custom_domain,
                     pod.certificate)
             if not ok:
                 msg = u'Failed to run pod with domain "{}": {}'
@@ -1935,14 +1982,12 @@ def run_service(pod):
 
     """
     resolve = getattr(pod, 'kuberdock_resolve', [])
-    domain = getattr(pod, 'domain', None)
     ports, public_ports = get_ports(pod)
     publicIP = getattr(pod, 'public_ip', None)
     if publicIP == 'true':
         publicIP = None
     public_svc = ingress_public_ports(pod.id, pod.namespace,
-                                      public_ports, pod.owner, publicIP,
-                                      domain)
+                                      public_ports, pod.owner, publicIP)
     cluster_ip = getattr(pod, 'podIP', None)
     local_svc = ingress_local_ports(pod.id, pod.namespace, ports,
                                     resolve, cluster_ip)
@@ -1968,27 +2013,15 @@ def ingress_local_ports(pod_id, namespace, ports,
         return rv
 
 
-def ingress_public_ports(pod_id, namespace, ports, owner, publicIP=None,
-                         domain=None):
+def ingress_public_ports(pod_id, namespace, ports, owner, publicIP=None):
     """Ingress public ports with cloudprovider specific methods
     :param pod_id: pod id
     :param namespace: pod namespace
     :param ports: list of ports to ingress, see get_ports
     :param owner: pod owner
     :param publicIP: publicIP to ingress. Optional.
-    :param domain: domain of a pod. Optional, only used in shared IP case
-    """
-    # For now in shared IP case a pod needs to have a rechable 80 port
-    # Which ingress frontend uses to proxy traffic. It does not need the public
-    # service, but needs a public port policy
-    if domain:
-        shared_ip_ports = [{'name': 'c0-p80',
-                            'protocol': 'TCP',
-                            'port': '80',
-                            'targetPort': '80'}]
-        set_public_ports_policy(namespace, shared_ip_ports, owner)
-        return
 
+    """
     svc = get_service_provider()
     services = svc.get_by_pods(pod_id)
     if not services and ports:

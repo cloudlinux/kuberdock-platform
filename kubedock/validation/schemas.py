@@ -440,6 +440,7 @@ edited_pod_config_schema = {
         'internal_only': True,
     },
     'domain': domain_schema,
+    'custom_domain': domain_schema,
 }
 
 new_pod_schema = deepcopy(edited_pod_config_schema)

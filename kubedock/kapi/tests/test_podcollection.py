@@ -8,11 +8,14 @@ from uuid import uuid4
 
 import ipaddress
 import mock
+import responses
+import re
 
 from kubedock.testutils import create_app
 from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
 from kubedock.kapi import helpers
 from kubedock.kapi.lbpoll import PUBLIC_SVC_TYPE
+from .. import pod_domains
 from .. import pod as kapi_pod
 from .. import podcollection
 from ..images import Image
@@ -27,6 +30,21 @@ from ...pods.models import Pod as DBPod
 global_patchers = [
     mock.patch.object(podcollection, 'licensing'),
 ]
+
+
+def mock_k8s_ingress_endpoints():
+    base_url = r'http://{}:{}/'.format(settings.KUBE_API_HOST, settings.KUBE_API_PORT)
+    url_re = re.compile(
+        base_url + 'apis/extensions/v1beta1/namespaces/.+/ingresses')
+
+    responses.add(responses.GET, url_re, body='{"kind": "ingress"}', status=200,
+                  content_type='application/json')
+
+    url_re = re.compile(
+        base_url + 'apis/extensions/v1beta1/namespaces/.+/ingresses/?.*')
+    responses.add(responses.DELETE, url_re, status=200,
+                  body='{"kind": "Status", "code": 200, "status": "Success"}',
+                  content_type='application/json')
 
 
 def setUpModule():
@@ -603,8 +621,9 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         create_ingress_mock.assert_called_once_with(
             self.test_pod.containers,
             self.test_pod.namespace,
-            self.test_pod.domain,
             self.test_pod.service,
+            self.test_pod.domain,
+            self.test_pod.custom_domain,
             self.test_pod.certificate,
         )
         self.assertEqual(res, self.test_pod.as_dict.return_value)
@@ -798,8 +817,9 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         create_ingress_mock.assert_called_once_with(
             self.test_pod.containers,
             self.test_pod.namespace,
-            self.test_pod.domain,
             self.test_pod.service,
+            self.test_pod.domain,
+            self.test_pod.custom_domain,
             self.test_pod.certificate,
         )
         self.assertEqual(res, self.test_pod.as_dict.return_value)
@@ -822,6 +842,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         self.assertTrue(self.pod_collection.has_public_ports(test_conf))
         self.assertFalse(self.pod_collection.has_public_ports(test_conf2))
 
+    @mock.patch.object(pod_domains, 'validate_domain_reachability')
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
     @mock.patch.object(podcollection, 'prepare_and_run_pod_task')
     @mock.patch.object(podcollection, 'get_replicationcontroller')
@@ -831,7 +852,9 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
     @mock.patch.object(podcollection, 'db')
     def test_apply_edit_called(self, mock_db, is_domain_system_ready_mock,
                                DBPod, IpState, get_replicationcontroller,
-                               prepare_and_run_pod_task, _make_namespace):
+                               prepare_and_run_pod_task, _make_namespace,
+                               domain_check_mock):
+        domain_check_mock.return_value = True
         config = {'volumes': [], 'service': self.test_service_name}
         DBPod.query.get().get_dbconfig.return_value = config
         self.test_pod.prepare = mock.Mock(return_value=self.valid_config)
@@ -853,6 +876,7 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
                           '_get_pods', '_merge')
         self.pod_collection = podcollection.PodCollection(U())
 
+    @responses.activate
     @mock.patch.object(podcollection.PersistentDisk, 'free')
     @mock.patch.object(podcollection.scale_replicationcontroller_task,
                        'apply_async')
@@ -862,6 +886,8 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         :type del_: mock.Mock
         :type rif: mock.Mock
         """
+        mock_k8s_ingress_endpoints()
+
         pod = fake_pod(
             use_parents=(mock.Mock,),
             status=POD_STATUSES.running,
@@ -886,6 +912,7 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         self.assertEqual(pod.containers[0]['state'], POD_STATUSES.running)
         self.assertEqual(res, pod.as_dict.return_value)
 
+    @responses.activate
     @mock.patch.object(podcollection.PersistentDisk, 'free')
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection, 'scale_replicationcontroller')
@@ -898,6 +925,7 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
         """
         Test stop_unpaid in usual case
         """
+        mock_k8s_ingress_endpoints()
         pod = fake_pod(
             id='119fd339-f12c-4be3-bfa1-2e82001d0811',
             use_parents=(mock.Mock,),
@@ -918,6 +946,12 @@ class TestPodCollectionStopPod(unittest.TestCase, TestCaseMixin):
                 'state': POD_STATUSES.stopped,
             }]
         )
+
+        def fake_wait_pod_status(pod_id, *args, **kwargs):
+            return {pod.id: pod for pod in [pod, pod2]}[pod_id]
+
+        wait_pod_status.side_effect = fake_wait_pod_status
+
         _get_by_id.return_value = pod2
 
         # Actual call

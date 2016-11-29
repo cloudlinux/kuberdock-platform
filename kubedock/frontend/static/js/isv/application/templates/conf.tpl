@@ -8,15 +8,13 @@
 </div>
 
 <div class="row">
-    <div class="col-sm-12">
-        <ul class="nav nav-tabs">
-            <% _.each(containers, function(container, i){ %>
-                <li class="container-tab <%- current_tab_num == i ? 'active' : ''
-                 %>"
-                    data-name="<%- container.name%>"><%- container.image %></li>
-            <% }) %>
-        </ul>
-    </div>
+    <ul class="nav nav-tabs col-sm-12">
+        <% _.each(containers, function(container, i){ %>
+            <li class="container-tab <%- current_tab_num == i ? 'active' : ''
+             %>"
+                data-name="<%- container.name%>"><%- container.image %></li>
+        <% }) %>
+    </ul>
 </div>
 
 <div class="row">

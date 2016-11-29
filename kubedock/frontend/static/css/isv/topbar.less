@@ -8,6 +8,11 @@
         right: 0;
         z-index: 2;
         position: absolute;
+        @media only screen and (max-width: 640px) {
+            position: initial;
+            text-align: right;
+            margin-bottom: 25px;
+        }
     }
     .active-button{
         .border-radius(2px);
@@ -21,6 +26,7 @@
         min-width: 105px;
         line-height: 32px;
         text-align: center;
+        margin-left: 36px;
         background-color: #299aed;
         &:hover{
             .box-shadow(0 5px 11px 0 rgba(0, 0, 0, 0.18));
@@ -65,8 +71,8 @@
         .transform-origin(bottom);
     }
     .btn-group{
-        margin-left: 40px;
-        margin-right: 10px;
+        // margin-left: 40px;
+        // margin-right: 10px;
         &.controls{
             &.open{
                 .dropdown-toggle{
@@ -109,6 +115,7 @@
                 z-index: 2;
                 left: -22px;
                 border: none;
+                min-width: 140px;
                 padding-top: 40px;
                 li{
                     > *{

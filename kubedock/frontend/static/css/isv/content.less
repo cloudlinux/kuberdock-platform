@@ -63,7 +63,11 @@
     ul{
         &.nav{
             &.nav-tabs{
+                padding-left: initial;
                 border-bottom: 1px solid #e4e4e4;
+                @media only screen and (max-width: 768px) {
+                    padding-left: 15px;
+                }
                 li{
                     &.container-tab{
                         .border-radiuses(3px, 0, 0, 3px);

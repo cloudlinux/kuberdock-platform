@@ -111,12 +111,12 @@ export const Conf = Marionette.LayoutView.extend({
         this.updateContainerInfo();
     },
     updateContainerInfo(){
-        let direct_access = this.model.get('direct_access'),
-            link = direct_access ? direct_access.links[this.containerName] : null,
+        let directAccess = this.model.get('direct_access'),
+            link = directAccess ? directAccess.links[this.containerName] : null,
             containerInfo = new Backbone.Model({
                 name: this.containerName,
                 link: link,
-                auth: direct_access ? direct_access.auth : '',
+                auth: directAccess ? directAccess.auth : '',
             });
         this.currentContainer.show(
             new ContainerConfig({model: containerInfo})

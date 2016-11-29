@@ -293,6 +293,17 @@ class DomainZoneDoesNotExist(APIError):
         super(DomainZoneDoesNotExist, self).__init__(details=details)
 
 
+class CustomDomainIsNotReady(APIError):
+    status_code = 400
+    message_template = \
+        "Custom domain {domain} does not resolve yet. " \
+        "Please check your DNS records or wait till DNS zone update propagates"
+
+    def __init__(self, domain):
+        details = {'domain': domain}
+        super(CustomDomainIsNotReady, self).__init__(details=details)
+
+
 class CanNotRemoveIPPool(APIError):
     message_template = 'Can not remove IP Pool. {message}'
 

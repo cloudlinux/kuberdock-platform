@@ -28,7 +28,7 @@ Vagrant.configure(2) do |config|
   #Disable default sync folder
   config.vm.synced_folder ".", "/vagrant", disabled: true
 
-  rsyncExcludes = [".git/", ".venv/", "ceph_settings.py"]
+  rsyncExcludes = [".git/", ".venv/", "ceph_settings.py", ".license"]
 
   gitignoreFile = File.expand_path("../../../.gitignore", __FILE__)
   if File.readable?(gitignoreFile)

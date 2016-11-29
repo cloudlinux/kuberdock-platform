@@ -1,10 +1,12 @@
 import re
-from copy import deepcopy, copy
+from copy import copy, deepcopy
 
 import pytz
 
 from kubedock.constants import DOMAINNAME_LENGTH
 from kubedock.users import User
+from OpenSSL import crypto
+
 from .coerce import extbool, get_user
 
 PATH_LENGTH = 512
@@ -263,6 +265,30 @@ pod_resolve_schema = {
     }
 }
 
+
+def validate_cert(field, value, error):
+    try:
+        crypto.load_certificate(crypto.FILETYPE_PEM, value)
+    except:
+        error(field, 'Certificate must be in a PEM format')
+
+
+def validate_cert_key(field, value, error):
+    try:
+        crypto.load_privatekey(crypto.FILETYPE_PEM, value)
+    except:
+        error(field, 'Private Key must be in a PEM format')
+
+
+certificate_schema = {
+    'type': 'dict',
+    'nullable': True,
+    'schema': {
+        'cert': {'validator': validate_cert, 'required': True},
+        'key': {'validator': validate_cert_key, 'required': True},
+    }
+}
+
 edited_pod_config_schema = {
     'podIP': {
         'type': 'ipv4',
@@ -426,20 +452,14 @@ edited_pod_config_schema = {
             }
         }
     },
-    'certificate': {
-        'type': 'dict',
-        'nullable': True,
-        'schema': {
-            'cert': {'type': 'string', 'nullable': True},
-            'key': {'type': 'string', 'nullable': True},
-        }
-    },
+    'certificate': certificate_schema,
     'serviceAccount': {
         'type': 'boolean',
         'required': False,
         'internal_only': True,
     },
     'domain': domain_schema,
+    'custom_domain': domain_schema,
 }
 
 new_pod_schema = deepcopy(edited_pod_config_schema)

@@ -75,6 +75,7 @@ Requires: pytz >= 2012d
 Requires: PyYAML
 Requires: python-cloudflare
 Requires: python-etcd
+Requires: pyOpenSSL
 
 # AutoReq: 0
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)

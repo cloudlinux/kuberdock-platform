@@ -249,10 +249,9 @@ class Pipeline(object):
         pass
 
     @classmethod
-    def from_name(cls, name):
-        # type: (str) -> Pipeline
+    def class_from_name(cls, name):
         """
-        Fabric method for creating a specific pipeline class instance
+        Fabric method for returning a specific pipeline class
         depending on a given pipe's full name (name_threadID)
         """
 
@@ -265,7 +264,16 @@ class Pipeline(object):
         if pipe_name not in available:
             raise PipelineNotFound(name)
 
-        return available[pipe_name](name)
+        return available[pipe_name]
+
+    @classmethod
+    def from_name(cls, name):
+        # type: (str) -> Pipeline
+        """
+        Fabric method for creating a specific pipeline class instance
+        depending on a given pipe's full name (name_threadID)
+        """
+        return cls.class_from_name(name)(name)
 
 
 class UpgradedPipelineMixin(object):

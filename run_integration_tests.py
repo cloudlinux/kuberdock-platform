@@ -224,7 +224,8 @@ def _filter_by_infra_provider(pipelines, infra_provider):
     return {
         k: v
         for k, v in pipelines.items() if
-        Pipeline.from_name("{}_{}".format(*k)).INFRA_PROVIDER == infra_provider
+        Pipeline.class_from_name("{}_{}".format(*k)
+                                 ).INFRA_PROVIDER == infra_provider
         }
 
 

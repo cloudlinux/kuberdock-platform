@@ -116,6 +116,8 @@
     - timezone
 
 - include: predefined_apps.yml
+  tags:
+    - predefined_apps
 
 - include: kdctl.yml
 

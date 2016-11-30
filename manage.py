@@ -131,8 +131,8 @@ def wait_for_nodes(nodes_list, timeout, verbose=False):
         if time.time() > wait_end:
             remaining_nodes = [Node.get_by_name(nhost) for nhost in nodes_list]
             raise WaitTimeoutException(
-                "These nodes did not become 'running' in a given timeout {}s:\n"
-                "{}".format(timeout, remaining_nodes))
+                "These nodes did not become 'running' in a given "
+                "timeout {}s:\n{}".format(timeout, remaining_nodes))
 
         time.sleep(WAIT_RETRY_DELAY)
 

@@ -18,18 +18,13 @@
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
   tags:
-    - deploy
     - non_aws
 
 - set_fact: _hostname={{ hostvars[item].ansible_fqdn or hostvars[item].ansible_hostname }}
   with_items: "{{ groups['node'] }}"
   register: _hostnames
-  tags:
-    - node_deploy
 
 - set_fact: hostnames="{{ _hostnames.results|map(attribute='ansible_facts._hostname')|list|join(',')}}"
-  tags:
-    - node_deploy
 
 - name: Wait for nodes
   run_once: true
@@ -39,32 +34,22 @@
   changed_when: False
   register: wait_for_nodes_result
   ignore_errors: True
-  tags:
-    - node_deploy
 
 - name: Fetching node deploy log
   fetch: src="{{ node_deploy_log_file }}" dest={{ node_deploy_log_file_dst }} fail_on_missing=yes flat=yes
   when: wait_for_nodes_result|failed
   delegate_facts: True
   delegate_to: "{{ groups['master'][0] }}"
-  tags:
-    - node_deploy
 
 - set_fact:
     deploy_log: "{{ lookup('file', node_deploy_log_file_dst).split('\n') }}"
   when: wait_for_nodes_result|failed
-  tags:
-    - node_deploy
 
 - debug: var=deploy_log
   when: wait_for_nodes_result|failed
-  tags:
-    - node_deploy
 
 - fail: msg="=== Node `{{ ansible_hostname }}` deploy failed ==="
   when: wait_for_nodes_result|failed
-  tags:
-    - node_deploy
 
 - group: name=docker state=present
 - name: Adding existing user to group docker
@@ -77,10 +62,3 @@
 - name: Restart docker
   service: name=docker state=restarted
   when: docker_user.changed
-
-- name: restart emperor
-  run_once: true
-  service: name=emperor.uwsgi state=restarted
-  delegate_facts: True
-  delegate_to: "{{ groups['master'][0] }}"
-  when: hostvars[groups['master'][0]].restart_emperor|changed

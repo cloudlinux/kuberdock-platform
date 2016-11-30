@@ -15,10 +15,10 @@ test_users = [
 
 
 def _setup_restore_test(cluster):
-    _clear_master(cluster)
+    _cleanup_master(cluster)
 
 
-@pipeline("master_backup_restore", skip_reason="FIXME in AC-5035")
+@pipeline("master_backup_restore")
 @hooks(setup=_setup_restore_test)
 def test_master_backup_restore(cluster):
     # Backup master after it was cleared from pods, PAs, node etc.
@@ -45,15 +45,14 @@ def test_master_backup_restore(cluster):
     non_empty_master_state.compare(_MasterState(cluster))
 
 
-def _clear_master(cluster):
+def _cleanup_master(cluster):
     """
-    Remove all pods, IP pools, PAs and node from master
+    Remove all pods, IP pools, PAs from master
     """
     cluster.ip_pools.clear()
     cluster.pods.clear()
     cluster.pvs.clear()
     cluster.pas.delete_all()
-    cluster.nodes.get_node("node1").delete()
     cluster.set_system_setting(DEFAULT_SETTING_VALUE, name=SETTING_NAME)
 
 

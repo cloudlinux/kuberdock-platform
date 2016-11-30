@@ -1,6 +1,7 @@
 import App from 'isv/app';
 import * as utils from 'app_data/utils';
 import 'backbone-associations';
+import 'backbone.paginator';
 import numeral from 'numeral';
 
 Backbone.syncOrig = Backbone.sync;
@@ -280,3 +281,26 @@ PodCollection = Backbone.Collection.extend({
     parse: utils.restUnwrapper,
 });
 App.getPodCollection = App.resourcePromiser('podCollection', PodCollection);
+
+// Backup stuff
+
+export let Backup, BackupCollection;
+
+Backup = Backbone.Model.extend({
+    defaults: {
+        timestamp: '1970-01-01 00:00:00',
+        size: '0.0GB'
+    }
+});
+
+BackupCollection = Backbone.PageableCollection.extend({
+    url: apiUrl('podapi', 'backup'),
+    model: Backup,
+    parse: utils.restUnwrapper,
+    mode: 'client',
+    state: {
+        pageSize: 8,
+    },
+});
+
+App.getBackupCollection = App.resourcePromiser('backupCollection', BackupCollection);

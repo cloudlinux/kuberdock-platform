@@ -11,6 +11,7 @@ from ..login import auth_required
 from ..pods.models import Pod
 from ..rbac import check_permission
 from ..system_settings.models import SystemSettings
+from ..tasks import make_backup
 from ..utils import KubeUtils, register_api, catch_error
 from ..validation import check_new_pod_data, check_change_pod_data, \
     owner_optional_schema, owner_mandatory_schema
@@ -237,3 +238,14 @@ def restore(pod_dump, owner, **kwargs):
 def get_plans_info_for_pod(pod_id):
     current_user = KubeUtils.get_current_user()
     return PredefinedApp.get_plans_info_for_pod(pod_id, user=current_user)
+
+
+@podapi.route('/backup', methods=['GET', 'POST'])
+@auth_required
+@KubeUtils.jsonwrap
+def backup_list():
+    if request.method == 'GET':
+        return [
+            {'id': 1, 'timestamp': '2016-11-28 23:11:33', 'size': '1.3GB'},
+            {'id': 2, 'timestamp': '2016-11-29 23:15:07', 'size': '1.1GB'}]
+    make_backup.delay()

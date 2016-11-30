@@ -609,3 +609,22 @@ def update_node_multiplier(target, value, oldvalue, initiator):
             db.session.add(action)
         db.session.commit()
         process_node_actions.delay(action_type=target.name)
+
+
+@celery.task()
+def make_backup():
+    for node in Node.query.all():
+        ssh, err = ssh_connect(node.ip)
+        if err:
+            continue
+        i, o, e = ssh.exec_command('kd-backup-node /var/data', get_pty=True)
+        with open('/tmp/out.txt', 'a') as f:
+            try:
+                while not o.channel.exit_status_ready():
+                    data = o.channel.recv(1024)
+                    while data:
+                        f.write(data)
+                        data = o.channel.recv(1024)
+                    time.sleep(0.2)
+            except socket.timeout:
+                continue

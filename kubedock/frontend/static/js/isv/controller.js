@@ -5,6 +5,7 @@ import * as utils from 'app_data/utils';
 import {Details as AppDetailsView,
         Conf as AppConfView,
         } from 'isv/application/views';
+import {Backup as AppBackupView} from 'isv/backup/views';
 import {Topbar, Sidebar} from 'isv/misc/views';
 
 const controller = {
@@ -51,8 +52,23 @@ const controller = {
     },
 
     appBackups(){
-        console.log('show appBackups');
-        App.rootLayout.contents.empty();
+        utils.preloader2.show();
+        $.when(App.getPodCollection(), App.getBackupCollection())
+                .then((podCollection, backupCollection) => {
+            const pod = podCollection.at(0);
+            if (!pod){
+                utils.notifyWindow('Application not found');
+                // TODO: redirect to "order app" page
+                return;
+            }
+            var backupView = new AppBackupView({collection: backupCollection});
+            App.rootLayout.contents.show(backupView);
+            if (!App.rootLayout.topbar.hasView())
+                App.rootLayout.topbar.show(new Topbar({model: pod}));
+            if (!App.rootLayout.sidebar.hasView())
+                App.rootLayout.sidebar.show(new Sidebar());
+            utils.preloader2.hide();
+        });
     },
 };
 

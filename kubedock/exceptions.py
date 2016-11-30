@@ -220,6 +220,10 @@ class BillingExc(object):
         message_template = 'An internal error occurred (billing): {message}'
 
 
+class ContainerCommandExecutionError(APIError):
+    message_template = 'Failed to execute command in container.'
+
+
 class AlreadyExistsError(APIError):
     message_template = 'Resource already exists'
     status_code = 409

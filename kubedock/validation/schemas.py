@@ -263,6 +263,31 @@ pod_resolve_schema = {
     }
 }
 
+app_commands_schema = {
+    'type': 'dict',
+    'nullable': True,
+    'valueschema': {
+        'type': 'dict',
+        'schema': {
+            'type': {
+                'type': 'string',
+                'required': True,
+                'empty': False,
+                'allowed': [
+                    'execInContainer',
+                    # 'httpRequest',
+                ],
+            },
+            'container': container_name_schema,
+            'command': {
+                'type': 'string',
+                'required': True,
+                'empty': False,
+            },
+        },
+    },
+}
+
 edited_pod_config_schema = {
     'podIP': {
         'type': 'ipv4',
@@ -441,6 +466,7 @@ edited_pod_config_schema = {
     },
     'domain': domain_schema,
     'custom_domain': domain_schema,
+    'appCommands': app_commands_schema,
 }
 
 new_pod_schema = deepcopy(edited_pod_config_schema)
@@ -709,6 +735,7 @@ predefined_apps_kuberdock_schema = {
             'schema': app_package_schema,
         },
     },
+    'commands': app_commands_schema,
     'resolve': pod_resolve_schema,
 }
 predefined_apps_spec_schema = {

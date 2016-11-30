@@ -21,19 +21,41 @@ export const Details = Marionette.ItemView.extend({
     },
 
     ui: {
-        tooltip : '[data-toggle="tooltip"]'
+        tooltip: '[data-toggle="tooltip"]',
+        resetAdminPassword: '.reset-admin-password',
+        copyAdminPassword: '.copy-password',
+    },
+
+    events: {
+        'click @ui.resetAdminPassword': 'resetAdminPassword',
+        'click @ui.copyAdminPassword': 'copyAdminPassword',
     },
 
     onDomRefresh(){ this.ui.tooltip.tooltip(); },
 
     templateHelpers(){
         return {
+            prettyStatus: this.model.getPrettyStatus(),
             appLastUpdate: utils.localizeDatetime({
                 dt: this.model.get('appLastUpdate'),
                 formatString: 'YYYY-MM-DD HH:mm:ss (z)',
             }),
         };
-    }
+    },
+    resetAdminPassword(){
+        this.model.resetPassword().then(({exitStatus = 1, result = ''} = {}) => {
+            if (exitStatus !== 0)
+                return utils.notifyWindow(
+                    `Failed to reset password: ${exitStatus}${result ? ', ' + result : ''}`);
+            this.adminPassword = result;
+            this.ui.copyAdminPassword.removeClass('hidden');
+            utils.notifyWindow('Admin password was reset successfully. ' +
+                               'You can copy it to clipboard now.', 'success');
+        });
+    },
+    copyAdminPassword(){
+        utils.copyLink(this.adminPassword, 'Admin password copied to clipboard.');
+    },
 });
 
 export const ContainerConfig = Marionette.ItemView.extend({

@@ -1,6 +1,9 @@
 import json
+import paramiko
+import pytz
 from collections import defaultdict
 from crypt import crypt
+from datetime import datetime
 from os import path
 from uuid import uuid4
 
@@ -18,6 +21,7 @@ from helpers import (
     KubeQuery, K8sSecretsClient, K8sSecretsBuilder, LocalService)
 from images import Image
 from kubedock.exceptions import (
+    ContainerCommandExecutionError, NotFound,
     NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError, ServicePodDumpError,
     CustomDomainIsNotReady)
 from kubedock.kapi.lbpoll import get_service_provider
@@ -1017,6 +1021,7 @@ class PodCollection(object):
                 pod.forbidSwitchingAppPackage = db_pod_config.get(
                     'forbidSwitchingAppPackage')
                 pod.appLastUpdate = db_pod_config.get('appLastUpdate')
+                pod.appCommands = db_pod_config.get('appCommands')
 
                 pod.public_access_type = db_pod_config.get(
                     'public_access_type', PublicAccessType.PUBLIC_IP)
@@ -1091,11 +1096,13 @@ class PodCollection(object):
             new_config['forbidSwitchingAppPackage'] = 'the pod was edited'
         fields_to_copy = ['podIP', 'service', 'postDescription', 'public_ip',
                           'public_aws', 'domain', 'base_domain',
-                          'public_access_type']
+                          'public_access_type', 'appVariables']
         for k in fields_to_copy:
             v = getattr(old_pod, k, None)
             if v is not None:
                 new_config[k] = v
+        updated_dt = datetime.utcnow().replace(tzinfo=pytz.UTC).isoformat()
+        new_config['appLastUpdate'] = updated_dt
 
         # re-check images, PDs, etc.
         new_config, _ = self._preprocess_new_pod(
@@ -1416,6 +1423,32 @@ class PodCollection(object):
         finish_redeploy.delay(pod.id, data)
         # return updated pod
         return PodCollection(owner=self.owner).get(pod.id, as_json=False)
+
+    def exec_in_container(self, pod_id, container_name, command):
+        k8s_pod = self._get_by_id(pod_id)
+        ssh_access = getattr(k8s_pod, 'direct_access', None)
+        if not ssh_access:
+            raise ContainerCommandExecutionError(
+                "Couldn't access the contianer")
+        if container_name not in ssh_access['links']:
+            raise NotFound('Container not found')
+        username, host = ssh_access['links'][container_name].split('@', 1)
+
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        try:
+            ssh.connect(host, username=username, password=ssh_access['auth'],
+                        timeout=10, look_for_keys=False, allow_agent=False)
+        except Exception:
+            raise ContainerCommandExecutionError(
+                'Failed to connect to the container')
+        try:
+            _, o, _ = ssh.exec_command(command, timeout=20)
+            exit_status = o.channel.recv_exit_status()
+            result = o.read().strip('\n')
+        except Exception:
+            raise ContainerCommandExecutionError()
+        return {'exitStatus': exit_status, 'result': result}
 
     def reset_direct_access_pass(self, pod_id, new_pass=None):
         """Change ssh password to `new_pass` if set, or generate new one.

@@ -1411,6 +1411,7 @@ def process_pod(pod, rc, service, template_id=None):
         'kube_type': kdSection.get(
             'kubeType', plan.get('kubeType', Kube.get_default_kube_type())),
         'postDescription': kdSection.get('postDescription'),
+        'appCommands': kdSection.get('commands'),
         'kuberdock_template_id': kdSection.get('kuberdock_template_id',
                                                template_id),
         'kuberdock_plan_name': plan.get('name'),

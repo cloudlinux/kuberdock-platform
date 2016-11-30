@@ -13,6 +13,10 @@ Backbone.sync = function(method, model, options){
 
 export const apiUrl = (...path) => [App.config.apiHost, 'api', ...path].join('/');
 
+export const getParentWithType = function(model, typeOfPatent, throughCollection){
+    return _.find(model.parents || [], parent => parent instanceof typeOfPatent);
+};
+
 
 export const CurrentUserModel = Backbone.Model.extend({
     url: apiUrl('users/editself'),
@@ -185,6 +189,14 @@ Container = Backbone.AssociatedModel.extend({
             terminationMessagePath: null,
         };
     },
+    getPod(){ return getParentWithType(this.collection, Pod); },
+    exec(command){
+        return new Promise((resolve, reject) => {
+            let url = apiUrl('podapi', this.getPod().id, this.get('name'), 'exec');
+            $.ajax({url, data: {command}, authWrap: true, method: 'POST'})
+                .then(response => resolve(utils.restUnwrapper(response)), reject);
+        });
+    },
 });
 
 Pod = Backbone.AssociatedModel.extend({
@@ -206,6 +218,8 @@ Pod = Backbone.AssociatedModel.extend({
             name: 'Nameless',
             containers: [],
             volumes: [],
+            appCommands: {},
+            ready: false,
             replicas: 1,
             restartPolicy: 'Always',
             node: null,
@@ -213,6 +227,19 @@ Pod = Backbone.AssociatedModel.extend({
             status: 'stopped',
             custom_domain: null,
         };
+    },
+
+    resetPassword(){
+        return new Promise((resolve, reject) => {
+            const action = this.get('appCommands', {}).resetPassword;
+            if (!action)
+                return reject("Application doesn't support this action.");
+            const container = this.get('containers')
+                .findWhere({name: action.container});
+            if (!container)
+                return reject(`Container "${action.container}" was not found.`);
+            container.exec(action.command).then(resolve, reject);
+        });
     },
 
     resetSshAccess(){
@@ -241,6 +268,15 @@ Pod = Backbone.AssociatedModel.extend({
         let data = _.extend(this.changedAttributes() || {},
                             {command, commandOptions});
         return this.save(data, {wait: true, patch: true});
+    },
+
+    getPrettyStatus(){
+        let status = this.get('status');
+        if (status === 'running' && !this.get('ready'))
+            return 'pending';
+        else if (status === 'preparing')
+            return 'deploying';
+        return status || 'stopped';
     },
 
     /**

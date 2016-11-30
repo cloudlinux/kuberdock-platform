@@ -21,6 +21,17 @@ podapi = Blueprint('podapi', __name__, url_prefix='/podapi')
 
 schema = {'owner': owner_optional_schema}
 
+def check_owner_permissions(owner=None, action='get'):
+    current_user = KubeUtils.get_current_user()
+    owner = owner or current_user
+
+    check_permission('own', 'pods', user=owner).check()
+    if owner == current_user:
+        check_permission(action, 'pods').check()
+    else:
+        check_permission('{}_non_owned'.format(action), 'pods').check()
+    return owner
+
 
 class PodsAPI(KubeUtils, MethodView):
     decorators = [KubeUtils.jsonwrap, KubeUtils.pod_start_permissions,
@@ -28,30 +39,14 @@ class PodsAPI(KubeUtils, MethodView):
 
     @use_kwargs(schema)
     def get(self, pod_id, owner=None):
-        current_user = self.get_current_user()
-        owner = owner or current_user
-
-        check_permission('own', 'pods', user=owner).check()
-        if owner == current_user:
-            check_permission('get', 'pods').check()
-        else:
-            check_permission('get_non_owned', 'pods').check()
-
+        owner = check_owner_permissions(owner)
         return PodCollection(owner).get(pod_id, as_json=False)
 
     @maintenance_protected
     @catch_error(action='notify', trigger='resources')
     @use_kwargs(schema, allow_unknown=True)
     def post(self, owner=None, **params):
-        current_user = self.get_current_user()
-        owner = owner or current_user
-
-        check_permission('own', 'pods', user=owner).check()
-        if owner == current_user:
-            check_permission('create', 'pods').check()
-        else:
-            check_permission('create_non_owned', 'pods').check()
-
+        owner = check_owner_permissions(owner, 'create')
         params = check_new_pod_data(params, owner)
         return PodCollection(owner).add(params)
 
@@ -117,15 +112,7 @@ class PodsAPI(KubeUtils, MethodView):
     @maintenance_protected
     @use_kwargs(schema)
     def delete(self, pod_id, owner=None):
-        current_user = self.get_current_user()
-        owner = owner or current_user
-
-        check_permission('own', 'pods', user=owner).check()
-        if owner == current_user:
-            check_permission('delete', 'pods').check()
-        else:
-            check_permission('delete_non_owned', 'pods').check()
-
+        owner = check_owner_permissions(owner, 'delete')
         pods = PodCollection(owner)
         return pods.delete(pod_id)
 
@@ -138,15 +125,7 @@ register_api(podapi, PodsAPI, 'podapi', '/', 'pod_id')
 @KubeUtils.jsonwrap
 @use_kwargs(schema)
 def check_updates(pod_id, container_name, owner=None):
-    current_user = KubeUtils.get_current_user()
-    owner = owner or current_user
-
-    check_permission('own', 'pods', user=owner).check()
-    if owner == current_user:
-        check_permission('get', 'pods').check()
-    else:
-        check_permission('get_non_owned', 'pods').check()
-
+    owner = check_owner_permissions(owner)
     return PodCollection(owner).check_updates(pod_id, container_name)
 
 
@@ -155,16 +134,19 @@ def check_updates(pod_id, container_name, owner=None):
 @KubeUtils.jsonwrap
 @use_kwargs(schema)
 def update_container(pod_id, container_name, owner=None):
-    current_user = KubeUtils.get_current_user()
-    owner = owner or current_user
-
-    check_permission('own', 'pods', user=owner).check()
-    if owner == current_user:
-        check_permission('get', 'pods').check()
-    else:
-        check_permission('get_non_owned', 'pods').check()
-
+    owner = check_owner_permissions(owner)
     return PodCollection(owner).update_container(pod_id, container_name)
+
+
+@podapi.route('/<pod_id>/<container_name>/exec', methods=['POST'])
+@auth_required
+@KubeUtils.jsonwrap
+@use_kwargs(dict(schema, command={
+    'type': 'string', 'required': True, 'empty': False}))
+def exec_in_container(pod_id, container_name, owner=None, command=''):
+    owner = check_owner_permissions(owner)
+    return PodCollection(owner).exec_in_container(
+        pod_id, container_name, command)
 
 
 @podapi.route('/<pod_id>/reset_direct_access_pass', methods=['GET'])

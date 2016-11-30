@@ -52,7 +52,7 @@ export const Topbar = Marionette.ItemView.extend({
         window.open(`http://${this.model.get('domain')}/`, '_blank').focus();
     },
     restart(){
-        this.model.command('restart');
+        this.model.command('redeploy');
     },
     start(){
         this.model.command('start');

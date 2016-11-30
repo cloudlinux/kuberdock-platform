@@ -4,7 +4,7 @@
 <div class="col-xs-12 col-sm-10 isv-block">
     <p>SSH link:
         <% if (link) { %>
-            <span class="ssh-link"><%- link %></span>
+            <a class="ssh-link" href="ssh://<%- link %>/"><%- link %></a>
             <span class="copy-ssh-link" data-toggle="tooltip" data-placement="top" data-original-title="Copy ssh link to clipboard"></span>
         <% } else { %>
             SSH access credentials are outdated.

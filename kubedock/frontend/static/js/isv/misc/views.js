@@ -6,11 +6,18 @@ import topbarTpl from './templates/topbar.tpl';
 
 // import 'tooltip';
 
-
 export const Sidebar = Marionette.ItemView.extend({
     template: sidebarTpl,
     onBeforeShow(){ utils.preloader2.show(); },
     onShow(){ utils.preloader2.hide(); },
+    initialize(options){
+        this.tab = options.tab;
+    },
+    templateHelpers(){
+        return {
+            tab : this.tab
+        };
+    }
 });
 
 

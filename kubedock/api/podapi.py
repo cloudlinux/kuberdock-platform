@@ -1,4 +1,4 @@
-from flask import Blueprint
+from flask import Blueprint, request
 from flask.views import MethodView
 
 from .utils import use_kwargs

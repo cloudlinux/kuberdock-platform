@@ -14,12 +14,11 @@ const controller = {
         // TODO: redirect to WHMCS -> login -> redirect back with SSO?
     },
 
-    showApplicationView(view){
+    showApplicationView(view, tab){
         App.rootLayout.contents.show(view);
         if (!App.rootLayout.topbar.hasView())
             App.rootLayout.topbar.show(new Topbar({model: view.model}));
-        if (!App.rootLayout.sidebar.hasView())
-            App.rootLayout.sidebar.show(new Sidebar());
+        App.rootLayout.sidebar.show(new Sidebar({tab}));
     },
 
     appDetails(){
@@ -32,7 +31,7 @@ const controller = {
                 return;
             }
             let detailsView = new AppDetailsView({model: pod});
-            this.showApplicationView(detailsView);
+            this.showApplicationView(detailsView, 'details');
             utils.preloader2.hide();
         });
     },
@@ -46,7 +45,7 @@ const controller = {
                 return;
             }
             let confView = new AppConfView({model: pod});
-            this.showApplicationView(confView);
+            this.showApplicationView(confView, 'conf');
             utils.preloader2.hide();
         });
     },
@@ -61,12 +60,8 @@ const controller = {
                 // TODO: redirect to "order app" page
                 return;
             }
-            var backupView = new AppBackupView({collection: backupCollection});
-            App.rootLayout.contents.show(backupView);
-            if (!App.rootLayout.topbar.hasView())
-                App.rootLayout.topbar.show(new Topbar({model: pod}));
-            if (!App.rootLayout.sidebar.hasView())
-                App.rootLayout.sidebar.show(new Sidebar());
+            let backupView = new AppBackupView({collection: backupCollection, model: pod});
+            this.showApplicationView(backupView, 'backups');
             utils.preloader2.hide();
         });
     },

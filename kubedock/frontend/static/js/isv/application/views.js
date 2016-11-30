@@ -11,7 +11,6 @@ import confContainerTpl from './templates/conf_container.tpl';
 // import 'bootstrap-select';
 import 'tooltip';
 
-
 export const Details = Marionette.ItemView.extend({
     template: detailsTpl,
     onBeforeShow: utils.preloader2.show,
@@ -24,7 +23,7 @@ export const Details = Marionette.ItemView.extend({
         tooltip : '[data-toggle="tooltip"]'
     },
 
-    onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
+    onDomRefresh(){ this.ui.tooltip.tooltip(); },
 
     templateHelpers(){
         return {
@@ -56,7 +55,7 @@ export const ContainerConfig = Marionette.ItemView.extend({
     triggers: {
         'click @ui.resetSshPassword': 'pod:resetSshPassword',
     },
-    onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
+    onDomRefresh(){ this.ui.tooltip.tooltip(); },
     copySshLink(){
         let sshPassword = this.model.get('link');
         if (sshPassword) {

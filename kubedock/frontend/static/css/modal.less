@@ -1,0 +1,82 @@
+@import "variables.less";
+
+.modal{
+    background-color: rgba(61, 76, 85, 0.45);
+    .modal-dialog{
+        .modal-content{
+            .box-shadow(none);
+            border: none;
+            .modal-header{
+                padding: 19px 30px;
+                position: relative;
+                .border-radius(none);
+                .close{
+                    .opacity(1);
+                    outline: 0;
+                }
+                .modal-title{
+                    color: #1e1e1e;
+                    font-size: 17px;
+                    font-family: @regular;
+                }
+            }
+            .modal-body{
+                color: #1e1e1e;
+                font-size: 13px;
+                padding: 50px 30px;
+                font-family: @regular;
+                background-color: #f5fafe;
+            }
+            .modal-footer{
+                .border-radius( 5px );
+                margin: 0;
+                border: none;
+                padding: 15px 20px;
+                background-color: #f5fafe;
+                .btn + .btn{
+                    margin-left: 0;
+                }
+                button{
+                    .border-radius(2px);
+                    outline: 0;
+                    height: 37px;
+                    padding: 0 31px;
+                    font-size: 13px;
+                    min-width: 105px;
+                    border: 1px solid;
+                    text-align: center;
+                    margin-right: 10px;
+                    font-family: @regular;
+                    &:hover{
+                        cursor: pointer;
+                    }
+                    &:active, &:focus{
+                        .box-shadow(none);
+                        cursor: default;
+                    }
+                    &:first-child{
+                        color: #1d1d1d;
+                        border-color: #ebebeb;
+                        background-color: #fcfcfc;
+                    }
+                    &:last-child, &.blue{
+                        color: #fff;
+                        margin-right: 0;
+                        border-color: #2490EA;
+                        background-color: #2490EA;
+                    }
+                    &.gray{
+                        color: #1d1d1d;
+                        border-color: #ebebeb;
+                        background-color: #fcfcfc;
+                    }
+                    &.btn-danger{
+                        color: #fff;
+                        border-color: #dd0000;
+                        background-color: #dd0000;
+                    }
+                }
+            }
+        }
+    }
+}

@@ -36,12 +36,12 @@
     .copy-ssh-link,
     .copy-password,
     .copy-ssh-password{
-        .mdi('content_copy', 18px, #bac1c7, #103c5e);
+        .mdi('content_copy', 21px, #bac1c7, #103c5e);
         vertical-align: top;
         display: inline-block;
     }
     .reset-ssh-password{
-        .mdi('autorenew', 18px, #bac1c7, #103c5e);
+        .mdi('autorenew', 21px, #bac1c7, #103c5e);
         vertical-align: top;
         display: inline-block;
     }
@@ -49,6 +49,7 @@
         .mdi('settings_ethernet', 80px, #bac1c7, #bac1c7);
         &:hover{ cursor: default; }
     }
+
     .container-info{
         padding-top: 40px;
     }
@@ -59,6 +60,14 @@
             bottom: 0;
             margin: auto;
         }
+    }
+    .restore{
+        .mdi('restore', 21px, #b5bbc1, #103c5e);
+        display: inline-block;
+    }
+    .export{
+        .mdi('exit_to_app', 21px, #b5bbc1, #103c5e);
+        display: inline-block;
     }
     ul{
         &.nav{
@@ -87,6 +96,13 @@
                         }
                     }
                 }
+            }
+        }
+    }
+    table{
+        &.backups-table{
+            th{
+                background-color: #f8f8f8;
             }
         }
     }

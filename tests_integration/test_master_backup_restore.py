@@ -18,7 +18,7 @@ def _setup_restore_test(cluster):
     _clear_master(cluster)
 
 
-@pipeline("master_backup_restore", skip_reason="FIXME in AC-5035")
+@pipeline("master_backup_restore")
 @hooks(setup=_setup_restore_test)
 def test_master_backup_restore(cluster):
     # Backup master after it was cleared from pods, PAs, node etc.

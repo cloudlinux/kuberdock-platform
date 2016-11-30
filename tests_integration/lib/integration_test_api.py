@@ -403,17 +403,15 @@ class NodeList(object):
 
     def add(self, node_name, kube_type="Standard"):
         docker_options = \
-            '--insecure-registry=192.168.115.165:5001' \
-            '--registry-mirror=http://192.168.115.165:5001' \
+            '--insecure-registry=192.168.115.165:5001 ' \
+            '--registry-mirror=http://192.168.115.165:5001 ' \
             '' \
             ''
 
         add_cmd = 'add-node --hostname {} --kube-type "{}" --do-deploy -t ' \
-                  '--docker-options="{}"'.format(node_name, kube_type,
-                                                 docker_options)
-
+                  '--docker-options="{}" --wait ' \
+                  '--verbose'.format(node_name, kube_type, docker_options)
         self.cluster.manage(add_cmd)
-        self.cluster.manage("wait-for-nodes --nodes {}".format(node_name))
 
     def node_exists(self, hostname):
         _, out, _ = self.cluster.kdctl("nodes list", out_as_dict=True)

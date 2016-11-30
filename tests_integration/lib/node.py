@@ -16,18 +16,16 @@ class KDNode(object):
     @classmethod
     def add(cls, cluster, node_name, kube_type):
         docker_options = \
-            '--insecure-registry=192.168.115.165:5001' \
-            '--registry-mirror=http://192.168.115.165:5001' \
+            '--insecure-registry=192.168.115.165:5001 ' \
+            '--registry-mirror=http://192.168.115.165:5001 ' \
             '' \
             ''
 
         add_cmd = 'add-node --hostname {} --kube-type {} --do-deploy -t ' \
-                  '--docker-options="{}"'.format(node_name, kube_type,
-                                                 docker_options)
-
+                  '--docker-options="{}" --wait ' \
+                  '--verbose'.format(node_name, kube_type, docker_options)
         cluster.manage(add_cmd)
-        cluster.manage("wait-for-nodes --nodes {}".format(node_name))
-        node_data = cluster.get_nod_data(node_name)
+        node_data = cluster.nodes.get_node_data(node_name)
         return cls(cluster, node_data)
 
     def delete(self, timeout=60):

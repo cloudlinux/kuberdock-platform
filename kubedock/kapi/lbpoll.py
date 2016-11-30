@@ -2,8 +2,6 @@ from kubedock.kapi.helpers import Services
 from kubedock.kapi.podutils import raise_if_failure
 from kubedock.settings import AWS
 
-from ..pods.models import Pod
-
 PUBLIC_SVC_TYPE = 'public'
 
 
@@ -23,14 +21,8 @@ class LoadBalanceService(Services):
     def get_template(self, pod_id, ports):
         template = super(LoadBalanceService, self).get_template(pod_id, ports)
 
-        if self.is_external_loadbalancing_required(pod_id):
-            template['spec']['type'] = 'LoadBalancer'
+        template['spec']['type'] = 'LoadBalancer'
         return template
-
-    @staticmethod
-    def is_external_loadbalancing_required(pod_id):
-        # When AWS is used we should not create ELB for PODs used with shared IP
-        return not bool(Pod.query.get(pod_id).get_dbconfig('domain'))
 
     @staticmethod
     def get_public_dns(service):

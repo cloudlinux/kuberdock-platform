@@ -12,13 +12,15 @@ from fabric.context_managers import cd, quiet
 
 from kubedock.allowed_ports.models import AllowedPort
 from kubedock.core import db, ssh_connect
+from kubedock.domains.models import BaseDomain, PodDomain
+from kubedock.exceptions import DomainNotFound
 from kubedock.kapi.nodes import (
     KUBERDOCK_DNS_POD_NAME,
     create_policy_pod,
     get_dns_policy_config,
     get_node_token,
 )
-from kubedock.kapi import podcollection, restricted_ports
+from kubedock.kapi import podcollection, restricted_ports, ingress, configmap
 from kubedock.kapi.pstorage import CephStorage, get_ceph_credentials
 from kubedock.kapi.helpers import (
     KUBERDOCK_POD_UID,
@@ -26,11 +28,13 @@ from kubedock.kapi.helpers import (
     LOCAL_SVC_TYPE,
     Services,
     replace_pod_config,
+    KubeQuery,
 )
 from kubedock.kapi.node_utils import complete_calico_node_config
 from kubedock.kapi.nodes import get_kuberdock_logs_pod_name
 from kubedock.kapi.podutils import raise_if_failure
-from kubedock.kapi.podcollection import PodCollection, PodNotFound, run_service
+from kubedock.kapi.podcollection import PodCollection, PodNotFound, \
+    run_service, PublicAccessType
 from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod
 from kubedock.predefined_apps.models import PredefinedApp
@@ -40,7 +44,7 @@ from kubedock.settings import (
     ETCD_NETWORK_POLICY_SERVICE,
     MASTER_IP, NODE_DATA_DIR, NODE_TOBIND_EXTERNAL_IPS
 )
-from kubedock import settings
+from kubedock import settings, constants
 from kubedock.system_settings import keys
 from kubedock.system_settings.models import SystemSettings
 from kubedock.updates import helpers
@@ -74,26 +78,87 @@ NODE_STORAGE_MANAGE_DIR = 'node_storage_manage'
 KD_INSTALL_DIR = '/var/opt/kuberdock'
 
 # update 00197
-new_resources = [
+allowed_ports_resources = [
     'allowed-ports',
 ]
 
-new_permissions = [
+allowed_ports_permissions = [
     ('allowed-ports', 'Admin', 'get', True),
     ('allowed-ports', 'Admin', 'create', True),
     ('allowed-ports', 'Admin', 'delete', True),
 ]
 
 # update 00201
-new_resources = [
+restricted_ports_resources = [
     'restricted-ports',
 ]
 
-new_permissions = [
+restricted_ports_permissions = [
     ('restricted-ports', 'Admin', 'get', True),
     ('restricted-ports', 'Admin', 'create', True),
     ('restricted-ports', 'Admin', 'delete', True),
 ]
+
+
+def _add_public_access_type(upd):
+    upd.print_log('Update pod configs')
+    pods = Pod.all()
+    for pod in pods:
+        db_config = pod.get_dbconfig()
+        pod.set_dbconfig(db_config, save=False)
+
+        if 'public_access_type' in db_config:
+            continue
+
+        elif (db_config.get('public_ip', None)
+                or db_config.get('public_ip_before_freed', None)):
+            db_config['public_access_type'] = PublicAccessType.PUBLIC_IP
+
+        elif db_config.get('public_aws', None):
+            db_config['public_access_type'] = PublicAccessType.PUBLIC_AWS
+
+        elif db_config.get('domain', None):
+            db_config['public_access_type'] = PublicAccessType.DOMAIN
+
+            if not db_config.get('base_domain', None):
+                domain = db_config['domain']
+
+                base_domain = BaseDomain.query.filter_by(name=domain).first()
+
+                if base_domain:
+                    db_config['base_domain'] = domain
+                    db_config.pop('domain')
+
+                else:
+                    sub_domain_part, base_domain_part = domain.split('.', 1)
+
+                    base_domain = BaseDomain.query.filter_by(
+                        name=base_domain_part).first()
+
+                    if base_domain is None:
+                        raise DomainNotFound(
+                            "Can't find BaseDomain for requested domain {0}"
+                            .format(domain)
+                        )
+
+                    pod_domain = PodDomain.query.filter_by(
+                        name=sub_domain_part, domain_id=base_domain.id,
+                        pod_id=pod.id
+                    ).first()
+
+                    if not pod_domain:
+                        raise DomainNotFound(
+                            "Can't find PodDomain for requested domain {0}"
+                            .format(domain)
+                        )
+
+                    db_config['base_domain'] = base_domain.name
+                    db_config['domain'] = domain
+
+        else:
+            db_config['public_access_type'] = PublicAccessType.PUBLIC_IP
+
+        pod.set_dbconfig(db_config, save=False)
 
 
 def _update_nonfloating_config(upd):
@@ -143,6 +208,12 @@ def _update_00176_upgrade(upd):
 
 
 def _update_00176_upgrade_node(upd, with_testing):
+    _node_flannel()
+    # Moved flannel removal before docker upgrade because else docker will reuse
+    # old flannel IP 10.254.*.* (use one from docker0 iface) and save it to
+    # config /var/lib/docker/network/files/local-kv.db
+    run('sync')
+    run("systemctl stop docker && ip link del docker0")
     _upgrade_docker(upd, with_testing)
 
 
@@ -228,7 +299,7 @@ def _update_00191_upgrade(upd, calico_network):
     _master_k8s_node()
 
     if helpers.local('docker ps --format "{{.Names}}" | grep "^calico-node$"') != 'calico-node':
-        _master_calico(calico_network)
+        _master_calico(upd, calico_network)
 
     _master_k8s_extensions()
     helpers.restart_master_kubernetes()
@@ -244,13 +315,12 @@ def _update_00191_upgrade(upd, calico_network):
     _master_service_update()
 
 
-def _update_00191_upgrade_node(with_testing, env, **kwargs):
+def _update_00191_upgrade_node(upd, with_testing, env, **kwargs):
     helpers.remote_install(CONNTRACK_PACKAGE)
     _node_kube_proxy()
-    _node_flannel()
 
     if run('docker ps --format "{{.Names}}" | grep "^calico-node$"') != 'calico-node':
-        _node_calico(with_testing, env.host_string, kwargs['node_ip'])
+        _node_calico(upd, with_testing, env.host_string, kwargs['node_ip'])
 
     _node_policy_agent(env.host_string)
     _node_move_config()
@@ -264,16 +334,16 @@ def _update_00197_upgrade(upd):
     upd.print_log('Create table for AllowedPort model if not exists')
     AllowedPort.__table__.create(bind=db.engine, checkfirst=True)
     upd.print_log('Upgrade permissions')
-    fixtures.add_permissions(resources=new_resources,
-                             permissions=new_permissions)
+    fixtures.add_permissions(resources=allowed_ports_resources,
+                             permissions=allowed_ports_permissions)
 
 
 def _update_00201_upgrade(upd):
     upd.print_log('Create table for RestrictedPort model if not exists')
     RestrictedPort.__table__.create(bind=db.engine, checkfirst=True)
     upd.print_log('Upgrade permissions')
-    fixtures.add_permissions(resources=new_resources,
-                             permissions=new_permissions)
+    fixtures.add_permissions(resources=restricted_ports_resources,
+                             permissions=restricted_ports_permissions)
     upd.print_log('reject outgoing not authorized smtp packets '
                   'to prevent spamming from containers')
     try:
@@ -282,6 +352,58 @@ def _update_00201_upgrade(upd):
         pass
     finally:
         restricted_ports.set_port(25, 'tcp')
+
+
+def _update_00203_upgrade(upd):
+    def _update_ingress_container(config):
+        config_map_cmd = "--nginx-configmap={}/{}".format(
+            constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE,
+            constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAME)
+
+        for c in config['containers']:
+            if c['name'] == 'nginx-ingress':
+                if config_map_cmd not in c['command']:
+                    c['command'].append(config_map_cmd)
+                    return True
+        return False
+
+    def _create_or_update_ingress_config():
+        client = configmap.ConfigMapClient(KubeQuery())
+        try:
+            client.get(
+                constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
+                namespace=constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
+
+            client.patch(constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
+                data={'server-name-hash-bucket-size': '128'},
+                namespace=constants.KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
+
+        except configmap.ConfigMapNotFound:
+            ingress.create_ingress_nginx_configmap()
+
+
+    owner = User.get_internal()
+    pod = Pod.query.filter_by(
+        name=constants.KUBERDOCK_INGRESS_POD_NAME, owner=owner).first()
+
+    if pod is None:
+        upd.print_log('Ingress POD hasn\'t been created yet. Skipping')
+        return
+
+    _create_or_update_ingress_config()
+
+    config = pod.get_dbconfig()
+    if not _update_ingress_container(config):
+        upd.print_log('Ingress contoller RC is up-to-date. Skipping')
+        return
+
+    collection = PodCollection()
+
+    replace_pod_config(pod, config)
+    collection.patch_running_pod(pod.id, {
+        'spec': {'containers': config['containers']}
+    }, restart=True)
+
 
 
 
@@ -605,26 +727,35 @@ def _master_k8s_node():
     helpers.restart_service('kube-proxy')
 
 
-def _master_calico(calico_network):
-    with quiet():
-        rv = helpers.local(
-            'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl pool add '
-            '{} --ipip --nat-outgoing'.format(calico_network)
-        )
-        if rv.failed:
-            raise helpers.UpgradeError(
-                "Can't add calicoctl pool: {}".format(rv))
+def _master_calico(upd, calico_network):
+    rv = helpers.local(
+        'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl pool add '
+        '{} --ipip --nat-outgoing'.format(calico_network)
+    )
+    if rv.failed:
+        raise helpers.UpgradeError(
+            "Can't add calicoctl pool: {}".format(rv))
+
+    for i in range(3):
+        helpers.local('sync')
         rv = helpers.local('docker pull kuberdock/calico-node:0.22.0-kd2')
-        if rv.failed:
-            raise helpers.UpgradeError(
-                "Can't pull calicoctl image: {}".format(rv))
-        rv = helpers.local(
-            'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl node '
-            '--ip="{0}" --node-image=kuberdock/calico-node:0.22.0-kd2'
-            .format(MASTER_IP)
-        )
-        if rv.failed:
-            raise helpers.UpgradeError("Can't start calico node: {}".format(rv))
+        if not rv.failed:
+            break
+        upd.print_log("Pull calico-node failed. Doing retry {}".format(i))
+        sleep(10)
+    if rv.failed:
+        raise helpers.UpgradeError(
+            "Can't pull calico-node image after 3 retries: {}".format(rv))
+
+    helpers.local("sync && sleep 5")
+    rv = helpers.local(
+        'ETCD_AUTHORITY=127.0.0.1:4001 /opt/bin/calicoctl node '
+        '--ip="{0}" --node-image=kuberdock/calico-node:0.22.0-kd2'
+        .format(MASTER_IP)
+    )
+    if rv.failed:
+        raise helpers.UpgradeError("Can't start calico node: {}".format(rv))
+    helpers.local("sync && sleep 5")
 
 
 def _master_k8s_extensions():
@@ -675,9 +806,10 @@ def _master_network_policy(upd, calico_network):
     )
 
     KD_HOST_ROLE = 'kdnode'
+    helpers.local("sync && sleep 5")
     upd.print_log('Trying to get master tunnel IP...')
-    retry_pause = 1
-    max_retries = 30
+    retry_pause = 3
+    max_retries = 10
     MASTER_TUNNEL_IP = retry(
         get_calico_ip_tunnel_address, retry_pause, max_retries)
     upd.print_log('Master tunnel IP is: {}'.format(MASTER_TUNNEL_IP))
@@ -839,34 +971,51 @@ def _node_kube_proxy():
     )
 
 
-RM_FLANNEL_COMMANDS = [
+RM_FLANNEL_COMMANDS_MASTER = [
+    'systemctl disable flanneld',
     'systemctl stop flanneld',
-    'systemctl stop kuberdock-watcher',
     'rm -f /etc/sysconfig/flanneld',
     'rm -f /etc/systemd/system/flanneld.service',
     'rm -f /etc/systemd/system/docker.service.d/flannel.conf',
+    'rm -f /run/flannel/subnet.env',
+    'ifdown br0',
+    'ip link del br0',
+    'rm -f /etc/sysconfig/network-scripts/ifcfg-kuberdock-flannel-br0',
+    'ip link del flannel.1',
+]
+
+RM_FLANNEL_COMMANDS_NODES = [
+    'systemctl disable kuberdock-watcher',
+    'systemctl stop kuberdock-watcher',
+    'systemctl disable flanneld',
+    'systemctl stop flanneld',
+    'rm -f /etc/sysconfig/flanneld',
+    'rm -f /etc/systemd/system/flanneld.service',
+    'rm -f /etc/systemd/system/docker.service.d/flannel.conf',
+    'rm -f /run/flannel/subnet.env',
+    'ip link del flannel.1',
 ]
 
 
 def _master_flannel():
-    for cmd in RM_FLANNEL_COMMANDS:
+    for cmd in RM_FLANNEL_COMMANDS_MASTER:
         helpers.local(cmd)
-    helpers.local('systemctl daemon-reload')
     helpers.install_package('flannel', action='remove')
+    helpers.local('systemctl daemon-reload')
 
 
 def _node_flannel():
-    for cmd in RM_FLANNEL_COMMANDS:
+    for cmd in RM_FLANNEL_COMMANDS_NODES:
         run(cmd)
     # disable kuberdock-watcher but do not remove Kuberdock Network Plugin
     # because it should be replaced by new one
     run('rm -f /etc/systemd/system/kuberdock-watcher.service')
-    run('systemctl daemon-reload')
     helpers.remote_install('flannel', action='remove')
     helpers.remote_install('ipset', action='remove')
+    run('systemctl daemon-reload')
 
 
-def _node_calico(with_testing, node_name, node_ip):
+def _node_calico(upd, with_testing, node_name, node_ip):
     helpers.remote_install(CALICO_CNI, with_testing)
     helpers.remote_install(CALICOCTL, with_testing)
 
@@ -878,26 +1027,33 @@ def _node_calico(with_testing, node_name, node_ip):
         'python /var/lib/kuberdock/scripts/kubelet_args.py '
         '--network-plugin=cni --network-plugin-dir=/etc/cni/net.d'
     )
-    with quiet():
-        # pull image separately to get reed of calicoctl timeouts
+
+    # pull image separately to get reed of calicoctl timeouts
+    for i in range(3):
+        run('sync')
         rv = run('docker pull kuberdock/calico-node:0.22.0-kd2')
-        if rv.failed:
-            raise helpers.UpgradeError(
-                "Can't pull calicoctl image: {}".format(rv))
-        rv = run(
-            'ETCD_AUTHORITY="{0}:2379" '
-            'ETCD_SCHEME=https '
-            'ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt '
-            'ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt '
-            'ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key '
-            'HOSTNAME="{1}" '
-            '/opt/bin/calicoctl node '
-            '--ip="{2}" '
-            '--node-image=kuberdock/calico-node:0.22.0-kd2'
-            .format(MASTER_IP, node_name, node_ip)
-        )
-        if rv.failed:
-            raise helpers.UpgradeError("Can't start calico node: {}".format(rv))
+        if not rv.failed:
+            break
+        upd.print_log("Pull calico-node failed. Doing retry {}".format(i))
+        sleep(10)
+    if rv.failed:
+        raise helpers.UpgradeError(
+            "Can't pull calico-node image after 3 retries: {}".format(rv))
+
+    rv = run(
+        'ETCD_AUTHORITY="{0}:2379" '
+        'ETCD_SCHEME=https '
+        'ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt '
+        'ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt '
+        'ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key '
+        'HOSTNAME="{1}" '
+        '/opt/bin/calicoctl node '
+        '--ip="{2}" '
+        '--node-image=kuberdock/calico-node:0.22.0-kd2'
+        .format(MASTER_IP, node_name, node_ip)
+    )
+    if rv.failed:
+        raise helpers.UpgradeError("Can't start calico node: {}".format(rv))
 
 
 def _create_etcd_config():
@@ -909,6 +1065,7 @@ def _create_etcd_config():
     if etcd_conf not in config:
         new_fd = StringIO(config + '\n' + etcd_conf)
         put(new_fd, '/etc/kubernetes/config')
+
 
 def _create_calico_config():
     kube_config = StringIO()
@@ -1024,6 +1181,7 @@ def checkout_calico_network():
 def upgrade(upd, with_testing, *args, **kwargs):
     _update_nonfloating_config(upd)
     _update_00200_upgrade(upd)  # db migration
+    _add_public_access_type(upd)
     calico_network = checkout_calico_network()
     settings.CALICO_NETWORK = calico_network
     _update_00176_upgrade(upd)
@@ -1032,6 +1190,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     _update_00191_upgrade(upd, calico_network)
     _update_00197_upgrade(upd)
     _update_00201_upgrade(upd)
+    _update_00203_upgrade(upd)
 
 
 def downgrade(upd, with_testing, exception, *args, **kwargs):
@@ -1044,7 +1203,7 @@ def upgrade_node(upd, with_testing, env, *args, **kwargs):
     _update_00176_upgrade_node(upd, with_testing)
     _update_00179_upgrade_node(env)
     _update_00188_upgrade_node()
-    _update_00191_upgrade_node(with_testing, env, **kwargs)
+    _update_00191_upgrade_node(upd, with_testing, env, **kwargs)
     helpers.reboot_node(upd)
 
 

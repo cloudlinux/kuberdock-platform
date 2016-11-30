@@ -238,8 +238,8 @@ class TestIpPool(DBTestCase):
         pool = ippool.IpAddrPool().update(network, {'node': node.hostname})
         self.assertEqual(pool.node, node)
 
-    @mock.patch.object(ippool, 'PodIP')
-    def test_delete(self, pod_ip_mock):
+    @mock.patch.object(ippool.IpAddrPool, '_check_if_network_used_by_pod')
+    def test_delete(self, network_check_mock):
         """Test IpAddrPool.delete method."""
         network = u'192.168.1.0/24'
         with self.assertRaises(APIError) as err:
@@ -250,12 +250,11 @@ class TestIpPool(DBTestCase):
         db.session.add(pool)
         db.session.commit()
 
-        pod_ip_mock.filter_by.return_value.first.return_value = 'aaa'
+        network_check_mock.side_effect = APIError()
         with self.assertRaises(APIError):
             ippool.IpAddrPool().delete(network)
-        pod_ip_mock.filter_by.assert_called_once_with(network=network)
 
-        pod_ip_mock.filter_by.return_value.first.return_value = None
+        network_check_mock.side_effect = None
         ippool.IpAddrPool().delete(network)
         all_ = IPPool.query.all()
         self.assertEqual(all_, [])

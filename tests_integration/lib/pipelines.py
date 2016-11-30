@@ -24,13 +24,11 @@ class MainUpgradedPipeline(UpgradedPipelineMixin, MainPipeline):
 
 
 class MainAwsPipeline(MainPipeline):
-    skip_reason = "AWS will be enabled in AC-5178"
     INFRA_PROVIDER = 'aws'
     NAME = 'main_aws'
 
 
 class MainAwsUpgradedPipeline(UpgradedPipelineMixin, MainAwsPipeline):
-    skip_reason = "AWS will be enabled in AC-5178"
     INFRA_PROVIDER = 'aws'
     NAME = 'main_aws_upgraded'
 
@@ -68,7 +66,6 @@ class NetworkingPipeline(Pipeline):
 
 
 class NetworkingPipelineAWS(NetworkingPipeline):
-    skip_reason = "AWS will be enabled in AC-5178"
     INFRA_PROVIDER = 'aws'
     NAME = 'networking_aws'
 
@@ -152,12 +149,6 @@ class KubeTypePipeline(Pipeline):
         self.cluster.pas.add('custom_redis.yaml', '/tmp/custom_redis.yaml')
 
 
-class KubeTypePipelineAWS(KubeTypePipeline):
-    skip_reason = "AWS will be enabled in AC-5178"
-    NAME = 'kubetype_aws'
-    INFRA_PROVIDER = 'aws'
-
-
 class MovePodsPipeline(Pipeline):
     NAME = 'move_pods'
     ROUTABLE_IP_COUNT = 2
@@ -165,13 +156,12 @@ class MovePodsPipeline(Pipeline):
         'KD_NODES_COUNT': '2',
     }
 
-    def post_create_hook(self, *args, **kwargs):
+    def post_create_hook(self):
         set_eviction_timeout(self.cluster, '30s')
-        return super(MovePodsPipeline, self).post_create_hook(*args, **kwargs)
+        return super(MovePodsPipeline, self).post_create_hook()
 
 
 class MovePodsPipelineAWS(MovePodsPipeline):
-    skip_reason = "AWS will be enabled in AC-5178"
     INFRA_PROVIDER = 'aws'
     NAME = 'move_pods_aws'
 
@@ -201,11 +191,11 @@ class MasterRestorePipeline(Pipeline):
     ROUTABLE_IP_COUNT = 2
     ENV = {
         'KD_NODES_COUNT': '1',
-        'KD_DEPLOY_SKIP': 'cleanup,ui_patch'
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch,node_deploy,ippool'
     }
 
-    def set_up(self):
-        self.cleanup()
+    def post_create_hook(self):
+        pass  # Do nothing
 
 
 class ReleaseUpdatePipeline(Pipeline):
@@ -224,7 +214,6 @@ class ReleaseUpdatePipeline(Pipeline):
 
 
 class ReleaseUpdatePipelineAWS(ReleaseUpdatePipeline):
-    skip_reason = "AWS will be enabled in AC-5178"
     INFRA_PROVIDER = 'aws'
     NAME = 'release_update_aws'
 
@@ -248,12 +237,6 @@ class WebUIPipeline(Pipeline):
         self.cluster.wait_for_service_pods()
 
 
-class WebUIPipelineAWS(Pipeline):
-    skip_reason = "AWS will be enabled in AC-5178"
-    INFRA_PROVIDER = 'aws'
-    NAME = 'web_ui_aws'
-
-
 class PredefinedApps(Pipeline):
     NAME = 'predefined_apps'
     ROUTABLE_IP_COUNT = 2
@@ -268,7 +251,6 @@ class PredefinedApps(Pipeline):
 
 
 class PredefinedAppsAWS(PredefinedApps):
-    skip_reason = "AWS will be enabled in AC-5178"
     NAME = 'predefined_apps_aws'
     INFRA_PROVIDER = 'aws'
 
@@ -348,7 +330,6 @@ class SSHPipeline(Pipeline):
 
 
 class SSHPipelineAWS(SSHPipeline):
-    skip_reason = "AWS will be enabled in AC-5178"
     NAME = 'ssh_feature_aws'
     INFRA_PROVIDER = 'aws'
 
@@ -360,12 +341,6 @@ class PACatalogPipeline(Pipeline):
         'KD_NODES_COUNT': '1',
         'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
     }
-
-
-class PACatalogPipelineAWS(PACatalogPipeline):
-    skip_reason = "AWS will be enabled in AC-5178"
-    INFRA_PROVIDER = 'aws'
-    NAME = 'PA_catalog_aws'
 
 
 class DeleteNodePipeline(Pipeline):
@@ -388,15 +363,20 @@ class ZFSStorageUpgradedPipeline(UpgradedPipelineMixin, ZFSStoragePipeline):
     NAME = 'zfs_upgraded'
 
 
-pipelines = defaultdict(list)
-
-
 class SharedIPPipeline(Pipeline):
     NAME = 'shared_ip'
     ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
     }
+
+
+# How many pipelines can be created at time when running on infra provider.
+infra_provider_slots = {
+    "opennebula": 25,
+    "aws": 2
+}
+pipelines = defaultdict(list)
 
 
 def pipeline(name, thread=1, skip_reason=""):

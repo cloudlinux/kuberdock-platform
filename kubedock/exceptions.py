@@ -291,3 +291,10 @@ class DomainZoneDoesNotExist(APIError):
     def __init__(self, domain):
         details = {'domain': domain}
         super(DomainZoneDoesNotExist, self).__init__(details=details)
+
+
+class CanNotRemoveIPPool(APIError):
+    message_template = 'Can not remove IP Pool. {message}'
+
+    def __init__(self, details):
+        super(CanNotRemoveIPPool, self).__init__(details={'message': details})

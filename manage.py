@@ -131,8 +131,8 @@ def wait_for_nodes(nodes_list, timeout, verbose=False):
         if time.time() > wait_end:
             remaining_nodes = [Node.get_by_name(nhost) for nhost in nodes_list]
             raise WaitTimeoutException(
-                "These nodes did not become 'running' in a given timeout {}s:\n"
-                "{}".format(timeout, remaining_nodes))
+                "These nodes did not become 'running' in a given "
+                "timeout {}s:\n{}".format(timeout, remaining_nodes))
 
         time.sleep(WAIT_RETRY_DELAY)
 
@@ -154,7 +154,7 @@ def wait_for_nodes(nodes_list, timeout, verbose=False):
                 else:
                     _print("Node '{}' state is 'troubles' but acceptable "
                            "troubles timeout '{}'s is not reached yet..".format(
-                            nhost, WAIT_TROUBLE_TIMEOUT))
+                               nhost, WAIT_TROUBLE_TIMEOUT))
             elif state == NODE_STATUSES.running:
                 host_list.remove(nhost)
             else:

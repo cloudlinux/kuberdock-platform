@@ -153,7 +153,6 @@ def test_wordpressbackup_pa(cluster):
 
 
 @pipeline('kubetype')
-@pipeline('kubetype_aws')
 def test_redis_pa_tiny(cluster):
     pod = cluster.pods.create_pa('custom_redis.yaml', plan_id=0,
                                  wait_ports=True,
@@ -164,7 +163,6 @@ def test_redis_pa_tiny(cluster):
 
 
 @pipeline('kubetype')
-@pipeline('kubetype_aws')
 def test_redis_pa_standard(cluster):
     pod = cluster.pods.create_pa('custom_redis.yaml', plan_id=1,
                                  wait_ports=True,
@@ -175,7 +173,6 @@ def test_redis_pa_standard(cluster):
 
 
 @pipeline('kubetype')
-@pipeline('kubetype_aws')
 def test_redis_pa_highmem(cluster):
     pod = cluster.pods.create_pa('custom_redis.yaml', plan_id=2,
                                  wait_ports=True,

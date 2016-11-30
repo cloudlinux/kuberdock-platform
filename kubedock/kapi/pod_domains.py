@@ -32,8 +32,8 @@ def get_or_create_pod_domain(pod, domain_name):
       should exists in hoster added Domains and 'mypod' should be free
       in this domain zone)
     :type domain_name: string
-    :return: tuple of (kubedock.domains.models.PodDomain, created) where created
-     is a boolean specifying whether a new PodDomain was created
+    :return: tuple of (kubedock.domains.models.PodDomain, created) where 
+    created is a boolean specifying whether a new PodDomain was created
     :rtype: tuple
 
     """

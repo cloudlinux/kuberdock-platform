@@ -17,7 +17,7 @@ from tests_integration.lib.utils import assert_eq, assert_in, all_subclasses, \
     wait_for_status, wait_net_port
 
 
-DEFAULT_WAIT_PORTS_TIMEOUT = 5 * 60
+DEFAULT_WAIT_PORTS_TIMEOUT = 6 * 60
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -468,6 +468,9 @@ class KDPod(RESTMixin):
         elif container_image is not None:
             def predicate(c):
                 return c['image'] == container_image
+        else:
+            raise Exception('Neither container_name nor container_image '
+                            'was specified')
 
         try:
             container = next(c for c in

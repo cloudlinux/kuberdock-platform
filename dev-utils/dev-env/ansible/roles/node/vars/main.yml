@@ -3,7 +3,7 @@
 node_deploy_log_file: /var/log/kuberdock/node-install-log-{{ ansible_hostname }}.log
 node_deploy_log_file_dst: /tmp/kd_node_{{ ansible_hostname }}_deploy.log
 
-wait_node_timeout: 800
+wait_node_timeout: 1000
 
 zfs_devices_location: /zfsdevs/
 zfs_devices_count: 2

@@ -34,7 +34,7 @@ HOST_UDP_CHECK_CMD = (
     'python -c \'import socket as s; '
     'udp = s.socket(s.AF_INET, s.SOCK_DGRAM); '
     'udp.sendto("PING", ("{0}", {1})); '
-    'udp.settimeout(5); '
+    'udp.settimeout(10); '
     'print(udp.recv(1024))\'')
 
 
@@ -188,7 +188,14 @@ def host_udp_server(cluster, host):
 
 def host_udp_check_pod(cluster, host, pod_ip, port=UDP_PORT):
     cmd = HOST_UDP_CHECK_CMD.format(pod_ip, port)
-    _, out, _ = cluster.ssh_exec(host, cmd)
+    out = None
+    for i in range(3):
+        try:
+            _, out, _ = cluster.ssh_exec(host, cmd)
+            break
+        except Exception as e:
+            LOG.debug("UDP check failed with {}. Retry {}".format(repr(e), i))
+            sleep(5)
     if out != 'PONG':
         raise NonZeroRetCodeException('No PONG received')
 
@@ -208,11 +215,13 @@ def jenkins_accept_connections(sock_server, handler, bind_ip='0.0.0.0',
     sock_server.allow_reuse_address = True
     server = sock_server((bind_ip, port), handler)
     server.connection_list = []
-    server_thread = threading.Thread(target=server.serve_forever)
+    thread_name = threading.current_thread().name + '_accepted_connections'
+    server_thread = threading.Thread(name=thread_name,
+                                     target=server.serve_forever)
     try:
         server_thread.start()
         if isinstance(sock_server, SocketServer.TCPServer):
-            wait_net_port(bind_ip, port)
+            wait_net_port(bind_ip, port, 3, 1)
         LOG.debug('{}Starting SocketServer in a new thread{}'.format(
             Fore.CYAN, Style.RESET_ALL))
         yield server.connection_list
@@ -494,7 +503,7 @@ def test_network_isolation_pods_from_cluster(cluster):
     pod_ip_list.extend([(pod, specs[name]['podIP'], False)
                         for name, pod in pods.items()])
 
-    # Registered hosts have acces through all ports via pod/service IP
+    # Registered hosts have access through all ports via pod/service IP
     for pod, target_host, do_ping in pod_ip_list:
         # ICMP check
         if do_ping:

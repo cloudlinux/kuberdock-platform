@@ -101,6 +101,12 @@ def _get_network_policy_api():
                      base_url=settings.KUBE_NP_BASE_URL)
 
 
+class PublicAccessType:
+    PUBLIC_IP = 'public_ip'
+    PUBLIC_AWS = 'public_aws'
+    DOMAIN = 'domain'
+
+
 class PodCollection(object):
     def __init__(self, owner=None):
         """
@@ -205,6 +211,21 @@ class PodCollection(object):
             # "set").
             pod_data['status'] = POD_STATUSES.unpaid
 
+    @staticmethod
+    def _preprocess_public_access(pod_data):
+        """Preprocess public access parameters.
+
+        Apply it to the new pods.
+        """
+        if pod_data.get('domain', None):
+            pod_data['public_access_type'] = PublicAccessType.DOMAIN
+            pod_data['base_domain'] = pod_data.pop('domain')
+        else:
+            if settings.AWS:
+                pod_data['public_access_type'] = PublicAccessType.PUBLIC_AWS
+            else:
+                pod_data['public_access_type'] = PublicAccessType.PUBLIC_IP
+
     def _add_pod(self, data, secrets, skip_check, reuse_pv):
         self._preprocess_volumes(data)
 
@@ -258,6 +279,8 @@ class PodCollection(object):
 
         params, secrets = self._preprocess_new_pod(
             params, skip_check=skip_check)
+
+        self._preprocess_public_access(params)
 
         if dry_run:
             return True
@@ -425,41 +448,44 @@ class PodCollection(object):
         return False
 
     @staticmethod
+    def get_public_ports(conf):
+        return [
+            port
+            for container in conf.get('containers', [])
+            for port in container.get('ports', [])
+            if port.get('isPublic', False)
+            ]
+
+    @staticmethod
     @utils.atomic()
     def _prepare_for_public_address(pod, config):
         """Prepare pod for Public IP assigning"""
-        public_ip = config.get('public_ip')
-        if public_ip:
-            # if both fields public_ip and domain/_domain appear in config
-            # then public_ip is used
-            config.pop('domain', None)
-            config.pop('_domain', None)
-            pod.set_dbconfig(config, save=False)
-            return
+
         if not PodCollection.has_public_ports(config):
-            # save domain to _domain if there are no public ports after edit
-            if 'domain' in config:
-                config['_domain'] = config.pop('domain', None)
             pod.set_dbconfig(config, save=False)
             return
-        domain_name = config.get('domain', None) or config.get('_domain', None)
-        if domain_name is None:
-            if settings.AWS:
-                config.setdefault('public_aws', UNKNOWN_ADDRESS)
-            else:
+
+        access_type = config.get('public_access_type',
+                                 PublicAccessType.PUBLIC_IP)
+
+        if access_type == PublicAccessType.PUBLIC_IP:
+            if not config.get('public_ip', None):
                 IPPool.get_free_host(as_int=True)
                 # 'true' indicates that this Pod needs Public IP to be assigned
                 config['public_ip'] = pod.public_ip = 'true'
-        else:
-            ready, message = dns_management.is_domain_system_ready()
-            if not ready:
-                raise SubsystemtIsNotReadyError(
-                    u'Trying to use domain for pod, while DNS is '
-                    u'misconfigured: {}'.format(message),
-                    response_message=(
-                        u'DNS management system is misconfigured. '
-                        u'Please, contact administrator.')
-                )
+
+        elif access_type == PublicAccessType.PUBLIC_AWS:
+            config.setdefault('public_aws', UNKNOWN_ADDRESS)
+
+        elif access_type == PublicAccessType.DOMAIN:
+            domain_name = (config.get('domain', None)
+                           or config.get('base_domain'))
+            if not domain_name:
+                raise Exception(
+                    'At least on of "domain" or "base_domain" must be set '
+                    'when public_access_type is "domain". It seems like '
+                    'there is some error')
+
             with utils.atomic(PublicAccessAssigningError(
                     details={'message': 'Error while getting Pod Domain'})):
                 pod_domain, pod_domain_created = \
@@ -467,6 +493,10 @@ class PodCollection(object):
                 if pod_domain_created:
                     db.session.add(pod_domain)
             config['domain'] = pod.domain = str(pod_domain)
+
+        else:
+            _raise_unexpected_access_type(access_type)
+
         pod.set_dbconfig(config, save=False)
 
     @utils.atomic(nested=False)
@@ -687,7 +717,7 @@ class PodCollection(object):
         if hasattr(pod, 'public_ip'):
             self._remove_public_ip(pod_id=pod_id, force=force)
         if hasattr(pod, 'domain'):
-            self._remove_pod_domain(pod_id=pod_id, domain=pod.domain)
+            self._remove_pod_domain(pod_id=pod_id, pod_domain=pod.domain)
 
         self._drop_network_policies(pod.namespace, force=force)
         # all deleted asynchronously, now delete namespace, that will ensure
@@ -696,16 +726,33 @@ class PodCollection(object):
         helpers.mark_pod_as_deleted(pod_id)
 
     @staticmethod
-    def _remove_pod_domain(pod_id, domain):
+    def _remove_pod_domain(pod_id, pod_domain):
+        """:type pod_domain: str"""
         record_type = 'CNAME' if current_app.config['AWS'] else 'A'
-        ok, message = dns_management.delete_record(domain, record_type)
+        ok, message = dns_management.delete_record(pod_domain, record_type)
         if not ok:
             current_app.logger.error(
                 u'Failed to delete DNS record for pod "{}": {}'
-                .format(pod_id, message))
+                    .format(pod_id, message))
             utils.send_event_to_role(
                 'notify:error', {'message': message}, 'Admin')
-        PodDomain.query.filter_by(pod_id=pod_id).delete()
+
+        domain_name = pod_domain.split('.', 1)[0]
+
+        db_pod_domain = PodDomain.query.filter_by(
+            pod_id=pod_id, name=domain_name).first()  # type: PodDomain
+
+        if not db_pod_domain:
+            return
+
+        base_domain = db_pod_domain.base_domain
+        db.session.delete(db_pod_domain)
+        db_pod = DBPod.query.get(pod_id)  # type: DBPod
+        db_config = db_pod.get_dbconfig()  # type: dict
+        db_config.pop('domain')
+        db_config.setdefault('base_domain', base_domain)
+        # ^^^ ensure for old-style db_config without this field
+        db_pod.set_dbconfig(db_config, save=False)
 
     def check_updates(self, pod_id, container_name):
         """
@@ -937,12 +984,16 @@ class PodCollection(object):
                     'forbidSwitchingAppPackage')
                 pod.appLastUpdate = db_pod_config.get('appLastUpdate')
 
+                pod.public_access_type = db_pod_config.get(
+                    'public_access_type', PublicAccessType.PUBLIC_IP)
                 if db_pod_config.get('public_ip'):
                     pod.public_ip = db_pod_config['public_ip']
                 if db_pod_config.get('public_aws'):
                     pod.public_aws = db_pod_config['public_aws']
                 if db_pod_config.get('domain'):
                     pod.domain = db_pod_config['domain']
+                if db_pod_config.get('base_domain'):
+                    pod.base_domain = db_pod_config['base_domain']
 
                 pod.secrets = db_pod_config.get('secrets', [])
                 a = pod.containers
@@ -1000,49 +1051,88 @@ class PodCollection(object):
             return pod, db_config
 
         old_pod = pod
-        old_saved_domain = db_config.get('_domain', None)
-        db_config = db_config['edited_config']
+        old_config = db_config
+        new_config = db_config['edited_config']
         if not internal_edit:
-            db_config['forbidSwitchingAppPackage'] = 'the pod was edited'
-        db_config['podIP'] = getattr(old_pod, 'podIP', None)
-        db_config['service'] = getattr(old_pod, 'service', None)
-        db_config['postDescription'] = getattr(
-            old_pod, 'postDescription', None)
-        db_config['public_ip'] = getattr(old_pod, 'public_ip', None)
-        db_config['public_aws'] = getattr(old_pod, 'public_aws', None)
-
-        if not self.has_public_ports(db_config):
-            if db_config.get('domain', None):
-                self._remove_pod_domain(pod_id=db_pod.id,
-                                        domain=db_config['domain'])
-                db_config['_domain'] = db_config.pop('domain', None)
-            elif old_saved_domain:
-                db_config['_domain'] = old_saved_domain
-        elif 'domain' not in db_config and old_saved_domain:
-            db_config['domain'] = old_saved_domain
+            new_config['forbidSwitchingAppPackage'] = 'the pod was edited'
+        fields_to_copy = ['podIP', 'service', 'postDescription', 'public_ip',
+                          'public_aws', 'domain', 'base_domain',
+                          'public_access_type']
+        for k in fields_to_copy:
+            v = getattr(old_pod, k, None)
+            if v is not None:
+                new_config[k] = v
 
         # re-check images, PDs, etc.
-        db_config, _ = self._preprocess_new_pod(
-            db_config, original_pod=old_pod)
+        new_config, _ = self._preprocess_new_pod(
+            new_config, original_pod=old_pod)
 
-        pod = Pod(db_config)
+        pod = Pod(new_config)
         pod.id = db_pod.id
         pod.set_owner(db_pod.owner)
         update_service(pod)
         db_pod = self._save_pod(pod, db_pod=db_pod)
-        if self.has_public_ports(db_config):
-            if getattr(db_pod, 'public_ip', None):
-                pod.public_ip = db_pod.public_ip
-            elif getattr(db_pod, 'public_aws', None):
-                pod.public_aws = db_pod.public_aws
-        else:
-            self._remove_public_ip(pod_id=db_pod.id)
-            pod.public_ip = None
         pod.name = db_pod.name
         pod.kube_type = db_pod.kube_id
         pod.status = old_pod.status
         pod.forge_dockers()
+        new_config = db_pod.get_dbconfig()
+        self._update_public_access(pod, old_config, new_config)
         return pod, db_pod.get_dbconfig()
+
+    def _update_public_access(self, pod, old_config, new_config):
+        if old_config == new_config:
+            return
+
+        access_type = old_config.get('public_access_type',
+                                     PublicAccessType.PUBLIC_IP)
+
+        if access_type == PublicAccessType.PUBLIC_IP:
+            self._update_public_ip(pod, old_config, new_config)
+
+        elif access_type == PublicAccessType.PUBLIC_AWS:
+            self._update_public_aws(pod, old_config, new_config)
+
+        elif access_type == PublicAccessType.DOMAIN:
+            self._update_domain(pod, old_config, new_config)
+
+        else:
+            _raise_unexpected_access_type(access_type)
+
+    def _update_public_ip(self, pod, old_config, new_config):
+        had_public_ports = self.has_public_ports(old_config)
+        has_public_ports = self.has_public_ports(new_config)
+
+        if had_public_ports and not has_public_ports:
+            self._remove_public_ip(pod.id)
+            pod.public_ip = None
+
+    def _update_public_aws(self, pod, old_config, new_config):
+        has_public_ports = self.has_public_ports(new_config)
+
+        if not has_public_ports:
+            pod.public_aws = None
+
+    def _update_domain(self, pod, old_config, new_config):
+        old_ports = {port.get('hostPort') or port['containerPort']: port
+                     for port in self.get_public_ports(old_config)}
+        new_ports = {port.get('hostPort') or port['containerPort']: port
+                     for port in self.get_public_ports(new_config)}
+
+        if old_ports == new_ports:
+            # nothing changes
+            pass
+
+        elif not new_ports:
+            # no opened ports
+            ingress_resource.remove_ingress(pod.namespace)
+            self._remove_pod_domain(pod.id, pod.domain)
+            pod.domain = None
+
+        else:
+            # ports changed, remove old ingress and create again
+            ingress_resource.remove_ingress(pod.namespace)
+            # new ones will be created at prepare_and_run_pod(...)
 
     def _sync_start_pod(self, pod, data=None):
         if data is None:
@@ -1490,6 +1580,22 @@ class PodCollection(object):
         db.session.flush()
 
 
+def _raise_unexpected_access_type(access_type):
+    raise Exception('Unexpected public access type: %s' % access_type)
+
+
+def _check_if_domain_system_ready():
+    ready, message = dns_management.is_domain_system_ready()
+    if not ready:
+        raise SubsystemtIsNotReadyError(
+            u'Trying to use domain for pod, while DNS is '
+            u'misconfigured: {}'.format(message),
+            response_message=(
+                u'DNS management system is misconfigured. '
+                u'Please, contact administrator.')
+        )
+
+
 def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
                     error_message=None):
     """Keeps polling k8s api until pod status becomes as given"""
@@ -1829,12 +1935,14 @@ def run_service(pod):
 
     """
     resolve = getattr(pod, 'kuberdock_resolve', [])
+    domain = getattr(pod, 'domain', None)
     ports, public_ports = get_ports(pod)
     publicIP = getattr(pod, 'public_ip', None)
     if publicIP == 'true':
         publicIP = None
     public_svc = ingress_public_ports(pod.id, pod.namespace,
-                                      public_ports, pod.owner, publicIP)
+                                      public_ports, pod.owner, publicIP,
+                                      domain)
     cluster_ip = getattr(pod, 'podIP', None)
     local_svc = ingress_local_ports(pod.id, pod.namespace, ports,
                                     resolve, cluster_ip)
@@ -1860,15 +1968,27 @@ def ingress_local_ports(pod_id, namespace, ports,
         return rv
 
 
-def ingress_public_ports(pod_id, namespace, ports, owner, publicIP=None):
+def ingress_public_ports(pod_id, namespace, ports, owner, publicIP=None,
+                         domain=None):
     """Ingress public ports with cloudprovider specific methods
     :param pod_id: pod id
     :param namespace: pod namespace
     :param ports: list of ports to ingress, see get_ports
     :param owner: pod owner
     :param publicIP: publicIP to ingress. Optional.
-
+    :param domain: domain of a pod. Optional, only used in shared IP case
     """
+    # For now in shared IP case a pod needs to have a rechable 80 port
+    # Which ingress frontend uses to proxy traffic. It does not need the public
+    # service, but needs a public port policy
+    if domain:
+        shared_ip_ports = [{'name': 'c0-p80',
+                            'protocol': 'TCP',
+                            'port': '80',
+                            'targetPort': '80'}]
+        set_public_ports_policy(namespace, shared_ip_ports, owner)
+        return
+
     svc = get_service_provider()
     services = svc.get_by_pods(pod_id)
     if not services and ports:

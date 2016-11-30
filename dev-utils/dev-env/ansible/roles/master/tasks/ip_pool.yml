@@ -11,5 +11,3 @@
 - name: Create IP pool
   shell: python "{{ master_kd_src_path }}/manage.py" create-ip-pool -s "{{ network }}" -i {{ public_ips }}
   when: network not in "{{ networks_stdout.stdout.split('\n') }}'"
-  tags:
-    - ippool

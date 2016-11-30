@@ -15,3 +15,4 @@ deploy_log_file: /var/log/kuberdock_master_deploy.log
 deploy_log_file_dst: /tmp/kd_master_deploy.log
 
 deploy_script_url: http://repo.cloudlinux.com/kuberdock/deploy.sh
+emperor_needs_restart: false

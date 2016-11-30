@@ -39,3 +39,12 @@
     - non_aws
 
 - include: deploy.yml
+  tags:
+    - node_deploy
+
+- name: Restart master emperor when nodes are deployed.
+  run_once: true
+  service: name=emperor.uwsgi state=restarted
+  delegate_facts: True
+  delegate_to: "{{ groups['master'][0] }}"
+  when: hostvars[groups['master'][0]].restart_emperor|changed

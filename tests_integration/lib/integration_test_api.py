@@ -148,6 +148,14 @@ class KDIntegrationTestAPI(object):
             # while full log is still printed by ssh_exec logging
             raise ClusterUpgradeError('kuberdock-upgrade non-zero retcode')
 
+        try:
+            # Nodes can be rebooted during upgrade, make sure SSH
+            # is active before we return
+            self.wait_ssh_conn(self.node_names)
+        except Exception as e:
+            raise ClusterUpgradeError('Cannot SSH to one of the cluster VMs '
+                                      'after upgrade:\n{}'.format(repr(e)))
+
     @log_timing
     def upgrade_rhosts(self, deploy_script_path, use_testing=False):
         for rhost in self.rhost_names:
@@ -155,7 +163,18 @@ class KDIntegrationTestAPI(object):
             if use_testing:
                 cmd.append('-t')
             cmd.append('--upgrade')
-            self.ssh_exec(rhost, " ".join(cmd), live=True)
+            try:
+                self.ssh_exec(rhost, " ".join(cmd), live=True)
+            except NonZeroRetCodeException:
+                raise ClusterUpgradeError("Rhost '{}' upgrade failed")
+
+        try:
+            # Rhosts can be rebooted during upgrade, make sure SSH
+            # is active before we return
+            self.wait_ssh_conn(self.rhost_names)
+        except Exception as e:
+            raise ClusterUpgradeError('Cannot SSH to one of the rhost VMs '
+                                      'after upgrade:\n{}'.format(repr(e)))
 
     @contextmanager
     def temporary_stop_host(self, host):
@@ -208,6 +227,15 @@ class KDIntegrationTestAPI(object):
         for node in nodes:
             retry(self.docker, interval=5, tries=3,
                   cmd='pull {}'.format(image), node=node)
+
+    @log_timing
+    def wait_ssh_conn(self, hosts, tries=20, interval=10):
+        if not isinstance(hosts, (list, tuple)):
+            hosts = [hosts]
+        for host in hosts:
+            retry(self.ssh_exec, tries, interval,
+                  node=host, cmd="echo OK")
+            LOG.debug("SSH connection to host '{}' is OK.".format(host))
 
     @log_timing
     def wait_for_service_pods(self):
@@ -272,6 +300,9 @@ class KDIntegrationTestAPI(object):
 
         kcli_cmd.extend(['kubectl', cmd])
         return self.ssh_exec('master', ' '.join(kcli_cmd))
+
+    def get_hostname(self, name):
+        return self._provider.get_vm_hostname(name)
 
     def kdctl(self, cmd, out_as_dict=False):
         rc, out, err = self.ssh_exec("master", u"kdctl -k {}".format(cmd))
@@ -391,8 +422,10 @@ class NodeList(object):
         return KDNode(self.cluster, self.get_node_data(node_name))
 
     def get_node_data(self, name):
-        _, out, _ = self.cluster.kdctl("nodes get --hostname {}".format(name),
-                                       out_as_dict=True)
+        hostname = self.cluster.get_hostname(name)
+        _, out, _ = self.cluster.kdctl(
+            "nodes get --hostname {}".format(hostname),
+            out_as_dict=True)
         return out["data"]
 
     def get_node_info(self, name):

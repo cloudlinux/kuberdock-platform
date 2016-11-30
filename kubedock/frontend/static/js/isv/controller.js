@@ -4,6 +4,7 @@ import * as utils from 'app_data/utils';
 
 import {Details as AppDetailsView,
         Conf as AppConfView,
+        EditDomain as AppEditDomainView
         } from 'isv/application/views';
 import {Backup as AppBackupView} from 'isv/backup/views';
 import {Topbar, Sidebar} from 'isv/misc/views';
@@ -46,6 +47,20 @@ const controller = {
             }
             let confView = new AppConfView({model: pod});
             this.showApplicationView(confView, 'conf');
+            utils.preloader2.hide();
+        });
+    },
+
+    appConfDomain(){
+        utils.preloader2.show();
+        App.getPodCollection().done(podCollection => {
+            const pod = podCollection.at(0);
+            if (!pod){
+                utils.notifyWindow('Application not found');
+                return;
+            }
+            let confDomainView = new AppEditDomainView({model: pod});
+            this.showApplicationView(confDomainView, 'conf');
             utils.preloader2.hide();
         });
     },

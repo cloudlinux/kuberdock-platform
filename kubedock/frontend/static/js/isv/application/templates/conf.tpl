@@ -3,7 +3,13 @@
     <div class="hidden-xs col-sm-2 isv-block text-center layers"></div>
     <div class="col-xs-12 col-sm-10 isv-block">
         <p>Service address: <a href="http://<%- domain %>"><%- domain %></a></p>
-        <p>Domain name: <a href="http://<%- domain %>"><%- domain %></a></p>
+        <p>Domain name:
+            <% if(custom_domain) { %>
+                <a href="http://<%- custom_domain %>"><%- custom_domain %></a></p>
+            <% } else { %>
+                Domain name not presented
+            <% } %>
+            <a href="#app/conf/domain" class="edit-domain">editdomain</a>
     </div>
 </div>
 

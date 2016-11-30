@@ -526,6 +526,11 @@ class PodCollection(object):
             config = dict(db_pod.get_dbconfig(),
                           postDescription=pod.postDescription)
             db_pod.set_dbconfig(config, save=False)
+        if commandOptions.get('custom_domain') is not None:
+            custom_domain = commandOptions['custom_domain']
+            self._set_custom_domain(pod, custom_domain)
+
+
         return pod.as_dict()
 
     @staticmethod
@@ -1623,6 +1628,14 @@ class PodCollection(object):
             return
         PodCollection._stop_pod(pod, raise_=False, block=block)
         db.session.flush()
+
+    def _set_custom_domain(self, pod, domain):
+        if not pod_domains.validate_domain_reachability(domain):
+            raise CustomDomainIsNotReady(domain)
+        if pod.custom_domain:
+            self.remove_custom_domain(pod.id, pod.custom_domain)
+        self.add_custom_domain(pod.id, domain)
+
 
 
 def _raise_unexpected_access_type(access_type):

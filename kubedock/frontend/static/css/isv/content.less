@@ -49,7 +49,11 @@
         .mdi('settings_ethernet', 80px, #bac1c7, #bac1c7);
         &:hover{ cursor: default; }
     }
-
+    .edit-domain{
+        .mdi('mode_edit', 21px, #bac1c7, #103c5e);
+        display: inline-block;
+        vertical-align: middle;
+    }
     .container-info{
         padding-top: 40px;
     }
@@ -104,6 +108,43 @@
             th{
                 background-color: #f8f8f8;
             }
+        }
+    }
+    .form-group{
+        label{
+            display: block;
+            margin-bottom: 30px;
+        }
+
+        input,
+        textarea{
+            .placeholder(#b4b4b4);
+            .box-shadow(none);
+            outline: 0;
+            width: 100%;
+            height: 49px;
+            padding: 0 20px;
+            font-size: 13px;
+            position: relative;
+            font-weight: normal;
+            background-color: #fff;
+            border: 1px solid #e5e5e5;
+            &:focus{
+                .transition(color 500ms ease);
+                border-color: #3197ee;
+            }
+        }
+        input,
+        select{
+            .placeholder(#b4b4b4);
+            margin-bottom: 25px;
+        }
+        textarea{
+            resize: none;
+            height: auto;
+            min-height: 200px;
+            padding-top: 17px;
+            padding-bottom: 17px;
         }
     }
 }

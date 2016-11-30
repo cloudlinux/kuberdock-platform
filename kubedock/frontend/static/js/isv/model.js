@@ -211,11 +211,12 @@ Pod = Backbone.AssociatedModel.extend({
             node: null,
             kube_type: defaultKube.id,
             status: 'stopped',
+            custom_domain: null,
         };
     },
 
     resetSshAccess(){
-        utils.preloader.show();
+        utils.preloader2.show();
         return new Promise(
             (resolve, reject) => {
                 $.ajax({
@@ -273,6 +274,12 @@ Pod = Backbone.AssociatedModel.extend({
                       this.get('template_plan_name') &&
                       !this.get('forbidSwitchingAppPackage'));
     },
+
+    setCustomDomain(domain){
+        utils.preloader2.show();
+        return this.command('set', {'custom_domain':domain})
+            .always(utils.preloader2.hide).fail(utils.notifyWindow);
+    }
 });
 
 PodCollection = Backbone.Collection.extend({

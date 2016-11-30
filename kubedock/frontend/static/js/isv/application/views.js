@@ -1,9 +1,10 @@
-// import App from 'isv/app';
+import App from 'isv/app';
 // import * as Model from 'isv/model';
 import * as utils from 'app_data/utils';
 import detailsTpl from './templates/details.tpl';
 import confTpl from './templates/conf.tpl';
 import confContainerTpl from './templates/conf_container.tpl';
+import editDomainTpl from './templates/edit_domain.tpl'
 
 // import 'bootstrap-editable';
 // import 'jqplot';
@@ -85,7 +86,7 @@ export const Conf = Marionette.LayoutView.extend({
         change: 'render',
     },
     ui: {
-        containerTab  : '.container-tab',
+        containerTab  : '.container-tab'
     },
     regions: {
         currentContainer: '.container-info',
@@ -126,5 +127,25 @@ export const Conf = Marionette.LayoutView.extend({
             this.updateContainerInfo();
         });
     }
+});
 
+export const EditDomain = Marionette.ItemView.extend({
+    template: editDomainTpl,
+    onBeforeShow: utils.preloader2.show,
+    onShow: utils.preloader2.hide,
+    modelEvents: {
+        change: 'render',
+    },
+    ui: {
+        saveButton: '.save-button',
+        domainName: '#domain-name',
+    },
+    events: {
+        'click @ui.saveButton': 'save',
+    },
+    save() {
+        this.model.setCustomDomain(this.ui.domainName.val()).then(() => {
+            App.navigate('app/conf', {trigger: true});
+        });
+    }
 });

@@ -86,7 +86,8 @@ export const Conf = Marionette.LayoutView.extend({
         change: 'render',
     },
     ui: {
-        containerTab  : '.container-tab'
+        containerTab  : '.container-tab',
+        tooltip : '[data-toggle="tooltip"]'
     },
     regions: {
         currentContainer: '.container-info',
@@ -106,6 +107,7 @@ export const Conf = Marionette.LayoutView.extend({
         this.updateContainerInfo();
         utils.preloader2.hide();
     },
+    onDomRefresh(){ this.ui.tooltip.tooltip(); },
     selectContainer(event){
         this.containerName = $(event.currentTarget).attr('data-name');
         this.updateContainerInfo();

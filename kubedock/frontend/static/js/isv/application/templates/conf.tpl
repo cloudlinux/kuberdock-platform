@@ -7,9 +7,13 @@
             <% if(custom_domain) { %>
                 <a href="http://<%- custom_domain %>"><%- custom_domain %></a></p>
             <% } else { %>
-                Domain name not presented
+                not set
             <% } %>
-            <a href="#app/conf/domain" class="edit-domain">editdomain</a>
+            <a href="#app/conf/domain"
+               class="edit-domain"
+               data-toggle="tooltip"
+               data-placement="top"
+               data-original-title="Edit domain name"></a>
     </div>
 </div>
 

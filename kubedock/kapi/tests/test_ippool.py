@@ -4,16 +4,15 @@ import unittest
 
 import mock
 import responses
+from flask import current_app
 
 from kubedock.core import db
 from kubedock.exceptions import APIError
 from kubedock.kapi import ippool
-from kubedock.pods.models import IPPool
-from kubedock.testutils.fixtures import K8SAPIStubs
-from kubedock.testutils.testcases import DBTestCase
 from kubedock.kapi.node import Node as K8SNode
-from kubedock.testutils.testcases import attr
-from flask import current_app
+from kubedock.pods.models import IPPool
+from kubedock.testutils.fixtures import K8SAPIStubs, pod
+from kubedock.testutils.testcases import DBTestCase, attr
 
 
 @attr('db')
@@ -420,27 +419,19 @@ class TestIpPool(DBTestCase):
                           'blocks': [(3232236032, 3232236287, 'free')]}
                          )
 
-    @responses.activate
     @mock.patch('kubedock.kapi.ippool.AWS', True)
-    @mock.patch.object(ippool, 'Pod')
     @mock.patch('kubedock.kapi.ippool.LoadBalanceService')
-    def test_get_network_ips_aws(self, LoadBalanceService, Pod):
-        mock_pod = mock.Mock()
-        mock_pod.id = 'id'
-        mock_pod.name = 'name'
-        mock_pod.owner.username = 'owner'
-        LoadBalanceService.return_value = mock.Mock(get_dns_by_pods=lambda
-            x: {y: y for y in x})
-        Pod.query.filter().all.return_value = [mock_pod]
-        res = ippool.IpAddrPool().get_network_ips(None)
-        self.assertEqual(res,
-                         {'blocks': [('id', 'id', 'busy', 'name', 'owner')],
-                          'free_host_count': 0,
-                          'id': 'aws',
-                          'ipv6': False,
-                          'network': None,
-                          'node': None}
+    def test_get_network_ips_aws(self, LoadBalanceService):
+        LoadBalanceService.return_value = mock.Mock(
+            get_dns_by_pods=lambda x: {y: y for y in x})
 
+        p = pod()
+        res = ippool.IpAddrPool().get_network_ips(None)
+        expected_blocks = [(p.id, p.id, 'busy', p.name, p.owner.username)]
+        self.assertEqual(res,
+                         {'blocks': expected_blocks,
+                          'free_host_count': 0, 'id': 'aws', 'ipv6': False,
+                          'network': None, 'node': None}
                          )
 
 

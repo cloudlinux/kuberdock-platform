@@ -1,9 +1,11 @@
 import json
 import os
 import re
+import time
 import socket
 import ConfigParser
 from StringIO import StringIO
+from time import sleep
 
 from itertools import chain
 import yaml
@@ -219,7 +221,15 @@ def _update_00176_upgrade_node(upd, with_testing):
     # old flannel IP 10.254.*.* (use one from docker0 iface) and save it to
     # config /var/lib/docker/network/files/local-kv.db
     run('sync')
+
+    # When we have lots of containers docker stop could exceed timeout and
+    # that's why one "stop" command is not enough
+    start_time = time.time()
+    run("bash -c 'for i in $(seq 1 3); do systemctl stop docker; done;'")
+    # Ensure docker is already stopped and remove old iface
     run("systemctl stop docker && ip link del docker0")
+    upd.print_log("Docker stop took: {} secs".format(time.time() - start_time))
+
     _upgrade_docker(upd, with_testing)
 
 
@@ -293,8 +303,6 @@ def _update_00188_upgrade_node():  # update 00187 absorbed by 00188
 
 
 def _update_00191_upgrade(upd, calico_network):
-    _master_flannel()
-
     etcd1 = helpers.local('uname -n')
     _master_etcd_cert(etcd1)
     _master_etcd_conf(etcd1)
@@ -434,8 +442,10 @@ def _upgrade_docker(upd, with_testing):
                       r"OPTIONS='\1 --log-driver=json-file --log-level=error'",
                       line)
 
+    upd.print_log("Docker before pkg upgrade " + run("docker --version"))
     helpers.remote_install(SELINUX, with_testing)
     helpers.remote_install(DOCKER, with_testing)
+    upd.print_log("Docker after pkg upgrade " + run("docker --version"))
 
     docker_config = StringIO()
     get('/etc/sysconfig/docker', docker_config)
@@ -451,7 +461,14 @@ def _upgrade_docker(upd, with_testing):
     # If not, then docker will be old till node reboot at the end of upgrade.
     # So we probably could comment restart part (known to work ~ok)
     run("systemctl daemon-reload")
-    res = run("systemctl restart docker")
+    start_time = time.time()
+    # Because of bug in our package docker could be running again at this moment
+    # Maybe this is because of rpm %systemd hooks or else, so ensure it stopped
+    # again before restart to prevent timeouts
+    res = run("bash -c 'for i in $(seq 1 5); do systemctl stop docker; done; "
+              "sleep 1; systemctl restart docker;'")
+    upd.print_log("Docker second_stop/restart took: {} secs"
+                  .format(time.time() - start_time))
     if res.failed:
         raise helpers.UpgradeError('Failed to restart docker. {}'.format(res))
     upd.print_log(run("docker --version"))
@@ -1187,6 +1204,7 @@ def checkout_calico_network():
 def upgrade(upd, with_testing, *args, **kwargs):
     _update_nonfloating_config(upd)
     _update_00200_upgrade(upd)  # db migration
+    _master_flannel()
     _add_public_access_type(upd)
     calico_network = checkout_calico_network()
     settings.CALICO_NETWORK = network_policies.CALICO_NETWORK = calico_network
@@ -1206,10 +1224,16 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
     _update_node_nonfloating_config(upd)
     _update_00174_upgrade_node(upd, with_testing)
+
+    # We have to teardown kubelet to ensure it will not try to restart
+    # stopped docker during upgrade. Mask is needed to prevent it restart by KD
+    run("systemctl mask kubelet && systemctl stop kubelet")
+
     _update_00176_upgrade_node(upd, with_testing)
     _update_00179_upgrade_node(env)
     _update_00188_upgrade_node()
     _update_00191_upgrade_node(upd, with_testing, env, **kwargs)
+    run("systemctl unmask kubelet && systemctl restart kubelet")
     helpers.reboot_node(upd)
 
 

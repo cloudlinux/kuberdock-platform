@@ -34,13 +34,14 @@ from kubedock.updates.kuberdock_upgrade import get_available_updates
 from kubedock.updates.helpers import get_maintenance
 from kubedock import tasks
 from kubedock.kapi import licensing
-from kubedock.kapi import restricted_ports
 from kubedock.kapi.pstorage import check_namespace_exists, STORAGE_CLASS
 from kubedock.kapi import ippool
 from kubedock.kapi.node_utils import (
     get_one_node, extend_ls_volume, get_ls_info,
     get_block_device_list)
 from kubedock.kapi.podcollection import change_pv_size
+from kubedock.restricted_ports.fixtures import add_restricted_ports
+from kubedock.network_policies_utils import create_network_policies
 
 from flask.ext.script import Manager, Shell, Command, Option, prompt_pass
 from flask.ext.script.commands import InvalidCommand
@@ -92,9 +93,7 @@ class Creator(Command):
 
         generate_menu(aws)
 
-        # reject outgoing not authorized smtp packets
-        # to prevent spamming from containers
-        restricted_ports.set_port(25, 'tcp')
+        add_restricted_ports()
 
         # Fix packages id next val
         db.engine.execute("SELECT setval('packages_id_seq', 1, false)")
@@ -579,6 +578,11 @@ pv_manager.add_command('resize', PVResize)
 pv_manager.add_command('is-resizable', PVIsResizable)
 
 
+class NetworkPoliciesCreator(Command):
+    def run(self):
+        create_network_policies()
+
+
 app = create_app(fake_sessions=True)
 manager = Manager(app, with_default_commands=False)
 directory = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -609,6 +613,7 @@ manager.add_command('create-user', CreateUser())
 manager.add_command('add-predefined-app', AddPredefinedApp())
 manager.add_command('node-storage', node_ls_manager)
 manager.add_command('persistent-volume', pv_manager)
+manager.add_command('create-network-policies', NetworkPoliciesCreator())
 
 
 if __name__ == '__main__':

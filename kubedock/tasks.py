@@ -180,7 +180,8 @@ def add_new_node(self, node_id, log_pod_ip, with_testing=False, redeploy=False,
         try:
             timezone = get_timezone()
         except OSError as e:
-            raise NodeInstallException('Cannot get master timezone: {}'.format(repr(e)))
+            raise NodeInstallException(
+                'Cannot get master timezone: {}'.format(repr(e)))
 
         if redeploy:
             send_logs(node_id, 'Redeploy.', log_file, channels)
@@ -271,39 +272,47 @@ def add_new_node(self, node_id, log_pod_ip, with_testing=False, redeploy=False,
 
         sftp.close()
 
-        deploy_cmd = 'AWS={0} NODE_KUBERNETES={1} MASTER_IP={2} ' \
-                     'FLANNEL_IFACE={3} TZ={4} NODENAME={5} ' \
-                     'CPU_MULTIPLIER={6} MEMORY_MULTIPLIER={7} ' \
-                     'FIXED_IP_POOLS={8} TOKEN="{9}" ' \
-                     'LOG_POD_IP={10} NETWORK_INTERFACE={11} ' \
-                     'bash /node_install.sh'
+        deploy_vars = {
+            'NODE_IP': db_node.ip,
+            'AWS': AWS,
+            'NODE_KUBERNETES': node_kubernetes_rpm,
+            'MASTER_IP': MASTER_IP,
+            'FLANNEL_IFACE': node_interface,
+            'TZ': timezone,
+            'NODENAME': host,
+            'CPU_MULTIPLIER': cpu_multiplier,
+            'MEMORY_MULTIPLIER': memory_multiplier,
+            'FIXED_IP_POOLS': current_app.config['FIXED_IP_POOLS'],
+            'TOKEN': token,
+            'LOG_POD_IP': log_pod_ip,
+            'NETWORK_INTERFACE': NODE_TOBIND_EXTERNAL_IPS,
+        }
+        deploy_cmd = 'bash /node_install.sh'
+
         if CEPH:
-            deploy_cmd = 'CEPH_CONF={} '.format(
-                TEMP_CEPH_CONF_PATH) + deploy_cmd
+            deploy_vars['CEPH_CONF'] = TEMP_CEPH_CONF_PATH
         elif ZFS:
-            deploy_cmd = 'ZFS=yes ' + deploy_cmd
+            deploy_vars['ZFS'] = 'yes'
 
         if CALICO:
-            deploy_cmd = 'CALICO={0} NODE_IP={1} {2}'.format(
-                CALICO, db_node.ip, deploy_cmd)
+            deploy_vars['CALICO'] = CALICO
 
         if with_testing:
-            deploy_cmd = 'WITH_TESTING=yes ' + deploy_cmd
+            deploy_vars['WITH_TESTING'] = 'yes'
 
         # Via AC-3191 we need the way to pass some additional
         # parameters to node deploying.
         if deploy_options is not None:
-            for key, value in deploy_options.items():
-                new_param = "{0}_PARAMS='{1}' ".format(key, value)
-                deploy_cmd = new_param + deploy_cmd
+            for k, v in deploy_options.items():
+                k = '{}_PARAMS'.format(k)
+                deploy_vars[k] = v
+
+        set_vars_str = ' '.join('{key}="{value}"'.format(key=k, value=v)
+                                for k, v in deploy_vars.items())
+        cmd = '{set_vars} {deploy_cmd}'.format(set_vars=set_vars_str,
+                                               deploy_cmd=deploy_cmd)
 
         s_time = time.time()
-        cmd = deploy_cmd.format(AWS, node_kubernetes_rpm,
-                                MASTER_IP, node_interface, timezone,
-                                host, cpu_multiplier, memory_multiplier,
-                                current_app.config['FIXED_IP_POOLS'],
-                                token,
-                                log_pod_ip, NODE_TOBIND_EXTERNAL_IPS)
         i, o, e = ssh.exec_command(cmd,
                                    timeout=NODE_INSTALL_TIMEOUT_SEC,
                                    get_pty=True)
@@ -453,7 +462,7 @@ def fix_pods_timeline():
     raise_if_failure(pods, "Can't get pods")
     pods = {
         pod['metadata']['labels']['kuberdock-pod-uid']:
-        k8s_json_object_hook(pod) for pod in pods.get('items', [])}
+            k8s_json_object_hook(pod) for pod in pods.get('items', [])}
     now = datetime.utcnow().replace(microsecond=0)
     t.append(time.time())
 
@@ -537,8 +546,10 @@ def clean_deleted_drives():
 
 def clean_drives_for_deleted_users():
     ids = [
-        item.id for item in db.session.query(PersistentDisk.id).join(
-            User).filter(User.deleted.is_(True))
+        item.id
+        for item
+        in db.session.query(PersistentDisk.id)
+            .join(User).filter(User.deleted.is_(True))
     ]
     delete_persistent_drives(ids)
 

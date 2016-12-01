@@ -89,19 +89,31 @@ def remote_install(pkg, testing=False, action='install'):
 
 def update_local_config_file(conf_file, new_vars):
     with open(conf_file, "r+") as conf:
-        text = conf.read()
-        for var, updates in new_vars.iteritems():
-            for param, new_value in updates.iteritems():
-                assert not re.findall('\s+', param)
-                assert new_value is None \
-                       or not re.findall('\s+', new_value)
-                if new_value is None:
-                    text = _unset_param(text, var, param)
-                else:
-                    text = _set_param(text, var, param, new_value)
+        conf_str = conf.read()
+        conf_str = _update_config_str(conf_str, new_vars)
         conf.seek(0)
-        conf.write(text)
+        conf.write(conf_str)
         conf.truncate()
+
+
+def update_remote_config_file(config_file, new_vars):
+    conf_str = run("cat '{}'".format(config_file), quiet=True) \
+        .replace('\r', '')
+    conf_str = _update_config_str(conf_str, new_vars)
+    conf_str = conf_str.replace("'", "'\\''")  # escape single quote
+    run("echo -e '{}' > {}".format(conf_str, config_file), quiet=True)
+
+
+def _update_config_str(conf_str, new_vars):
+    for var, updates in new_vars.iteritems():
+        for param, new_value in updates.iteritems():
+            assert not re.findall('\s+', param)
+            assert new_value is None or not re.findall('\s+', new_value)
+            if new_value is None:
+                conf_str = _unset_param(conf_str, var, param)
+            else:
+                conf_str = _set_param(conf_str, var, param, new_value)
+    return conf_str
 
 
 def _set_param(text, var, param, value):
@@ -218,7 +230,7 @@ def start_service(service):
 
 # Will be executed after successful upgrade only
 def close_all_sessions():
-    for (role_id, ) in db.session.query(Role.id).all():
+    for (role_id,) in db.session.query(Role.id).all():
         send_event_to_role('refresh', {}, role_id)
     deleted = SessionData.query.delete()
     db.session.commit()

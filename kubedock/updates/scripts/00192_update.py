@@ -199,7 +199,7 @@ def _update_00176_upgrade(upd):
         upd.print_log('No outdated PAs. Skipping')
         return
 
-    pods_to_upgrade = Pod.query.filter(
+    pods_to_upgrade = Pod.query.filter(Pod.status != 'deleted',
         Pod.template_id.in_(pas_to_upgrade.keys())).all()
 
     _remove_lifecycle_section_from_pods(upd, pods_to_upgrade, pas_to_upgrade)

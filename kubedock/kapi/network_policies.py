@@ -12,8 +12,22 @@ from ..settings import (
     CALICO_NETWORK,
     ELASTICSEARCH_REST_PORT,
     ELASTICSEARCH_PUBLISH_PORT,
-    MASTER_IP, KD_NODE_HOST_ENDPOINT_ROLE
+    MASTER_IP, KD_MASTER_HOST_ENDPOINT_ROLE, KD_NODE_HOST_ENDPOINT_ROLE,
 )
+
+# Node host isolation
+# 22 - ssh
+NODE_PUBLIC_TCP_PORTS = [22]
+
+# Master host isolation
+# 22 - ssh
+# 80, 443 - KD API & web server
+# 6443 - kube-api server secure
+# 2379 - etcd secure
+# 8123, 8118 open ports for cpanel calico and kube-proxy
+MASTER_PUBLIC_TCP_PORTS = [22, 80, 443, 6443, 2379, 8123, 8118]
+# 123 - ntp
+MASTER_PUBLIC_UDP_PORTS = [123]
 
 PUBLIC_PORT_POLICY_NAME = 'public'
 
@@ -222,7 +236,7 @@ def get_node_allowed_ports_policy(rules):
     return {
         "id": "kd-nodes-allowed-ports",
         "order": 105,
-        "selector": "role==\"kdnode\"",
+        "selector": "role==\"{0}\"".format(KD_NODE_HOST_ENDPOINT_ROLE),
         "inbound_rules": rules,
         "outbound_rules": [
             {
@@ -256,4 +270,163 @@ def get_pod_restricted_ports_rule(ports, protocol):
         "action": "deny",
         "dst_ports": ports,
         "protocol": protocol
+    }
+
+
+# This rule is needed for remote hosts tier (kuberdock-hosts). It will allow
+# next tiers processing if some rhosts policy is in this tier.
+# Remote hosts policies use selector 'all()'.
+RULE_NEXT_TIER = {
+    "id": "next-tier",
+    "order": 9999,
+    "inbound_rules": [{"action": "next-tier"}],
+    "outbound_rules": [{"action": "next-tier"}],
+    "selector": "all()"
+}
+
+
+# This next tier policy is needed for traffic that will come from pods
+# and is not match any deny rules. Those deny rule will be created for each
+# node when node is added.
+KD_NODES_NEXT_TIER_FOR_PODS = {
+    "id": "kd-nodes-dont-drop-pods-traffic",
+    "selector": "has(kuberdock-pod-uid)",
+    "order": 50,
+    "inbound_rules": [{"action": "next-tier"}],
+    "outbound_rules": [{"action": "next-tier"}]
+}
+
+
+def get_tiers():
+    return {
+        'failsafe': {
+            'order': 0,
+            'policies': {
+                'failsafe': get_nodes_failsafe_policy()
+            }
+        },
+        'kuberdock-hosts': {
+            'order': 5,
+            'policies': {
+                'next-tier': RULE_NEXT_TIER,
+            },
+        },
+        'kuberdock-nodes': {
+            'order': 10,
+            'policies': {
+                'kuberdock-master': get_master_policy(),
+                'kuberdock-nodes': get_nodes_policy(),
+                'pods-next-tier': KD_NODES_NEXT_TIER_FOR_PODS,
+            },
+        },
+        'kuberdock-service': {
+            'order': 20,
+            'policies': {
+                'next-tier': RULE_NEXT_TIER,
+            },
+        },
+    }
+
+
+# We will add endpoints for all nodes ('host endpoints', see
+# http://docs.projectcalico.org/en/latest/etcd-data-model.html#endpoint-data).
+# This will close all traffic to and from nodes, so we should explicitly allow
+# what we need. Also we create failsafe rules as recommended in
+# http://docs.projectcalico.org/en/latest/bare-metal.html#failsafe-rules
+def get_nodes_policy():
+    calico_ip_tunnel_address = get_calico_ip_tunnel_address()
+    if not calico_ip_tunnel_address:
+        raise SubsystemtIsNotReadyError(
+            'Can not get calico IPIP tunnel address')
+    return {
+        "id": "kd-nodes-public",
+        "selector": "role==\"{0}\"".format(KD_NODE_HOST_ENDPOINT_ROLE),
+        "order": 100,
+        "inbound_rules": [
+            {
+                "src_net": "{0}/32".format(MASTER_IP),
+                "action": "allow"
+            },
+            {
+                "src_net": "{0}/32".format(calico_ip_tunnel_address),
+                "action": "allow"
+            },
+            {
+                "protocol": "tcp",
+                "dst_ports": NODE_PUBLIC_TCP_PORTS,
+                "action": "allow"
+            }
+        ],
+        "outbound_rules": [{"action": "allow"}]
+    }
+
+
+def get_master_policy():
+    return {
+        "id": "kdmaster-public",
+        "selector": "role==\"{0}\"".format(KD_MASTER_HOST_ENDPOINT_ROLE),
+        "order": 200,
+        "inbound_rules": [
+            {
+                "protocol": "tcp",
+                "dst_ports": MASTER_PUBLIC_TCP_PORTS,
+                "action": "allow"
+            },
+            {
+                "protocol": "udp",
+                "dst_ports": MASTER_PUBLIC_UDP_PORTS,
+                "action": "allow"
+            },
+            {
+                "action": "next-tier"
+            }
+        ],
+        "outbound_rules": [{"action": "allow"}]
+    }
+
+
+# Here we allow all traffic from master to calico subnet. It is a
+# workaround and it must be rewritten to specify more secure policy
+# for access from master to some services.
+def get_nodes_failsafe_policy():
+    calico_ip_tunnel_address = get_calico_ip_tunnel_address()
+    if not calico_ip_tunnel_address:
+        raise SubsystemtIsNotReadyError(
+            'Can not get calico IPIP tunnel address')
+    return {
+        "id": "failsafe-all",
+        "selector": "all()",
+        "order": 100,
+        "inbound_rules": [
+            {"protocol": "icmp", "action": "allow"},
+            {
+                "dst_net": CALICO_NETWORK,
+                "src_net": "{0}/32".format(calico_ip_tunnel_address),
+                "action": "allow"
+            },
+            {"action": "next-tier"}
+        ],
+        "outbound_rules": [
+            {
+                "protocol": "tcp",
+                "dst_ports": [2379],
+                "dst_net": "{0}/32".format(MASTER_IP),
+                "action": "allow"
+            },
+            {
+                "src_net": "{0}/32".format(calico_ip_tunnel_address),
+                "action": "allow"
+            },
+            {"protocol": "udp", "dst_ports": [67], "action": "allow"},
+            {"action": "next-tier"}
+        ]
+    }
+
+
+# master calico host endpoint
+def get_master_host_endpoint():
+    return {
+        "expected_ipv4_addrs": [MASTER_IP],
+        "labels": {"role": KD_MASTER_HOST_ENDPOINT_ROLE},
+        "profile_ids": []
     }

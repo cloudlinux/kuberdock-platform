@@ -282,13 +282,17 @@ ETCD_BASE_URL = 'http://{0}:{1}/v2/keys'.format(ETCD_HOST, ETCD_PORT)
 # 'https://github.com/projectcalico/libcalico/blob/master/calico_containers/
 #   pycalico/datastore.py'
 ETCD_CALICO_V_PATH = '/calico/v1'
+ETCD_CALICO_POLICY_PATH = ETCD_CALICO_V_PATH + '/policy/tier'
 ETCD_CALICO_URL = ETCD_BASE_URL + ETCD_CALICO_V_PATH
-ETCD_NETWORK_POLICY_SERVICE = \
-    ETCD_CALICO_URL + '/policy/tier/kuberdock-service/policy'
-ETCD_NETWORK_POLICY_HOSTS = \
-    ETCD_CALICO_URL + '/policy/tier/kuberdock-hosts/policy'
+ETCD_CALICO_POLICY_URL = ETCD_BASE_URL + ETCD_CALICO_POLICY_PATH
+ETCD_NETWORK_POLICY_SERVICE_KEY = \
+    ETCD_CALICO_POLICY_PATH + '/kuberdock-service/policy'
+ETCD_NETWORK_POLICY_SERVICE = ETCD_BASE_URL + ETCD_NETWORK_POLICY_SERVICE_KEY
+ETCD_NETWORK_POLICY_HOSTS_KEY = \
+    ETCD_CALICO_POLICY_PATH + '/kuberdock-hosts/policy'
+ETCD_NETWORK_POLICY_HOSTS = ETCD_BASE_URL + ETCD_NETWORK_POLICY_HOSTS_KEY
 ETCD_NETWORK_POLICY_NODES_KEY = \
-    ETCD_CALICO_V_PATH + '/policy/tier/kuberdock-nodes/policy'
+    ETCD_CALICO_POLICY_PATH + '/kuberdock-nodes/policy'
 ETCD_NETWORK_POLICY_NODES = ETCD_BASE_URL + ETCD_NETWORK_POLICY_NODES_KEY
 ETCD_CALICO_HOST_KEY_PATH_TEMPLATE = ETCD_CALICO_URL + '/host/{hostname}'
 ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE = \
@@ -308,6 +312,8 @@ ETCD_RESTRICTED_PORT_KEY_PATH = ETCD_NETWORK_POLICY_NODES_KEY + \
 
 # Role label for nodes calico host endpoints
 KD_NODE_HOST_ENDPOINT_ROLE = 'kdnode'
+# Role label for master calico host endpoint
+KD_MASTER_HOST_ENDPOINT_ROLE = 'kdmaster'
 
 ETCD_PKI = '/etc/pki/etcd/'
 ETCD_CACERT = os.path.join(ETCD_PKI, 'ca.crt')

@@ -20,7 +20,13 @@ from kubedock.kapi.nodes import (
     get_dns_policy_config,
     get_node_token,
 )
-from kubedock.kapi import podcollection, restricted_ports, ingress, configmap
+from kubedock.kapi import (
+    network_policies,
+    podcollection,
+    restricted_ports,
+    ingress,
+    configmap,
+)
 from kubedock.kapi.pstorage import CephStorage, get_ceph_credentials
 from kubedock.kapi.helpers import (
     KUBERDOCK_POD_UID,
@@ -1183,7 +1189,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     _update_00200_upgrade(upd)  # db migration
     _add_public_access_type(upd)
     calico_network = checkout_calico_network()
-    settings.CALICO_NETWORK = calico_network
+    settings.CALICO_NETWORK = network_policies.CALICO_NETWORK = calico_network
     _update_00176_upgrade(upd)
     _update_00185_upgrade()
     _update_00186_upgrade()

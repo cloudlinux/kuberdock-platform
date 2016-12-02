@@ -735,7 +735,7 @@ class PodCollection(object):
         db_pod = DBPod.query.get(pod_id)  # type: DBPod
         db_config = db_pod.get_dbconfig()  # type: dict
         db_config.pop('domain')
-        db_config.setdefault('base_domain', base_domain)
+        db_config.setdefault('base_domain', base_domain.name)
         # ^^^ ensure for old-style db_config without this field
         db_pod.set_dbconfig(db_config, save=False)
 

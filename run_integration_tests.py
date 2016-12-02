@@ -229,6 +229,23 @@ def _filter_by_infra_provider(pipelines, infra_provider):
         }
 
 
+def _filter_by_pipeline_tags(pipelines, tags):
+    """
+    Filters out pipelines that do not have tags intersected with
+    requested tags.
+
+    :param pipelines: a dict of pipelines to filter
+    :param tags: list of str - requested tags
+    :return: dictionary of pipelines
+    """
+    tags = set(tags)
+    return {
+        k: v
+        for k, v in pipelines.items() if
+        set(Pipeline.class_from_name("{}_{}".format(*k)).tags) & tags
+        }
+
+
 def _filter_by_include_exclude(pipelines, include, exclude):
     """
     Filters basing on given include/exclude lists.
@@ -282,7 +299,7 @@ def _verify_paths(ctx, param, items):
     return items
 
 
-def _verify_pipelines(ctx, param, items):
+def _comma_sep_str_to_list(ctx, param, items):
     if not items:
         return []
     return [i.strip() for i in items.split(',')]
@@ -290,10 +307,15 @@ def _verify_pipelines(ctx, param, items):
 
 @click.command(context_settings={'help_option_names': ['-h', '--help']})
 @click.argument('paths', nargs=-1, callback=_verify_paths)
-@click.option('--pipelines', callback=_verify_pipelines,
-              help='Comma separated pipeline names to use')
-@click.option('--pipelines-skip', callback=_verify_pipelines,
-              help='Comma separated pipeline names to skip')
+@click.option('--pipelines', callback=_comma_sep_str_to_list,
+              help='Comma separated pipeline names to run.')
+@click.option('--pipelines-skip', callback=_comma_sep_str_to_list,
+              help='Comma separated pipeline names to skip. Cannot be used '
+                   'with --pipelines.')
+@click.option('--pipeline-tags', callback=_comma_sep_str_to_list,
+              help='Comma separated pipeline tags to run. Takes effect only '
+                   'if pipelines are not specified explicitly via --pipelines',
+              default='general')
 @click.option('--infra-provider', type=str, default='opennebula',
               help='Which infra provider to use. Options are: '
                    '"opennebula" (default); "aws"')
@@ -305,15 +327,15 @@ def _verify_pipelines(ctx, param, items):
                    'cluster if any of its tests failed.')
 @click.option('--junit-xml', type=click.File(mode='w'))
 @click.option('--test', type=str, help='A name of a test to run')
-def main(paths, pipelines, pipelines_skip, infra_provider, live_log,
-         all_tests, cluster_debug, junit_xml, test):
+def main(paths, pipelines, pipelines_skip, pipeline_tags, infra_provider,
+         live_log, all_tests, cluster_debug, junit_xml, test):
     if bool(all_tests) == bool(test):
         raise click.BadOptionUsage(
-            'You should specify either --test NAME or --all-tests')
+            'Should specify either --test NAME or --all-tests')
 
     if bool(pipelines) and bool(pipelines_skip):
         raise click.BadOptionUsage(
-            'You can not use both --pipelines and --pipelines-skip')
+            'Can not use both --pipelines and --pipelines-skip')
 
     if cluster_debug and (infra_provider == 'aws'):
         # FIXME in AC-5210
@@ -329,6 +351,9 @@ def main(paths, pipelines, pipelines_skip, infra_provider, live_log,
 
         filtered = _filter_by_infra_provider(registered_pipelines,
                                              infra_provider)
+        if not pipelines:
+            # Take effect only if pipelines to run are not set explicitly.
+            filtered = _filter_by_pipeline_tags(filtered, pipeline_tags)
         filtered = _filter_by_include_exclude(filtered, pipelines,
                                               pipelines_skip)
         filtered = _filter_by_test_name(filtered, test)

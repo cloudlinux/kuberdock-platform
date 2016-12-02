@@ -38,6 +38,7 @@ class Pipeline(object):
     INFRA_PROVIDER = "opennebula"
     ROUTABLE_IP_COUNT = 0
     skip_reason = ""
+    tags = ["general"]
 
     def __init__(self, name):
         # type: (str) -> None

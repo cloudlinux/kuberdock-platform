@@ -1,12 +1,12 @@
 
-def config_rhost(config, index)
+def config_rhost(config, index, nodesCount)
 
     rhostMemory = Integer(ENV['KD_RHOST_MEMORY'] || '2048')
     rhostCpus = Integer(ENV['KD_RHOST_CPUS'] || '1')
     rhostTemplateId = Integer(ENV['KD_NEBULA_RHOST_TEMPLATE_ID'] || '0')
 
     config.vm.hostname = "rhost#{index}"
-    config.vm.network "private_network", ip: "192.168.77.#{10+index}"
+    config.vm.network "private_network", ip: "192.168.77.#{10+nodesCount+index}"
     config.vm.provider "virtualbox" do |vb, override|
         vb.memory = rhostMemory
         vb.cpus = rhostCpus

@@ -9,9 +9,12 @@ REQUESTS_ACCEPTABLE_FAILURES = 0.05  # 5% of requests can be slower than timeout
 REQUESTS_BATCH_SIZE = 100
 
 
-def run_with_timeout(timeout):
-    """ Raises a TimeoutError if execution exceeds timeout
+def mild(batch_size=REQUESTS_BATCH_SIZE,
+         acceptable=REQUESTS_ACCEPTABLE_FAILURES):
+    """ This decorator passes timeout errors until `acceptable`
+    portion of calls (batch_size) not exceeded.
     """
+
     def decorator(clbl):
 
         stat = {'name': clbl.__name__, 'overall': 0, 'failed': 0}
@@ -19,15 +22,13 @@ def run_with_timeout(timeout):
         @functools.wraps(clbl)
         def wrapper(*args, **kwargs):
             stat['overall'] += 1
-            p = pool.ThreadPool(processes=1)
-            async_result = p.apply_async(clbl, args, kwargs)
             try:
-                return async_result.get(timeout)
-            except TimeoutError as err:
+                clbl(*args, **kwargs)
+            except (TimeoutError, KDIsNotSane) as err:
                 stat['failed'] += 1
-                if stat['overall'] > REQUESTS_BATCH_SIZE:
+                if stat['overall'] > batch_size:
                     request_failures = float(stat['failed']) / stat['overall']
-                    if request_failures > REQUESTS_ACCEPTABLE_FAILURES:
+                    if request_failures > acceptable:
                         raise KDIsNotSane(
                             "Callable {0} overcome acceptable requests failure"
                             " limit.\nStats:\n{1}. Reasons of request"
@@ -38,24 +39,51 @@ def run_with_timeout(timeout):
     return decorator
 
 
-@run_with_timeout(NORMAL_API_RESPONCE_TIMEOUT)
+def run_with_timeout(timeout=NORMAL_API_RESPONCE_TIMEOUT):
+    """ Raises a TimeoutError if execution exceeds timeout
+    """
+    def decorator(clbl):
+
+        @functools.wraps(clbl)
+        def wrapper(*args, **kwargs):
+            p = pool.ThreadPool(processes=1)
+            async_result = p.apply_async(clbl, args, kwargs)
+            try:
+                return async_result.get(timeout)
+            finally:
+                p.terminate()
+
+        return wrapper
+    return decorator
+
+
+@mild()
+@run_with_timeout()
 def check_nodes(cluster):
     cluster.kdctl("nodes list")
 
 
-@run_with_timeout(NORMAL_API_RESPONCE_TIMEOUT)
+@mild()
+@run_with_timeout()
 def check_pod(pod):
     pod.healthcheck()
 
 
-@run_with_timeout(NORMAL_API_RESPONCE_TIMEOUT)
+@mild()
+@run_with_timeout()
 def check_pod_stats(pod):
     pod.get_stat()
+
+
+@mild()
+@run_with_timeout()
+def check_pod_container_stats(pod):
     for container in pod.containers:
         pod.get_container_stat(container['name'])
 
 
-@run_with_timeout(NORMAL_API_RESPONCE_TIMEOUT)
+@mild()
+@run_with_timeout()
 def check_node_stats(cluster):
     for node_data in cluster.nodes.get_list():
         node = cluster.nodes.get_node(node_data['hostname'])
@@ -72,3 +100,4 @@ def check_sanity(cluster, pods):
     for pod in pods:
         check_pod(pod)
         check_pod_stats(pod)
+        check_pod_container_stats(pod)

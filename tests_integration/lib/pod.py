@@ -739,3 +739,13 @@ class _AptibleNginxPod(KDPod):
         if (443 in self.ports) or self.open_all_ports:
             utils.retry(self.do_GET, tries=10, interval=10, scheme='https')
             utils.assert_in("Welcome to nginx!", self.do_GET(scheme='https'))
+
+
+class _MicroWebPod(KDPod):
+    SRC = 'histrio/webhook:v1'
+
+    def healthcheck(self):
+        self._generic_healthcheck()
+        self.wait_http_resp(port=80)
+        page = self.do_GET(path='/')
+        utils.assert_in("OK", page)

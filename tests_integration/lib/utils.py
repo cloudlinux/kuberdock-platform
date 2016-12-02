@@ -562,3 +562,19 @@ def log_debug(msg, logger=LOG, color=Fore.CYAN):
 
 def log_info(msg, logger=LOG, color=Fore.MAGENTA):
     logger.debug('{}{}{}'.format(color, msg, Style.RESET_ALL))
+
+
+@contextmanager
+def loglevel(level):
+    logger = logging.getLogger()
+    original_loglevel = logger.getEffectiveLevel()
+    logging.getLogger().setLevel(level)
+    try:
+        yield
+    finally:
+        logger.setLevel(original_loglevel)
+
+
+def log_workload(cluster, vm_name):
+    _, result_raw, _ = cluster.ssh_exec(vm_name, "top -bn3 | head -20")
+    return result_raw

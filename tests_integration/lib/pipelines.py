@@ -10,8 +10,8 @@ from tests_integration.lib.cluster_utils import enable_beta_repos, \
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
-from tests_integration.lib.utils import wait_for_status, get_rnd_string, \
-    log_debug, assert_eq, assert_in
+from tests_integration.lib.utils import get_rnd_string
+from tests_integration.lib.utils import log_debug, assert_eq, assert_in
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
@@ -512,10 +512,13 @@ class LoadTestingNodeResizePipelineAWS(LoadTestingNodeResizePipeline):
 
 class StressTestingPipeline(Pipeline):
     NAME = 'stress_testing'
-    ROUTABLE_IP_COUNT = 1
+    ROUTABLE_IP_COUNT = 10
     ENV = {
-        'KD_NODES_COUNT': '1',
+        'KD_NODES_COUNT': '10',
         'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
+        'KD_NODE_TYPES': ('node1=Tiny,node2=Tiny,node3=Tiny,node4=Tiny,'
+                          'node5=Tiny,node6=Tiny,node7=Tiny,node8=Tiny,'
+                          'node9=Tiny,node10=Tiny'),
     }
     tags = ['load']
 

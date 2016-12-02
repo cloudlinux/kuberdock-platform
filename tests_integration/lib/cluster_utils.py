@@ -78,7 +78,7 @@ def set_eviction_timeout(cluster, timeout):
 
 def set_kubelet_multipliers(cluster, cpu_mult=None, ram_mult=None):
     LOG.debug("Setting the new kubelet multipliers: CPU {}; RAM {}".format(
-        cpu_mult, ram_mult))
+              cpu_mult, ram_mult))
     cluster.set_system_setting(cpu_mult, name="cpu_multiplier")
     cluster.set_system_setting(ram_mult, name="memory_multiplier")
     # wait until applied on the nodes

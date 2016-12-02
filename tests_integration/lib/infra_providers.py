@@ -165,6 +165,12 @@ class VagrantProvider(InfraProvider):
             "node2": "kd_node2",
             "node3": "kd_node3",
             "node4": "kd_node4",
+            "node5": "kd_node5",
+            "node6": "kd_node6",
+            "node7": "kd_node7",
+            "node8": "kd_node8",
+            "node9": "kd_node9",
+            "node10": "kd_node10",
             "rhost1": "kd_rhost1",
         }
 

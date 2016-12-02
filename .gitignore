@@ -14,6 +14,7 @@ settings.cfg
 local_settings.py
 celerybeat-schedule
 .vagrant
+dev-utils/dev-env/*.vagrant
 .pipelines
 .docker*
 *.retry

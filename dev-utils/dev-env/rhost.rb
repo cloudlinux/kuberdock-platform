@@ -1,5 +1,5 @@
 
-def config_rhost(config, index)
+def config_rhost(config, index, nodesCount)
 
     rhostMemory = Integer(ENV['KD_RHOST_MEMORY'] || '2048')
     rhostCpus = Integer(ENV['KD_RHOST_CPUS'] || '1')
@@ -10,7 +10,7 @@ def config_rhost(config, index)
     end
 
     config.vm.hostname = "rhost#{index}"
-    config.vm.network "private_network", ip: "192.168.77.#{10+index}"
+    config.vm.network "private_network", ip: "192.168.77.#{10+nodesCount+index}"
     config.vm.provider "virtualbox" do |vb, override|
         vb.memory = rhostMemory
         vb.cpus = rhostCpus

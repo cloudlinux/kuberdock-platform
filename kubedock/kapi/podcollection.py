@@ -532,8 +532,8 @@ class PodCollection(object):
             db_pod.set_dbconfig(config, save=False)
         if commandOptions.get('custom_domain') is not None:
             custom_domain = commandOptions['custom_domain']
-            self._set_custom_domain(pod, custom_domain)
-
+            certificate = commandOptions.get('certificate')
+            self._set_custom_domain(pod, custom_domain, certificate)
 
         return pod.as_dict()
 
@@ -745,7 +745,7 @@ class PodCollection(object):
             domain)
 
         db_config.pop('custom_domain', None)
-        db_pod.set_dbconfig(db_config, save=True)
+        db_pod.set_dbconfig(db_config, save=False)
 
     @staticmethod
     def add_custom_domain(pod_id, domain, certificate=None):
@@ -760,7 +760,7 @@ class PodCollection(object):
             db_pod.namespace, db_config['service'], db_config['containers'],
             domain, certificate)
 
-        db_pod.set_dbconfig(db_config, save=True)
+        db_pod.set_dbconfig(db_config, save=False)
 
     @staticmethod
     def _remove_pod_domain(pod_id, pod_domain):
@@ -1033,6 +1033,8 @@ class PodCollection(object):
                     pod.domain = db_pod_config['domain']
                 if db_pod_config.get('base_domain'):
                     pod.base_domain = db_pod_config['base_domain']
+                if db_pod_config.get('custom_domain'):
+                    pod.custom_domain = db_pod_config['custom_domain']
 
                 pod.secrets = db_pod_config.get('secrets', [])
                 a = pod.containers
@@ -1663,13 +1665,13 @@ class PodCollection(object):
         PodCollection._stop_pod(pod, raise_=False, block=block)
         db.session.flush()
 
-    def _set_custom_domain(self, pod, domain):
+    def _set_custom_domain(self, pod, domain, certificate=None):
         if not pod_domains.validate_domain_reachability(domain):
             raise CustomDomainIsNotReady(domain)
-        if pod.custom_domain:
+        if getattr(pod, 'custom_domain', None):
             self.remove_custom_domain(pod.id, pod.custom_domain)
-        self.add_custom_domain(pod.id, domain)
-
+        self.add_custom_domain(pod.id, domain, certificate)
+        pod.custom_domain = domain
 
 
 def _raise_unexpected_access_type(access_type):

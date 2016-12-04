@@ -1672,6 +1672,13 @@ class PodCollection(object):
             self.remove_custom_domain(pod.id, pod.custom_domain)
         self.add_custom_domain(pod.id, domain, certificate)
         pod.custom_domain = domain
+        app_commands = getattr(pod, 'appCommands', None)
+        if app_commands and app_commands.get('changeDomain'):
+            command = app_commands['changeDomain']
+            if command['type'] == 'execInContainer':
+                self.exec_in_container(
+                    pod.id, command['container'],
+                    "DOMAIN='{}' {}".format(domain, command['command']))
 
 
 def _raise_unexpected_access_type(access_type):

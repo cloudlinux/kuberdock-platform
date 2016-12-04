@@ -5,7 +5,7 @@
         <p>Service address: <a href="http://<%- domain %>"><%- domain %></a></p>
         <p>Domain name:
             <% if(custom_domain) { %>
-                <a href="http://<%- custom_domain %>"><%- custom_domain %></a></p>
+                <a href="http://<%- custom_domain %>"><%- custom_domain %></a>
             <% } else { %>
                 not set
             <% } %>
@@ -14,6 +14,7 @@
                data-toggle="tooltip"
                data-placement="top"
                data-original-title="Edit domain name"></a>
+        </p>
     </div>
 </div>
 

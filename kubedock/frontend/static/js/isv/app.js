@@ -76,6 +76,12 @@ const App = new Marionette.Application({
      * @param {Object} authData - modified data from App.getAuth
      */
     updateAuth(token){
+        if (App.storage.authData){
+            let oldToken = utils.parseJWT(App.storage.authData);
+            let newToken = utils.parseJWT(token);
+            if (oldToken.header.exp > newToken.header.exp)
+                return;  // old token will live longer
+        }
         App.storage.authData = token;
     },
 

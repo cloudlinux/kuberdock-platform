@@ -354,13 +354,14 @@ export const resourcePromiser = function(cache, name, ResourceClass, context = t
 
 
 export const parseJWT = function(token){
-    return token.split('.').slice(0, 2).map(atob).map(JSON.parse);
+    let [header, payload] = token.split('.').slice(0, 2).map(atob).map(JSON.parse);
+    return {header, payload};
 };
 
 
 export const checkToken = function(authData){
     if (!authData) return;
-    let header = parseJWT(authData)[0];
+    let header = parseJWT(authData).header;
     if (header.exp > +new Date() / 1000)
         return authData;
 };

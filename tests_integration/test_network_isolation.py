@@ -791,7 +791,7 @@ def _run_test_for_port_and_proto(cluster, port, proto):
 
     utils.log_debug(
         "Check that port: '{proto}:{port}' is NOT listed as open".format(
-            proto=proto, port=port). LOG)
+            proto=proto, port=port), LOG)
     with utils.assert_raises(AssertionError):
         assert_open_ports(cluster, port, proto)
 
@@ -832,7 +832,7 @@ def check_custom_port(cluster, port, proto, is_open=False):
 def paramiko_expect_http_server(cluster, node, port):
     try:
         utils.log_debug("Start HTTP server on node '{}' port '{}'".format(
-            node, port))
+            node, port), LOG)
         ssh = cluster.get_ssh(node)
         server = SSHClientInteraction(ssh)
         server.send('python -m SimpleHTTPServer {}'.format(port))
@@ -845,7 +845,7 @@ def paramiko_expect_http_server(cluster, node, port):
 def paramiko_expect_udp_server(cluster, node, port):
     try:
         utils.log_debug("Start UDP server on node '{}' port '{}'".format(
-            node, port))
+            node, port), LOG)
         ssh = cluster.get_ssh(node)
         server = SSHClientInteraction(ssh)
         server.send(HOST_UP_UDP_SERVER_CMD.format(bind_ip='0.0.0.0',

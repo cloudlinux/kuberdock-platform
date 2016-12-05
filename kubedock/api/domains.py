@@ -13,7 +13,7 @@ from ..kapi.ingress import prepare_ip_sharing
 from ..login import auth_required
 from ..rbac import check_permission
 from ..utils import atomic, KubeUtils, register_api
-from ..validation.schemas import domain_schema
+from ..validation.schemas import domain_schema, certificate_schema
 
 domains = Blueprint('domains', __name__, url_prefix='/domains')
 
@@ -29,6 +29,13 @@ class EditDomainInternalError(InternalAPIError):
 
 class DeleteDomainInternalError(InternalAPIError):
     message_template = 'Failed to delete domain ({excType}: {excValue})'
+
+# TODO: Validate that common name in certificate is wildcard cert of the given
+# domain
+base_domain_schema = {
+    'name': dict(domain_schema, required=True),
+    'certificate': certificate_schema,
+}
 
 
 class DomainsAPI(KubeUtils, MethodView):
@@ -51,8 +58,7 @@ class DomainsAPI(KubeUtils, MethodView):
 
     @maintenance_protected
     @check_permission('create', 'domains')
-    @use_kwargs({'name': dict(domain_schema, required=True)},
-                allow_unknown=True)
+    @use_kwargs(base_domain_schema, allow_unknown=True)
     def post(self, **params):
         """Creates BaseDomain model in database.
 
@@ -71,7 +77,12 @@ class DomainsAPI(KubeUtils, MethodView):
                 raise DNSPluginError(message)
             if not zone_exists:
                 raise DomainZoneDoesNotExist(name)
+
             domain = BaseDomain(name=name)
+
+            if 'certificate' in params:
+                domain.certificate = params['certificate']
+
             db.session.add(domain)
         return domain.to_dict()
 

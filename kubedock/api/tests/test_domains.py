@@ -2,6 +2,7 @@ import unittest
 import mock
 
 from kubedock.testutils.testcases import APITestCase
+from kubedock.testutils import fixtures
 from kubedock.core import db
 from kubedock.domains.models import BaseDomain, PodDomain
 
@@ -52,7 +53,59 @@ class TestDomains(APITestCase):
         dbdomains = db.session.query(BaseDomain).all()
         self.assertEqual(len(dbdomains), 2)
 
-    def test_eidt_domain(self):
+    @mock.patch('kubedock.api.domains.prepare_ip_sharing')
+    @mock.patch('kubedock.dns_management.check_if_zone_exists')
+    def test_domain_creation_with_missing_certificate_fails(
+            self, check_if_zone_exists_mock, prepare_ip_sharing_mock):
+        check_if_zone_exists_mock.return_value = (True, None)
+        data = {'name': 'somedomain.com', 'certificate': {}}
+        response = self.admin_open('/domains/', method='POST', json=data)
+
+        self.assert400(response)
+
+    @mock.patch('kubedock.api.domains.prepare_ip_sharing')
+    @mock.patch('kubedock.dns_management.check_if_zone_exists')
+    def test_domain_creation_with_incorrect_certificate_fails(
+            self, check_if_zone_exists_mock, prepare_ip_sharing_mock):
+        check_if_zone_exists_mock.return_value = (True, None)
+        data = {
+            'name': 'somedomain.com', 'certificate': fixtures.sample_certiicate
+        }
+
+        data['certificate']['cert'] = 'some thrash'
+        response = self.admin_open('/domains/', method='POST', json=data)
+        self.assert400(response)
+
+    @mock.patch('kubedock.api.domains.prepare_ip_sharing')
+    @mock.patch('kubedock.dns_management.check_if_zone_exists')
+    def test_domain_creation_with_incorrect_private_key_fails(
+            self, check_if_zone_exists_mock, prepare_ip_sharing_mock):
+        check_if_zone_exists_mock.return_value = (True, None)
+        data = {
+            'name': 'somedomain.com', 'certificate': fixtures.sample_certiicate
+        }
+
+        data['certificate']['key'] = 'some thrash'
+        response = self.admin_open('/domains/', method='POST', json=data)
+        self.assert400(response)
+
+    @mock.patch('kubedock.api.domains.prepare_ip_sharing')
+    @mock.patch('kubedock.dns_management.check_if_zone_exists')
+    def test_domain_creation_with_correct_certificate_succeeds(
+            self, check_if_zone_exists_mock, prepare_ip_sharing_mock):
+        check_if_zone_exists_mock.return_value = (True, None)
+        data = {
+            'name': 'somedomain.com', 'certificate': fixtures.sample_certiicate
+        }
+        response = self.admin_open('/domains/', method='POST', json=data)
+
+        self.assert200(response)
+#
+        dbdomains = BaseDomain.query.filter_by(name=data['name']).all()
+        self.assertEqual(len(dbdomains), 1)
+        self.assertEqual(dbdomains[0].certificate, data['certificate'])
+
+    def test_edit_domain(self):
         test_name1 = 'example1.com'
         test_name2 = 'example2.com'
         dbdomain = BaseDomain(name=test_name1)

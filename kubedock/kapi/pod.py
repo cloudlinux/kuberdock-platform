@@ -434,20 +434,17 @@ class Pod(object):
         else:
             pod_config['spec']['nodeSelector'] = {}
 
-        node = getattr(self, 'node', None)
-        if node:
-            nested_dict_utils.set(
-                pod_config, 'spec.nodeSelector.kuberdock-node-hostname', node)
+        config_values = {
+            'node': 'spec.nodeSelector.kuberdock-node-hostname',
+            'public_ip': 'metadata.labels.kuberdock-public-ip',
+            'domain': 'metadata.labels.kuberdock-domain',
+            'custom_domain': 'metadata.labels.kuberdock-custom-domain',
+        }
 
-        public_ip = getattr(self, 'public_ip', None)
-        if public_ip:
-            nested_dict_utils.set(
-                pod_config, 'metadata.labels.kuberdock-public-ip', public_ip)
-
-        domain = getattr(self, 'domain', None)
-        if domain:
-            nested_dict_utils.set(
-                pod_config, 'metadata.labels.kuberdock-domain', domain)
+        for key, path in config_values.items():
+            value = getattr(self, key, None)
+            if value:
+                nested_dict_utils.set(pod_config, path, value)
 
         return config
 

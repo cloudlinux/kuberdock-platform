@@ -2,7 +2,7 @@ FROM centos:7
 
 RUN yum -y install epel-release && \
     yum -y update && \
-    yum -y install python-pip python-devel postgresql-contrib postgresql-devel gcc nmap && \
+    yum -y install openssl-devel libffi-devel python-pip python-devel postgresql-contrib postgresql-devel gcc nmap && \
     yum clean all
 RUN pip install --upgrade pip && pip install virtualenv
 

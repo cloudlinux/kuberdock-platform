@@ -28,6 +28,8 @@ show_help() {
     echo "-k|--kuberdock        : Specify KuberDock master hostname or IP address (if not specified '127.0.0.1' is used)"
     echo "-i|--ip-address       : Ip v4 address to use in calico-node"
     echo "-h|--help             : Show this help"
+    echo "--local-kcli          : Filename of local package to install for upgrade kuberdock-cli."
+    echo "--local-plugin        : Filename of local package to install for upgrade kuberdock-plugin."
     exit 0
 }
 
@@ -192,7 +194,7 @@ switch_to_calico() {
 
 
 upgrade() {
-    yum_wrapper -y update kubernetes-proxy kuberdock-cli kuberdock-plugin
+    yum_wrapper -y update kubernetes-proxy ${KCLI_PACKAGE} ${PLUGIN_PACKAGE}
 
     sed -i "s/^#\?KUBE_PROXY_ARGS=.*$/KUBE_PROXY_ARGS=\"--proxy-mode userspace\"/" $PROXY_CONFIG_ARGS
     do_and_log service kube-proxy restart
@@ -205,9 +207,11 @@ upgrade() {
 
 VER=$(cat /etc/redhat-release|sed -e 's/[^0-9]//g'|cut -c 1)
 
-TEMP=$(getopt -o k:u:i:th,U -l kuberdock:,user:,ip-address:,testing,help,upgrade -n 'kcli-deploy.sh' -- "$@")
+TEMP=$(getopt -o k:u:i:th,U -l kuberdock:,user:,ip-address:,local-kcli:,local-plugin:,testing,help,upgrade -n 'kcli-deploy.sh' -- "$@")
 eval set -- "$TEMP"
-
+# default values
+KCLI_PACKAGE=kuberdock-cli
+PLUGIN_PACKAGE=kuberdock-plugin
 
 while true;do
     case "$1" in
@@ -227,12 +231,21 @@ while true;do
             show_help;break
         ;;
          -U|--upgrade)
-            upgrade;break
+            DO_UPGRADE=true;shift;
+        ;;
+        --local-kcli)
+            KCLI_PACKAGE=$2;shift 2;
+        ;;
+        --local-plugin)
+            PLUGIN_PACKAGE=$2;shift 2;
         ;;
         --) shift;break;
     esac
 done
 
+if [ "$DO_UPGRADE" ];then
+    upgrade
+fi
 
 if [ -z "$KD_HOST" ];then
     read -r -p "Enter KuberDock host name or IP address: " KD_HOST
@@ -279,8 +292,8 @@ EOF
 do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 enable_epel
 
-yum_wrapper -y install kuberdock-cli
-yum_wrapper -y install kuberdock-plugin
+yum_wrapper -y install ${KCLI_PACKAGE}
+yum_wrapper -y install ${PLUGIN_PACKAGE}
 
 sed -i -e "/^url/ {s|[ \t]*\$||}" -e "/^url/ {s|[^/]\+$|$KD_HOST|}" $GLOBAL_KCLI_CONFIG
 

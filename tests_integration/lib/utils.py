@@ -1,24 +1,24 @@
 from __future__ import print_function
-import collections
-import os
-import re
-import time
-import sys
-import traceback
-import types
-from itertools import count, islice
 
+import collections
 import logging
+import os
 import pipes
 import random
+import re
 import socket
 import string
 import subprocess
-from colorama import Fore, Style
+import sys
+import time
+import traceback
+import types
 from contextlib import contextmanager
 from functools import wraps
+from itertools import count, islice
+
+from colorama import Fore, Style
 from paramiko import SSHClient, AutoAddPolicy
-from paramiko.sftp import CMD_EXTENDED
 from paramiko.ssh_exception import AuthenticationException
 from pygments import highlight
 from pygments.formatters.terminal256 import Terminal256Formatter
@@ -450,53 +450,12 @@ def suppress(exc=Exception):
         pass
 
 
-def http_share(cluster, host, shared_dir):
-    def _is_running():
-        cmd = "curl -X GET http://{}".format("127.0.0.1")
-        try:
-            cluster.ssh_exec(host, cmd)
-            return True
-        except NonZeroRetCodeException:
-            return False
-
-    if not _is_running():
-        cmd = "docker run -d -p 80:80 -v {}:/usr/share/nginx/html/backups:ro" \
-              " nginx".format(shared_dir)
-        cluster.ssh_exec(host, cmd)
-
-
 def force_unicode(text):
     return text if isinstance(text, unicode) else text.decode('utf-8')
 
 
 def escape_command_arg(arg):
     return pipes.quote(arg)
-
-
-def set_eviction_timeout(cluster, timeout):
-    """
-    Adds --pod-eviction-timeout setting to the KUBE_CONTROLLER_MANAGER_ARGS in
-    /etc/kubernetes/controller-manager and restarts kube-controller-manager to
-    apply the new settings.
-    """
-    sftp = cluster.get_sftp('master')
-    tmp_filename = '/tmp/controller-manager-conf_tmp'
-    conf_filename = '/etc/kubernetes/controller-manager'
-    conf = sftp.open(conf_filename)
-    tmp_file = sftp.open(tmp_filename, 'w')
-    for line in conf:
-        if re.match(r'^\s*KUBE_CONTROLLER_MANAGER_ARGS', line):
-            line = re.sub(r'"(.*)"',
-                          r'"\1 --pod-eviction-timeout={}"'.format(timeout),
-                          line)
-        tmp_file.write(line)
-    conf.close()
-    tmp_file.close()
-
-    cluster.ssh_exec('master', 'mv {0} {1}'.format(
-        tmp_filename, conf_filename), sudo=True)
-    cluster.ssh_exec('master', 'systemctl restart kube-controller-manager',
-                     sudo=True)
 
 
 def wait_for(func, tries=50, interval=10, fail_silently=False):
@@ -603,29 +562,3 @@ def log_debug(msg, logger=LOG, color=Fore.CYAN):
 
 def log_info(msg, logger=LOG, color=Fore.MAGENTA):
     logger.debug('{}{}{}'.format(color, msg, Style.RESET_ALL))
-
-
-def enable_beta_repos(cluster):
-    all_hosts = ['master']
-    all_hosts.extend(cluster.node_names)
-    all_hosts.extend(cluster.rhost_names)
-    for host in all_hosts:
-        LOG.debug("Adding beta repos to {}".format(host))
-        cmd = """cat > /etc/yum.repos.d/kube-cloudlinux-beta6.repo << EOF
-[kube-beta6]
-name=kube-beta-6
-baseurl=http://repo.cloudlinux.com/kuberdock-beta/6/x86_64/
-enabled=1
-gpgcheck=1
-gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-EOF"""
-        cluster.ssh_exec(host, cmd)
-        cmd = """cat > /etc/yum.repos.d/kube-cloudlinux-beta7.repo << EOF
-[kube-beta7]
-name=kube-beta-7
-baseurl=http://repo.cloudlinux.com/kuberdock-beta/7/x86_64/
-enabled=1
-gpgcheck=1
-gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-EOF"""
-        cluster.ssh_exec(host, cmd)

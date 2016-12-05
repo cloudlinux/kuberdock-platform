@@ -75,6 +75,7 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
         test_results.register_failure(t, test_time, pipeline_name, error)
         pipe_log(u'{} -> FAILED ({})\n{}'.format(test_name, test_time, error),
                  Fore.RED)
+
     try:
         pipeline = Pipeline.from_name(pipeline_name)
     except Exception as e:
@@ -84,6 +85,7 @@ def run_tests_in_a_pipeline(pipeline_name, tests, cluster_debug=False):
             ''.join(traceback.format_exception(*sys.exc_info()))
         ))
         raise
+
     if pipeline.skip_reason:
         pipe_log('SKIPPING CLUSTER ({})'.format(pipeline.skip_reason),
                  Fore.YELLOW)

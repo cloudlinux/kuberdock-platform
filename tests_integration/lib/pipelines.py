@@ -1,16 +1,18 @@
-import os
 import logging
+import os
 from collections import defaultdict
 from functools import wraps
 from shutil import rmtree
-
-from tests_integration.lib.pipelines_base import Pipeline, \
-    UpgradedPipelineMixin
-from tests_integration.lib.utils import set_eviction_timeout, get_rnd_string, \
-    enable_beta_repos, log_debug, assert_eq, assert_in, wait_for_status
-from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tempfile import NamedTemporaryFile, mkdtemp
 
+from tests_integration.lib.cluster_utils import enable_beta_repos, \
+    set_eviction_timeout
+from tests_integration.lib.exceptions import NonZeroRetCodeException
+from tests_integration.lib.pipelines_base import Pipeline, \
+    UpgradedPipelineMixin
+from tests_integration.lib.utils import enable_beta_repos, wait_for_status
+from tests_integration.lib.utils import get_rnd_string
+from tests_integration.lib.utils import log_debug, assert_eq, assert_in
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
@@ -509,6 +511,26 @@ class StressTestingPipeline(Pipeline):
     def post_create_hook(self):
         super(StressTestingPipeline, self).post_create_hook()
         self.cluster.wait_for_service_pods()
+
+
+class LoadTestingPipeline(Pipeline):
+    NAME = 'load_testing'
+    ROUTABLE_IP_COUNT = 50
+    tags = ['load']
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'KD_NODE_CPUS': '4',
+        'KD_NODE_MEMORY': '8192',
+    }
+
+
+class LoadTestingAwsPipeline(LoadTestingPipeline):
+    NAME = 'load_testing_aws'
+    INFRA_PROVIDER = 'aws'
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'NODE_SIZE': 'c3.xlarge'  # https://aws.amazon.com/ec2/instance-types/
+    }
 
 
 # How many pipelines can be created at time when running on infra provider.

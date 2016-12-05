@@ -104,6 +104,14 @@ class ClusterUpgradeError(Exception):
     pass
 
 
+class PANotFoundInCatalog(Exception):
+    pass
+
+
+class PodResizeError(Exception):
+    pass
+
+
 class WrongCLICommand(Exception):
 
     """Be risen if wrong cli command is called.

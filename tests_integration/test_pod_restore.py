@@ -3,7 +3,8 @@ import json
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.utils import assert_in, assert_raises, assert_eq, \
-    assert_not_eq, hooks, http_share
+    assert_not_eq, hooks
+from tests_integration.lib.cluster_utils import http_share
 from tests_integration.lib.pipelines import pipeline
 
 USER = "test_user"

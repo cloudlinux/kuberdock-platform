@@ -1,21 +1,30 @@
+import cookielib
 import itertools
 import json
 import logging
 import pipes
+import re
 import sys
-import urllib2
 import urllib
-import cookielib
+import urllib2
+from contextlib import closing
+from urlparse import urlparse
 
-from tests_integration.lib import utils
+import requests
+from requests.exceptions import ConnectionError, Timeout
+
 from tests_integration.lib import exceptions
-
+from tests_integration.lib import utils
+from tests_integration.lib.exceptions import \
+    PodResizeError
+from tests_integration.lib.utils import assert_eq, assert_in
 
 DEFAULT_WAIT_PORTS_TIMEOUT = 6 * 60
 
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger("paramiko").setLevel(logging.WARNING)
+logging.getLogger("requests").setLevel(logging.WARNING)
 LOG = logging.getLogger(__name__)
 
 
@@ -31,30 +40,76 @@ class RESTMixin(object):
             url = '{0}://{1}{2}'.format(scheme, self.host, path)
         return url
 
-    def do_GET(self, scheme="http", path='/', port=None, timeout=5):
+    def do_GET(self, scheme="http", path='/', port=None, timeout=10,
+               exp_retcodes=None, fetch_subres=False, verbose=True):
         url = self._build_url(scheme, port, path)
+
         LOG.debug("Issuing GET to {0}".format(url))
-        req = urllib2.urlopen(url, timeout=timeout)
-        res = unicode(req.read(), 'utf-8')
-        LOG.debug(u"Response:\n{0}".format(res))
-        return res
+        with closing(urllib2.urlopen(url, timeout=timeout)) as req:
+            body = unicode(req.read(), 'utf-8')
+            code = req.code
+        LOG.debug("GET {} status: {}".format(url, code))
+        if verbose:
+            LOG.debug(u"Response:\n{0}".format(body))
 
-    def do_POST(self, scheme="http", path='/', port=None, timeout=5,
-                body=None, opener=None):
+        if exp_retcodes:
+            assert_in(code, exp_retcodes)
+
+        if fetch_subres:
+            self._fetch_subresources(body, urlparse(url).netloc)
+
+        return body
+
+    def _fetch_subresources(self, html, netloc):
+
+        def parse(_html, _sess, _netloc):
+            tag_patt = re.compile(r"""<(?:link|img|script)[^>]*>""")
+            resource_patt = re.compile(r"""(?:href|src)=["']([^"']+)""")
+            tags = tag_patt.findall(_html)
+            for tag in tags:
+                if tag.startswith('<link') and 'stylesheet' not in tag:
+                    continue
+                m = resource_patt.search(tag)
+                if not m:
+                    continue
+                href = m.group(1)
+                if _netloc not in href:
+                    continue
+                fetch(href, _sess)
+
+        def fetch(_href, _sess):
+            try:
+                resp = _sess.get(_href)
+                parse(resp.text, _sess, urlparse(_href).netloc)
+            except (ConnectionError, Timeout):
+                pass
+
+        parse(html, requests.Session(), netloc)
+
+    def do_POST(self, scheme="http", path='/', port=None, timeout=10,
+                body=None, opener=None, exp_retcodes=None, verbose=True):
         url = self._build_url(scheme, port, path)
-        LOG.debug("Issuing POST to {0}".format(url))
-
         data = urllib.urlencode(body or {})
+
+        LOG.debug("Issuing POST to {0}".format(url))
         if opener:
             req = opener.open(url, data=data, timeout=timeout)
         else:
             req = urllib2.urlopen(url, data=data, timeout=timeout)
-        res = unicode(req.read(), 'utf-8')
-        LOG.debug(u"Response:\n{0}".format(res))
-        return res
+        resp = unicode(req.read(), 'utf-8')
+        code = req.code
+
+        LOG.debug("POST {} status: {}".format(url, code))
+        if verbose:
+            LOG.debug(u"Response:\n{0}".format(resp))
+
+        if exp_retcodes:
+            assert_in(code, exp_retcodes)
+
+        return resp
 
     def wait_http_resp(self, scheme="http", path='/', port=None, code=200,
-                       timeout=3, tries=60, internal=3):
+                       timeout=10, tries=30, interval=3):
         port = port or self.HTTP_PORT
         url = self._build_url(scheme, port, path)
         LOG.debug('Expecting for response code {code} on url {url}, '
@@ -62,10 +117,10 @@ class RESTMixin(object):
                       code=code, url=url, tries=tries, port=port))
 
         def check(*args, **kwargs):
-            req = urllib2.urlopen(url, timeout=timeout)
-            assert req.code == code
+            with closing(urllib2.urlopen(url, timeout=timeout)) as req:
+                assert_eq(req.code, code)
 
-        utils.retry(check, tries=tries, internal=internal)
+        utils.retry(check, tries=tries, interval=interval)
 
     def get_opener(self, scheme="http", path='/', port=None, timeout=5,
                    body=None):
@@ -122,7 +177,16 @@ class KDPod(RESTMixin):
 
     @property
     def host(self):
-        return self.public_ip or self.domain
+        # TODO add generic caching mechanism, define cacheable fields
+        if getattr(self, "_cached_host", None) is None:
+            self._cached_host = self.public_ip or self.domain
+        return self._cached_host
+
+    @property
+    def pod_id(self):
+        if getattr(self, "_cached_pod_id", None) is None:
+            self._cached_pod_id = self.get_spec()['id']
+        return self._cached_pod_id
 
     @property
     def ports(self):
@@ -484,10 +548,6 @@ class KDPod(RESTMixin):
         rv = out['data']
         return rv
 
-    @property
-    def pod_id(self):
-        return self.get_spec()['id']
-
     def docker_exec(self, container_id, command, detached=False):
         if self.status != 'running':
             raise exceptions.PodIsNotRunning()
@@ -533,7 +593,8 @@ class KDPod(RESTMixin):
         return edit_data
 
     def change_kubes(self, kubes=None, kube_type=None,
-                     container_name=None, container_image=None):
+                     container_name=None, container_image=None,
+                     redeploy=True):
         edit_data = self.__get_edit_data()
 
         if not (kubes is None) ^ (kube_type is None):
@@ -560,15 +621,20 @@ class KDPod(RESTMixin):
                              if predicate(c))
             container['kubes'] = kubes
         except StopIteration:
-            LOG.error("Pod {} does not have {} container".format(
-                self.name, container_name))
+            raise PodResizeError(
+                "Pod '{}' does not have container with {}".format(
+                    self.name,
+                    "name '{}'".format(container_name) if container_name else
+                    "image '{}'".format(container_image)
+                ))
 
         _, out, _ = self.cluster.kcli2(
             "pods update --name '{}' '{}'".format(self.name,
                                                   json.dumps(edit_data)),
             out_as_dict=True, user=self.owner)
         LOG.debug("Pod {} updated".format(out))
-        self.redeploy(applyEdit=True)
+        if redeploy:
+            self.redeploy(applyEdit=True)
         self.kubes = kubes
 
     def change_kubetype(self, kube_type):

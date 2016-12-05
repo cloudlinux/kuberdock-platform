@@ -3,6 +3,7 @@ import logging
 import sys
 import time
 import re
+from urlparse import urlparse
 
 import memcache
 import pymongo
@@ -16,7 +17,7 @@ from tests_integration.lib.pod import KDPod
 from tests_integration.lib.pod import DEFAULT_WAIT_PORTS_TIMEOUT
 from tests_integration.lib.utils import \
     assert_eq, assert_in, kube_type_to_int, \
-    kube_type_to_str
+    kube_type_to_str, get_rnd_string
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger("paramiko").setLevel(logging.WARNING)
@@ -36,7 +37,7 @@ class KDPAPod(KDPod):
 
     @classmethod
     def create(cls, cluster, template_name, plan_id, owner, command,
-               rnd_str, pod_name):
+               rnd_str, pod_name=None):
         commands = {
             "kcli2": cluster.kcli2,
             "kdctl": cluster.kdctl
@@ -47,11 +48,12 @@ class KDPAPod(KDPod):
                                   format(command))
         pa_data = cluster.pas.get_by_name(template_name)
         pa_id = pa_data['id']
-        data = {'PD_RAND': rnd_str}
-        if pod_name:
-            data.update({'APP_NAME': pod_name})
 
-        data = json.dumps(data)
+        if not pod_name:
+            pod_name = template_name + get_rnd_string(prefix="_")
+
+        data = json.dumps({'PD_RAND': rnd_str,
+                           'APP_NAME': pod_name})
 
         base_command = "predefined-apps create-pod {} {} '{}'".format(
             pa_id, plan_id, data)
@@ -263,6 +265,7 @@ class _PhpBBPaPod(KDPAPod):
 class _WordpressPaPod(KDPAPod):
     SRC = 'wordpress.yaml'
     WAIT_PORTS_TIMEOUT = 60 * 10
+    _installed = False
 
     def healthcheck(self):
         self._generic_healthcheck()
@@ -271,6 +274,17 @@ class _WordpressPaPod(KDPAPod):
         assert_in(u"WordPress &rsaquo; Installation", page)
 
     def gen_workload(self, load_time):
+        self.pass_install()
+        opener = self.get_wp_opener()
+
+        t0 = time.time() + load_time
+        while t0 > time.time():
+            self.publish_post(opener)
+            time.sleep(1)
+
+    def pass_install(self):
+        if self._installed:
+            return
         body = {
             'weblog_title': 'test',
             'user_name': 'test',
@@ -280,34 +294,48 @@ class _WordpressPaPod(KDPAPod):
             'language': 'en_GB'
         }
         self.do_POST(path='/wp-admin/install.php?step=2', body=body,
-                     timeout=15)
-        opener = self.get_opener(path='/wp-login.php', body={
+                     timeout=15, verbose=False)
+        self._installed = True
+
+    def get_wp_opener(self):
+        return self.get_opener(path='/wp-login.php', body={
             "log": 'test',
             'pwd': 'tes_t123'
         })
-        # Create posts
-        t0 = time.time() + load_time
-        while t0 > time.time():
-            resp = self.do_POST(path='/wp-admin/post-new.php',
-                                opener=opener, timeout=10)
-            nonce = re.search('name="_wpnonce" value="([a-z0-9]+)"', resp).group(1)
-            post_id = re.search("name='post_ID' value='([a-z0-9]+)'", resp).group(1)
-            body = {
-                "_wpnonce": nonce,
-                "post_title": "Scooby-Doo {0}".format(time.time()),
-                "user_ID": "1",
-                "post_author": "1",
-                "post_type": "post",
-                "content": "None",
-                "visibility": "public",
-                "action": "editpost",
-                "post_ID": post_id,
-                "post_author_override": "1",
-                "publish": "Publish"
-            }
-            self.do_POST(path='/wp-admin/post.php', body=body,
-                         opener=opener, timeout=10)
-            time.sleep(1)
+
+    def publish_post(self, content=None, opener=None):
+        self.pass_install()
+
+        if not content:
+            content = get_rnd_string(100, prefix="Random Content: ")
+        if not opener:
+            opener = self.get_wp_opener()
+
+        resp = self.do_POST(path='/wp-admin/post-new.php',
+                            opener=opener, timeout=10, verbose=False)
+        # TODO use BS
+        nonce = re.search(
+            'name="_wpnonce" value="([a-z0-9]+)"', resp).group(1)
+        post_id = re.search(
+            "name='post_ID' value='([a-z0-9]+)'", resp).group(1)
+        body = {
+            "_wpnonce": nonce,
+            "post_title": "Post_{}".format(time.time()),
+            "user_ID": "1",
+            "post_author": "1",
+            "post_type": "post",
+            "content": content,
+            "visibility": "public",
+            "action": "editpost",
+            "post_ID": post_id,
+            "post_author_override": "1",
+            "publish": "Publish"
+        }
+        resp = self.do_POST(path='/wp-admin/post.php', body=body,
+                            opener=opener, timeout=10, verbose=False)
+        post_url = re.search(
+            'Post published. <a href="([^"]*)"', resp).group(1)
+        return urlparse(post_url).path
 
 
 class _PhpMyAdminPaPod(KDPAPod):

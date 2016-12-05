@@ -2,19 +2,22 @@ import json
 import logging
 import os
 import pipes
-import requests
 import sys
 from contextlib import contextmanager
 
 import paramiko
+import requests
 from ipaddress import IPv4Network
 
+from exceptions import NonZeroRetCodeException, ClusterUpgradeError, \
+    PANotFoundInCatalog
 from tests_integration.lib import exceptions
+from tests_integration.lib import utils
+from tests_integration.lib.infra_providers import InfraProvider
 from tests_integration.lib.node import KDNode
 from tests_integration.lib.pa import KDPAPod
 from tests_integration.lib.pod import KDPod
 from tests_integration.lib.timing import log_timing, log_timing_ctx
-from tests_integration.lib import utils
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logging.getLogger("paramiko").setLevel(logging.WARNING)
@@ -496,9 +499,12 @@ class PAList(object):
         return [pa for pa in data]
 
     def get_by_name(self, name):
-            return next(
-                (pa for pa in self.get_all() if pa['name'] == name),
-                None)
+        # reversed is a workaround for AC-5370
+        _all = reversed(self.get_all())
+        for pa in _all:
+            if pa['name'] == name:
+                return pa
+        raise PANotFoundInCatalog()
 
     def delete(self, id_):
         self.cluster.kdctl("predefined-apps delete --id {}".format(id_))
@@ -581,12 +587,20 @@ class PodList(object):
     def create_pa(self, template_name, plan_id=1, wait_ports=False,
                   healthcheck=False, wait_for_status=None, owner='test_user',
                   command="kcli2", rnd_str='test_data_', pod_name=None):
-        """Create new pod with predefined application in the Kuberdock.
+        """Create new pod from predefined application in KuberDock.
 
+        :param template_name:
+        :param plan_id:
+        :param wait_ports:
+        :param healthcheck:
+        :param wait_for_status:
+        :param owner:
+        :param command:
         :param rnd_str: string which will be applied to the name of
             persistent volumes, which will be created with the pod
-        :return: object via which Kuberdock pod can be managed
+        :param pod_name: Resulting pod name (must be unique per user)
 
+        :return: object via which Kuberdock pod can be managed
         """
         pod = KDPAPod.create(
             self.cluster, template_name, plan_id, owner, command,

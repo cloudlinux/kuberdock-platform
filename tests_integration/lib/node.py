@@ -71,6 +71,9 @@ class KDNode(object):
         # load on Nebula clusters.
         utils.wait_for_status(self, "running", tries=48, interval=10)
 
+    def wait_for_status(self, status, tries=20, interval=3):
+        wait_for_status(self, status, tries=tries, interval=interval)
+
     @property
     def info(self):
         return self.cluster.nodes.get_node_data(self.name)

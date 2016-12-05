@@ -820,7 +820,7 @@ if [ ! -z "$CEPH_CONF" ]; then
 
 else
     if [ "$ZFS" = yes ]; then
-        yum_wrapper -y install --nogpgcheck http://archive.zfsonlinux.org/epel/zfs-release$(rpm -E %dist).noarch.rpm
+        yum_wrapper -y install --nogpgcheck http://download.zfsonlinux.org/epel/zfs-release$(rpm -E %dist).noarch.rpm
         # Use exact version of kernel-headers as current kernel.
         # If it differs, then installation of spl-dkms, zfs-dkms will fail
         yum_wrapper -y install kernel-devel-$current_kernel zfs

@@ -921,6 +921,40 @@ def retry(f, retry_pause, max_retries, exc=None, *f_args, **f_kwargs):
         raise exc
 
 
+def retry_with_catch(f, max_tries=1, retry_pause=0, exc_types=(Exception,),
+                     callback_on_error=None, args=(), kwargs=None):
+    """Retries the given function call on errors. If max_retries reached,
+    last error will be raised.
+
+    ATTENTION: the signature is different from `retry`.
+
+    :param f: a function to retry.
+    :param max_tries: max tries num.
+    :param retry_pause: pause between retries (seconds).
+    :param exc_types: types of handled exceptions.
+    :param callback_on_error: callback that will be called on each
+        handled error. Exception instance will be passed as an argument.
+    :param args: args of function
+    :param kwargs: kwargs of function
+    :return:
+    """
+    if kwargs is None:
+        kwargs = {}
+    for _ in range(max_tries - 1):
+        try:
+            return f(*args, **kwargs)
+        except exc_types as e:
+            if callback_on_error:
+                callback_on_error(e)
+            time.sleep(retry_pause)
+    try:
+        return f(*args, **kwargs)
+    except exc_types as e:
+        if callback_on_error:
+            callback_on_error(e)
+        raise e
+
+
 def ip2int(ip):
     return int(ipaddress.IPv4Address(ip))
 

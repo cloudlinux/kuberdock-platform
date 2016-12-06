@@ -1,0 +1,22 @@
+# Based on
+# https://github.com/jetstack/kube-lego/blob/0.0.4/examples/
+#   default-http-backend-deployment.yaml
+
+containers:
+- command: []
+  env: []
+  image: gcr.io/google_containers/defaultbackend:1.0
+  kubes: 2
+  name: default-http-backend
+  ports:
+  - containerPort: 8080
+    protocol: TCP
+  terminationMessagePath: null
+  volumeMounts: []
+  workingDir: ''
+kube_type: $kube_type
+name: $name
+node: null
+replicas: 1
+restartPolicy: Always
+volumes: []

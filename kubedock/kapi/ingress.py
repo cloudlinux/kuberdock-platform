@@ -1,9 +1,19 @@
+import os
+from contextlib import contextmanager
+from string import Template
+
+import yaml
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
-from .podcollection import PodCollection
-from .configmap import ConfigMapClient, ConfigMapNotFound
+from .configmap import (
+    ConfigMapClient, ConfigMapAlreadyExists, ConfigMapNotFound
+)
 from .helpers import KubeQuery
+from .podcollection import PodCollection
+from .. import settings
+from .. import utils
+from .. import validation
 from ..billing.models import Kube
 from ..constants import (
     KUBERDOCK_BACKEND_POD_NAME,
@@ -11,247 +21,148 @@ from ..constants import (
     KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
     KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE,
 )
-from ..exceptions import APIError
+from ..exceptions import (
+    APIError,
+    DefaultBackendNotReady,
+    IngressControllerNotReady,
+    IngressConfigMapError
+)
+from ..kd_celery import celery
 from ..pods.models import Pod, IPPool
-from ..settings import IS_PRODUCTION_PKG
 from ..system_settings import keys
 from ..system_settings.models import SystemSettings
-from ..validation import check_internal_pod_data
 from ..users.models import User
-from ..utils import retry
+
+DEFAULT_BACKEND_CONFIG_FILE = 'default_backend_config.yaml'
+INGRESS_CONFIG_FILE = 'ingress_config.yaml'
 
 
-def create_default_backend_pod():
+def _find_template(template_name):
+    """Finds template in templates dir and returns full path."""
+    return os.path.join(settings.ASSETS_PATH, template_name)
+
+
+def _read_template(template_name, template_vars):
+    """Reads template, substitutes variables and loads yaml as dict."""
+    with open(_find_template(template_name)) as f:
+        t = Template(f.read())
+    s = t.safe_substitute(**template_vars)
+    rv = yaml.safe_load(s)
+    return rv
+
+
+def _create_default_backend_pod():
     """
     Create Default Backend pod that serving 404 response for Ingress Controller
     """
-    owner = User.get_internal()
+    kd_user = User.get_internal()
 
     def _create_pod():
-        if Pod.query.filter_by(name=KUBERDOCK_BACKEND_POD_NAME,
-                               owner=owner).first():
-            return True
-        try:
-            backend_config = get_default_backend_config()
-            check_internal_pod_data(backend_config, owner)
-            backend_pod = PodCollection(owner).add(backend_config,
-                                                   skip_check=True)
-            PodCollection(owner).update(
-                backend_pod['id'], {'command': 'start'})
-            return True
-        except (IntegrityError, APIError):
-            # Either pod already exists or an error occurred during it's
-            # creation - log and retry
-            current_app.logger.exception(
-                'Tried to create a Default HTTP Backend service '
-                'pod but got an error.'
-            )
+        if _is_default_backend_exists(kd_user):
+            return
 
-    return retry(_create_pod, 1, 5, exc=APIError('Could not create Default '
-                                                 'HTTP Backend service POD'))
+        backend_config = _get_default_backend_config()
+        validation.check_internal_pod_data(backend_config, kd_user)
+        backend_pod = PodCollection(kd_user).add(backend_config,
+                                                 skip_check=True)
+        PodCollection(kd_user).update(
+            backend_pod['id'], {'command': 'synchronous_start'})
+
+    def _on_error(e):
+        current_app.logger.exception(
+            'Tried to create a Default HTTP Backend service '
+            'pod but got an error.'
+        )
+
+    handled_exceptions = (IntegrityError, APIError)
+    # pod already exists or an error occurred during it's
+    # creation
+
+    try:
+        utils.retry_with_catch(_create_pod, max_tries=5, retry_pause=1,
+                               exc_types=handled_exceptions,
+                               callback_on_error=_on_error)
+    except handled_exceptions as e:
+        raise DefaultBackendNotReady(details=e.message)
 
 
-def create_ingress_controller_pod():
+def _create_ingress_controller_pod():
     """Create Ingress Controller pod"""
-    owner = User.get_internal()
+    kd_user = User.get_internal()
 
     # Check if pod is already exists and if not - check free public ip for it
-    if Pod.query.filter_by(name=KUBERDOCK_INGRESS_POD_NAME,
-                           owner=owner).first():
+    if _is_ingress_controller_exists(kd_user):
         return
-
-    if not current_app.config['AWS']:
-        # Raises exception if there are no free IPs. Not needed in AWS case
-        IPPool.get_free_host()
+    _check_free_ips()
 
     def _create_pod():
-        try:
-            default_backend_pod = Pod.query.filter_by(
-                name=KUBERDOCK_BACKEND_POD_NAME,
-                owner=owner).first()
+        default_backend_pod = Pod.query.filter_by(
+            name=KUBERDOCK_BACKEND_POD_NAME,
+            owner=kd_user).first()
 
-            if not default_backend_pod:
-                raise APIError('No Default HTTP Backend Pod can be found')
+        if not default_backend_pod:
+            raise DefaultBackendNotReady(
+                'No Default HTTP Backend Pod can be found')
 
-            default_backend_pod_config = default_backend_pod.get_dbconfig()
+        default_backend_pod_config = default_backend_pod.get_dbconfig()
 
-            backend_ns = default_backend_pod_config['namespace']
-            backend_svc = default_backend_pod_config.get('service', None)
+        backend_ns = default_backend_pod_config['namespace']
+        backend_svc = default_backend_pod_config.get('service', None)
 
-            if backend_svc is None:
-                return False
+        if backend_svc is None:
+            raise DefaultBackendNotReady(
+                'Cannot get service name of Default HTTP Backend Pod')
 
-            email = SystemSettings.get_by_name(
-                keys.EXTERNAL_SYSTEMS_AUTH_EMAIL)
-            ingress_config = get_ingress_pod_config(backend_ns, backend_svc,
-                                                    email)
-            check_internal_pod_data(ingress_config, owner)
-            ingress_pod = PodCollection(owner).add(ingress_config,
-                                                   skip_check=True)
-            PodCollection(owner).update(
-                ingress_pod['id'], {'command': 'start'})
-            return True
-        except (IntegrityError, APIError):
-            # Either pod already exists or an error occurred during it's
-            # creation - log and retry
-            current_app.logger.exception(
-                'Tried to create an Ingress Controller service '
-                'pod but got an error.'
-            )
+        email = SystemSettings.get_by_name(
+            keys.EXTERNAL_SYSTEMS_AUTH_EMAIL)
+        ingress_config = _get_ingress_pod_config(backend_ns, backend_svc,
+                                                 email)
+        validation.check_internal_pod_data(ingress_config, kd_user)
+        ingress_pod = PodCollection(kd_user).add(ingress_config,
+                                                 skip_check=True)
+        PodCollection(kd_user).update(
+            ingress_pod['id'], {'command': 'synchronous_start'})
 
-    return retry(_create_pod, 10, 5, exc=APIError('Could not create Ingress '
-                                                  'Controller service POD'))
+    def _on_error(e):
+        current_app.logger.exception(
+            'Tried to create an Ingress Controller service '
+            'pod but got an error.'
+        )
+
+    handled_exceptions = (IntegrityError, APIError)
+
+    try:
+        utils.retry_with_catch(_create_pod, max_tries=5, retry_pause=10,
+                               exc_types=handled_exceptions,
+                               callback_on_error=_on_error)
+    except handled_exceptions as e:
+        raise IngressControllerNotReady(e.message)
 
 
-def get_default_backend_config():
+def _get_default_backend_config():
     """Return config of k8s default http backend pod."""
-    # Based on
-    # https://github.com/jetstack/kube-lego/blob/0.0.4/examples/
-    #   default-http-backend-deployment.yaml
-    return {
-        "name": KUBERDOCK_BACKEND_POD_NAME,
-        "replicas": 1,
-        "kube_type": Kube.get_internal_service_kube_type(),
-        "node": None,
-        "restartPolicy": "Always",
-        "volumes": [],
-        "containers": [
-            {
-                "name": "default-http-backend",
-                "command": [],
-                "kubes": 2,
-                "image": "gcr.io/google_containers/defaultbackend:1.0",
-                "env": [],
-                "ports": [
-                    {
-                        "protocol": "TCP",
-                        "containerPort": 8080
-                    }
-                ],
-                "volumeMounts": [],
-                "workingDir": "",
-                "terminationMessagePath": None
-            }
-        ]
+    template_vars = {
+        'name': KUBERDOCK_BACKEND_POD_NAME,
+        'kube_type': Kube.get_internal_service_kube_type()
     }
+    return _read_template(DEFAULT_BACKEND_CONFIG_FILE, template_vars)
 
 
-def get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
+def _get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
     """Return config of k8s ingress controller pod."""
-    # Based on
-    # https://github.com/jetstack/kube-lego/blob/0.0.4/examples/
-    #   nginx-deployment.yaml
-    # and
-    # https://github.com/jetstack/kube-lego/blob/0.0.4/examples/
-    #   kube-lego-deployment.yaml
-    config = {
-        "name": KUBERDOCK_INGRESS_POD_NAME,
-        "podIP": ip,
-        "labels": {"app": "kube-lego"},
-        "replicas": 1,
-        "kube_type": Kube.get_internal_service_kube_type(),
-        "node": None,
-        "restartPolicy": "Always",
-        "volumes": [],
-        "containers": [
-            {
-                "name": "nginx-ingress",
-                "command": [
-                    "/nginx-ingress-controller",
-                    "--default-backend-service={0}/{1}".format(
-                        backend_ns, backend_svc
-                    ),
-                    "--nginx-configmap={}/{}".format(
-                        KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE,
-                        KUBERDOCK_INGRESS_CONFIG_MAP_NAME),
-                ],
-                "kubes": 5,
-                "image": "gcr.io/google_containers/"
-                         "nginx-ingress-controller:0.8.3",
-                "env": [
-                    {
-                        "name": "POD_NAME",
-                        "valueFrom": {
-                            "fieldRef": {
-                                "fieldPath": "metadata.name"
-                            }
-                        }
-                    },
-                    {
-                        "name": "POD_NAMESPACE",
-                        "valueFrom": {
-                            "fieldRef": {
-                                "fieldPath": "metadata.namespace"
-                            }
-                        }
-                    }
-                ],
-                "ports": [
-                    {
-                        "isPublic": True,
-                        "protocol": "TCP",
-                        "containerPort": 80
-                    },
-                    {
-                        "isPublic": True,
-                        "protocol": "TCP",
-                        "containerPort": 443
-                    }
-                ],
-                "volumeMounts": [],
-                "workingDir": "",
-                "terminationMessagePath": None
-            },
-            {
-                "name": "kube-lego",
-                "command": [],
-                "kubes": 3,
-                "image": "jetstack/kube-lego:0.1.3",
-                "env": [
-                    {
-                        "name": "LEGO_EMAIL",
-                        "value": email
-                    },
-                    {
-                        "name": "LEGO_POD_IP",
-                        "valueFrom": {
-                            "fieldRef": {
-                                "fieldPath": "status.podIP"
-                            }
-                        }
-                    },
-                    {
-                        "name": "LEGO_NAMESPACE",
-                        "valueFrom": {
-                            "fieldRef": {
-                                "fieldPath": "metadata.namespace"
-                            }
-                        }
-                    },
-                    {
-                        "name": "LEGO_SERVICE_NAME",
-                        "value": "$(KUBERDOCK_SERVICE)"
-                    },
-                    {
-                        "name": "LEGO_PORT",
-                        "value": "8081"
-                    }
-                ],
-                "ports": [
-                    {
-                        "protocol": "TCP",
-                        "containerPort": 8081
-                    }
-                ],
-                "volumeMounts": [],
-                "workingDir": "",
-                "terminationMessagePath": None
-            }
-        ],
-        "serviceAccount": True,
+    template_vars = {
+        'name': KUBERDOCK_INGRESS_POD_NAME,
+        'kube_type': Kube.get_internal_service_kube_type(),
+        'backend_ns': backend_ns,
+        'backend_svc': backend_svc,
+        'ingress_configmap_ns': KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE,
+        'ingress_configmap_name': KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
+        'email': email,
+        'pod_ip': ip
     }
+    config = _read_template(INGRESS_CONFIG_FILE, template_vars)
 
-    if IS_PRODUCTION_PKG:
+    if settings.IS_PRODUCTION_PKG:
         config['containers'][1]['env'].append(
             {
                 "name": "LEGO_URL",
@@ -262,44 +173,94 @@ def get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
     return config
 
 
-def check_cluster_email():
+def _check_cluster_email():
     """Check if cluster email is not empty"""
     if SystemSettings.get_by_name(keys.EXTERNAL_SYSTEMS_AUTH_EMAIL):
         return
     raise APIError('Email for external services is empty')
 
 
-def create_ingress_nginx_configmap():
+def _create_ingress_nginx_configmap():
     client = ConfigMapClient(KubeQuery())
     default_nginx_settings = {'server-name-hash-bucket-size': '128'}
-
-    try:
-        client.get(KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
-                   namespace=KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
-        return
-    except ConfigMapNotFound:
-        pass
-    except Exception:
-        current_app.logger.exception(
-            'Could not check if ConfigMap for Ingress Controller exists')
-        raise APIError('Could not create configuration resource for Ingress '
-                       'Controller')
 
     try:
         client.create(
             data=default_nginx_settings,
             metadata={'name': KUBERDOCK_INGRESS_CONFIG_MAP_NAME},
             namespace=KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
-    except Exception:
+    except ConfigMapAlreadyExists:
+        pass
+    except Exception as e:
         current_app.logger.exception(
             'Could not create ConfigMap for Ingress Controller')
-        raise APIError('Could not create configuration resource for Ingress '
-                       'Controller')
+        raise IngressConfigMapError(e.message)
+
+
+def _is_default_backend_exists(kd_user):
+    return bool(Pod.filter_by(name=KUBERDOCK_BACKEND_POD_NAME,
+                              owner=kd_user).first())
+
+
+def _is_ingress_controller_exists(kd_user):
+    return bool(Pod.filter_by(name=KUBERDOCK_INGRESS_POD_NAME,
+                              owner=kd_user).first())
+
+
+def _is_nginx_config_map_exists():
+    try:
+        ConfigMapClient(KubeQuery()).get(
+            name=KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
+            namespace=KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
+        return True
+    except ConfigMapNotFound:
+        return False
+
+
+def _check_free_ips():
+    if current_app.config['AWS']:
+        IPPool.get_free_host()
+
+
+@contextmanager
+def _notify_on_errors_context(*err_types):
+    """Context that send notifies to admin on errors"""
+    try:
+        yield
+    except err_types as e:
+        utils.send_event_to_role(
+            'notify:error', {'message': e.message}, 'Admin')
+
+
+def is_subsystem_up():
+    """Check if ip sharing subsystem is up.
+
+    Returns True if ready otherwise False.
+    """
+    kd_user = User.get_internal()
+    return all((
+        _is_default_backend_exists(kd_user),
+        _is_ingress_controller_exists(kd_user),
+        _is_nginx_config_map_exists(),
+    ))
+
+
+def check_subsystem_up_preconditions():
+    """Check some preconditions that must be satisfied before system up."""
+    _check_cluster_email()
+    _check_free_ips()
 
 
 def prepare_ip_sharing():
-    """Create all pods for IP Sharing"""
-    check_cluster_email()
-    create_default_backend_pod()
-    create_ingress_nginx_configmap()
-    create_ingress_controller_pod()
+    """Bring up all components of sharing iP subsystem."""
+    check_subsystem_up_preconditions()
+    _create_default_backend_pod()
+    _create_ingress_nginx_configmap()
+    _create_ingress_controller_pod()
+
+
+@celery.task(ignore_results=True)
+def prepare_ip_sharing_task():
+    """Run `prepare_ip_sharing` asynchronously."""
+    with _notify_on_errors_context(APIError):
+        return prepare_ip_sharing()

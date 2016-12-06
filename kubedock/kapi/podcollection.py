@@ -156,7 +156,8 @@ class PodCollection(object):
         # DNS management system is ok (if required)
         # ...
         if self.owner is not None:
-            DBPod.check_name(params.get('name'), self.owner.id)
+            params['name'] = DBPod.check_name(params.get('name'),
+                                              self.owner.id, generate_new=True)
 
         return params, secrets
 

@@ -18,8 +18,6 @@ from json import JSONEncoder
 from urlparse import urlsplit, urlunsplit, urljoin
 
 import bitmath
-import boto.ec2
-import boto.ec2.elb
 import ipaddress
 import requests
 import yaml
@@ -31,7 +29,6 @@ from werkzeug.wrappers import Response as ResponseBase
 from .core import ssh_connect, db, ConnectionPool
 from .exceptions import APIError, PermissionDenied, NoFreeIPs, NoSuitableNode
 from .login import current_user, AnonymousUserMixin
-from .pods import Pod
 from .rbac.models import Role
 from .settings import (
     KUBE_MASTER_URL, KUBE_BASE_URL, KUBE_API_VERSION, NODE_TOBIND_EXTERNAL_IPS,
@@ -531,128 +528,6 @@ def get_load_balancer(conn, service_name):
     filtered = [elb for elb in elbs if elb.name == service_name]
     if filtered:
         return filtered[0]
-
-
-def register_elb_name(service, name):
-    """
-    Saves received from ELB DNS name in the DB
-    :param name: string -> DNS name to be saved
-    """
-    item = db.session.query(Pod).filter(
-        (Pod.status != 'deleted') & (
-            Pod.config.like('%' + service + '%'))).first()
-    if item is None:
-        return
-    data = json.loads(item.config)
-    data['public_aws'] = name
-    item.config = json.dumps(data)
-    db.session.commit()
-
-
-def get_pod_owner_id(service):
-    """
-    Returns pod owner from db
-    :param service: string -> service name
-    :return: integer
-    """
-    item = db.session.query(Pod).filter(
-        (Pod.status != 'deleted') & (
-            Pod.config.like('%' + service + '%'))).first()
-    if item is None:
-        return
-    return item.owner_id
-
-
-# TODO: need to be moved to network plugin
-def handle_aws_node(ssh, service, host, cmd, pod_ip, ports, app):
-    try:
-        from .settings import REGION, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-    except ImportError:
-        return
-
-    conn = boto.ec2.connect_to_region(
-        REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
-
-    elbconn = boto.ec2.elb.connect_to_region(
-        REGION,
-        aws_access_key_id=AWS_ACCESS_KEY_ID,
-        aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
-
-    data = get_instance_data(conn, host)
-    private_ip = hostname_to_ip(host)
-    elb = get_load_balancer(elbconn, service)
-    elb_rules = []
-    if elb:
-        elb_rules.extend(elb.listeners)
-    rules = get_current_dnat(ssh)
-
-    if cmd == 'add':
-        listeners = []
-        for port_spec in ports:
-            if not port_spec['name'].endswith('-public'):
-                continue
-            container_port = port_spec['targetPort']
-            public_port = port_spec.get('port', container_port)
-            protocol = port_spec.get('protocol', 'tcp')
-
-            match = [i for i in rules
-                     if (i.pod_ip, i.pod_port) == (pod_ip, container_port)]
-
-            port = None
-            if not match:
-                port = get_available_port(host)
-                if port is None:
-                    return False
-
-                new_rule = compose_dnat('I', NODE_TOBIND_EXTERNAL_IPS,
-                                        protocol, private_ip, port,
-                                        pod_ip, container_port)
-                i, o, e = ssh.exec_command(new_rule)
-
-            if not elb_rules and port:
-                listeners.append((public_port, port, protocol))
-        if listeners:
-            sg = get_security_group(conn)
-            if not sg:
-                if not data.get('vpc'):
-                    return False
-                vpc_id = data['vpc'][0]
-                sg = create_security_group(conn, vpc_id)
-
-            elb = elbconn.create_load_balancer(
-                name=service, zones=None, listeners=listeners,
-                subnets=data['sn'], security_groups=sg)
-            elb.register_instances(data['instances'])
-
-            with app.app_context():
-                register_elb_name(service, elb.dns_name)
-                pod = Pod.query.filter(Pod.ip == pod_ip).first()
-                send_event('pod:change', {'id': pod.id} if pod else None)
-
-    elif cmd == 'del':
-        if elb:
-            elb.deregister_instances(data['instances'])
-            elb.delete()
-        for port_spec in ports:
-            if not port_spec['name'].endswith('-public'):
-                continue
-            container_port = port_spec['targetPort']
-            public_port = port_spec.get('port', container_port)
-            protocol = port_spec.get('protocol', 'tcp')
-
-            match = [i for i in rules
-                     if (i.pod_ip, i.pod_port) == (pod_ip, container_port)]
-
-            if match:
-                for ruleset in match:
-                    rule = compose_dnat('D', NODE_TOBIND_EXTERNAL_IPS,
-                                        protocol, private_ip,
-                                        ruleset.host_port,
-                                        ruleset.pod_ip, ruleset.pod_port)
-                    ssh.exec_command(rule)
-    return True
 
 
 def unregistered_pod_warning(pod_id):

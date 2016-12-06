@@ -11,6 +11,20 @@
 - name: Install epel-release
   yum: name=epel-release state=latest
 
+- name: Add yum-config-manager
+  yum: name=yum-utils disablerepo=epel
+
+- name: Increase timeouts in YUM
+  shell: "yum-config-manager --save --setopt {{ item.option }}={{ item.value }}"
+  with_items:
+    - option: timeout
+      value: 60.0
+    - option: retries
+      value: 30
+
+- name: Ensure latest ca-certificates to fix EPEL https problems
+  yum: name=ca-certificates disablerepo=epel state=latest update_cache=yes
+
 - name: Install additional packages
   yum: name={{ item }} state=latest
   with_items:

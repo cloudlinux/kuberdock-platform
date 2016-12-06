@@ -63,6 +63,11 @@ from kubedock.utils import (
 
 KUBERDOCK_MAIN_CONFIG = '/etc/sysconfig/kuberdock/kuberdock.conf'
 
+DOCKER_TIMEOUTS_DROPIN = (
+    '[Service]\n'
+    'TimeoutSec=600'
+)
+
 # It is needed for upgraded kube-proxy
 CONNTRACK_PACKAGE = 'conntrack-tools'
 
@@ -454,6 +459,11 @@ def _upgrade_docker(upd, with_testing):
 
     run("cat << EOF > /etc/sysconfig/docker\n{}\nEOF".format(new_config))
 
+    run("mkdir -p /etc/systemd/system/docker.service.d/")
+    run("cat << EOF > /etc/systemd/system/docker.service.d/timeouts.conf\n"
+        "{}\nEOF".format(DOCKER_TIMEOUTS_DROPIN))
+
+
     # If we restart docker here then rest of node upgrade code will be
     # executed with fresh new docker (don't know whether this is good or bad)
     # and also will results in pods/containers restart at this moment, which
@@ -465,6 +475,8 @@ def _upgrade_docker(upd, with_testing):
     # Because of bug in our package docker could be running again at this moment
     # Maybe this is because of rpm %systemd hooks or else, so ensure it stopped
     # again before restart to prevent timeouts
+    upd.print_log("===== Docker.service restart timeout has been increased to "
+                  "10 min, please, don't interrupt it before timeout ======")
     res = run("bash -c 'for i in $(seq 1 5); do systemctl stop docker; done; "
               "sleep 1; systemctl restart docker;'")
     upd.print_log("Docker second_stop/restart took: {} secs"
@@ -737,6 +749,9 @@ def _master_etcd_conf(etcd1):
 
 
 def _master_docker(upd):
+    helpers.local("mkdir -p /etc/systemd/system/docker.service.d/")
+    helpers.local("cat << EOF > /etc/systemd/system/docker.service.d/timeouts.conf\n"
+                  "{}\nEOF".format(DOCKER_TIMEOUTS_DROPIN))
     helpers.local('systemctl daemon-reload')
     upd.print_log(helpers.local('systemctl reenable docker'))
     upd.print_log(helpers.restart_service('docker'))
@@ -1222,6 +1237,10 @@ def downgrade(upd, with_testing, exception, *args, **kwargs):
 
 
 def upgrade_node(upd, with_testing, env, *args, **kwargs):
+    # To make script idempotent we should unmask it at start if script was
+    # failed somewhere between mask and unmask
+    run("systemctl unmask kubelet")
+
     _update_node_nonfloating_config(upd)
     _update_00174_upgrade_node(upd, with_testing)
 

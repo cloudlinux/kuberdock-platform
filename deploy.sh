@@ -962,7 +962,7 @@ ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl pool add "$CALICO_NE
 do_and_log systemctl disable docker-storage-setup
 do_and_log systemctl mask docker-storage-setup
 mkdir /etc/systemd/system/docker.service.d/
-echo -e "[Service]\nTimeoutStartSec=10min" > /etc/systemd/system/docker.service.d/10-increase_start_timeout.conf
+echo -e "[Service]\nTimeoutSec=600" > /etc/systemd/system/docker.service.d/timeouts.conf
 sed -i 's/^DOCKER_STORAGE_OPTIONS=/DOCKER_STORAGE_OPTIONS="--storage-driver=overlay"/' /etc/sysconfig/docker-storage
 systemctl daemon-reload
 do_and_log systemctl reenable docker

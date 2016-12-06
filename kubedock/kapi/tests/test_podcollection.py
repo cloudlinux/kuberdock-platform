@@ -33,12 +33,13 @@ global_patchers = [
 
 
 def mock_k8s_ingress_endpoints():
-    base_url = r'http://{}:{}/'.format(settings.KUBE_API_HOST, settings.KUBE_API_PORT)
+    base_url = r'http://{}:{}/'.format(settings.KUBE_API_HOST,
+                                       settings.KUBE_API_PORT)
     url_re = re.compile(
         base_url + 'apis/extensions/v1beta1/namespaces/.+/ingresses')
 
-    responses.add(responses.GET, url_re, body='{"kind": "ingress"}', status=200,
-                  content_type='application/json')
+    responses.add(responses.GET, url_re, body='{"kind": "ingress"}',
+                  status=200, content_type='application/json')
 
     url_re = re.compile(
         base_url + 'apis/extensions/v1beta1/namespaces/.+/ingresses/?.*')
@@ -1052,6 +1053,36 @@ class TestPodCollectionPreprocessNewPod(DBTestCase, TestCaseMixin):
         self.pod_collection._preprocess_new_pod(self.params)
         podcollection.fix_relative_mount_paths.assert_called_once_with(
             self.params['containers'])
+
+    @mock.patch('kubedock.pods.models.utils')
+    def test_check_pod_with_exists_name(self, utils):
+        rand_values = ['111', '111', '111', '111', '222']
+
+        def mock_randstr(*args):
+            return rand_values.pop(0)
+
+        utils.randstr = mock_randstr
+
+        first_pod, _ = self.pod_collection._preprocess_new_pod(
+            copy.copy(self.params))
+        self.assertEqual(first_pod['name'], self.params['name'])
+
+        DBPod(id=str(uuid4()), owner_id=self.user.id,
+              name=self.params['name'],
+              kube_id=0).save()
+
+        next_pod, _ = self.pod_collection._preprocess_new_pod(
+            copy.copy(self.params))
+        self.assertEqual(next_pod['name'], '{}-111'.format(
+            self.params['name']))
+
+        DBPod(id=str(uuid4()), owner_id=self.user.id, name=next_pod['name'],
+              kube_id=0).save()
+
+        next_pod, _ = self.pod_collection._preprocess_new_pod(
+            copy.copy(self.params))
+        self.assertEqual(next_pod['name'],
+                         '{}-222'.format(self.params['name']))
 
 
 class TestPodCollectionAdd(DBTestCase, TestCaseMixin):

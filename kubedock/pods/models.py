@@ -15,6 +15,7 @@ from sqlalchemy.dialects import postgresql
 from ..core import db
 from ..exceptions import NoFreeIPs, PodExists
 from ..kapi import pd_utils
+from kubedock import utils
 from ..models_mixin import BaseModelMixin
 from ..settings import DOCKER_IMG_CACHE_TIMEOUT, KUBERDOCK_INTERNAL_USER
 from ..users.models import User
@@ -159,13 +160,30 @@ class Pod(BaseModelMixin, db.Model):
         return self
 
     @classmethod
-    def check_name(cls, name, owner_id, pod_id=None):
-        query = cls.query.filter(cls.name == name, cls.owner_id == owner_id)
+    def check_name(cls, name, owner_id, pod_id=None, generate_new=False,
+                   max_retries=5):
+        query = cls.query.filter(
+            cls.name == name,
+            cls.owner_id == owner_id
+        )
         if pod_id is not None:
             query = query.filter(cls.id != pod_id)
         duplicate = query.first()
         if duplicate:
+            if generate_new:
+                new_name = '{}-{}'.format(name,
+                                          utils.randstr(3, string.digits))
+                retries = max_retries
+                while retries > 0:
+                    try:
+                        return cls.check_name(new_name, owner_id, pod_id)
+                    except PodExists:
+                        new_name = '{}-{}'.format(
+                            name,
+                            utils.randstr(3, string.digits))
+                        retries -= 1
             raise PodExists(name=name, id_=duplicate.id)
+        return name
 
     def get_volumes_size(self):
         return {pd['persistentDisk']['pdName']:

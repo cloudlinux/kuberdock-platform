@@ -205,6 +205,7 @@ clean_node(){
     del_existed $KD_KERNEL_VARS
 
     del_existed /etc/sysconfig/docker*
+    del_existed /etc/systemd/system/docker.service.d/*
     del_existed /etc/systemd/system/docker.service*
 
     del_existed /var/lib/docker
@@ -714,6 +715,17 @@ sed -i "s|^# \(INSECURE_REGISTRY='--insecure-registry\)'|\1=0.0.0.0/0'|" /etc/sy
 # AC-3191 additional docker params
 sed -i "s|^OPTIONS='\(.*\)'|OPTIONS='\1 ${DOCKER_PARAMS}'|" /etc/sysconfig/docker
 
+# Docker is extremely slow on restart/stop/start when there are many containers
+# was running. This could lead to timeouts during upgrade.
+# Maybe this value is too high but we don't know yet what will be the case on
+# production clusters under heavy load
+mkdir -p /etc/systemd/system/docker.service.d
+cat << EOF > /etc/systemd/system/docker.service.d/timeouts.conf
+[Service]
+TimeoutSec=600
+EOF
+
+# TODO we will get reed of this later in favor of drop-ins or in packaged files
 cat > /etc/systemd/system/docker.service << 'EOF'
 [Unit]
 Description=Docker Application Container Engine

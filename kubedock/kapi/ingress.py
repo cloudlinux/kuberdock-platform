@@ -1,9 +1,11 @@
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
-from .podcollection import PodCollection
 from .configmap import ConfigMapClient, ConfigMapNotFound
 from .helpers import KubeQuery
+from .podcollection import PodCollection
+from .. import utils
+from .. import validation
 from ..billing.models import Kube
 from ..constants import (
     KUBERDOCK_BACKEND_POD_NAME,
@@ -12,13 +14,12 @@ from ..constants import (
     KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE,
 )
 from ..exceptions import APIError
+from ..kd_celery import celery
 from ..pods.models import Pod, IPPool
 from ..settings import IS_PRODUCTION_PKG
 from ..system_settings import keys
 from ..system_settings.models import SystemSettings
-from ..validation import check_internal_pod_data
 from ..users.models import User
-from ..utils import retry
 
 
 def create_default_backend_pod():
@@ -33,11 +34,11 @@ def create_default_backend_pod():
             return True
         try:
             backend_config = get_default_backend_config()
-            check_internal_pod_data(backend_config, owner)
+            validation.check_internal_pod_data(backend_config, owner)
             backend_pod = PodCollection(owner).add(backend_config,
                                                    skip_check=True)
             PodCollection(owner).update(
-                backend_pod['id'], {'command': 'start'})
+                backend_pod['id'], {'command': 'synchronous_start'})
             return True
         except (IntegrityError, APIError):
             # Either pod already exists or an error occurred during it's
@@ -47,8 +48,9 @@ def create_default_backend_pod():
                 'pod but got an error.'
             )
 
-    return retry(_create_pod, 1, 5, exc=APIError('Could not create Default '
-                                                 'HTTP Backend service POD'))
+    return utils.retry(_create_pod, 1, 5,
+                       exc=APIError('Could not create Default '
+                                    'HTTP Backend service POD'))
 
 
 def create_ingress_controller_pod():
@@ -79,17 +81,17 @@ def create_ingress_controller_pod():
             backend_svc = default_backend_pod_config.get('service', None)
 
             if backend_svc is None:
-                return False
+                raise APIError('Cannot get default backend service')
 
             email = SystemSettings.get_by_name(
                 keys.EXTERNAL_SYSTEMS_AUTH_EMAIL)
             ingress_config = get_ingress_pod_config(backend_ns, backend_svc,
                                                     email)
-            check_internal_pod_data(ingress_config, owner)
+            validation.check_internal_pod_data(ingress_config, owner)
             ingress_pod = PodCollection(owner).add(ingress_config,
                                                    skip_check=True)
             PodCollection(owner).update(
-                ingress_pod['id'], {'command': 'start'})
+                ingress_pod['id'], {'command': 'synchronous_start'})
             return True
         except (IntegrityError, APIError):
             # Either pod already exists or an error occurred during it's
@@ -99,8 +101,9 @@ def create_ingress_controller_pod():
                 'pod but got an error.'
             )
 
-    return retry(_create_pod, 10, 5, exc=APIError('Could not create Ingress '
-                                                  'Controller service POD'))
+    return utils.retry(_create_pod, 10, 5,
+                       exc=APIError('Could not create Ingress '
+                                    'Controller service POD'))
 
 
 def get_default_backend_config():
@@ -303,3 +306,8 @@ def prepare_ip_sharing():
     create_default_backend_pod()
     create_ingress_nginx_configmap()
     create_ingress_controller_pod()
+
+
+@celery.task(ignore_results=True)
+def prepare_ip_sharing_task():
+    return prepare_ip_sharing()

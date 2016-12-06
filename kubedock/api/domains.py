@@ -9,7 +9,7 @@ from ..domains.models import BaseDomain
 from ..exceptions import (AlreadyExistsError, CannotBeDeletedError,
                           InternalAPIError, DomainNotFound, DNSPluginError,
                           DomainZoneDoesNotExist)
-from ..kapi.ingress import prepare_ip_sharing
+from ..kapi import ingress
 from ..login import auth_required
 from ..rbac import check_permission
 from ..utils import atomic, KubeUtils, register_api
@@ -67,7 +67,6 @@ class DomainsAPI(KubeUtils, MethodView):
         :param name: domain name
         :return: dict with created BaseDomain model fields.
         """
-        prepare_ip_sharing()
         with atomic(CreateDomainInternalError.from_exc, nested=False):
             name = params['name']
             if BaseDomain.query.filter(BaseDomain.name == name).first():
@@ -78,12 +77,13 @@ class DomainsAPI(KubeUtils, MethodView):
             if not zone_exists:
                 raise DomainZoneDoesNotExist(name)
 
-            domain = BaseDomain(name=name)
+            domain = BaseDomain.create(name=name)
 
             if 'certificate' in params:
                 domain.certificate = params['certificate']
 
             db.session.add(domain)
+        ingress.prepare_ip_sharing_task.delay()
         return domain.to_dict()
 
     @maintenance_protected

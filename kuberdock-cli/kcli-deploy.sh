@@ -62,6 +62,34 @@ yum_wrapper() {
 }
 
 
+enable_epel() {
+  rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+  rpm -q epel-release &> /dev/null || yum_wrapper -y install epel-release
+
+  # Clean metadata once again if it's outdated after time sync with ntpd
+  yum -d 1 --disablerepo=* --enablerepo=epel clean metadata
+
+  # sometimes certificates can be outdated and this could cause
+  # EPEL https metalink problems
+  do_and_log yum -y --disablerepo=epel upgrade ca-certificates
+  do_and_log yum -y --disablerepo=epel install yum-utils
+  yum-config-manager --save --setopt timeout=60.0
+  yum-config-manager --save --setopt retries=30
+
+  _get_epel_metadata() {
+    # download metadata only for EPEL repo
+    yum -d 1 --disablerepo=* --enablerepo=epel clean metadata
+    yum -d 1 --disablerepo=* --enablerepo=epel makecache fast
+  }
+
+  for _retry in $(seq 5); do
+    echo "Attempt $_retry to get metadata for EPEL repo ..."
+    _get_epel_metadata && return || sleep 10
+  done
+  do_and_log _get_epel_metadata
+}
+
+
 remove_flannel() {
     if [ "$VER" == "7" ];then
         do_and_log systemctl stop flanneld
@@ -249,8 +277,8 @@ gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
 EOF
 
 do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
+enable_epel
 
-yum_wrapper -y install epel-release
 yum_wrapper -y install kuberdock-cli
 yum_wrapper -y install kuberdock-plugin
 

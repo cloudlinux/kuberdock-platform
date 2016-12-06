@@ -47,7 +47,10 @@ echo "Set time zone to $TZ"
 timedatectl set-timezone "$TZ"
 echo "Deploy started: $(date)"
 
-
+# This should be as early as possible because outdated metadata (one that was
+# before sync time with ntpd) could cause troubles with https metalink for
+# repos like EPEL.
+yum clean metadata
 
 # ======================== JUST COMMON HELPERS ================================
 # SHOULD BE DEFINED FIRST, AND BEFORE USE
@@ -350,7 +353,12 @@ setup_ntpd ()
     # AC-3199 Remove chrony which prevents ntpd service to start after boot
     yum -d 1 erase -y chrony
     check_status
-    yum -d 1 install -y ntp
+    if rpm -q epel-release >> /dev/null; then
+      # prevent EPEL metadata update before time sync
+      yum -d 1 install -y ntp --disablerepo=epel
+    else
+      yum -d 1 install -y ntp
+    fi
     check_status
 
     _sync_time() {
@@ -449,6 +457,41 @@ EOF
 
 }
 
+
+enable_epel()
+{
+  rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+  rpm -q epel-release &> /dev/null || yum_wrapper -y install epel-release
+  check_status
+
+  # Clean metadata once again if it's outdated after time sync with ntpd
+  yum -d 1 --disablerepo=* --enablerepo=epel clean metadata
+
+  # sometimes certificates can be outdated and this could cause
+  # EPEL https metalink problems
+  yum_wrapper -y --disablerepo=epel upgrade ca-certificates
+  check_status
+  yum_wrapper -y --disablerepo=epel install yum-utils
+  check_status
+  yum-config-manager --save --setopt timeout=60.0
+  yum-config-manager --save --setopt retries=30
+  check_status
+
+  _get_epel_metadata() {
+    # download metadata only for EPEL repo
+    yum -d 1 --disablerepo=* --enablerepo=epel clean metadata
+    yum -d 1 --disablerepo=* --enablerepo=epel makecache fast
+  }
+
+  for _retry in $(seq 5); do
+    echo "Attempt $_retry to get metadata for EPEL repo ..."
+    _get_epel_metadata && return || sleep 10
+  done
+  _get_epel_metadata
+  check_status
+}
+
+
 # Workaround for CentOS 7 minimal CD bug.
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787
 SWITCH=`cat /etc/nsswitch.conf | grep "^hosts:"`
@@ -500,7 +543,10 @@ yum --enablerepo=kube,kube-testing clean metadata
 
 
 # Should be done at the very beginning to ensure yum https works correctly
+# for example EPEL https metalink will not work if time is incorrect
 setup_ntpd
+
+enable_epel
 
 # 2. install components
 echo "Installing kubernetes..."
@@ -518,9 +564,6 @@ yum_wrapper -y install tuned
 # kdtools - statically linked binaries to provide ssh access into containers
 yum_wrapper -y install kdtools
 
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-yum_wrapper -y install epel-release
-check_status
 # TODO AC-4871: move to kube-proxy dependencies
 yum_wrapper -y install conntrack-tools
 

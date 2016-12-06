@@ -289,6 +289,12 @@ fi
 
 install_repos()
 {
+
+# This should be done as early as possible because outdated metadata (one that
+# was before sync time with ntpd) could cause troubles with https metalink for
+# repos like EPEL.
+yum clean metadata
+
 #1 Add kubernetes repo
 cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF
 [kube]
@@ -312,9 +318,39 @@ EOF
 
 #2 Import some keys
 do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-do_and_log rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-yum_wrapper -y install epel-release
+
+enable_epel
 }
+
+
+enable_epel()
+{
+  rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+  rpm -q epel-release &> /dev/null || yum_wrapper -y install epel-release
+
+  # Clean metadata once again if it's outdated after time sync with ntpd
+  log_it yum -d 1 --disablerepo=* --enablerepo=epel clean metadata
+
+  # sometimes certificates can be outdated and this could cause
+  # EPEL https metalink problems
+  do_and_log yum -y --disablerepo=epel upgrade ca-certificates
+  do_and_log yum -y --disablerepo=epel install yum-utils
+  yum-config-manager --save --setopt timeout=60.0
+  yum-config-manager --save --setopt retries=30
+
+  _get_epel_metadata() {
+    # download metadata only for EPEL repo
+    yum -d 1 --disablerepo=* --enablerepo=epel clean metadata
+    yum -d 1 --disablerepo=* --enablerepo=epel makecache fast
+  }
+
+  for _retry in $(seq 5); do
+    echo "Attempt $_retry to get metadata for EPEL repo ..."
+    _get_epel_metadata && return || sleep 10
+  done
+  do_and_log _get_epel_metadata
+}
+
 
 do_and_log()
 # Log all output to LOG-file and screen, and stop script on error
@@ -435,7 +471,12 @@ setup_ntpd ()
 {
     # AC-3318 Remove chrony which prevents ntpd service to start after boot
     yum erase -y chrony
-    yum install -y ntp
+    if rpm -q epel-release >> /dev/null; then
+      # prevent EPEL metadata update before time sync
+      yum install -y ntp --disablerepo=epel
+    else
+      yum install -y ntp
+    fi
 
     _sync_time() {
         grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -u
@@ -606,9 +647,13 @@ else
   PD_NAMESPACE="$PD_CUSTOM_NAMESPACE"
 fi
 
-# Should be done at the very beginning to ensure yum https works correctly
+# =============================================================================
+# This should be done as early as possible because outdated metadata (one that
+# was before sync time with ntpd) could cause troubles with https metalink for
+# repos like EPEL.
 setup_ntpd
 install_repos
+# =============================================================================
 
 if [ "$ISAMAZON" = true ];then
     AVAILABILITY_ZONE=$(curl -s connect-timeout 1 http://169.254.169.254/latest/meta-data/placement/availability-zone)

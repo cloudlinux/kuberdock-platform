@@ -104,10 +104,8 @@ class UserCollection(object):
         return dict(user.to_dict(full=True),
                     actions=self._get_applicability(user))
 
-    # temporarely removed `atomic`, because self._suspend_user isn't atomic.
-    # TODO: AC-4557
-    # @atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'),
-    #         nested=False)
+    @atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'),
+           nested=False)
     @enrich_tz_with_offset(['timezone'])
     def update(self, user, data):
         """Update user
@@ -149,40 +147,38 @@ class UserCollection(object):
                                     exc_info=sys.exc_info())
             raise APIError("Couldn't update user.", 500, 'UserUpdateError')
 
-        with atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'),
-                    nested=False):
-            if 'rolename' in data:
-                rolename = data.pop('rolename', 'User')
-                r = Role.by_rolename(rolename)
-                if r is not None:
-                    if r.rolename == 'Admin':
-                        pods = [p for p in user.pods if not p.is_deleted]
-                        if pods:
-                            raise APIError('User with the "{0}" role '
-                                           'cannot have any pods'
-                                           .format(r.rolename))
-                    data['role'] = r
-                else:
-                    data['role'] = Role.by_rolename('User')
-            if 'package' in data:
-                package = data['package']
-                p = Package.by_name(package)
-                old_package, new_package = user.package, p
-                kubes_in_old_only = (
-                    set(kube.kube_id for kube in old_package.kubes) -
-                    set(kube.kube_id for kube in new_package.kubes)
-                )
-                if kubes_in_old_only:
-                    if user.pods.filter(Pod.kube_id.in_(
-                            kubes_in_old_only)).first() is not None:
-                        raise APIError(
-                            "New package doesn't have kube_types of some "
-                            "of user's pods")
-                data['package'] = p
+        if 'rolename' in data:
+            rolename = data.pop('rolename', 'User')
+            r = Role.by_rolename(rolename)
+            if r is not None:
+                if r.rolename == 'Admin':
+                    pods = [p for p in user.pods if not p.is_deleted]
+                    if pods:
+                        raise APIError('User with the "{0}" role '
+                                        'cannot have any pods'
+                                        .format(r.rolename))
+                data['role'] = r
+            else:
+                data['role'] = Role.by_rolename('User')
+        if 'package' in data:
+            package = data['package']
+            p = Package.by_name(package)
+            old_package, new_package = user.package, p
+            kubes_in_old_only = (
+                set(kube.kube_id for kube in old_package.kubes) -
+                set(kube.kube_id for kube in new_package.kubes)
+            )
+            if kubes_in_old_only:
+                if user.pods.filter(Pod.kube_id.in_(
+                        kubes_in_old_only)).first() is not None:
+                    raise APIError(
+                        "New package doesn't have kube_types of some "
+                        "of user's pods")
+            data['package'] = p
 
-            user.update(data)
-            db.session.flush()
-            return user.to_dict()
+        user.update(data)
+        db.session.flush()
+        return user.to_dict()
 
     @atomic(APIError("Couldn't update user.", 500, 'UserUpdateError'),
             nested=False)
@@ -330,9 +326,7 @@ class UserCollection(object):
         return able
 
     @staticmethod
-    # temporarely removed `atomic`, because PodCollection() isn't atomic.
-    # TODO: AC-4557
-    # @atomic()
+    @atomic()
     def _suspend_user(user):
         pod_collection = PodCollection(user)
         for pod in pod_collection.get(as_json=False):

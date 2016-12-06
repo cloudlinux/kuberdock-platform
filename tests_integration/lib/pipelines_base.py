@@ -52,10 +52,10 @@ class Pipeline(object):
     def _get_pipeline_env(self):
         default_env = {
             'KD_MASTER_CPUS': '2',
-            'KD_MASTER_MEMORY': '4096',
+            'KD_MASTER_MEMORY': '2048',
             'KD_NODES_COUNT': '2',
             'KD_NODE_CPUS': '2',
-            'KD_NODE_MEMORY': '3048',
+            'KD_NODE_MEMORY': '3072',
             'KD_INSTALL_TYPE': 'qa',
             'KD_LICENSE': 'patch',
             'KD_TESTING_REPO': 'true',

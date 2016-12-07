@@ -14,6 +14,7 @@ settings.cfg
 local_settings.py
 celerybeat-schedule
 .vagrant
+dev-utils/dev-env/*.vagrant
 .pipelines
 .docker*
 *.retry
@@ -34,3 +35,4 @@ kubedock/frontend/static/local-config.js
 aws-kd-deploy/kuberdock-files/
 kubedock/frontend/static/prepared*
 dev-utils/dev-env/*.log
+dev-utils/dev-env/ansible/credentials/password.txt

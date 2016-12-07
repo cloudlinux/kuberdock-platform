@@ -36,6 +36,11 @@ Vagrant.configure(2) do |config|
       f.each_line do |line|
         line.chomp!
         next if line.empty?
+        # FIXME: I've spent hours to figure out how and why excluding
+        # exactly this one line fixes rsync'ing of "updates/scripts/" folder
+        # but can't find any reason. This small extra folder doesn't add any
+        # noticeable overhead, so this "fix" is acceptable for now
+        next if line == ".idea"
         rsyncExcludes << line
       end
     end
@@ -43,6 +48,7 @@ Vagrant.configure(2) do |config|
 
   config.vm.provider "virtualbox" do |vb, override|
     override.ssh.password = 'vagrant'
+    vb.linked_clone = true if Vagrant::VERSION =~ /^1.[8-9]/
   end
 
   config.vm.provider :opennebula do |one, override|
@@ -69,7 +75,7 @@ Vagrant.configure(2) do |config|
   if rhostsCount > 0
       (1..rhostsCount).each do |i|
           config.vm.define "kd_rhost#{i}" do |rhost|
-              config_rhost(rhost, i)
+              config_rhost(rhost, i, nodesCount)
           end
       end
   end

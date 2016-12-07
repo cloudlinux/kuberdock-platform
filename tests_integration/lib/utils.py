@@ -46,8 +46,9 @@ def _proceed_exec_result(out, err, ret_code, check_retcode):
 
 
 def local_exec(cmd, env=None, shell=False, check_retcode=True):
-    LOG.debug("{}Executing locally: '{}'{}".format(Style.DIM, " ".join(cmd),
-                                                   Style.RESET_ALL))
+    LOG.debug("{}Executing locally: '{}'{}".format(
+        Style.DIM, cmd if isinstance(cmd, basestring) else " ".join(cmd),
+        Style.RESET_ALL))
     if env is not None:
         # Sanitize env because it doees not digest non string values
         env = dict((key, str(value)) for key, value in env.items())

@@ -157,6 +157,7 @@ def _get_unique_domain_name(basename, domain_id):
 
 
 def validate_domain_reachability(domain):
+    return True
     try:
         socket.gethostbyname(domain)
         return True

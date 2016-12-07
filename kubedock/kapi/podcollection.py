@@ -1241,10 +1241,6 @@ class PodCollection(object):
                                  u'management subsystem is misconfigured. '
                                  u'Please, contact administrator.'
             )
-        custom_domain = getattr(pod, 'custom_domain', None)
-        if custom_domain:
-            if not pod_domains.validate_domain_reachability(custom_domain):
-                raise CustomDomainIsNotReady(domain=custom_domain)
 
     def assign_public_ip(self, pod_id, node=None):
         """Returns assigned ip"""

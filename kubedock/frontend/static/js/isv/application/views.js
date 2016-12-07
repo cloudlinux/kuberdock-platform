@@ -125,6 +125,11 @@ export const Conf = Marionette.LayoutView.extend({
         this.model.set('current_tab_num', 0);
         this.containerName = this.model.get('containers').at(0).get('name');
     },
+    templateHelpers(){
+        return {
+            activeSshTab: this.containerName,
+        };
+    },
     onShow(){
         this.updateContainerInfo();
         utils.preloader2.hide();
@@ -132,6 +137,9 @@ export const Conf = Marionette.LayoutView.extend({
     onDomRefresh(){ this.ui.tooltip.tooltip(); },
     selectContainer(event){
         this.containerName = $(event.currentTarget).attr('data-name');
+        this.render();
+    },
+    onRender() {
         this.updateContainerInfo();
     },
     updateContainerInfo(){

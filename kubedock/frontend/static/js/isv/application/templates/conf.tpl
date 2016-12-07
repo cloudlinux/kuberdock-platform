@@ -20,8 +20,8 @@
 
 <div class="row">
     <ul class="nav nav-tabs col-sm-12">
-        <% _.each(containers, function(container, i){ %>
-            <li class="container-tab <%- current_tab_num == i ? 'active' : ''
+        <% _.each(containers, function(container){ %>
+            <li class="container-tab <%- activeSshTab === container.name ? 'active' : ''
              %>"
                 data-name="<%- container.name%>"><%- container.image %></li>
         <% }) %>

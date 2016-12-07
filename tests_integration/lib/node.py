@@ -29,7 +29,7 @@ class KDNode(object):
         return cls(cluster, node_data)
 
     def delete(self, timeout=60):
-        self.cluster.manage("delete-node --hostname {}".format(self.name))
+        self.cluster.kdctl("nodes delete --hostname {}".format(self.name))
         end = time.time() + timeout
         while time.time() < end:
             if not self.exists():
@@ -75,4 +75,3 @@ class KDNode(object):
     @property
     def status(self):
         return self.info["status"]
-

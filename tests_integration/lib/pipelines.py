@@ -24,6 +24,10 @@ class MainPipeline(Pipeline):
         'KD_TIMEZONE': 'Europe/Moscow'
     }
 
+    def post_create_hook(self):
+        super(MainPipeline, self).post_create_hook()
+        self.cluster.wait_for_service_pods()
+
 
 class MainUpgradedPipeline(UpgradedPipelineMixin, MainPipeline):
     NAME = 'main_upgraded'

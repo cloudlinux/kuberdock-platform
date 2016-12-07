@@ -134,7 +134,7 @@ def test_delete_node_with_pv(cluster):
         'nginx', 'test_nginx_pod_2', pvs=[pv1, pv2], start=True,
         wait_for_status='running')
 
-    hosting_node = cluster.nodes.get_node(pod1.node)
+    hosting_node = cluster.nodes.get_node(pod2.node)
 
     pod2.stop()
     pod2.wait_for_status('stopped')

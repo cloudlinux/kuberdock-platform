@@ -59,7 +59,8 @@ def test_move_pods_and_delete_node_with_ceph_storage(cluster):
 
     log_debug("Delete node '{}' which is hosting the pod. Pod should move to "
               "node '{}'".format(pod.node, prev_node))
-    cluster.nodes.delete(pod.node)
+    hosting_node = cluster.nodes.get_node(node_name=pod.node)
+    hosting_node.delete()
 
     wait_for(lambda: pod.node == prev_node)
     pod.wait_for_status('running')
@@ -133,6 +134,8 @@ def test_delete_node_with_pv(cluster):
         'nginx', 'test_nginx_pod_2', pvs=[pv1, pv2], start=True,
         wait_for_status='running')
 
+    hosting_node = cluster.nodes.get_node(pod1.node)
+
     pod2.stop()
     pod2.wait_for_status('stopped')
 
@@ -141,7 +144,7 @@ def test_delete_node_with_pv(cluster):
         NonZeroRetCodeException,
         "Node 'node1' can't be deleted. Reason: users Persistent volumes "
         "located on the node.*"):
-        cluster.nodes.delete(node_name='node1')
+        hosting_node.delete()
 
     pod2.delete()
     pv2.delete()
@@ -150,7 +153,7 @@ def test_delete_node_with_pv(cluster):
         NonZeroRetCodeException,
         "Node 'node1' can't be deleted. Reason: users Persistent volumes "
         "located on the node.*"):
-        cluster.nodes.delete(node_name='node1')
+        hosting_node.delete()
 
     pod1.delete()
     # pod1 is deleted, but pv1 is still linked to the node.
@@ -159,8 +162,8 @@ def test_delete_node_with_pv(cluster):
         NonZeroRetCodeException,
         "Node 'node1' can't be deleted. Reason: users Persistent volumes "
         "located on the node.*"):
-        cluster.nodes.delete(node_name='node1')
+        hosting_node.delete()
 
     pv1.delete()
     # no pvs left on node, so it can be deleted with no problem.
-    cluster.nodes.delete(node_name='node1')
+    hosting_node.delete()

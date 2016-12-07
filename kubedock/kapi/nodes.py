@@ -7,17 +7,20 @@ import socket
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
+from . import ingress
 from . import pstorage
+from .network_policies import get_dns_policy_config, get_logs_policy_config
 from .node_utils import (
     add_node_to_db, delete_node_from_db, remove_ls_storage,
     cleanup_node_network_policies)
 from .podcollection import PodCollection
-from .network_policies import get_dns_policy_config, get_logs_policy_config
 from .. import tasks
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
 from ..core import db
+from ..domains.models import BaseDomain
 from ..exceptions import APIError
+from ..kd_celery import celery
 from ..nodes.models import Node, NodeFlag, NodeFlagNames
 from ..pods.models import Pod
 from ..settings import (
@@ -35,7 +38,6 @@ from ..utils import (
     get_node_token,
 )
 from ..validation import check_internal_pod_data
-from ..kd_celery import celery
 
 KUBERDOCK_DNS_POD_NAME = 'kuberdock-dns'
 KUBERDOCK_POLICY_POD_NAME = 'kuberdock-policy-agent'
@@ -109,7 +111,8 @@ def create_node(ip, hostname, kube_id,
     current_app.logger.debug('Created log pod: {}'.format(log_pod))
     create_dns_pod(hostname, ku)
     create_policy_pod(hostname, ku, token)
-
+    if BaseDomain.query.first() and not ingress.is_subsystem_up():
+        ingress.prepare_ip_sharing()
     _deploy_node(node, log_pod['podIP'], do_deploy, with_testing,
                  ls_devices=ls_devices, ebs_volume=ebs_volume, options=options)
 
@@ -188,7 +191,8 @@ def create_dns_pod(hostname, owner):
             dns_config = get_dns_pod_config()
             check_internal_pod_data(dns_config, owner)
             dns_pod = PodCollection(owner).add(dns_config, skip_check=True)
-            PodCollection(owner).update(dns_pod['id'], {'command': 'synchronous_start'})
+            PodCollection(owner).update(dns_pod['id'],
+                                        {'command': 'synchronous_start'})
             if CALICO:
                 dns_policy = get_dns_policy_config(owner.id, dns_pod['id'])
                 Etcd(ETCD_NETWORK_POLICY_SERVICE).put(
@@ -216,7 +220,8 @@ def create_policy_pod(hostname, owner, token):
             policy_conf = get_policy_agent_config(MASTER_IP, token)
             check_internal_pod_data(policy_conf, owner)
             policy_pod = PodCollection(owner).add(policy_conf, skip_check=True)
-            PodCollection(owner).update(policy_pod['id'], {'command': 'synchronous_start'})
+            PodCollection(owner).update(policy_pod['id'],
+                                        {'command': 'synchronous_start'})
             return True
         except (IntegrityError, APIError):
             # Either pod already exists or an error occurred during it's

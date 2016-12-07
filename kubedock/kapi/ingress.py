@@ -58,7 +58,8 @@ def _create_default_backend_pod():
     kd_user = User.get_internal()
 
     def _create_pod():
-        if _is_default_backend_exists(kd_user):
+        if _get_default_backend(kd_user):
+            current_app.logger.debug('Default backend exists. Skip')
             return
 
         backend_config = _get_default_backend_config()
@@ -67,6 +68,7 @@ def _create_default_backend_pod():
                                                  skip_check=True)
         PodCollection(kd_user).update(
             backend_pod['id'], {'command': 'synchronous_start'})
+        current_app.logger.debug('Default created and started')
 
     def _on_error(e):
         current_app.logger.exception(
@@ -91,26 +93,24 @@ def _create_ingress_controller_pod():
     kd_user = User.get_internal()
 
     # Check if pod is already exists and if not - check free public ip for it
-    if _is_ingress_controller_exists(kd_user):
+    if _get_ingress_controller(kd_user):
+        current_app.logger.debug('Ingress controller exists. Skip')
         return
     _check_free_ips()
 
     def _create_pod():
-        default_backend_pod = Pod.query.filter_by(
-            name=KUBERDOCK_BACKEND_POD_NAME,
-            owner=kd_user).first()
+        default_backend_pod = _get_default_backend(kd_user)
 
         if not default_backend_pod:
-            raise DefaultBackendNotReady(
+            raise IngressControllerNotReady(
                 'No Default HTTP Backend Pod can be found')
 
         default_backend_pod_config = default_backend_pod.get_dbconfig()
-
-        backend_ns = default_backend_pod_config['namespace']
-        backend_svc = default_backend_pod_config.get('service', None)
+        backend_ns, backend_svc = _get_backend_address(
+            default_backend_pod_config)
 
         if backend_svc is None:
-            raise DefaultBackendNotReady(
+            raise IngressControllerNotReady(
                 'Cannot get service name of Default HTTP Backend Pod')
 
         email = SystemSettings.get_by_name(
@@ -122,6 +122,7 @@ def _create_ingress_controller_pod():
                                                  skip_check=True)
         PodCollection(kd_user).update(
             ingress_pod['id'], {'command': 'synchronous_start'})
+        current_app.logger.debug('Ingress controller created and started')
 
     def _on_error(e):
         current_app.logger.exception(
@@ -137,6 +138,12 @@ def _create_ingress_controller_pod():
                                callback_on_error=_on_error)
     except handled_exceptions as e:
         raise IngressControllerNotReady(e.message)
+
+
+def _get_backend_address(default_backend_pod_config):
+    backend_ns = default_backend_pod_config['namespace']
+    backend_svc = default_backend_pod_config.get('service', None)
+    return backend_ns, backend_svc
 
 
 def _get_default_backend_config():
@@ -189,7 +196,9 @@ def _create_ingress_nginx_configmap():
             data=default_nginx_settings,
             metadata={'name': KUBERDOCK_INGRESS_CONFIG_MAP_NAME},
             namespace=KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
+        current_app.logger.debug('Nginx configmap created')
     except ConfigMapAlreadyExists:
+        current_app.logger.debug('Nginx configmap exists. Skip')
         pass
     except Exception as e:
         current_app.logger.exception(
@@ -197,28 +206,27 @@ def _create_ingress_nginx_configmap():
         raise IngressConfigMapError(e.message)
 
 
-def _is_default_backend_exists(kd_user):
-    return bool(Pod.filter_by(name=KUBERDOCK_BACKEND_POD_NAME,
-                              owner=kd_user).first())
+def _get_default_backend(kd_user):
+    return Pod.filter_by(name=KUBERDOCK_BACKEND_POD_NAME,
+                         owner=kd_user).first()
 
 
-def _is_ingress_controller_exists(kd_user):
-    return bool(Pod.filter_by(name=KUBERDOCK_INGRESS_POD_NAME,
-                              owner=kd_user).first())
+def _get_ingress_controller(kd_user):
+    return Pod.filter_by(name=KUBERDOCK_INGRESS_POD_NAME,
+                         owner=kd_user).first()
 
 
-def _is_nginx_config_map_exists():
+def _get_nginx_config_map():
     try:
-        ConfigMapClient(KubeQuery()).get(
+        return ConfigMapClient(KubeQuery()).get(
             name=KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
             namespace=KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE)
-        return True
     except ConfigMapNotFound:
-        return False
+        return None
 
 
 def _check_free_ips():
-    if current_app.config['AWS']:
+    if not current_app.config['AWS']:
         IPPool.get_free_host()
 
 
@@ -239,9 +247,9 @@ def is_subsystem_up():
     """
     kd_user = User.get_internal()
     return all((
-        _is_default_backend_exists(kd_user),
-        _is_ingress_controller_exists(kd_user),
-        _is_nginx_config_map_exists(),
+        _get_default_backend(kd_user),
+        _get_ingress_controller(kd_user),
+        _get_nginx_config_map(),
     ))
 
 

@@ -12,7 +12,7 @@ from .users.signals import user_logged_in
 from .billing.models import Package
 from .kapi.users import UserCollection, User
 from .system_settings.models import SystemSettings
-from .core import db
+from .core import db, ConnectionPool
 from .login import create_identifier, get_remote_addr
 from .utils import randstr
 from .validation.validators import V
@@ -124,7 +124,7 @@ class ManagedSessionInterface(SessionInterface):
         try:
             s = Serializer(secret, lifetime)
             data = s.loads(token)
-            return self.manager.get(data)
+            return self.manager.get(data, token)
         except SignatureExpired:
             try:
                 s = FallbackSerializer(secret)
@@ -162,10 +162,14 @@ class DataBaseSessionManager(SessionManager):
     def new_session(self):
         return ManagedSession()
 
-    def get(self, data):
+    def get(self, data, token=None, key="USED_TOKENS"):
         sid = data.pop('sid', None)
         if sid is None:
             if data.pop('auth', None):
+                conn = ConnectionPool.get_connection()
+                if conn.hexists(key, token):
+                    return self.new_session()
+                conn.hset(key, token, 1)
                 return add_and_auth_user(data)
             return self.new_session()
         saved = SessionData.query.get(sid)

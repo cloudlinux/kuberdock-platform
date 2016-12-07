@@ -23,7 +23,7 @@ from images import Image
 from kubedock.exceptions import (
     ContainerCommandExecutionError, NotFound,
     NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError, ServicePodDumpError,
-    CustomDomainIsNotReady)
+    CustomDomainIsNotReady, CertificatDoesNotMatchDomain)
 from kubedock.kapi.lbpoll import get_service_provider
 from network_policies import (
     allow_public_ports_policy,
@@ -37,6 +37,7 @@ from .. import billing
 from .. import dns_management
 from .. import settings
 from .. import utils
+from .. import certificate_utils
 from ..core import ExclusiveLockContextManager, db
 from ..domains.models import PodDomain
 from ..exceptions import (
@@ -498,6 +499,15 @@ class PodCollection(object):
                 if pod_domain_created:
                     db.session.add(pod_domain)
             config['domain'] = pod.domain = str(pod_domain)
+
+            if config.get('certificate'):
+                # If certificate is provided it's applied to the custom_domain
+                # if present. Otherwise is used with the domain from KD.
+                # This check is also performed later, on pod start. It is here
+                # for the user's convience only
+                domain = config.get('custom_domain') or config['domain']
+                certificate_utils.check_cert_is_valid_for_domain(
+                    domain, config['certificate']['cert'])
 
         else:
             _raise_unexpected_access_type(access_type)

@@ -131,7 +131,8 @@ class TestDomains(APITestCase):
             self, check_if_zone_exists_mock, prepare_ip_sharing_mock):
         check_if_zone_exists_mock.return_value = (True, None)
         data = {
-            'name': 'somedomain.com', 'certificate': fixtures.sample_certiicate
+            'name': 'example.com',
+            'certificate': fixtures.sample_certificate
         }
 
         data['certificate']['cert'] = 'some thrash'
@@ -144,7 +145,8 @@ class TestDomains(APITestCase):
             self, check_if_zone_exists_mock, prepare_ip_sharing_mock):
         check_if_zone_exists_mock.return_value = (True, None)
         data = {
-            'name': 'somedomain.com', 'certificate': fixtures.sample_certiicate
+            'name': 'example.com',
+            'certificate': fixtures.sample_certificate
         }
 
         data['certificate']['key'] = 'some thrash'
@@ -153,11 +155,25 @@ class TestDomains(APITestCase):
 
     @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.delay')
     @mock.patch('kubedock.dns_management.check_if_zone_exists')
+    def test_domain_creation_with_certificate_fails_if_domain_does_not_match(
+            self, check_if_zone_exists_mock, prepare_ip_sharing_mock):
+        check_if_zone_exists_mock.return_value = (True, None)
+        data = {
+            'name': 'nonmatchingdomain.com',
+            'certificate': fixtures.sample_certificate
+        }
+        response = self.admin_open('/domains/', method='POST', json=data)
+
+        self.assert400(response)
+
+    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.delay')
+    @mock.patch('kubedock.dns_management.check_if_zone_exists')
     def test_domain_creation_with_correct_certificate_succeeds(
             self, check_if_zone_exists_mock, prepare_ip_sharing_mock):
         check_if_zone_exists_mock.return_value = (True, None)
         data = {
-            'name': 'somedomain.com', 'certificate': fixtures.sample_certiicate
+            'name': 'example.com',
+            'certificate': fixtures.sample_certificate
         }
         response = self.admin_open('/domains/', method='POST', json=data)
 

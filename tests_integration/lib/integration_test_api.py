@@ -148,8 +148,9 @@ class KDIntegrationTestAPI(object):
             # is active before we return
             self.wait_ssh_conn(self.node_names)
         except Exception as e:
-            raise ClusterUpgradeError('Cannot SSH to one of the cluster VMs '
-                                      'after upgrade:\n{}'.format(repr(e)))
+            raise exceptions.ClusterUpgradeError(
+                'Cannot SSH to one of the cluster VMs after upgrade:\n{}'
+                .format(repr(e)))
 
     @log_timing
     def upgrade_rhosts(self, deploy_script_path, use_testing=False):
@@ -160,16 +161,18 @@ class KDIntegrationTestAPI(object):
             cmd.append('--upgrade')
             try:
                 self.ssh_exec(rhost, " ".join(cmd), live=True)
-            except NonZeroRetCodeException:
-                raise ClusterUpgradeError("Rhost '{}' upgrade failed")
+            except exceptions.NonZeroRetCodeException:
+                raise exceptions.ClusterUpgradeError(
+                    "Rhost '{}' upgrade failed")
 
         try:
             # Rhosts can be rebooted during upgrade, make sure SSH
             # is active before we return
             self.wait_ssh_conn(self.rhost_names)
         except Exception as e:
-            raise ClusterUpgradeError('Cannot SSH to one of the rhost VMs '
-                                      'after upgrade:\n{}'.format(repr(e)))
+            raise exceptions.ClusterUpgradeError(
+                'Cannot SSH to one of the rhost VMs after upgrade:\n{}'
+                .format(repr(e)))
 
     @contextmanager
     def temporary_stop_host(self, host):
@@ -228,8 +231,8 @@ class KDIntegrationTestAPI(object):
         if not isinstance(hosts, (list, tuple)):
             hosts = [hosts]
         for host in hosts:
-            retry(self.ssh_exec, tries, interval,
-                  node=host, cmd="echo OK")
+            utils.retry(self.ssh_exec, tries, interval,
+                        node=host, cmd="echo OK")
             LOG.debug("SSH connection to host '{}' is OK.".format(host))
 
     @log_timing
@@ -295,6 +298,10 @@ class KDIntegrationTestAPI(object):
 
         kcli_cmd.extend(['kubectl', cmd])
         return self.ssh_exec('master', ' '.join(kcli_cmd))
+
+    def true_kubectl(self, cmd):
+        rc, out, err = self.ssh_exec('master', ' '.join(('kubectl', cmd)))
+        return rc, out, err
 
     def get_hostname(self, name):
         return self._provider.get_vm_hostname(name)
@@ -552,7 +559,7 @@ class PodList(object):
 
     def create_pa(self, template_name, plan_id=1, wait_ports=False,
                   healthcheck=False, wait_for_status=None, owner='test_user',
-                  command="kcli2", rnd_str='test_data_'):
+                  command="kcli2", rnd_str='test_data_', pod_name=None):
         """Create new pod with predefined application in the Kuberdock.
 
         :param rnd_str: string which will be applied to the name of
@@ -562,7 +569,7 @@ class PodList(object):
         """
         pod = KDPAPod.create(
             self.cluster, template_name, plan_id, owner, command,
-            rnd_str=utils.get_rnd_low_string(prefix=rnd_str, length=5))
+            utils.get_rnd_low_string(prefix=rnd_str, length=5), pod_name)
 
         if wait_for_status:
             pod.wait_for_status(wait_for_status)

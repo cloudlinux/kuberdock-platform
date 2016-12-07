@@ -33,7 +33,8 @@ class KDPAPod(KDPod):
         self.restart_policy = restart_policy
 
     @classmethod
-    def create(cls, cluster, template_name, plan_id, owner, command, rnd_str):
+    def create(cls, cluster, template_name, plan_id, owner, command,
+               rnd_str, pod_name):
         commands = {
             "kcli2": cluster.kcli2,
             "kdctl": cluster.kdctl
@@ -44,7 +45,11 @@ class KDPAPod(KDPod):
                                   format(command))
         pa_data = cluster.pas.get_by_name(template_name)
         pa_id = pa_data['id']
-        data = json.dumps({'PD_RAND': rnd_str})
+        data = {'PD_RAND': rnd_str}
+        if pod_name:
+            data.update({'APP_NAME': pod_name})
+
+        data = json.dumps(data)
 
         base_command = "predefined-apps create-pod {} {} '{}'".format(
             pa_id, plan_id, data)

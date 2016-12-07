@@ -453,6 +453,18 @@ class SharedIPPipeline(Pipeline):
     }
 
 
+class VerticalScalabilityPipeline(Pipeline):
+    NAME = 'vertical_scalability'
+    ROUTABLE_IP_COUNT = 3
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'KD_NODE_CPUS': '4',
+        'KD_NODE_MEMORY': '4096',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
+        'KD_NODE_TYPES': 'node1=standard'
+    }
+
+
 # How many pipelines can be created at time when running on infra provider.
 infra_provider_slots = {
     "opennebula": 25,

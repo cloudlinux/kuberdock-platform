@@ -2,13 +2,13 @@ from flask import Blueprint
 from flask.views import MethodView
 
 from .utils import use_kwargs
-from .. import dns_management
+from .. import dns_management, certificate_utils
 from ..core import db
 from ..decorators import maintenance_protected
 from ..domains.models import BaseDomain
 from ..exceptions import (AlreadyExistsError, CannotBeDeletedError,
                           InternalAPIError, DomainNotFound, DNSPluginError,
-                          DomainZoneDoesNotExist)
+                          DomainZoneDoesNotExist, CertificatDoesNotMatchDomain)
 from ..kapi import ingress
 from ..login import auth_required
 from ..rbac import check_permission
@@ -30,8 +30,6 @@ class EditDomainInternalError(InternalAPIError):
 class DeleteDomainInternalError(InternalAPIError):
     message_template = 'Failed to delete domain ({excType}: {excValue})'
 
-# TODO: Validate that common name in certificate is wildcard cert of the given
-# domain
 base_domain_schema = {
     'name': dict(domain_schema, required=True),
     'certificate': certificate_schema,
@@ -86,7 +84,10 @@ class DomainsAPI(KubeUtils, MethodView):
         with atomic(CreateDomainInternalError.from_exc, nested=False):
             domain = BaseDomain.create(name=name)
             if certificate:
+                certificate_utils.check_cert_is_valid_for_domain(
+                    '*.' + name, certificate['cert'])
                 domain.certificate = certificate
+
             db.session.add(domain)
 
         # up subsystem if needed

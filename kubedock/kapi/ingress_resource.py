@@ -2,6 +2,8 @@
 import base64
 import json
 
+from .. import exceptions
+from ..certificate_utils import check_cert_is_valid_for_domain
 from ..domains.models import PodDomain
 from .helpers import KubeQuery
 
@@ -231,7 +233,8 @@ def create_ingress_https(namespace, service, domain, custom_domain=None,
         custom_r.add_tls(custom_r.name, custom_domain)
 
         if certificate is not None:
-            save_certificate_to_secret(certificate, custom_r.name, namespace)
+            save_certificate_to_secret(certificate, custom_domain,
+                                       custom_r.name, namespace)
         else:
             custom_r.enable_ssl_autogeneration()
 
@@ -243,16 +246,20 @@ def create_ingress_https(namespace, service, domain, custom_domain=None,
     # Wildcard certificate is used in all cases except there is user provided
     # certificate and there is no custom_domain specified
     if certificate is not None and custom_domain is None:
-        save_certificate_to_secret(certificate, resource.name, namespace)
+        save_certificate_to_secret(certificate, domain, resource.name,
+                                   namespace)
         resource.disable_ssl_autogeneration()
     elif wildcard_cert:
-        save_certificate_to_secret(wildcard_cert, resource.name, namespace)
+        save_certificate_to_secret(wildcard_cert, domain, resource.name,
+                                   namespace)
         resource.disable_ssl_autogeneration()
 
     client.create(resource)
 
 
-def save_certificate_to_secret(certificate, secret_name, namespace):
+def save_certificate_to_secret(certificate, domain, secret_name, namespace):
+    check_cert_is_valid_for_domain(domain, certificate['cert'])
+
     secret = {
         "kind": "Secret",
         "apiVersion": "v1",
@@ -270,7 +277,8 @@ def save_certificate_to_secret(certificate, secret_name, namespace):
     r = kq.post(['secrets'], json.dumps(secret), ns=namespace, rest=True)
 
     if r.get('code') == 409:
-        kq.put(['secrets', secret_name], json.dumps(secret), ns=namespace, rest=True)
+        kq.put(['secrets', secret_name], json.dumps(secret),
+               ns=namespace, rest=True)
 
 
 def create_ingress(containers, namespace, service, domain, custom_domain=None,
@@ -331,7 +339,8 @@ def add_custom_domain(namespace, service, containers, domain, certificate=None):
 
         if certificate is not None:
             resource.disable_ssl_autogeneration()
-            save_certificate_to_secret(certificate, resource.name, resource.namespace)
+            save_certificate_to_secret(certificate, domain, resource.name,
+                                       resource.namespace)
         else:
             resource.enable_ssl_autogeneration()
     else:

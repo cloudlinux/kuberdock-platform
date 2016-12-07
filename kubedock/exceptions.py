@@ -321,6 +321,16 @@ class CanNotRemoveIPPool(APIError):
         super(CanNotRemoveIPPool, self).__init__(details={'message': details})
 
 
+class CertificatDoesNotMatchDomain(APIError):
+    message_template = \
+        'Certificate is only valid for {cert_domains}. Can not ' \
+        'use it with {domain}'
+
+    def __init__(self, domain, cert_domains):
+        details = {'domain': domain, 'cert_domains': ', '.join(cert_domains)}
+        super(CertificatDoesNotMatchDomain, self).__init__(details=details)
+
+
 class SharedIPSubsystemNotReady(APIError):
     message_template = "Shared IP subsystem is not ready. {message}"
 

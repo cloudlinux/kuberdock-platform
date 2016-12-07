@@ -4,6 +4,7 @@ from copy import copy, deepcopy
 import pytz
 
 from kubedock.constants import DOMAINNAME_LENGTH
+from kubedock import certificate_utils
 from kubedock.users import User
 from OpenSSL import crypto
 
@@ -305,14 +306,27 @@ def validate_cert_key(field, value, error):
         error(field, 'Private Key must be in a PEM format')
 
 
+def validate_cert_matches_priv_key(field, value, error):
+    # Any error already happend - stop
+    if error.im_self.errors:
+        return
+    cert = value['cert']
+    key = value['key']
+
+    if not certificate_utils.check_cert_matches_private_key(cert, key):
+        error('cert', 'Certificate does not match private key')
+
+
 certificate_schema = {
     'type': 'dict',
     'nullable': True,
     'schema': {
         'cert': {'validator': validate_cert, 'required': True},
         'key': {'validator': validate_cert_key, 'required': True},
-    }
+    },
+    'validator': validate_cert_matches_priv_key,
 }
+
 
 edited_pod_config_schema = {
     'podIP': {

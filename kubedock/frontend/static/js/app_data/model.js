@@ -1318,7 +1318,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     App.getAppCollection = App.resourcePromiser('appCollection', data.AppCollection);
 
     data.CurrentUserModel = Backbone.Model.extend({
-        url(){ return '/api/users/editself'; },
+        url(){ return '/api/users/self'; },
         parse: unwrapper,
         defaults: {
             impersonated: false

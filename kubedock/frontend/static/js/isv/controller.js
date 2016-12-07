@@ -10,9 +10,10 @@ import {Backup as AppBackupView} from 'isv/backup/views';
 import {Topbar, Sidebar} from 'isv/misc/views';
 
 const controller = {
-    doLogin(options){
-        console.log('not authorized');
-        // TODO: redirect to WHMCS -> login -> redirect back with SSO?
+    doLogin(){
+        utils.notifyWindow('Session expired. Reload this page.');
+        App.rootLayout.topbar.reset();
+        App.rootLayout.contents.reset();
     },
 
     showApplicationView(view, tab){

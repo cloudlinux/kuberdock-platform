@@ -61,11 +61,14 @@ const App = new Marionette.Application({
         _.each([  // delete all initial data
             'currentUser', 'userPackage',
             'packageCollection', 'kubeTypeCollection', 'packageKubeCollection'
-        ], function(name){ delete this[name]; }, this);
-        for (var resource in this._cache) delete this._cache[resource];
+        ], name => this[name] = undefined);
+        for (var resource in this._cache)
+            this._cache[resource] = undefined;
+        if (this._updateTokenTimeout)
+            clearTimeout(this._updateTokenTimeout);
         if (this.sse) {  // close SSE stream
             this.sse.kill();
-            delete this.sse;
+            this.sse = undefined;
         }
         return this;
     },
@@ -76,13 +79,26 @@ const App = new Marionette.Application({
      * @param {Object} authData - modified data from App.getAuth
      */
     updateAuth(token){
+        if (this._updateTokenTimeout)
+            clearTimeout(this._updateTokenTimeout);
+        let newToken = utils.parseJWT(token);
         if (App.storage.authData){
             let oldToken = utils.parseJWT(App.storage.authData);
-            let newToken = utils.parseJWT(token);
-            if (oldToken.header.exp > newToken.header.exp)
+            if (oldToken.header.exp > newToken.header.exp &&
+                    !oldToken.payload.auth)
                 return;  // old token will live longer
         }
         App.storage.authData = token;
+        // Ping API to receive a new token 10s before this one expires.
+        // But in one hour without any action, it's safe to drop expired token.
+        // This would keep user logged in while he does anything on the page.
+        let doNotRenewTokenAfter = 60 * 60 * 1000;
+        this._updateTokenTimeout = setTimeout(() => {
+            if (new Date() - this.idleSince < doNotRenewTokenAfter)
+                this.getCurrentUser({updateCache: true});
+            else
+                this.cleanUp().controller.doLogin();
+        }, newToken.header.exp * 1000 - new Date() - 10000);
     },
 
     /**
@@ -161,14 +177,27 @@ const App = new Marionette.Application({
      * @returns {Promise} - promise of auth data
      */
     getAuth(){
-        var deferred = $.Deferred(),
-            authData = this.getCurrentAuth();
-        if (authData)
-            return deferred.resolveWith(this, [authData]).promise();
-        this.cleanUp().controller.doLogin().done(function(authData){
-            this.initApp().then(deferred.resolve, deferred.reject);
+        return new Promise((resolve, reject) => {
+            let authData = this.getCurrentAuth();
+            if (authData){
+                let token = utils.parseJWT(authData);
+                if (token.payload.auth){
+                    // need to replace SSO token with session token
+                    $.ajax({
+                        url: '/api/v1/users/self',
+                        headers: {'X-Auth-Token': authData},
+                    }).then((data, status, xhr) => {
+                        this.updateAuth(xhr.getResponseHeader('X-Auth-Token'));
+                        resolve(this.getCurrentAuth());
+                    }, () => this.cleanUp().controller.doLogin());
+                } else {
+                    resolve(authData);
+                }
+                return;
+            }
+            this.cleanUp().controller.doLogin();
+            reject();
         });
-        return deferred.promise();
     },
 
     /**
@@ -177,32 +206,33 @@ const App = new Marionette.Application({
      * @returns {Promise} - Promise of auth data, SSE, and initial data in App.
      */
     initApp(){
-        var deferred = new $.Deferred();
-        this.getAuth().done(authData => {
-            if (this.initialized){
-                deferred.resolveWith(this, [authData]);
-                return;
-            }
-            $.when(this.getCurrentUser(), this.getPackages()).done((user, packages) => {
-                // These resources must be fetched every time user logins in, and they
-                // are widely used immediately after start, so let's just save them as
-                // properties, so we won't need to go async every time we need them.
-                this.currentUser = user;
-                this.userPackage = packages.get(user.get('package_id'));
-                // open SSE stream
-                this.eventHandler();
-                // trigger Routers for the current url
-                Backbone.history.loadUrl(this.getCurrentRoute());
-                this.initialized = true;
-                deferred.resolveWith(this, [authData]);
-            }).fail(() => { deferred.rejectWith(this, arguments); });
+        return new Promise((resolve, reject) => {
+            this.getAuth().then(authData => {
+                if (this.initialized){
+                    resolve(authData);
+                    return;
+                }
+                let initialData = [this.getCurrentUser(), this.getPackages()];
+                Promise.all(initialData).then(([user, packages]) => {
+                    // These resources must be fetched every time user logins in, and they
+                    // are widely used immediately after start, so let's just save them as
+                    // properties, so we won't need to go async every time we need them.
+                    this.currentUser = user;
+                    this.userPackage = packages.get(user.get('package_id'));
+                    // open SSE stream
+                    this.eventHandler();
+                    // trigger Routers for the current url
+                    Backbone.history.loadUrl(this.getCurrentRoute());
+                    this.initialized = true;
+                    resolve(authData);
+                }, reject);
+            });
         });
-        return deferred.promise();
     },
 });
 
 App.on('start', function(){
-    utils.preloader.show();
+    utils.preloader2.show();
     const Controller = require('isv/controller').default;
     const Router = require('isv/router').default;
     new Router({controller: this.controller = new Controller()});
@@ -212,7 +242,7 @@ App.on('start', function(){
 
     if (Backbone.history) {
         Backbone.history.start({root: '/', silent: true});
-        utils.preloader.hide();
+        utils.preloader2.hide();
         this.initApp();
     }
 });
@@ -252,7 +282,13 @@ $(document).ajaxComplete(function(e, xhr){
     $.xhrPool.splice(_.indexOf($.xhrPool, xhr), 1);
 });
 $.xhrPool.abortAll = function() {
-    _.each(this.splice(0), function(xhr){ xhr.abort(); });
+    for (let xhr of this.splice(0))
+        xhr.abort();
 };
+
+App.idleSince = +new Date();
+$(document).on('click mousemove keyup', _.throttle(
+    () => App.idleSince = +new Date(),
+    5000, {trailing: false}));
 
 export default App;

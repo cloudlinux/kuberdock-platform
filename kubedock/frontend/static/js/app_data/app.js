@@ -116,13 +116,27 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
      * @returns {Promise} - promise of auth data
      */
     App.getAuth = function(){
-        var deferred = $.Deferred(),
+        let deferred = $.Deferred(),
             authData = this.getCurrentAuth();
-        if (authData)
-            return deferred.resolveWith(this, [authData]).promise();
-        this.cleanUp().controller.doLogin().done(function(authData){
-            this.initApp().then(deferred.resolve, deferred.reject);
-        });
+        if (authData){
+            let token = Utils.parseJWT(authData);
+            if (token.payload.auth){
+                // need to replace SSO token with session token
+                $.ajax({
+                    url: '/api/v1/users/self',
+                    headers: {'X-Auth-Token': authData},
+                }).then((data, status, xhr) => {
+                    this.updateAuth(xhr.getResponseHeader('X-Auth-Token'));
+                    deferred.resolveWith(this, [this.getCurrentAuth()]);
+                }, () => this.cleanUp().getAuth());
+            } else {
+                return deferred.resolveWith(this, [authData]).promise();
+            }
+        } else {
+            this.cleanUp().controller.doLogin().then(authData => {
+                this.initApp().then(deferred.resolve, deferred.reject);
+            });
+        }
         return deferred.promise();
     };
 

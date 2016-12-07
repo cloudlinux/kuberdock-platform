@@ -19,7 +19,7 @@ export const getParentWithType = function(model, typeOfPatent, throughCollection
 
 
 export const CurrentUserModel = Backbone.Model.extend({
-    url: apiUrl('users/editself'),
+    url: apiUrl('users/self'),
     parse: utils.restUnwrapper,
     defaults: {
         impersonated: false

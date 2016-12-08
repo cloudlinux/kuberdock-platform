@@ -121,14 +121,16 @@ class FixedIPPoolsPipeline(Pipeline):
 class CephPipeline(Pipeline):
     NAME = 'ceph'
     ROUTABLE_IP_COUNT = 2
+    root = os.path.abspath(os.path.join(
+        __file__, '../../../dev-utils/dev-env/ansible/ceph_configs'))
     ENV = {
         'KD_NODES_COUNT': '3',
         'KD_NODE_TYPES': 'node1=Standard,node2=Tiny,node3=High memory',
         'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',
         'KD_CEPH': '1',
         'KD_CEPH_USER': 'jenkins',
-        'KD_CEPH_CONFIG': 'ceph_configs/ceph.conf',
-        'KD_CEPH_USER_KEYRING': 'ceph_configs/client.jenkins.keyring',
+        'KD_CEPH_CONFIG': os.path.join(root, 'ceph.conf'),
+        'KD_CEPH_USER_KEYRING': os.path.join(root, 'client.jenkins.keyring'),
         'KD_PD_NAMESPACE': 'jenkins_pool'
     }
 

@@ -214,6 +214,46 @@ class TestIPPool_v2(BaseTestIPPool):
                      'node': self.node.hostname},
             'status': 'OK'})
 
+    @responses.activate
+    def test_create_with_autoblock(self):
+        new_network = {
+            'network': '192.168.33.0/24',
+            'autoblock': '192.168.33.0-192.168.33.214,'
+                         '192.168.33.218-192.168.33.255',
+            'node': self.node.hostname
+        }
+        response = self.admin_open(method='POST', json=new_network)
+        self.assert200(response)
+        self.assertEqual(
+            response.json,
+            {"data": {
+                "blocks": [[3232243968, 3232244182, "blocked"],
+                           [3232244183, 3232244185, "free"],
+                           [3232244186, 3232244223, "blocked"]],
+                "free_host_count": 3, "id": "192.168.33.0/24",
+                "ipv6": False, "network": "192.168.33.0/24",
+                "node": self.node.hostname}, "status": "OK"}
+        )
+
+    @responses.activate
+    def test_create_with_autoblock_overlaps(self):
+        new_network = {
+            'network': '192.168.33.0/32',
+            'autoblock': '192.168.33.0-192.168.33.214,'
+                         '192.168.33.218-192.168.33.255',
+            'node': self.node.hostname
+        }
+        response = self.admin_open(method='POST', json=new_network)
+        self.assert200(response)
+        self.assertEqual(
+            response.json,
+            {"data": {
+                "blocks": [[3232243968, 3232243968, "blocked"]],
+                "free_host_count": 0, "id": "192.168.33.0/32",
+                "ipv6": False, "network": "192.168.33.0/32",
+                "node": self.node.hostname}, "status": "OK"}
+        )
+
     def test_update(self):
         url = self.item_url(self.ippool.network)
         unblock = {'unblock_ip': '192.168.1.1'}

@@ -119,7 +119,8 @@ class PredefinedApp(object):
         :param as_dict bool -> if True returns PA objects as dicts
         :return: list of PA objects or dicts
         """
-        query = PredefinedAppModel.query.order_by(PredefinedAppModel.id)
+        query = PredefinedAppModel.query.order_by(PredefinedAppModel.id) \
+            .filter(PredefinedAppModel.is_deleted.isnot(True))
         if as_dict:
             return [app.to_dict(exclude=('templates',)) for app in query.all()]
         apps = []

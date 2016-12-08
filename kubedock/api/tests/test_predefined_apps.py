@@ -178,11 +178,21 @@ class PredefinedAppsTestCase(APITestCase):
                                  'template': self.template},
         ).json['data']
 
+        # get list
+        response = self.open(auth=self.adminauth)
+        self.assert200(response)
+        self.assertEqual(len(response.json['data']), 1)
+
         # delete template
         url = self.item_url(predefined_app['id'])
         response = self.admin_open(url, method='DELETE')
         self.assert200(response)
         self.assert404(self.open(url, auth=self.adminauth))
+
+        # get list
+        response = self.open(auth=self.adminauth)
+        self.assert200(response)
+        self.assertEqual(len(response.json['data']), 0)
 
     def test_delete_version(self):
         predefined_app = self.admin_open(

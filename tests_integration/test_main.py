@@ -38,7 +38,6 @@ def test_a_pv_created_together_with_pod(cluster):
     pod = cluster.pods.create("nginx", "test_nginx_pod_1", pvs=[pv],
                               start=True, wait_for_status='running',
                               wait_ports=True, open_all_ports=True)
-    assert_eq(pv.exists(), True)
     utils.assert_eq(pv.exists(), True)
 
     c_id = pod.get_container_id(container_image='nginx')

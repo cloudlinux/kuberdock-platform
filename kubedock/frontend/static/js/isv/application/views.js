@@ -4,7 +4,7 @@ import * as utils from 'app_data/utils';
 import detailsTpl from './templates/details.tpl';
 import confTpl from './templates/conf.tpl';
 import confContainerTpl from './templates/conf_container.tpl';
-import editDomainTpl from './templates/edit_domain.tpl'
+import editDomainTpl from './templates/edit_domain.tpl';
 
 // import 'bootstrap-editable';
 // import 'jqplot';
@@ -40,6 +40,8 @@ export const Details = Marionette.ItemView.extend({
                 dt: this.model.get('appLastUpdate'),
                 formatString: 'YYYY-MM-DD HH:mm:ss (z)',
             }),
+            price: App.config.price,
+            dueDate: App.config.dueDate,
         };
     },
     resetAdminPassword(){

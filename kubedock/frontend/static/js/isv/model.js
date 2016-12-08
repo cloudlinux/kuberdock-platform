@@ -11,15 +11,13 @@ Backbone.sync = function(method, model, options){
     return Backbone.syncOrig.apply(Backbone, arguments);
 };
 
-export const apiUrl = (...path) => [App.config.apiHost, 'api', ...path].join('/');
-
 export const getParentWithType = function(model, typeOfPatent, throughCollection){
     return _.find(model.parents || [], parent => parent instanceof typeOfPatent);
 };
 
 
 export const CurrentUserModel = Backbone.Model.extend({
-    url: apiUrl('users/self'),
+    url: App.apiUrl('users/self'),
     parse: utils.restUnwrapper,
     defaults: {
         impersonated: false
@@ -48,7 +46,7 @@ export let PackageKube, PackageKubeCollection;
 
 Package = Backbone.AssociatedModel.extend({
     url(){
-        return apiUrl(`pricing/packages/${this.id}?with_kubes=1&with_internal=1`);
+        return App.apiUrl(`pricing/packages/${this.id}?with_kubes=1&with_internal=1`);
     },
     parse: utils.restUnwrapper,
     defaults(){
@@ -103,7 +101,7 @@ Package = Backbone.AssociatedModel.extend({
     },
 });
 PackageCollection = Backbone.Collection.extend({
-    url: apiUrl('pricing/packages/?with_kubes=1&with_internal=1'),
+    url: App.apiUrl('pricing/packages/?with_kubes=1&with_internal=1'),
     model: Package,
     parse: utils.restUnwrapper,
 });
@@ -192,7 +190,7 @@ Container = Backbone.AssociatedModel.extend({
     getPod(){ return getParentWithType(this.collection, Pod); },
     exec(command){
         return new Promise((resolve, reject) => {
-            let url = apiUrl('podapi', this.getPod().id, this.get('name'), 'exec');
+            let url = App.apiUrl('podapi', this.getPod().id, this.get('name'), 'exec');
             $.ajax({url, data: {command}, authWrap: true, method: 'POST'})
                 .then(response => resolve(utils.restUnwrapper(response)), reject);
         });
@@ -200,7 +198,7 @@ Container = Backbone.AssociatedModel.extend({
 });
 
 Pod = Backbone.AssociatedModel.extend({
-    urlRoot: apiUrl('podapi'),
+    urlRoot: App.apiUrl('podapi'),
     parse: utils.restUnwrapper,
 
     relations: [{
@@ -247,7 +245,7 @@ Pod = Backbone.AssociatedModel.extend({
         return new Promise(
             (resolve, reject) => {
                 $.ajax({
-                    url: apiUrl(`podapi/${this.id}/reset_direct_access_pass`),
+                    url: App.apiUrl(`podapi/${this.id}/reset_direct_access_pass`),
                     authWrap: true,
                 })
                 .done((response) => {
@@ -319,7 +317,7 @@ Pod = Backbone.AssociatedModel.extend({
 });
 
 PodCollection = Backbone.Collection.extend({
-    url: apiUrl('podapi'),
+    url: App.apiUrl('podapi'),
     model: Pod,
     parse: utils.restUnwrapper,
 });
@@ -337,7 +335,7 @@ Backup = Backbone.Model.extend({
 });
 
 BackupCollection = Backbone.PageableCollection.extend({
-    url: apiUrl('podapi', 'backup'),
+    url: App.apiUrl('podapi', 'backup'),
     model: Backup,
     parse: utils.restUnwrapper,
     mode: 'client',

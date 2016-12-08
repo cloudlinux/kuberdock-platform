@@ -34,6 +34,10 @@ const App = new Marionette.Application({
         this.config = Object.assign(defaultGlobalConfig, window.KD_GLOBAL || {});
     },
 
+    apiUrl(...path){
+        return [this.config.apiHost, 'api', ...path].join('/');
+    },
+
     navigate(route, options = {}){
         Backbone.history.navigate(route, options);
         return this;  // for chaining
@@ -106,7 +110,7 @@ const App = new Marionette.Application({
      */
     eventHandler(){
         let token = App.getCurrentAuth(),
-            url = App.config.apiHost + '/api/stream';
+            url = App.apiUrl('stream');
         if (!token)
             return;
         let sse = new utils.EventHandler({token, url, error: () => {
@@ -184,7 +188,7 @@ const App = new Marionette.Application({
                 if (token.payload.auth){
                     // need to replace SSO token with session token
                     $.ajax({
-                        url: '/api/v1/users/self',
+                        url: this.apiUrl('users/self'),
                         headers: {'X-Auth-Token': authData},
                     }).then((data, status, xhr) => {
                         this.updateAuth(xhr.getResponseHeader('X-Auth-Token'));

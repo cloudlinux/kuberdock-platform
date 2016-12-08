@@ -49,7 +49,8 @@ export const Topbar = Marionette.ItemView.extend({
     },
 
     goToApp() {
-        window.open(`http://${this.model.get('domain')}/`, '_blank').focus();
+        let domain = this.model.get('custom_domain') || this.model.get('domain');
+        window.open(`http://${domain}/`, '_blank').focus();
     },
     restart(){
         this.model.command('redeploy');

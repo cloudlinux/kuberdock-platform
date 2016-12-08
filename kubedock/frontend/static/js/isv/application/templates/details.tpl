@@ -9,7 +9,7 @@
         </p>
         <p>Admin username: Admin</p>
         <p>
-            <% if (appCommands.resetPassword){ %>
+            <% if (appCommands && appCommands.resetPassword){ %>
                 <span class="page-action reset-admin-password">Reset admin password</span>
                 <span class="copy-password hidden" data-toggle="tooltip" data-placement="top"
                     data-original-title="Copy admin password to clipboard"></span>
@@ -22,8 +22,8 @@
     <div class="hidden-xs col-sm-2 isv-block text-center layers"></div>
     <div class="col-xs-12 col-sm-4 isv-block">
         <p>Current package: <%- template_plan_name %></p>
-        <p>Price: $29.95/month</p>
-        <p>Due date: TODO</p>
+        <% if (price){ %><p>Price: <%- price %></p><% } %>
+        <% if (dueDate){ %><p>Due date: <%- dueDate %></p><% } %>
     </div>
     <div class="hidden-xs col-sm-2 isv-block text-center info-outline"></div>
     <div class="col-xs-12 col-sm-4 isv-block">

@@ -297,15 +297,19 @@ class IPPool(BaseModelMixin, db.Model):
         return ip_network(self.network).iterpages()
 
     def get_blocked_set(self, as_int=False):
+        network = ip_network(self.network)
+
         blocked_set = set()
         try:
             blocked_set = self._to_ip_set(
                 json.loads(self.blocked_list or "[]"),
                 int if as_int else str)
-        except Exception, e:
+            blocked_set = filter(lambda x: ipaddress.ip_address(x) in network,
+                                 blocked_set)
+        except Exception as e:
             current_app.logger.warning("IPPool.get_blocked_set failed: "
                                        "{0}".format(e))
-        return blocked_set
+        return set(blocked_set)
 
     def _to_ip_set(self, ip, format=int):
         """Convert singular IP or IP iterable in IP set
@@ -373,9 +377,13 @@ class IPPool(BaseModelMixin, db.Model):
         return _hosts
 
     def busy_and_block(self):
+        network = ip_network(self.network)
         ip_list = [pod.ip_address
                    for pod in PodIP.filter_by(network=self.network)]
-        return list(set(ip_list) | self.get_blocked_set(as_int=True))
+        blocked_list = self.get_blocked_set(as_int=True)
+        blocked_list = filter(lambda x: ipaddress.ip_address(x) in network,
+                              blocked_list)
+        return list(set(ip_list) | set(blocked_list))
 
     def host_count(self):
         network = self.network

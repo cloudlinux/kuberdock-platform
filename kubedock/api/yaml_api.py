@@ -6,7 +6,8 @@ from kubedock.api.utils import use_kwargs
 from kubedock.billing import has_billing
 from kubedock.decorators import maintenance_protected
 from kubedock.exceptions import (
-    APIError, InsufficientData, PermissionDenied, PredefinedAppExc)
+    APIError, InsufficientData, PermissionDenied, PredefinedAppExc, NoFreeIPs,
+    NoFreeIPsAdminNotification)
 from kubedock.kapi.apps import PredefinedApp, AppInstance, start_pod_from_yaml
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.login import auth_required
@@ -105,7 +106,12 @@ def create_pod(template_id, plan_id, owner=None, start=True, **data):
     if not owner.is_administrator() and has_billing() and owner.fix_price:
         raise PermissionDenied
     pod_data = app.get_filled_template_for_plan(plan_id, data)
-    res = start_pod_from_yaml(pod_data, user=owner, template_id=template_id)
+    try:
+        res = start_pod_from_yaml(pod_data, user=owner,
+                                  template_id=template_id)
+    except NoFreeIPs:
+        raise NoFreeIPsAdminNotification
+
     if start:
         PodCollection(owner).update(
             res['id'], {'command': 'start', 'commandOptions': {}})

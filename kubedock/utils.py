@@ -31,7 +31,7 @@ from .exceptions import APIError, PermissionDenied, NoFreeIPs, NoSuitableNode
 from .login import current_user, AnonymousUserMixin
 from .rbac.models import Role
 from .settings import (
-    KUBE_MASTER_URL, KUBE_BASE_URL, KUBE_API_VERSION, NODE_TOBIND_EXTERNAL_IPS,
+    KUBE_MASTER_URL, KUBE_BASE_URL, KUBE_API_VERSION,
     ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE,
     ETCD_CALICO_HOST_KEY_PATH_TEMPLATE, ETCD_CALICO_URL
 )

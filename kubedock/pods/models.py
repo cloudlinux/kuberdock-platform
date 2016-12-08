@@ -495,6 +495,7 @@ class IPPool(BaseModelMixin, db.Model):
             free_host = n.get_first_free_host(as_int=as_int)
             if free_host is not None:
                 return free_host
+
         raise NoFreeIPs()
 
     def is_ip_available(self, ip, node_hostname=None):

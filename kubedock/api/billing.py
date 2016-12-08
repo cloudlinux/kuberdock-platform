@@ -4,7 +4,8 @@ from flask import Blueprint, current_app, request
 
 from kubedock.core import db
 from kubedock.decorators import maintenance_protected
-from kubedock.exceptions import APIError, BillingExc
+from kubedock.exceptions import APIError, BillingExc, NoFreeIPs, \
+    NoFreeIPsAdminNotification
 from kubedock.login import auth_required
 from kubedock.utils import atomic, KubeUtils
 from kubedock.billing.models import Package, Kube
@@ -146,8 +147,14 @@ def order_app(billing_driver, template_id, plan_id):
     data = KubeUtils._get_params()
     app = PredefinedApp.get(template_id)
 
-    start_pod_from_yaml(app.get_filled_template_for_plan(plan_id, data),
-                        dry_run=True)
+    try:
+        start_pod_from_yaml(app.get_filled_template_for_plan(plan_id, data),
+                            dry_run=True)
+    except NoFreeIPs:
+        raise NoFreeIPsAdminNotification(
+            response_message='There is a problem with a package you trying '
+                             'to buy. Please, try again or contact support '
+                             'team.')
 
     filled = app.get_filled_template_for_plan(plan_id, data, as_yaml=True)
     pkgid = app._get_package().id

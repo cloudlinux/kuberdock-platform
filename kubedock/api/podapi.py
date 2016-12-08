@@ -5,7 +5,8 @@ from kubedock.billing import has_billing
 from .utils import use_kwargs
 from ..backups import pods as backup_pods
 from ..decorators import maintenance_protected
-from ..exceptions import PermissionDenied
+from ..exceptions import PermissionDenied, NoFreeIPs, \
+    NoFreeIPsAdminNotification
 from ..kapi.apps import PredefinedApp
 from ..kapi.podcollection import PodCollection, PodNotFound
 from ..login import auth_required
@@ -21,6 +22,7 @@ podapi = Blueprint('podapi', __name__, url_prefix='/podapi')
 
 
 schema = {'owner': owner_optional_schema}
+
 
 def check_owner_permissions(owner=None, action='get'):
     current_user = KubeUtils.get_current_user()
@@ -49,7 +51,10 @@ class PodsAPI(KubeUtils, MethodView):
     def post(self, owner=None, **params):
         owner = check_owner_permissions(owner, 'create')
         params = check_new_pod_data(params, owner)
-        return PodCollection(owner).add(params)
+        try:
+            return PodCollection(owner).add(params)
+        except NoFreeIPs:
+            raise NoFreeIPsAdminNotification
 
     @maintenance_protected
     @use_kwargs({}, allow_unknown=True)

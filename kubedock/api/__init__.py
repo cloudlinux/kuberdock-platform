@@ -95,7 +95,7 @@ def on_app_error(e):
         else:
             send_event_to_role('notify:error', {'message': e.message}, 'Admin')
             return _jsonify_api_error(
-                APIError(e.response_message or 'Unknown error', 500))
+                APIError(e.response_message or 'Unknown error', e.status_code))
 
     elif isinstance(e, APIError):
         return _jsonify_api_error(e)

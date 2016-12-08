@@ -145,8 +145,15 @@ class PDNotFound(NotFound):
 
 
 class NoFreeIPs(APIError):
-    message_template = ('There are no free public IP-addresses, contact '
-                        'KuberDock administrator')
+    message = ('There are no free public IP-addresses, contact '
+               'KuberDock administrator')
+
+
+class NoFreeIPsAdminNotification(InternalAPIError):
+    status_code = 400
+    response_message = NoFreeIPs.message
+    message = ('Customer is not able to start Predefined Application '
+               'because of absence of free Public IPs.')
 
 
 class PublicAccessAssigningError(APIError):

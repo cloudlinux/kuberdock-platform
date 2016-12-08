@@ -56,7 +56,7 @@ from ..system_settings import keys as settings_keys
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
 from ..users.models import User
-from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils, nested_dict_utils
+from ..utils import POD_STATUSES, NODE_STATUSES, nested_dict_utils
 from .pod_locks import (
     PodOperations, get_pod_lock, pod_lock_context, catch_locked_pod,
     task_release_podlock, PodIsLockedError)
@@ -100,6 +100,12 @@ def get_user_namespaces(user):
 class PodNotFound(APIError):
     message = 'Pod not found'
     status_code = 404
+
+
+class NoDomain(APIError):
+    message = ('At least on of "domain" or "base_domain" must be set '
+               'when public_access_type is "domain". It seems like '
+               'there is some error')
 
 
 def _get_network_policy_api():
@@ -159,6 +165,10 @@ class PodCollection(object):
         # there is a free public IP (if required)
         # DNS management system is ok (if required)
         # ...
+
+        # check public adresses before create
+        self._check_public_address_available(params)
+
         if self.owner is not None:
             params['name'] = DBPod.check_name(params.get('name'),
                                               self.owner.id, generate_new=True)
@@ -290,10 +300,10 @@ class PodCollection(object):
         if not skip_check:
             _check_license()
 
+        self._preprocess_public_access(params)
+
         params, secrets = self._preprocess_new_pod(
             params, skip_check=skip_check)
-
-        self._preprocess_public_access(params)
 
         if dry_run:
             return True
@@ -479,6 +489,35 @@ class PodCollection(object):
         ]
 
     @staticmethod
+    def _check_public_address_available(config):
+        if not PodCollection.has_public_ports(config):
+            return
+
+        access_type = config.get('public_access_type',
+                                 PublicAccessType.PUBLIC_IP)
+
+        if access_type == PublicAccessType.PUBLIC_IP:
+            if not config.get('public_ip', None):
+                IPPool.get_free_host(as_int=True)
+        elif access_type == PublicAccessType.DOMAIN:
+            domain = (config.get('domain', None) or config.get('base_domain'))
+
+            if not domain:
+                raise NoDomain
+
+            # If certificate is provided it's applied to the custom_domain
+            # if present. Otherwise is used with the domain from KD.
+            # This check is also performed later, on pod start. It is here
+            # for the user's convience only
+            if config.get('certificate'):
+                certificate_utils.check_cert_is_valid_for_domain(
+                    domain, config['certificate']['cert'])
+        elif access_type == PublicAccessType.PUBLIC_AWS:
+            pass
+        else:
+            _raise_unexpected_access_type(access_type)
+
+    @staticmethod
     @utils.atomic()
     def _prepare_for_public_address(pod, config):
         """Prepare pod for Public IP assigning"""
@@ -503,10 +542,7 @@ class PodCollection(object):
             domain_name = (config.get('domain', None) or
                            config.get('base_domain'))
             if not domain_name:
-                raise Exception(
-                    'At least on of "domain" or "base_domain" must be set '
-                    'when public_access_type is "domain". It seems like '
-                    'there is some error')
+                raise NoDomain
 
             with utils.atomic(PublicAccessAssigningError(
                     details={'message': 'Error while getting Pod Domain'})):
@@ -517,13 +553,8 @@ class PodCollection(object):
             config['domain'] = pod.domain = str(pod_domain)
 
             if config.get('certificate'):
-                # If certificate is provided it's applied to the custom_domain
-                # if present. Otherwise is used with the domain from KD.
-                # This check is also performed later, on pod start. It is here
-                # for the user's convience only
-                domain = config.get('custom_domain') or config['domain']
                 certificate_utils.check_cert_is_valid_for_domain(
-                    domain, config['certificate']['cert'])
+                    pod.domain, config['certificate']['cert'])
 
         else:
             _raise_unexpected_access_type(access_type)

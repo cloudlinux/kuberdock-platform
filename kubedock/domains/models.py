@@ -40,6 +40,15 @@ class BaseDomain(BaseModelMixin, db.Model):
     def __str__(self):
         return self.name
 
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'name': self.name,
+            'certificate': {
+                'key': self.certificate_key,
+                'cert': self.certificate_cert,
+            },
+        }
 
 class PodDomain(db.Model):
     """Subdomains for BaseDomain which used for pods.

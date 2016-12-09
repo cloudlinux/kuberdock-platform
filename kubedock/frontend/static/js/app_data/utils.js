@@ -215,8 +215,10 @@ export const notifyInline = function (message, el){
 };
 // Just a shortcut to remove error from input (or group of inputs)
 export const removeError = function(el){
-    if (el.hasClass('error'))
+    if (el.hasClass('error')){
+        el.removeClass('error');
         el.parents('td, .form-group').find('.notifyjs-metro-error').trigger('notify-hide');
+    }
 };
 
 $(document).on('notify-hide', '.notifyjs-metro-error', function(event) {
@@ -225,7 +227,7 @@ $(document).on('notify-hide', '.notifyjs-metro-error', function(event) {
 });
 $(document).on('click', '.notifyjs-metro-error', function(event) {
     $(this).trigger('notify-hide')
-        .parents('.notifyjs-wrapper').next('input').focus();
+        .parents('.notifyjs-wrapper').next().focus();
 });
 
 /* Returns string representing date&time with timezone converted to

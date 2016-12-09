@@ -1498,6 +1498,15 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     data.DomainModel = Backbone.Model.extend({
         urlRoot: '/api/domains/',
         parse: unwrapper,
+        defaults: function(){
+            return {
+                name: '',
+                certificate : {
+                    cert : null,
+                    key : null
+                }
+            };
+        }
     });
 
     data.DomainsCollection = Backbone.PageableCollection.extend({

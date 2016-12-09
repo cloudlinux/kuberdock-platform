@@ -1497,23 +1497,33 @@ define([
             });
         },
 
-        showAddDomain: function(){
+        showAddDomain: function(id){
             if (!this.checkPermissions(['Admin']))
                 return;
             var that = this;
             require(['app_data/domains/views'], function(Views){
-                var layoutView = new Views.DomainsLayoutView(),
-                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['domains', 'add']});
-                that.listenTo(layoutView, 'show', function(){
-                    layoutView.breadcrumb.show(breadcrumbsLayout);
-                    breadcrumbsLayout.domains.show(
-                        new Breadcrumbs.Link({text: 'Domains Control', href:'#domains'}));
-                    breadcrumbsLayout.add.show(new Breadcrumbs.Text({text: 'Add domain'}));
-                    layoutView.main.show(
-                        new Views.DomainsAddDomainView()
-                    );
+                App.getDomainsCollection().done(function(domainCollection){
+                    var layoutView = new Views.DomainsLayoutView(),
+                        domainModel = id !== null
+                            ? domainCollection.fullCollection.get(id)
+                            : new Model.DomainModel(),
+                        breadcrumbsLayout = new Breadcrumbs.Layout({points: ['domains', 'add']}),
+                        breadcrumbText = new Breadcrumbs.Text({
+                            text: id !== null
+                                ? "Edit domain"
+                                : "Add domain" });
+                    that.listenTo(layoutView, 'show', function(){
+                        layoutView.breadcrumb.show(breadcrumbsLayout);
+                        breadcrumbsLayout.domains.show(
+                            new Breadcrumbs.Link({text: 'Domains Control', href:'#domains'})
+                        );
+                        breadcrumbsLayout.add.show(breadcrumbText);
+                        layoutView.main.show(
+                            new Views.DomainsAddDomainView({model: domainModel})
+                        );
+                    });
+                    App.rootLayout.contents.show(layoutView);
                 });
-                App.rootLayout.contents.show(layoutView);
             });
         },
 

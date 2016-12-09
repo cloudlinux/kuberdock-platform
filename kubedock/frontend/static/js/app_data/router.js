@@ -43,6 +43,7 @@ define(['marionette'], function(Marionette){
             'publicIPs'                       : 'showIPs',
             'domains'                         : 'showDomains',
             'domains/add'                     : 'showAddDomain',
+            // 'domains/:id/edit'                : 'showAddDomain',
             '*nothingSimilar'                 : 'pageNotFound'
 
 

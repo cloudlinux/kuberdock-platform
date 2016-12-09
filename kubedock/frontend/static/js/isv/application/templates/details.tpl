@@ -28,7 +28,12 @@
     <div class="hidden-xs col-sm-2 isv-block text-center info-outline"></div>
     <div class="col-xs-12 col-sm-4 isv-block">
         <p>Status: <span class="statuses <%- prettyStatus %>"><%- prettyStatus %></span></p>
-        <p>Version: <%- template_version_id || 'Not set'%></p>
+        <p>
+            Version: <%- template_version_id || 'Not set'%>
+            <span class="check-version-update"
+                  data-toggle="tooltip" data-placement="top"
+                  data-original-title="Check version update"></span>
+        </p>
         <p>Last update: <%- appLastUpdate %></p>
     </div>
 </div>

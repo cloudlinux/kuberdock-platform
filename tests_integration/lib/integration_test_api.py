@@ -617,8 +617,15 @@ class DomainList(object):
         # type: (KDIntegrationTestAPI) -> None
         self.cluster = cluster
 
-    def add(self, name):
-        self.cluster.kdctl(u"domains create --name {}".format(name))
+    def add(self, name, ignore_duplicates=False):
+        try:
+            self.cluster.kdctl(u"domains create --name {}".format(name))
+        except exceptions.NonZeroRetCodeException as e:
+            if ignore_duplicates and \
+               "Resource already exists" in e.stderr:
+                pass
+            else:
+                raise
 
     def delete(self, name=None, id_=None):
         cmd = u"domains delete "

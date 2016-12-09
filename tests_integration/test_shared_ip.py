@@ -1,12 +1,17 @@
 import json
+import logging
 
 from kubedock.constants import KUBERDOCK_INGRESS_POD_NAME
 
 from tests_integration.lib.exceptions import StatusWaitException
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.pod import KDPod
-from tests_integration.lib.utils import assert_eq, hooks, retry,\
-    get_rnd_low_string
+from tests_integration.lib.utils import assert_eq, get_rnd_low_string, hooks,\
+    log_debug, retry
+
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.DEBUG)
 
 
 def _add_domain(cluster):
@@ -23,8 +28,11 @@ def _add_domain(cluster):
     dns_pod = KDPod.get_internal_pod(cluster, "kuberdock-dns")
     dns_pod.wait_for_status("running")
 
-    # TODO: remove retry when fix for AC-5096 is merged
-    retry(cluster.domains.add, name=creds["domain"], tries=5, interval=10)
+    cluster.domains.add(name=creds["domain"],
+                        ignore_duplicates=True)
+    # Make sure ingress controller has been created
+    retry(KDPod.get_internal_pod, tries=6, interval=10,
+          cluster=cluster, pod_name=KUBERDOCK_INGRESS_POD_NAME)
     ingress_pod = KDPod.get_internal_pod(cluster, KUBERDOCK_INGRESS_POD_NAME)
     ingress_pod.wait_for_status("running")
 
@@ -43,10 +51,11 @@ def test_pod_with_domain_name(cluster):
     pod_name = format(suffix)
     with open("tests_integration/assets/cpanel_credentials.json") as f:
         creds = json.load(f)
+    log_debug("Start a pod with shared IP", LOG)
     pod = cluster.pods.create("nginx", pod_name, ports_to_open=[80],
                               wait_for_status="running", domain=creds["domain"],
                               healthcheck=True, wait_ports=True)
-    # Restart the pod
+    log_debug("Restart the pod with shared IP", LOG)
     pod.redeploy()
     try:
         pod.wait_for_status("pending", tries=5, interval=3)
@@ -60,7 +69,7 @@ def test_pod_with_domain_name(cluster):
     pod.wait_for_ports([80])
     pod.healthcheck()
 
-    # Stop and start the pod
+    log_debug("Start and stop the pod with shared IP", LOG)
     pod.stop()
     pod.wait_for_status("stopped")
     pod.start()
@@ -68,9 +77,7 @@ def test_pod_with_domain_name(cluster):
     pod.wait_for_ports([80])
     pod.healthcheck()
 
-    # TODO: uncommend following section when fix for AC-4970 is merged
-    """
-    # Change number of kubes:
+    log_debug("Change number of kubes in the pod with shared IP", LOG)
     pod.change_kubes(kubes=3, container_image="nginx")
     try:
         # right after starting changing number of kubes pod is still running
@@ -82,7 +89,6 @@ def test_pod_with_domain_name(cluster):
     pod.wait_for_status("running")
     pod.wait_for_ports([80])
     pod.healthcheck()
-    """
 
 
 @pipeline("shared_ip")
@@ -99,6 +105,8 @@ def test_pod_with_long_domain_name(cluster):
     # is 63 - 10 (length of "testuser-.")
     pod_name = get_rnd_low_string(length=53 - len(creds["domain"]))
 
+    log_debug("Start the pod with shared IP, having domain name consisting "
+              "of 63 symbols", LOG)
     pod = cluster.pods.create("nginx", pod_name, ports_to_open=[80],
                               wait_for_status="running", domain=creds["domain"],
                               healthcheck=True, wait_ports=True)

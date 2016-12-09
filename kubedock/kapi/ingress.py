@@ -215,6 +215,11 @@ def _get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
             }
         )
 
+    if current_app.config['AWS']:
+        config['service_annotations'] = {
+            'service.beta.kubernetes.io/aws-load-balancer-proxy-protocol': '*'
+        }
+
     return config
 
 
@@ -231,6 +236,11 @@ def _check_cluster_email():
 
 def _create_ingress_nginx_configmap():
     client = ConfigMapClient(KubeQuery())
+
+    # In AWS case ELB uses proxy protocol, so we need to enable it on Ingress
+    # Controller as well
+    if current_app.config['AWS']:
+        default_nginx_settings['use-proxy-protocol'] = 'true'
 
     try:
         client.create(

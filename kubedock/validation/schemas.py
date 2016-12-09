@@ -334,6 +334,12 @@ edited_pod_config_schema = {
         'nullable': True,
         'internal_only': True,
     },
+    'service_annotations': {
+        'type': 'dict',
+        'nullable': True,
+        'required': False,
+        'internal_only': True
+    },
     'replicas': {'type': 'integer', 'min': 0, 'max': 1},
     'kube_type': dict(kube_type_schema, kube_type_in_user_package=True,
                       kube_type_exists=True, required=True),
@@ -433,7 +439,7 @@ edited_pod_config_schema = {
                 'args': args_list_schema,
                 'kubes': kubes_qty_schema,
                 'image': container_image_name_schema,
-                'name': container_name_schema,
+                'name': dict(container_name_schema, required=True),
                 'env': env_schema,
                 'ports': {
                     'type': 'list',

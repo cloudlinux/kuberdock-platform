@@ -25,7 +25,7 @@ def test_master_backup_restore(cluster):
     empty_backup = _master_backup(cluster, BACKUP_FOLDER)
     empty_master_state = _MasterState(cluster)
 
-    _fill_master_with_data_to_backup(cluster)
+    pods = _fill_master_with_data_to_backup(cluster)
 
     # Backup master after it was filled by pods, PAs etc.
     non_empty_master_backup = _master_backup(cluster, BACKUP_FOLDER)
@@ -34,15 +34,20 @@ def test_master_backup_restore(cluster):
     # Restore "empty" master
     _master_restore(cluster, empty_backup)
 
-    # Check that backup was successful, i.e. data (such as nodes, pods, users,
+    # Check that restore was successful, i.e. data (such as nodes, pods, users,
     # ips ...) was removed from master
     empty_master_state.compare(_MasterState(cluster))
 
     # Restore master with data
     _master_restore(cluster, non_empty_master_backup)
 
-    # Check that backup was successful
+    # Check that restore was successful
     non_empty_master_state.compare(_MasterState(cluster))
+    for pod in pods:
+        pod.healthcheck()
+    cluster.pods.create("nginx", "test_nginx_pod_3", open_all_ports=True,
+                        start=True, wait_ports=True,
+                        wait_for_status='running', ports_to_open=[80])
 
 
 def _cleanup_master(cluster):
@@ -72,8 +77,10 @@ def _fill_master_with_data_to_backup(cluster):
     cluster.recreate_routable_ip_pool()
     cluster.nodes.add("node1")
     cluster.preload_docker_image('nginx')
-    for name in ("test_nginx_pod_1", "test_nginx_pod_2"):
-        cluster.pods.create("nginx", name, open_all_ports=True, start=True)
+    return [cluster.pods.create("nginx", name, open_all_ports=True,
+                                start=True, wait_ports=True,
+                                wait_for_status='running', ports_to_open=[80])
+            for name in ("test_nginx_pod_1", "test_nginx_pod_2")]
 
 
 class _MasterState(object):

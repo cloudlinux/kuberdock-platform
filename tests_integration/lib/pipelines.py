@@ -226,7 +226,7 @@ class PodRestorePipeline(Pipeline):
 
 class MasterRestorePipeline(Pipeline):
     NAME = 'master_backup_restore'
-    ROUTABLE_IP_COUNT = 2
+    ROUTABLE_IP_COUNT = 3
     ENV = {
         'KD_NODES_COUNT': '1',
         'KD_DEPLOY_SKIP': 'cleanup,ui_patch,node_deploy,ippool'

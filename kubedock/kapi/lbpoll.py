@@ -18,8 +18,9 @@ class LoadBalanceService(Services):
     def __init__(self):
         super(LoadBalanceService, self).__init__(PUBLIC_SVC_TYPE)
 
-    def get_template(self, pod_id, ports):
-        template = super(LoadBalanceService, self).get_template(pod_id, ports)
+    def get_template(self, pod_id, ports, annotations=None):
+        template = super(LoadBalanceService, self).get_template(
+            pod_id, ports, annotations)
 
         template['spec']['type'] = 'LoadBalancer'
         return template

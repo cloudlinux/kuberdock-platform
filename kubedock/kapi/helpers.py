@@ -168,7 +168,7 @@ class Services(object):
     def delete(self, name, namespace):
         return self.kq.delete([SERVICES, name], ns=namespace)
 
-    def get_template(self, pod_id, ports):
+    def get_template(self, pod_id, ports, annotations=None):
         if not all((pod_id, ports)):
             raise ValueError('Pod id and ports must be specified')
         template = copy.deepcopy(self.template)
@@ -177,6 +177,8 @@ class Services(object):
             template['metadata']['labels'][KUBERDOCK_TYPE] = self.svc_type
         template['spec']['selector']['kuberdock-pod-uid'] = pod_id
         template['spec']['ports'] = ports
+        if annotations is not None:
+            template['metadata']['annotations'] = annotations
         return template
 
     @staticmethod

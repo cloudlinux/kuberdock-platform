@@ -270,6 +270,8 @@ class PodCollection(object):
         pod.secrets = secret_ids
 
         pod_config = db_pod.get_dbconfig()
+        pod_config['service_annotations'] = data.pop(
+            'service_annotations', None)
         pod_config['secrets'] = pod.secrets
         # Update config
         db_pod.set_dbconfig(pod_config, save=True)
@@ -1074,7 +1076,7 @@ class PodCollection(object):
             new_config['forbidSwitchingAppPackage'] = 'the pod was edited'
         fields_to_copy = ['podIP', 'service', 'postDescription', 'public_ip',
                           'public_aws', 'domain', 'base_domain',
-                          'appVariables',
+                          'appVariables', 'service_annotations',
                           'custom_domain', 'public_access_type', 'certificate']
         for k in fields_to_copy:
             v = getattr(old_pod, k, None)
@@ -1858,7 +1860,8 @@ def prepare_and_run_pod(pod, db_pod, db_config):
     try:
         _process_persistent_volumes(pod, db_config.get('volumes', []))
 
-        local_svc, _ = run_service(pod)
+        service_annotations = db_config.get('service_annotations')
+        local_svc, _ = run_service(pod, service_annotations)
         if local_svc:
             db_config['service'] = pod.service = local_svc['metadata']['name']
             db_config['podIP'] = LocalService().get_clusterIP(local_svc)
@@ -2003,7 +2006,7 @@ def get_ports(pod):
     return ports, public_ports
 
 
-def run_service(pod):
+def run_service(pod, annotations=None):
     """Run all required services for pod, if such services not exist already
     Args:
         pod: kapi/Pod object
@@ -2013,12 +2016,14 @@ def run_service(pod):
 
     """
     resolve = getattr(pod, 'kuberdock_resolve', [])
+    domain = getattr(pod, 'domain', None)
     ports, public_ports = get_ports(pod)
     publicIP = getattr(pod, 'public_ip', None)
     if publicIP == 'true':
         publicIP = None
     public_svc = ingress_public_ports(pod.id, pod.namespace,
-                                      public_ports, pod.owner, publicIP)
+                                      public_ports, pod.owner, publicIP, domain,
+                                      annotations)
     cluster_ip = getattr(pod, 'podIP', None)
     local_svc = ingress_local_ports(pod.id, pod.namespace, ports,
                                     resolve, cluster_ip)
@@ -2032,7 +2037,6 @@ def ingress_local_ports(pod_id, namespace, ports,
     :param: namespace: pod namespace
     :param: ports: list of ports to ingress, see get_ports
     :param: cluster_ip: cluster_ip to use in service. Optional.
-
     """
     local_svc = LocalService()
     services = local_svc.get_by_pods(pod_id)
@@ -2044,19 +2048,31 @@ def ingress_local_ports(pod_id, namespace, ports,
         return rv
 
 
-def ingress_public_ports(pod_id, namespace, ports, owner, publicIP=None):
+def ingress_public_ports(pod_id, namespace, ports, owner, publicIP=None,
+                         domain=None, annotations=None):
     """Ingress public ports with cloudprovider specific methods
     :param pod_id: pod id
     :param namespace: pod namespace
     :param ports: list of ports to ingress, see get_ports
     :param owner: pod owner
     :param publicIP: publicIP to ingress. Optional.
-
+    :param domain: domain of a pod. Optional, only used in shared IP case
     """
+    # For now in shared IP case a pod needs to have a rechable 80 port
+    # Which ingress frontend uses to proxy traffic. It does not need the public
+    # service, but needs a public port policy
+    if domain:
+        shared_ip_ports = [{'name': 'c0-p80',
+                            'protocol': 'TCP',
+                            'port': '80',
+                            'targetPort': '80'}]
+        set_public_ports_policy(namespace, shared_ip_ports, owner)
+        return
+
     svc = get_service_provider()
     services = svc.get_by_pods(pod_id)
     if not services and ports:
-        service = svc.get_template(pod_id, ports)
+        service = svc.get_template(pod_id, ports, annotations)
         if not settings.AWS:
             service = svc.set_publicIP(service, publicIP)
         rv = svc.post(service, namespace)

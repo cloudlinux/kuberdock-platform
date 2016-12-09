@@ -335,6 +335,12 @@ edited_pod_config_schema = {
         'nullable': True,
         'internal_only': True,
     },
+    'service_annotations': {
+        'type': 'dict',
+        'nullable': True,
+        'required': False,
+        'internal_only': True
+    },
     'replicas': {'type': 'integer', 'min': 0, 'max': MAX_POD_REPLICAS},
     'kube_type': dict(kube_type_schema, kube_type_in_user_package=True,
                       kube_type_exists=True, required=True),

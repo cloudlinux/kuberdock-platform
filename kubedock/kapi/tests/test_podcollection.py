@@ -608,7 +608,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         res = podcollection.prepare_and_run_pod(self.test_pod, dbpod,
                                                 dbpod_config)
 
-        run_service_mock.assert_called_once_with(self.test_pod)
+        run_service_mock.assert_called_once_with(self.test_pod, None)
         self.test_pod.prepare.assert_called_once_with()
         post_mock.assert_called_once_with(
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,

@@ -40,6 +40,13 @@
                 text-transform: uppercase;
             }
         }
+        &[disabled]{
+            .opacity(0.7);
+            &:hover{
+                cursor: not-allowed;
+                .box-shadow(0px 2px 4px 0px rgba(0, 0, 0, 0.35));
+            }
+        }
     }
     .start-btn{
         .mdi('play_arrow', 21px, #B5BBC1, darken(#B5BBC1, 20%));

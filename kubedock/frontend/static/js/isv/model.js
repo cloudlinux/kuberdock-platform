@@ -75,9 +75,8 @@ Package = Backbone.AssociatedModel.extend({
         App.packageCollection.add(this);
         _.each(kubes, function(kube){
             App.kubeTypeCollection.add(kube);
-            App.packageKubeCollection.add({package_id: this.id,
-                                           kube_id: kube.id,
-                                           kube_price: kube.price});
+            App.packageKubeCollection.add({package_id: this.id, kube_id: kube.id,
+                kube_price: kube.price});
         }, this);
     },
     getKubeTypes() {
@@ -129,6 +128,7 @@ KubeType.noAvailableKubeTypes = new KubeType(
 KubeType.noAvailableKubeTypes.notify = function(){
     utils.notifyWindow('There are no available kube types in your package.');
 };
+
 KubeType.noAvailableKubeTypes.notifyConflict = function(){
     // Case, when there are no available kube types, 'cause of conflicts with pod's PDs.
     // TODO: better message
@@ -169,7 +169,7 @@ PackageKubeCollection = Backbone.Collection.extend({
 
 // Pod-related stuff
 
-export let Pod, PodCollection, Container;
+export let Pod, PodCollection, Container, AppUpdate;
 
 
 Container = Backbone.AssociatedModel.extend({
@@ -293,16 +293,15 @@ Pod = Backbone.AssociatedModel.extend({
             return _.contains(['paid_deleted'], status);
         if (command === 'redeploy')
             return _.contains(['stopping', 'waiting', 'pending', 'running',
-                               'failed', 'succeeded', 'preparing'], status);
+                'failed', 'succeeded', 'preparing'], status);
         if (command === 'stop' || command === 'restart')
             return _.contains(['stopping', 'waiting', 'pending', 'running',
-                               'failed', 'succeeded', 'preparing'], status);
+                'failed', 'succeeded', 'preparing'], status);
         if (command === 'pay-and-start')
             return _.contains(['unpaid'], status);
         if (command === 'delete')
             return _.contains(['unpaid', 'stopped', 'stopping', 'waiting',
-                               'running', 'failed', 'succeeded'], status) &&
-                                !isInternalUser;
+                'running', 'failed', 'succeeded'], status) && !isInternalUser;
         if (command === 'switch-package')
             return !!(this.get('template_id') &&
                       this.get('template_plan_name') &&
@@ -313,7 +312,50 @@ Pod = Backbone.AssociatedModel.extend({
         utils.preloader2.show();
         return this.command('set', {'custom_domain':domain})
             .always(utils.preloader2.hide).fail(utils.notifyWindow);
-    }
+    },
+    checkForUpdate(){
+        let container = this;
+        utils.preloader2.show();
+        return new AppUpdate({}, {container: container}).fetch()
+            .always(utils.preloader2.hide)
+            .fail(utils.notifyWindow)
+            .done((rs) => {
+                if (!rs)
+                    utils.notifyWindow('No updates found', 'success');
+                if (!rs.data.updateAvailable){
+                    utils.notifyWindow('You have latest version', 'success');
+                } else {
+                    container.update(rs.data.activeVersionID);
+                }
+            });
+    },
+    update(version){
+        let model = this;
+        utils.modalDialog({
+            title: 'Update avalable',
+            body: `New update "${version}" is available. To update click "Update now"`,
+            small: true,
+            show: true,
+            footer: {
+                buttonOk: () => {
+                    utils.preloader2.show();
+                    new AppUpdate({}, {container: model}).save()
+                        .always(utils.preloader2.hide).fail(utils.notifyWindow);
+                },
+                buttonOkText: 'Update now',
+                buttonCancel: true,
+            },
+        });
+    },
+});
+
+AppUpdate = Backbone.Model.extend({
+    url() {
+        return App.apiUrl(`yamlapi/update/${this.container.id}`);
+    },
+    initialize(attributes, options){
+        this.container = options.container;
+    },
 });
 
 PodCollection = Backbone.Collection.extend({

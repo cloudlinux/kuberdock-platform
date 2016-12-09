@@ -24,11 +24,13 @@ export const Details = Marionette.ItemView.extend({
         tooltip: '[data-toggle="tooltip"]',
         resetAdminPassword: '.reset-admin-password',
         copyAdminPassword: '.copy-password',
+        checkVersionUpdate: '.check-version-update'
     },
 
     events: {
         'click @ui.resetAdminPassword': 'resetAdminPassword',
         'click @ui.copyAdminPassword': 'copyAdminPassword',
+        'click @ui.checkVersionUpdate': 'checkVersionUpdate',
     },
 
     onDomRefresh(){ this.ui.tooltip.tooltip(); },
@@ -58,6 +60,7 @@ export const Details = Marionette.ItemView.extend({
     copyAdminPassword(){
         utils.copyLink(this.adminPassword, 'Admin password copied to clipboard.');
     },
+    checkVersionUpdate(){ this.model.checkForUpdate(); }
 });
 
 export const ContainerConfig = Marionette.ItemView.extend({

@@ -16,7 +16,7 @@
         "comma-style": [1],
         "computed-property-spacing": [1],
         "eol-last": [1],
-        "indent": [0, 4],
+        "indent": [1, 4],
         "keyword-spacing": [1],
         "linebreak-style": [2, "unix"],
         "max-depth": [1, 8],

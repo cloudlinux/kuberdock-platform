@@ -28,7 +28,10 @@ class BaseDomain(BaseModelMixin, db.Model):
 
     @certificate.setter
     def certificate(self, v):
-        self.certificate_cert, self.certificate_key = v['cert'], v['key']
+        if v:
+            self.certificate_cert, self.certificate_key = v['cert'], v['key']
+        else:
+            self.certificate_cert, self.certificate_key = None, None
 
     def __repr__(self):
         return '{0}(id={1}, name="{2}")'.format(
@@ -49,6 +52,7 @@ class BaseDomain(BaseModelMixin, db.Model):
                 'cert': self.certificate_cert,
             },
         }
+
 
 class PodDomain(db.Model):
     """Subdomains for BaseDomain which used for pods.

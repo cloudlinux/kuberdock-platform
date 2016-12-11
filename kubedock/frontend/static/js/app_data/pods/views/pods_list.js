@@ -1,11 +1,12 @@
-define(['app_data/app',
-        'app_data/pods/templates/pod_list/layout.tpl',
-        'app_data/pods/templates/pod_list/item.tpl',
-        'app_data/pods/templates/pod_list/empty.tpl',
-        'app_data/pods/templates/pod_list/list.tpl',
-        'app_data/utils',
-        'tooltip'],
-       function(App, layoutPodListTpl, podListItemTpl, podListEmptyTpl, podListTpl, utils){
+define([
+    'app_data/app',
+    'app_data/pods/templates/pod_list/layout.tpl',
+    'app_data/pods/templates/pod_list/item.tpl',
+    'app_data/pods/templates/pod_list/empty.tpl',
+    'app_data/pods/templates/pod_list/list.tpl',
+    'app_data/utils',
+    'tooltip'
+], function(App, layoutPodListTpl, podListItemTpl, podListEmptyTpl, podListTpl, utils){
     'use strict';
 
     var podList = {};
@@ -229,8 +230,8 @@ define(['app_data/app',
                         that.render();
                     },
                     buttonCancel: true
-               }
-           });
+                }
+            });
         },
 
         runPods: function(evt){

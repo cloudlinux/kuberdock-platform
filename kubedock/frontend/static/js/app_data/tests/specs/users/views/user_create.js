@@ -1,5 +1,6 @@
 /* eslint-env mocha */
 /* eslint-disable no-unused-expressions */
+/* eslint indent: [1, 2] */
 mocha.allowUncaught();
 
 import {expect} from 'chai';

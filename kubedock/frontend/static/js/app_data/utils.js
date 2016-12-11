@@ -386,7 +386,7 @@ export class EventHandler {
         if (typeof EventSource === undefined) {
             console.log(  // eslint-disable-line no-console
                 'ERROR: EventSource is not supported by browser');
-                return;
+            return;
         }
         Object.assign(this, {token, lastEventId, error, url});
         this.connect();

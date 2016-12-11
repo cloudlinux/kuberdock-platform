@@ -1,6 +1,7 @@
-define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
-        'backbone.paginator', 'backbone-associations'],
-       function(Backbone, numeral, App, utils){
+define([
+    'backbone', 'numeral', 'app_data/app', 'app_data/utils',
+    'backbone.paginator', 'backbone-associations'
+], function(Backbone, numeral, App, utils){
     'use strict';
 
     Backbone.syncOrig = Backbone.sync;
@@ -798,8 +799,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                                 buttonOkText: 'Go to billing',
                                 buttonCancelText: 'No, thanks'
                             }
+                        });
                     });
-                });
             });
             return deferred.promise();
         },
@@ -1501,10 +1502,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
         defaults: function(){
             return {
                 name: '',
-                certificate : {
-                    cert : null,
-                    key : null
-                }
+                certificate : null,
             };
         }
     });

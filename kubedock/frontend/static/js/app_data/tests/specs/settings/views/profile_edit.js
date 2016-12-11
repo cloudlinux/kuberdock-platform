@@ -28,16 +28,16 @@ describe('settings.views.ProfileEditView', function(){
                 });
             view.model.in_edit = true;
             view.ui = {
-                        'first_name'      : {val:sandbox.stub().returns('a')},
-                        'last_name'       : {val:sandbox.stub().returns('b')},
-                        'middle_initials' : {val:sandbox.stub().returns('c')},
-                        'email'           : {val:sandbox.stub().returns('example@example.com')},
-                        'password'        : {val:sandbox.stub().returns('')},
-                        'password_again'  : {val:sandbox.stub().returns('')},
-                        'timezone'        : {val:sandbox.stub().returns('GMT')},
-                        'save'            : {show:sandbox.stub().returns(true),
-                                             hide: sandbox.stub().returns(true)}
-                    };
+                'first_name'      : {val:sandbox.stub().returns('a')},
+                'last_name'       : {val:sandbox.stub().returns('b')},
+                'middle_initials' : {val:sandbox.stub().returns('c')},
+                'email'           : {val:sandbox.stub().returns('example@example.com')},
+                'password'        : {val:sandbox.stub().returns('')},
+                'password_again'  : {val:sandbox.stub().returns('')},
+                'timezone'        : {val:sandbox.stub().returns('GMT')},
+                'save'            : {show:sandbox.stub().returns(true),
+                                     hide: sandbox.stub().returns(true)}
+            };
 
             view.toggleShowSaveButton();
             expect(view.isEqual()).to.be.equal(true);
@@ -59,16 +59,16 @@ describe('settings.views.ProfileEditView', function(){
                     model : new Model.CurrentUserModel(fakeModel)
                 });
             view.ui = {
-                        'first_name'      : {val:sandbox.stub().returns('a')},
-                        'last_name'       : {val:sandbox.stub().returns('b')},
-                        'middle_initials' : {val:sandbox.stub().returns('c')},
-                        'email'           : {val:sandbox.stub().returns('example@example.com')},
-                        'password'        : {val:sandbox.stub().returns('')},
-                        'password_again'  : {val:sandbox.stub().returns('')},
-                        'timezone'        : {val:sandbox.stub().returns('GMT')},
-                        'save'            : {show:sandbox.stub().returns(true),
-                                             hide: sandbox.stub().returns(true)}
-                    };
+                'first_name'      : {val:sandbox.stub().returns('a')},
+                'last_name'       : {val:sandbox.stub().returns('b')},
+                'middle_initials' : {val:sandbox.stub().returns('c')},
+                'email'           : {val:sandbox.stub().returns('example@example.com')},
+                'password'        : {val:sandbox.stub().returns('')},
+                'password_again'  : {val:sandbox.stub().returns('')},
+                'timezone'        : {val:sandbox.stub().returns('GMT')},
+                'save'            : {show:sandbox.stub().returns(true),
+                                     hide: sandbox.stub().returns(true)}
+            };
 
             let objKeys = Object.keys(view.ui),
                 clearObjKeys = _.without(objKeys, 'save'),

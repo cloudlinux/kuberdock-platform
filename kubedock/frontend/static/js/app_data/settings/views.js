@@ -157,34 +157,34 @@ export const GeneralView = Marionette.CompositeView.extend({
 
         if (billing === 'WHMCS'){
             allNonEmpty = this.collection.chain().filter(function(model){
-                    return _.contains(['billing_url', 'billing_username', 'billing_password'],
-                    model.get('name'));
-                }).map(function(model){ return model.get('value'); }).all().value();
+                return _.contains(['billing_url', 'billing_username', 'billing_password'],
+                model.get('name'));
+            }).map(function(model){ return model.get('value'); }).all().value();
         }
 
         if (dnsSystem === 'cpanel_dnsonly'){
             allNonEmpty = this.collection.chain().filter(function(model){
-                    return _.contains(['dns_management_cpanel_dnsonly_host',
-                                       'dns_management_cpanel_dnsonly_user',
-                                       'dns_management_cpanel_dnsonly_token'],
-                                        model.get('name'));
-                }).map(function(model){ return model.get('value'); }).all().value();
+                return _.contains(['dns_management_cpanel_dnsonly_host',
+                                   'dns_management_cpanel_dnsonly_user',
+                                   'dns_management_cpanel_dnsonly_token'],
+                                    model.get('name'));
+            }).map(function(model){ return model.get('value'); }).all().value();
         }
 
         if (dnsSystem === 'aws_route53'){
             allNonEmpty = this.collection.chain().filter(function(model){
-                    return _.contains(['dns_management_aws_route53_id',
-                                       'dns_management_aws_route53_secret'],
-                                        model.get('name'));
-                }).map(function(model){ return model.get('value'); }).all().value();
+                return _.contains(['dns_management_aws_route53_id',
+                                   'dns_management_aws_route53_secret'],
+                                    model.get('name'));
+            }).map(function(model){ return model.get('value'); }).all().value();
         }
 
         if (dnsSystem === 'cloudflare'){
             allNonEmpty = this.collection.chain().filter(function(model){
-                    return _.contains(['dns_management_cloudflare_email',
-                                       'dns_management_cloudflare_token'],
-                                        model.get('name'));
-                }).map(function(model){ return model.get('value'); }).all().value();
+                return _.contains(['dns_management_cloudflare_email',
+                                   'dns_management_cloudflare_token'],
+                                    model.get('name'));
+            }).map(function(model){ return model.get('value'); }).all().value();
         }
 
         if (!allNonEmpty) {
@@ -375,23 +375,23 @@ export const ProfileEditView = Backbone.Marionette.ItemView.extend({
 
     isEqual: function(){
         let oldData = {
-            'first_name'      : this.model.get('first_name'),
-            'last_name'       : this.model.get('last_name'),
-            'middle_initials' : this.model.get('middle_initials'),
-            'email'           : this.model.get('email'),
-            'password'        : '',
-            'password_again'  : '',
-            'timezone'        : this.model.get('timezone').split(' (', 1)[0],
-        },
-        newData = {
-            'first_name'      : this.ui.first_name.val(),
-            'last_name'       : this.ui.last_name.val(),
-            'middle_initials' : this.ui.middle_initials.val(),
-            'email'           : this.ui.email.val(),
-            'password'        : this.ui.password.val(),
-            'password_again'  : this.ui.password_again.val(),
-            'timezone'        : this.ui.timezone.val().split(' (', 1)[0],
-        };
+                'first_name'      : this.model.get('first_name'),
+                'last_name'       : this.model.get('last_name'),
+                'middle_initials' : this.model.get('middle_initials'),
+                'email'           : this.model.get('email'),
+                'password'        : '',
+                'password_again'  : '',
+                'timezone'        : this.model.get('timezone').split(' (', 1)[0],
+            },
+            newData = {
+                'first_name'      : this.ui.first_name.val(),
+                'last_name'       : this.ui.last_name.val(),
+                'middle_initials' : this.ui.middle_initials.val(),
+                'email'           : this.ui.email.val(),
+                'password'        : this.ui.password.val(),
+                'password_again'  : this.ui.password_again.val(),
+                'timezone'        : this.ui.timezone.val().split(' (', 1)[0],
+            };
 
         return _.isEqual(oldData, newData);
     },
@@ -428,12 +428,12 @@ export const ProfileEditView = Backbone.Marionette.ItemView.extend({
             .val(middleInitials.replace(symbols, '').replace(spaces, '').replace(numbers, ''));
 
         var data = {
-                'first_name': this.ui.first_name.val(),
-                'last_name': this.ui.last_name.val(),
-                'middle_initials': this.ui.middle_initials.val(),
-                'email': this.ui.email.val(),
-                'timezone': this.ui.timezone.val(),
-            };
+            'first_name': this.ui.first_name.val(),
+            'last_name': this.ui.last_name.val(),
+            'middle_initials': this.ui.middle_initials.val(),
+            'email': this.ui.email.val(),
+            'timezone': this.ui.timezone.val(),
+        };
 
         if (data.email === '') {
             utils.scrollTo(this.ui.email);

@@ -49,8 +49,8 @@ describe('users.views.UsersEditView', function(){
                 'timezone'        : {val:sandbox.stub().returns('GMT (+00:00)')},
                 'username'        : {val:sandbox.stub().returns('testUser')},
                 'user_add_btn'    : {
-                                        show:sandbox.stub().returns(true),
-                                        hide: sandbox.stub().returns(true)},
+                    show:sandbox.stub().returns(true),
+                    hide: sandbox.stub().returns(true)},
             };
             var ui = view.constructor.__super__.ui;
 
@@ -92,8 +92,8 @@ describe('users.views.UsersEditView', function(){
                 'timezone'        : {val:sandbox.stub().returns('GMT (+00:00)')},
                 'username'        : {val:sandbox.stub().returns('testUser')},
                 'user_add_btn'    : {
-                                        show:sandbox.stub().returns(true),
-                                        hide: sandbox.stub().returns(true)},
+                    show:sandbox.stub().returns(true),
+                    hide: sandbox.stub().returns(true)},
             };
             let ui = view.constructor.__super__.ui,
                 objKeys = Object.keys(view.constructor.__super__.ui),

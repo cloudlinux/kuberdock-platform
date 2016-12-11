@@ -255,9 +255,11 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                 deferred.resolveWith(App, [authData]);
                 return;
             }
-            $.when(App.getCurrentUser(),
-                   App.getMenuCollection(),
-                   App.getPackages()).done(function(user, menu, packages){
+            $.when(
+                App.getCurrentUser(),
+                App.getMenuCollection(),
+                App.getPackages()
+            ).done(function(user, menu, packages){
                 // These resources must be fetched every time user logins in, and they
                 // are widely used immediately after start, so let's just save them as
                 // properties, so we won't need to go async every time we need them.

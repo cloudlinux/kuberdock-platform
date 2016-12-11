@@ -42,9 +42,8 @@ export const DomainsListItemView = Marionette.ItemView.extend({
                     utils.preloader.show();
                     that.model.destroy({wait: true})
                         .done(function(){
-                            utils.notifyWindow(
-                                'Domain "' + domain + '" removed',
-                                'success');
+                            utils.notifyWindow(`Domain "${domain}" removed`,
+                                               'success');
                         })
                         .always(utils.preloader.hide)
                         .fail(utils.notifyWindow);
@@ -90,7 +89,7 @@ export const DomainsAddDomainView = Marionette.ItemView.extend({
 
     templateHelpers(){
         return {
-            isNew : this.model.isNew()
+            isNew: this.model.isNew(),
         };
     },
 
@@ -100,13 +99,10 @@ export const DomainsAddDomainView = Marionette.ItemView.extend({
         var isNew = this.model.isNew(),
             key = this.ui.key.val().trim(),
             domain = this.ui.domain.val().trim(),
-            certificate = this.ui.certificate.val().trim(),
+            cert = this.ui.certificate.val().trim(),
             data = {
                 name: domain,
-                certificate : {
-                    cert : certificate,
-                    key : key
-                }
+                certificate: cert ? {cert, key} : null,
             },
             validDomain = /^(?:[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.)+(?:[a-zA-Z]{2,})$/;
 
@@ -116,8 +112,8 @@ export const DomainsAddDomainView = Marionette.ItemView.extend({
             return;
         }
 
-        if (!!certificate !== !!key) {
-            if (!certificate){
+        if (!!cert !== !!key) {
+            if (!cert){
                 utils.notifyInline(`Certificate can't be empty`, this.ui.certificate);
             }
             if (!key){
@@ -128,13 +124,12 @@ export const DomainsAddDomainView = Marionette.ItemView.extend({
 
         utils.preloader.show();
         this.model.save(data)
-                  .always(utils.preloader.hide)
-                  .done(function(){
-                      App.navigate('domains', {trigger: true});
-                      utils.notifyWindow(
-                          `Domain "${domain}" ${isNew ? 'added' : 'updated'}`, 'success');
-                  })
-                  .fail(utils.notifyWindow);
+            .always(utils.preloader.hide)
+            .then(function(){
+                App.navigate('domains', {trigger: true});
+                utils.notifyWindow(
+                    `Domain "${domain}" ${isNew ? 'added' : 'updated'}`, 'success');
+            }, utils.notifyWindow);
 
         App.getDomainsCollection().done((domainCollection) => {
             domainCollection.add(this.model, {merge: true});

@@ -1,10 +1,13 @@
-define(['app_data/app', 'marionette',
-        'app_data/misc/templates/message_list.tpl',
-        'app_data/misc/templates/message_list_item.tpl',
-        'app_data/misc/templates/page_not_found.tpl'],
-       function(App, Marionette,
-                messageListTpl, messageListItemTpl,
-                pageNotFoundTpl){
+define([
+    'app_data/app', 'marionette',
+    'app_data/misc/templates/message_list.tpl',
+    'app_data/misc/templates/message_list_item.tpl',
+    'app_data/misc/templates/page_not_found.tpl',
+], function(
+    App, Marionette,
+    messageListTpl, messageListItemTpl,
+    pageNotFoundTpl
+){
 
     var views = {};
 

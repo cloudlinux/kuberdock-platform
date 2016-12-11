@@ -234,8 +234,8 @@ export const AppListItem = Marionette.ItemView.extend({
                     that.render();
                 },
                 buttonCancel: true
-           }
-       });
+            }
+        });
     },
 
     copyLink(){

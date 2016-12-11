@@ -3,6 +3,7 @@ import os
 import re
 import time
 import traceback
+import types
 from itertools import count, islice
 
 import logging
@@ -194,10 +195,25 @@ def assert_not_eq(actual, not_expected):
 
 
 def assert_in(item, sequence):
+    if isinstance(sequence, types.GeneratorType):
+        raise Exception(
+            "Generator object cannot be used in 'assert_in', please "
+            "convert to simple iterable first")
+
     if item not in sequence:
         raise AssertionError(u"Item '{0}' not in '{1}'".format(
             item, sequence
         ))
+
+
+def assert_not_in(item, sequence):
+    if isinstance(sequence, types.GeneratorType):
+        raise Exception(
+            "Generator object cannot be used in 'assert_not_in', please "
+            "convert to simple iterable first")
+
+    if item in sequence:
+        raise AssertionError(u"Item '{}' is in '{}'".format(item, sequence))
 
 
 @contextmanager
@@ -445,10 +461,10 @@ def set_eviction_timeout(cluster, timeout):
     conf.close()
     tmp_file.close()
 
-    cluster.ssh_exec('master', 'sudo mv {0} {1}'.format(tmp_filename,
-                                                        conf_filename))
-    cluster.ssh_exec('master',
-                     'sudo systemctl restart kube-controller-manager')
+    cluster.ssh_exec('master', 'mv {0} {1}'.format(
+        tmp_filename, conf_filename), sudo=True)
+    cluster.ssh_exec('master', 'systemctl restart kube-controller-manager',
+                     sudo=True)
 
 
 def wait_for(func, tries=50, interval=10, fail_silently=False):

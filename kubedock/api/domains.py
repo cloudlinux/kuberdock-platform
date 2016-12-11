@@ -9,7 +9,7 @@ from ..domains.models import BaseDomain
 from ..exceptions import (AlreadyExistsError, CannotBeDeletedError,
                           InternalAPIError, DomainNotFound, DNSPluginError,
                           DomainZoneDoesNotExist)
-from ..kapi.ingress import prepare_ip_sharing
+from ..kapi import ingress
 from ..login import auth_required
 from ..rbac import check_permission
 from ..utils import atomic, KubeUtils, register_api
@@ -59,31 +59,40 @@ class DomainsAPI(KubeUtils, MethodView):
     @maintenance_protected
     @check_permission('create', 'domains')
     @use_kwargs(base_domain_schema, allow_unknown=True)
-    def post(self, **params):
+    def post(self, name, certificate=None, **kwargs):
         """Creates BaseDomain model in database.
 
         Request must contain parameter 'name' - name for domain.
         Raises AlreadyExistsError if domain with specified name already exists.
         :param name: domain name
+        :param certificate: domain certificate
         :return: dict with created BaseDomain model fields.
         """
-        prepare_ip_sharing()
+        # check preconditions
+        subsystem_is_up = ingress.is_subsystem_up()
+        if not subsystem_is_up:
+            ingress.check_subsystem_up_preconditions()
+
+        if BaseDomain.query.filter(BaseDomain.name == name).first():
+            raise AlreadyExistsError()
+
+        zone_exists, message = dns_management.check_if_zone_exists(name)
+        if message:
+            raise DNSPluginError(message)
+        if not zone_exists:
+            raise DomainZoneDoesNotExist(name)
+
+        # add domain
         with atomic(CreateDomainInternalError.from_exc, nested=False):
-            name = params['name']
-            if BaseDomain.query.filter(BaseDomain.name == name).first():
-                raise AlreadyExistsError()
-            zone_exists, message = dns_management.check_if_zone_exists(name)
-            if message:
-                raise DNSPluginError(message)
-            if not zone_exists:
-                raise DomainZoneDoesNotExist(name)
-
-            domain = BaseDomain(name=name)
-
-            if 'certificate' in params:
-                domain.certificate = params['certificate']
-
+            domain = BaseDomain.create(name=name)
+            if certificate:
+                domain.certificate = certificate
             db.session.add(domain)
+
+        # up subsystem if needed
+        if not subsystem_is_up:
+            ingress.prepare_ip_sharing_task.delay()
+
         return domain.to_dict()
 
     @maintenance_protected

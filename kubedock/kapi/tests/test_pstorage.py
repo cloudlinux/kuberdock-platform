@@ -14,6 +14,7 @@ from kubedock.pods.models import PersistentDisk, PersistentDiskStatuses, Pod
 from kubedock.settings import PD_NS_SEPARATOR
 from kubedock.testutils import create_app
 from kubedock.testutils.testcases import DBTestCase, FlaskTestCase
+from kubedock.utils import POD_STATUSES
 
 
 class TestCase(FlaskTestCase):
@@ -118,6 +119,134 @@ class TestPstorageFuncs(DBTestCase):
         pstorage.delete_persistent_drives([pd.id])
         pds = db.session.query(PersistentDisk).all()
         self.assertEqual(pds, [])
+
+    @mock.patch.object(pstorage, 'STORAGE_CLASS', pstorage.LocalStorage)
+    @mock.patch.object(pstorage.LocalStorage, 'run_on_pd_node')
+    def test_delete_persistent_drives_pod_linked_local_storage(self,
+                                                               run_on_pd_node):
+
+        def mock_run_on_pd_node(*args, **kwargs):
+            if args[1].find('remove-volume'):
+                return {'status': 'OK'}
+            return None
+
+        run_on_pd_node.side_effect = mock_run_on_pd_node
+
+        self._test_delete_persistent_drives_pod_linked()
+
+        r_args, r_kwargs = run_on_pd_node.call_args
+        delete_node_call = 'PYTHONPATH=/var/lib/kuberdock/scripts python2 ' \
+                           '-m node_storage_manage.manage remove-volume ' \
+                           '--path /var/lib/kuberdock/storage/3/' \
+                           'mysql-persistent-storage'
+        self.assertEqual(r_args[1], delete_node_call)
+
+    @mock.patch.object(pstorage, 'STORAGE_CLASS', pstorage.CephStorage)
+    @mock.patch.object(pstorage.CephStorage, 'run_on_first_node')
+    def test_delete_persistent_drives_pod_linked_ceph(self, run_on_first_node):
+
+        def mock_run_on_first_node(*args, **kwargs):
+            if args[1].find('remove-volume'):
+                return {'status': 'OK'}
+            return None
+
+        run_on_first_node.return_value = {'watchers': None}
+
+        self._test_delete_persistent_drives_pod_linked()
+        ceph_call = 'rbd -n client.admin --keyring=/etc/ceph/ceph.client' \
+                    '.admin.keyring rm 3/mysql-persistent-storage'
+        run_on_first_node.assert_called_with(ceph_call)
+
+    @mock.patch.object(pstorage.podcollection.PodCollection, '_stop_pod')
+    @mock.patch.object(pstorage.podcollection.PodCollection,
+                       '_get_namespaces', mock.Mock(return_value=[]))
+    @mock.patch.object(pstorage.podcollection.helpers.KubeQuery,
+                       'get', mock.Mock(return_value={}))
+    def _test_delete_persistent_drives_pod_linked(self, _stop_pod):
+        pod = self.fixtures.pod(
+            owner_id=1,
+            name='pod1',
+            kube_id=0,
+            template_id=1,
+            status=POD_STATUSES.running,
+            config={
+                'volumes_public': [
+                    {
+                        'persistentDisk': {
+                            'pdName': 'mysql-persistent-storage',
+                            'pdSize': 2
+                        },
+                        'name': 'pd1'
+
+                    },
+                    {
+                        'persistentDisk': {
+                            'pdName': 'wordpress-persistent-storage',
+                            'pdSize': 1
+                        },
+                        'name': 'wordpress-persistent-storage'
+                    }
+                ],
+                "volumes": [
+                    {
+                        "name": "pd1",
+                        "annotation": {
+                            "localStorage": {
+                                "path": "/var/lib/kuberdock/storage/3/pd1",
+                                "name": "mysql-persistent-storage",
+                                "size": 2
+                            }
+                        }
+                    },
+                    {
+                        "name": "wordpress-persistent-storage",
+                        "annotation": {
+                            "localStorage": {
+                                "path": "/var/lib/kuberdock/storage/3/pd2",
+                                "name": "wordpress-persistent-storage",
+                                "size": 1
+                            }
+                        }
+                    }
+                ],
+                'containers': [
+                    {
+                        "name": 'container',
+                        'image': 'image',
+                        "kubes": 1,
+                        "volumeMounts": [
+                            {
+                                "mountPath": "/mysql-persistent-storage",
+                                "name": "pd1"
+                            },
+                            {
+                                "mountPath": "/wordpress-persistent-storage",
+                                "name": "wordpress-persistent-storage"
+                            }
+                        ]
+                    }
+                ]
+            }
+        )
+        pd1 = self.fixtures.persistent_disk(
+            name='mysql-persistent-storage',
+            drive_name='3/mysql-persistent-storage',
+            size=2,
+            pod_id=pod.id
+        )
+        self.fixtures.persistent_disk(
+            name='wordpress-persistent-storage',
+            drive_name='3/wordpress-persistent-storage',
+            size=1,
+            pod_id=pod.id
+        )
+
+        pstorage.delete_persistent_drives([pd1.id], mark_only=True)
+
+        self.assertEqual(pd1.state, PersistentDiskStatuses.DELETED)
+
+        s_args, s_kwargs = _stop_pod.call_args
+        self.assertEqual(s_args[0].name, 'pod1')
 
     @mock.patch.object(pstorage, 'update_pods_volumes')
     @mock.patch.object(pstorage, 'delete_persistent_drives_task')

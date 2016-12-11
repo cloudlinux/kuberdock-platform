@@ -230,7 +230,7 @@ CELERYBEAT_SCHEDULE = {
         'schedule': timedelta(minutes=5)
     },
 }
-CELERY_IMPORTS = ('kubedock.kapi.podcollection', )
+CELERY_IMPORTS = ('kubedock.kapi.podcollection', 'kubedock.kapi.ingress')
 # Do not store results too long. Default is 1 day.
 CELERY_TASK_RESULT_EXPIRES = 60 * 60
 
@@ -250,6 +250,7 @@ NODE_STORAGE_MANAGE_DIR = 'node_storage_manage'
 NODE_STORAGE_MANAGE_MODULE = 'manage'
 NODE_STORAGE_MANAGE_CMD = 'PYTHONPATH={} python2 -m {}.{}'.format(
     NODE_SCRIPT_DIR, NODE_STORAGE_MANAGE_DIR, NODE_STORAGE_MANAGE_MODULE)
+ASSETS_PATH = '/var/opt/kuberdock/kubedock/assets'
 
 
 # Use zfs for localstorage backend

@@ -304,6 +304,9 @@ class AwsProvider(InfraProvider):
 
         self.env = env
         self.env["NUM_NODES"] = self.env['KD_NODES_COUNT']
+        if self.env.get('KD_USE_ZFS') in ('1', 'true'):
+            # AWS deploy script uses 'yes' instead of '1' or 'true'
+            self.env['KD_USE_ZFS'] = 'yes'
         if 'KD_TESTING_REPO' in self.env:
             self.env["KUBE_AWS_USE_TESTING"] = "yes"
         if 'KD_NODE_TYPES' in self.env:

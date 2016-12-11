@@ -12,15 +12,16 @@ from StringIO import StringIO
 from fabric.exceptions import CommandTimeout, NetworkError
 from flask import current_app
 
+import podcollection
 from ..core import db, ExclusiveLock, ConnectionPool
 from ..exceptions import (
     APIError, PVResizeIsNotSupportedError, PVResizeFailed, PDNotFound)
 from ..nodes.models import Node, NodeFlagNames
-from ..pods.models import PersistentDisk, PersistentDiskStatuses, Pod
+from ..pods.models import PersistentDisk, PersistentDiskStatuses, Pod as DBPod
 from ..users.models import User
 from ..usage.models import PersistentDiskState
 from ..utils import send_event_to_role, atomic, nested_dict_utils, \
-    NODE_STATUSES
+    NODE_STATUSES, POD_STATUSES
 from ..settings import (
     SSH_KEY_FILENAME, CEPH, CEPH_POOL_NAME, PD_NS_SEPARATOR,
     NODE_LOCAL_STORAGE_PREFIX, CEPH_CLIENT_USER, CEPH_KEYRING_PATH,
@@ -78,7 +79,7 @@ class DriveIsLockedError(Exception):
     pass
 
 
-def delete_drive_by_id(drive_id):
+def delete_drive_by_id(drive_id, force=False):
     """Marks drive in DB as deleted and asynchronously calls deletion from
     storage backend.
     """
@@ -94,7 +95,7 @@ def delete_drive_by_id(drive_id):
                     update_pods_volumes(new_pd)
     except DriveIsLockedError as err:
         raise APIError(err.message)
-    delete_persistent_drives_task.delay([drive_id], mark_only=False)
+    delete_persistent_drives_task.delay([drive_id], mark_only=force)
 
 
 @atomic()
@@ -106,7 +107,7 @@ def update_pods_volumes(pd):
     :return: list of pod identifiers which were updated in database
     """
     changed_pod_ids = []
-    for pod in Pod.query.filter(Pod.owner_id == pd.owner_id):
+    for pod in DBPod.query.filter(DBPod.owner_id == pd.owner_id):
         if pod.is_deleted:
             continue
         try:
@@ -221,10 +222,13 @@ def delete_persistent_drives(pd_ids, mark_only=False):
         return
 
     try:
+        pd_query = db.session.query(PersistentDisk).filter(
+            PersistentDisk.id.in_(to_delete)
+        )
+        linked_pods = [(pd.pod, pd.name) for pd in pd_query if pd.pod]
+
         if mark_only:
-            db.session.query(PersistentDisk).filter(
-                PersistentDisk.id.in_(to_delete)
-            ).update(
+            pd_query.update(
                 {
                     PersistentDisk.state: PersistentDiskStatuses.DELETED,
                     PersistentDisk.node_id: None
@@ -232,10 +236,16 @@ def delete_persistent_drives(pd_ids, mark_only=False):
                 synchronize_session=False
             )
         else:
-            db.session.query(PersistentDisk).filter(
-                PersistentDisk.id.in_(to_delete)
-            ).delete(synchronize_session=False)
+            pd_query.delete(synchronize_session=False)
         db.session.commit()
+
+        # stop pod if running or pending
+        pod_collection = podcollection.PodCollection()
+        for (db_pod, pd_name) in linked_pods:
+            if db_pod and db_pod.status in [POD_STATUSES.running,
+                                            POD_STATUSES.pending]:
+                pod = pod_collection._get_by_id(db_pod.id)
+                podcollection.PodCollection._stop_pod(pod)
     except:
         current_app.logger.exception(
             u'Failed to delete Persistent Disks from DB: "%s"',
@@ -331,9 +341,9 @@ class PersistentStorage(object):
         drives_by_name = {
             (item['owner_id'], item['name']): item for item in drive_list
         }
-        query = Pod.query
+        query = DBPod.query
         if user_id:
-            query = query.filter(Pod.owner_id == user_id)
+            query = query.filter(DBPod.owner_id == user_id)
         for pod in query:
             if pod.is_deleted:
                 continue
@@ -1534,7 +1544,7 @@ class LocalStorage(PersistentStorage):
                 catch_exitcodes=[failed_rm_code],
                 jsonresult=True
             )
-            if res['status'] != 'OK':
+            if res and res['status'] != 'OK':
                 return 1
         except (NodeCommandWrongExitCode, KeyError):
             return 1
@@ -1570,7 +1580,7 @@ class LocalStorage(PersistentStorage):
             PersistentDisk.id == persistent_disk_id
         ).one()
         pods = []
-        for pod in Pod.query.filter(Pod.owner_id == pd.owner_id):
+        for pod in DBPod.query.filter(DBPod.owner_id == pd.owner_id):
             if pod.is_deleted:
                 continue
             try:
@@ -1627,7 +1637,7 @@ class LocalStorage(PersistentStorage):
                             drive_path, new_size),
                         jsonresult=True
                     )
-                    if res['status'] != 'OK':
+                    if res and res['status'] != 'OK':
                         raise PVResizeFailed(
                             u'Failed to resize PV: {}'.format(
                                 res['data']['message']

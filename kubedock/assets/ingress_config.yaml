@@ -1,0 +1,69 @@
+# Based on
+# https://github.com/jetstack/kube-lego/blob/0.0.4/examples/
+#   nginx-deployment.yaml
+# and
+# https://github.com/jetstack/kube-lego/blob/0.0.4/examples/
+#   kube-lego-deployment.yaml
+
+containers:
+- command:
+  - /nginx-ingress-controller
+  - --default-backend-service=$backend_ns/$backend_svc
+  - --nginx-configmap=$ingress_configmap_ns/$ingress_configmap_name
+  env:
+  - name: POD_NAME
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.name
+  - name: POD_NAMESPACE
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
+  image: gcr.io/google_containers/nginx-ingress-controller:0.8.3
+  kubes: 5
+  name: nginx-ingress
+  ports:
+  - containerPort: 80
+    isPublic: true
+    protocol: TCP
+  - containerPort: 443
+    isPublic: true
+    protocol: TCP
+  terminationMessagePath: null
+  volumeMounts: []
+  workingDir: ''
+- command: []
+  env:
+  - name: LEGO_EMAIL
+    value: $email
+  - name: LEGO_POD_IP
+    valueFrom:
+      fieldRef:
+        fieldPath: status.podIP
+  - name: LEGO_NAMESPACE
+    valueFrom:
+      fieldRef:
+        fieldPath: metadata.namespace
+  - name: LEGO_SERVICE_NAME
+    value: $(KUBERDOCK_SERVICE)
+  - name: LEGO_PORT
+    value: '8081'
+  image: jetstack/kube-lego:0.1.3
+  kubes: 3
+  name: kube-lego
+  ports:
+  - containerPort: 8081
+    protocol: TCP
+  terminationMessagePath: null
+  volumeMounts: []
+  workingDir: ''
+kube_type: $kube_type
+labels:
+  app: kube-lego
+name: $name
+node: null
+podIP: $pod_ip
+replicas: 1
+restartPolicy: Always
+serviceAccount: true
+volumes: []

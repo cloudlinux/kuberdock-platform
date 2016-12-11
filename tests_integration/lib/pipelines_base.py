@@ -112,6 +112,8 @@ class Pipeline(object):
             "KD_CEPH_USER_KEYRING",
             "KD_PD_NAMESPACE",
 
+            "KD_USE_ZFS",
+
             "KD_INSTALL_PLESK",
             "KD_PLESK_LICENSE",
 

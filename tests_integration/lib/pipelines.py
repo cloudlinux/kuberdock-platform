@@ -24,6 +24,10 @@ class MainPipeline(Pipeline):
         'KD_TIMEZONE': 'Europe/Moscow'
     }
 
+    def post_create_hook(self):
+        super(MainPipeline, self).post_create_hook()
+        self.cluster.wait_for_service_pods()
+
 
 class MainUpgradedPipeline(UpgradedPipelineMixin, MainPipeline):
     NAME = 'main_upgraded'
@@ -136,6 +140,8 @@ class FixedIPPoolsPipeline(Pipeline):
 class CephPipeline(Pipeline):
     NAME = 'ceph'
     ROUTABLE_IP_COUNT = 2
+    root = os.path.abspath(os.path.join(
+        __file__, '../../../dev-utils/dev-env/ansible/ceph_configs'))
     ENV = {
         'KD_NODES_COUNT': '4',
         'KD_NODE_TYPES':
@@ -143,8 +149,8 @@ class CephPipeline(Pipeline):
         'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',
         'KD_CEPH': '1',
         'KD_CEPH_USER': 'jenkins',
-        'KD_CEPH_CONFIG': 'ceph_configs/ceph.conf',
-        'KD_CEPH_USER_KEYRING': 'ceph_configs/client.jenkins.keyring',
+        'KD_CEPH_CONFIG': os.path.join(root, 'ceph.conf'),
+        'KD_CEPH_USER_KEYRING': os.path.join(root, 'client.jenkins.keyring'),
         'KD_PD_NAMESPACE': 'jenkins_pool'
     }
 
@@ -385,14 +391,58 @@ class DeleteNodePipeline(Pipeline):
 
 class ZFSStoragePipeline(Pipeline):
     NAME = 'zfs'
+    ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
         'KD_USE_ZFS': '1',
     }
 
+    def post_create_hook(self):
+        super(ZFSStoragePipeline, self).post_create_hook()
+        self.cluster.wait_for_service_pods()
+
+        # NOTE: We need to make sure that ZFS uses EBS volumes on AWS
+        for node in self.cluster.node_names:
+            self.cluster.ssh_exec(node, 'zpool status', sudo=True)
+
+        # Change default persistent disk removal schedule from 1hr to 1m, so
+        # that if a first attempt to remove a disk failes we don't have to
+        # wait for 1hr
+        self._change_delete_pd_schedule()
+
+    def _change_delete_pd_schedule(self):
+        conf_path = '/var/opt/kuberdock/kubedock/settings.py'
+
+        chmod_cmd = 'chmod a+rw {}'.format(conf_path)
+        self.cluster.ssh_exec('master', chmod_cmd, sudo=True)
+
+        new_schedule = (
+            'printf "%s\\n" '
+            '"CELERYBEAT_SCHEDULE[\'clean-deleted-persistent-drives\']'
+            '[\'schedule\'] = timedelta(minutes=1)" >> {}').format(conf_path)
+        self.cluster.ssh_exec('master', new_schedule, sudo=True)
+
+        # Change settings file permissions just in case.
+        chown_cmd = 'chown nginx:nginx {}'.format(conf_path)
+
+        self.cluster.ssh_exec('master', chown_cmd, sudo=True)
+        # Restart emperor
+        self.cluster.ssh_exec('master', 'systemctl restart emperor.uwsgi',
+                              sudo=True)
+
 
 class ZFSStorageUpgradedPipeline(UpgradedPipelineMixin, ZFSStoragePipeline):
     NAME = 'zfs_upgraded'
+
+
+class ZFSStorageAWSPipeline(ZFSStoragePipeline):
+    INFRA_PROVIDER = 'aws'
+    NAME = 'zfs_aws'
+
+
+class ZFSStorageAWSUpgradedPipeline(UpgradedPipelineMixin, ZFSStoragePipeline):
+    INFRA_PROVIDER = 'aws'
+    NAME = 'zfs_aws_upgraded'
 
 
 class SharedIPPipeline(Pipeline):
@@ -400,6 +450,18 @@ class SharedIPPipeline(Pipeline):
     ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
+    }
+
+
+class VerticalScalabilityPipeline(Pipeline):
+    NAME = 'vertical_scalability'
+    ROUTABLE_IP_COUNT = 3
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'KD_NODE_CPUS': '4',
+        'KD_NODE_MEMORY': '4096',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
+        'KD_NODE_TYPES': 'node1=standard'
     }
 
 

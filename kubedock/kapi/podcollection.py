@@ -53,7 +53,7 @@ from ..pods.models import (
 from ..system_settings import keys as settings_keys
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
-from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils
+from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils, nested_dict_utils
 
 UNKNOWN_ADDRESS = 'Unknown'
 
@@ -1182,9 +1182,8 @@ class PodCollection(object):
 
     def _sync_start_pod(self, pod, data=None):
         if data is None:
-            data = {'async-pod-create': False}
-        else:
-            data['async-pod-create'] = False
+            data = {}
+        nested_dict_utils.set(data, 'commandOptions.asyncPodCreate', False)
         return self._start_pod(pod, data=data)
 
     def _start_pod(self, pod, data=None):
@@ -1199,8 +1198,6 @@ class PodCollection(object):
             pod, db_config = self._apply_edit(pod, db_pod, db_config,
                                               internal_edit=internal_edit)
             db.session.commit()
-
-        async_pod_create = data.get('async-pod-create', True)
 
         if pod.status == POD_STATUSES.unpaid:
             raise APIError("Pod is unpaid, we can't run it")
@@ -1226,7 +1223,7 @@ class PodCollection(object):
             # public_ip could not have time to save before read
             db.session.commit()
 
-        if async_pod_create:
+        if command_options.get('asyncPodCreate', True):
             prepare_and_run_pod_task.delay(pod, db_pod.id, db_config)
         else:
             prepare_and_run_pod(pod, db_pod, db_config)

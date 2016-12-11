@@ -319,3 +319,26 @@ class CanNotRemoveIPPool(APIError):
 
     def __init__(self, details):
         super(CanNotRemoveIPPool, self).__init__(details={'message': details})
+
+
+class SharedIPSubsystemNotReady(APIError):
+    message_template = "Shared IP subsystem is not ready. {message}"
+
+    def __init__(self, details):
+        super(SharedIPSubsystemNotReady, self).__init__(
+            details={'message': details})
+
+
+class DefaultBackendNotReady(SharedIPSubsystemNotReady):
+    message_template = 'Could not create Default HTTP Backend service POD. ' \
+                       '{message}'
+
+
+class IngressControllerNotReady(SharedIPSubsystemNotReady):
+    message_template = 'Could not create Ingress Controller service POD. ' \
+                       '{message}'
+
+
+class IngressConfigMapError(SharedIPSubsystemNotReady):
+    message_template = 'Could not create configuration resource for Ingress ' \
+                       'Controller'

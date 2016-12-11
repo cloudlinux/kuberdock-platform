@@ -122,6 +122,10 @@ install_calico() {
     time sync
     #sleep 10   # even harder workaround
     echo "Starting Calico node..."
+    if mount | grep /tmp | grep noexec > /dev/null; then
+        mount /tmp -o remount,exec
+        echo "Directory /tmp was remount with exec flag"
+    fi
     # In case of ambiguity we can force calico to register host with
     # envvar HOSTNAME="$SOME_HOSTNAME"
     if [ -z "$SELF_IP" ]; then

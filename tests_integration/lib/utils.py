@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import sys
 import traceback
 from itertools import count, islice
 
@@ -63,9 +64,15 @@ def local_exec(cmd, env=None, shell=False, check_retcode=True):
 
 def ssh_exec(ssh, cmd, timeout=None, check_retcode=True, get_pty=False):
     LOG.debug(u"{}Calling SSH: '{}'{}".format(Style.DIM, cmd, Style.RESET_ALL))
-    _, out, err = ssh.exec_command(cmd, timeout=timeout, get_pty=get_pty)
-    ret_code = out.channel.recv_exit_status()
-    out, err = out.read().strip(), err.read().strip()
+    try:
+        _, out, err = ssh.exec_command(cmd, timeout=timeout, get_pty=get_pty)
+        ret_code = out.channel.recv_exit_status()
+        out, err = out.read().strip(), err.read().strip()
+    except Exception:
+        LOG.debug("Something went wrong in 'ssh_exec':\n{}".format(
+            format_exception(sys.exc_info())
+        ))
+        raise
 
     _proceed_exec_result(out, err, ret_code, check_retcode)
     return ret_code, out, err
@@ -74,12 +81,18 @@ def ssh_exec(ssh, cmd, timeout=None, check_retcode=True, get_pty=False):
 def ssh_exec_live(ssh, cmd, timeout=None, check_retcode=True):
     LOG.debug(u"{}Calling SSH live: '{}'{}".format(Style.DIM, cmd,
                                                    Style.RESET_ALL))
-    interact = SSHClientInteraction(ssh, timeout=timeout, display=True,
-                                    logger=logging.getLogger())
-    interact.expect('.*')
-    interact.send(cmd + "; exit $?")  # needed to not depend on prompt type
-    interact.tail()
-    ret_code = interact.channel.recv_exit_status()
+    try:
+        interact = SSHClientInteraction(ssh, timeout=timeout, display=True,
+                                        logger=logging.getLogger())
+        interact.expect('.*')
+        interact.send(cmd + "; exit $?")  # needed to not depend on prompt type
+        interact.tail()
+        ret_code = interact.channel.recv_exit_status()
+    except Exception:
+        LOG.debug("Something went wrong in 'ssh_exec_live':\n{}".format(
+            format_exception(sys.exc_info())
+        ))
+        raise
 
     _proceed_exec_result("", "", ret_code, check_retcode)
     return ret_code, "", ""

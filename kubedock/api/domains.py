@@ -1,6 +1,7 @@
 from flask import Blueprint
 from flask.views import MethodView
 
+from kubedock import tasks
 from .utils import use_kwargs
 from .. import dns_management, certificate_utils
 from ..core import db
@@ -90,9 +91,11 @@ class DomainsAPI(KubeUtils, MethodView):
 
             db.session.add(domain)
 
-        # up subsystem if needed
+        # up subsystem if needed and create wildcard dns record
+        post_actions = tasks.create_wildcard_dns_record.si(name)
         if not subsystem_is_up:
-            ingress.prepare_ip_sharing_task.delay()
+            post_actions = ingress.prepare_ip_sharing_task.si() | post_actions
+        post_actions.delay()
 
         return domain.to_dict()
 
@@ -119,6 +122,8 @@ class DomainsAPI(KubeUtils, MethodView):
             if BaseDomain.query.filter(BaseDomain.name == name).first():
                 raise AlreadyExistsError()
             domain.name = name
+            (tasks.delete_wildcard_dns_record.si(name)
+             | tasks.create_wildcard_dns_record.si(name)).delay()
         certificate = params.get('certificate')
         if certificate:
             domain.certificate = certificate
@@ -136,7 +141,9 @@ class DomainsAPI(KubeUtils, MethodView):
         if domain.pod_domains:
             raise CannotBeDeletedError(
                 'Domain cannot be deleted: there are some pods that use it')
+        domain_name = domain.name
         db.session.delete(domain)
+        tasks.delete_wildcard_dns_record.delay(domain_name)
 
 
 register_api(domains, DomainsAPI, 'domains', '/', 'domain_id', 'int')

@@ -1,12 +1,12 @@
 import json
-import paramiko
-import pytz
 from collections import defaultdict
 from crypt import crypt
 from datetime import datetime
 from os import path
 from uuid import uuid4
 
+import paramiko
+import pytz
 from celery.exceptions import MaxRetriesExceededError
 from flask import current_app
 
@@ -23,7 +23,7 @@ from images import Image
 from kubedock.exceptions import (
     ContainerCommandExecutionError, NotFound,
     NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError, ServicePodDumpError,
-    CustomDomainIsNotReady, CertificatDoesNotMatchDomain)
+    CustomDomainIsNotReady)
 from kubedock.kapi.lbpoll import get_service_provider
 from network_policies import (
     allow_public_ports_policy,
@@ -34,10 +34,11 @@ from node import Node as K8SNode
 from node import NodeException
 from pod import Pod
 from .. import billing
+from .. import certificate_utils
 from .. import dns_management
 from .. import settings
 from .. import utils
-from .. import certificate_utils
+from ..constants import AWS_UNKNOWN_ADDRESS
 from ..core import ExclusiveLockContextManager, db
 from ..domains.models import PodDomain
 from ..exceptions import (
@@ -55,8 +56,6 @@ from ..system_settings import keys as settings_keys
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
 from ..utils import POD_STATUSES, NODE_STATUSES, KubeUtils, nested_dict_utils
-
-UNKNOWN_ADDRESS = 'Unknown'
 
 # We use only 30 because useradd limits name to 32, and ssh client limits
 # name only to 30 (may be this is configurable) so we use lowest possible
@@ -482,7 +481,7 @@ class PodCollection(object):
                 config['public_ip'] = pod.public_ip = 'true'
 
         elif access_type == PublicAccessType.PUBLIC_AWS:
-            config.setdefault('public_aws', UNKNOWN_ADDRESS)
+            config.setdefault('public_aws', AWS_UNKNOWN_ADDRESS)
 
         elif access_type == PublicAccessType.DOMAIN:
             domain_name = (config.get('domain', None) or
@@ -971,7 +970,8 @@ class PodCollection(object):
         services. Update public address if found one.
         """
         if settings.AWS:
-            if getattr(pod, 'public_aws', UNKNOWN_ADDRESS) == UNKNOWN_ADDRESS:
+            if getattr(pod, 'public_aws', AWS_UNKNOWN_ADDRESS) \
+                    == AWS_UNKNOWN_ADDRESS:
                 dns = get_service_provider().get_dns_by_pods(pod.id)
                 if pod.id in dns:
                     set_public_address(dns[pod.id], pod.id)
@@ -1888,28 +1888,18 @@ def prepare_and_run_pod(pod, db_pod, db_config):
 
         if hasattr(pod, 'domain') and PodCollection.has_public_ports(
                 db_config):
-            # In AWS case we use a CNAME record - pod.domain -> ELB DNS name
-            if current_app.config['AWS']:
-                ok, message = dns_management.create_or_update_record(
-                    pod.domain, 'CNAME')
-            else:
-                ok, message = dns_management.create_or_update_record(
-                    pod.domain, 'A')
-            if ok:
-                custom_domain = getattr(pod, 'custom_domain', None)
-                ok, message = ingress_resource.create_ingress(
-                    pod.containers, pod.namespace, pod.service, pod.domain,
-                    custom_domain,
-                    pod.certificate)
+            _ensure_old_dns_record_removed(pod.domain)
+            custom_domain = getattr(pod, 'custom_domain', None)
+            ok, message = ingress_resource.create_ingress(
+                pod.containers, pod.namespace, pod.service, pod.domain,
+                custom_domain, pod.certificate)
             if not ok:
                 msg = u'Failed to run pod with domain "{}": {}'
                 utils.send_event_to_role(
                     'notify:error',
                     {'message': msg.format(pod.domain, message)}, 'Admin')
                 # "pod stop" will be called below
-                raise APIError(
-                    u'Failed to create DNS record for pod "{}". '
-                    u'Please, contact administrator'.format(pod.name))
+                raise APIError(msg)
     except Exception as err:
         current_app.logger.exception('Failed to run pod: %s', pod)
         # We have to stop pod here to release all the things that was allocated
@@ -1935,6 +1925,16 @@ def prepare_and_run_pod(pod, db_pod, db_config):
         raise
     pod.set_status(POD_STATUSES.pending, send_update=True)
     return pod.as_dict()
+
+
+def _ensure_old_dns_record_removed(pod_domain):
+    # ensure that old record does not overlap wildcard record
+    record_type = 'CNAME' if current_app.config['AWS'] else 'A'
+    ok, message = dns_management.delete_record(
+        pod_domain, record_type)
+    if not ok:
+        msg = 'Error during deleting of old dns record: {}'.format(message)
+        raise APIError(msg)
 
 
 def update_service(pod):

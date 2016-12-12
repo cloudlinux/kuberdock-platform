@@ -1,6 +1,7 @@
-define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
-        'backbone.paginator', 'backbone-associations'],
-       function(Backbone, numeral, App, utils){
+define([
+    'backbone', 'numeral', 'app_data/app', 'app_data/utils',
+    'backbone.paginator', 'backbone-associations'
+], function(Backbone, numeral, App, utils){
     'use strict';
 
     Backbone.syncOrig = Backbone.sync;
@@ -11,12 +12,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     };
 
     var data = {},
-        unwrapper = function(response) {
-            var data = response.hasOwnProperty('data') ? response.data : response;
-            if (response.status === 'error' || response.status === 'warning')
-                utils.notifyWindow(response);
-            return data;
-        },
+        unwrapper = utils.restUnwrapper,
         getParentWithType = function(model, typeOfPatent, throughCollection){
             return _.find(model.parents || [],
                           function(parent){ return parent instanceof typeOfPatent; });
@@ -446,10 +442,10 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             return this._containersDiffCollection;
         },
 
-        command: function(cmd, commandOptions){
+        command: function(command, commandOptions = {}){
             // patch should include previous `set`
-            var data = _.extend(this.changedAttributes() || {},
-                                {command: cmd, commandOptions: commandOptions || {}});
+            let data = _.extend(this.changedAttributes() || {},
+                                {command, commandOptions});
             return this.save(data, {wait: true, patch: true});
         },
 
@@ -475,7 +471,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             if (command === 'start')
                 return _.contains(['stopped'], status);
             if (command === 'restore')
-                return _.contains(['paid_deleted',], status);
+                return _.contains(['paid_deleted'], status);
             if (command === 'redeploy')
                 return _.contains(['stopping', 'waiting', 'pending', 'running',
                                    'failed', 'succeeded', 'preparing'], status);
@@ -803,8 +799,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                                 buttonOkText: 'Go to billing',
                                 buttonCancelText: 'No, thanks'
                             }
+                        });
                     });
-                });
             });
             return deferred.promise();
         },
@@ -1323,31 +1319,22 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     App.getAppCollection = App.resourcePromiser('appCollection', data.AppCollection);
 
     data.CurrentUserModel = Backbone.Model.extend({
-        url: function(){ return '/api/users/editself'; },
+        url(){ return '/api/users/self'; },
         parse: unwrapper,
         defaults: {
             impersonated: false
         },
-        localizeDatetime: function(dt, formatString){
-            return utils.localizeDatetime({dt: dt, tz: this.get('timezone'),
-                                           formatString: formatString});
+        localizeDatetime(dt, formatString){
+            return utils.localizeDatetime({dt, formatString, tz: this.get('timezone')});
         },
-        isImpersonated: function(){  // TODO-JWT: get this data from token
+        isImpersonated(){  // TODO-JWT: get this data from token
             return this.get('impersonated');
         },
-        roleIs: function(/* ...roles */){
-            for (var i = 0; i < arguments.length; i++){
-                if (this.get('rolename') === arguments[i])
-                    return true;
-            }
-            return false;
+        roleIs(...roles){
+            return roles.includes(this.get('rolename'));
         },
-        usernameIs: function(/* ...usernames */){
-            for (var i = 0; i < arguments.length; i++){
-                if (this.get('username') === arguments[i])
-                    return true;
-            }
-            return false;
+        usernameIs(...usernames){
+            return usernames.includes(this.get('username'));
         }
     });
     App.getCurrentUser = App.resourcePromiser('user', data.CurrentUserModel);
@@ -1512,6 +1499,12 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     data.DomainModel = Backbone.Model.extend({
         urlRoot: '/api/domains/',
         parse: unwrapper,
+        defaults: function(){
+            return {
+                name: '',
+                certificate : null,
+            };
+        }
     });
 
     data.DomainsCollection = Backbone.PageableCollection.extend({
@@ -1574,11 +1567,11 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     // Billing & resources
 
     data.Package = Backbone.AssociatedModel.extend({
-        url: function(){
-            return '/api/pricing/packages/' + this.id + '?with_kubes=1&with_internal=1';
+        url(){
+            return `/api/pricing/packages/${this.id}?with_kubes=1&with_internal=1`;
         },
         parse: unwrapper,
-        defaults: function(){
+        defaults(){
             return {
                 currency: 'USD',
                 first_deposit: 0,
@@ -1592,8 +1585,8 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                 suffix: ' USD',
             };
         },
-        initialize: function(attributes, options){
-            var kubes = this.get('kubes');
+        initialize(attributes, options){
+            let kubes = this.get('kubes');
             this.unset('kubes');
             if (App.packageCollection == null)
                 App.packageCollection = new data.PackageCollection();
@@ -1609,21 +1602,21 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
                                                kube_price: kube.price});
             }, this);
         },
-        getKubeTypes: function() {
-            var kubes = _.chain(this.parents)
-                .filter(function(model){ return model instanceof data.PackageKube; })
-                .map(function(packageKube){ return packageKube.get('kubeType'); })
+        getKubeTypes() {
+            let kubes = _.chain(this.parents)
+                .filter(model => model instanceof data.PackageKube)
+                .map(packageKube => packageKube.get('kubeType'))
                 .value();
             return new data.KubeTypeCollection(kubes);
         },
-        priceFor: function(kubeID) {
-            var packageKube = _.find(this.parents, function(model){
+        priceFor(kubeID) {
+            let packageKube = _.find(this.parents, function(model){
                 return model instanceof data.PackageKube &&
                     model.get('kubeType').id === kubeID;
             });
             return packageKube ? packageKube.get('kube_price') : undefined;
         },
-        getFormattedPrice: function(price, format) {
+        getFormattedPrice(price, format) {
             return this.get('prefix') +
                 numeral(price).format(format || '0.00') +
                 this.get('suffix');
@@ -1637,7 +1630,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     App.getPackages = App.resourcePromiser('packages', data.PackageCollection);
 
     data.KubeType = Backbone.AssociatedModel.extend({
-        defaults: function(){
+        defaults(){
             return {
                 available: false,
                 cpu: 0,
@@ -1666,7 +1659,7 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
     };
     data.KubeTypeCollection = Backbone.Collection.extend({
         model: data.KubeType,
-        comparator: function(kubeType) {
+        comparator(kubeType) {
             return !kubeType.get('available');
         },
     });
@@ -1682,11 +1675,11 @@ define(['backbone', 'numeral', 'app_data/app', 'app_data/utils',
             relatedModel: data.Package,
         }],
         defaults: {kube_price: 0},
-        initialize: function(){
+        initialize(){
             this.reattach();
             this.on('change:package_id change:kube_id', this.reattach);
         },
-        reattach: function(){
+        reattach(){
             this.set('kubeType', App.kubeTypeCollection.get(this.get('kube_id')));
             this.set('package', App.packageCollection.get(this.get('package_id')));
         },

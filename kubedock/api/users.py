@@ -152,7 +152,8 @@ class UsersAPI(KubeUtils, MethodView):
 register_api(users, UsersAPI, 'podapi', '/all/', 'uid')
 
 
-@users.route('/editself', methods=['GET'])
+@users.route('/self', methods=['GET'])
+@users.route('/editself', methods=['GET'])  # deprecaated
 @auth_required
 @KubeUtils.jsonwrap
 def get_self():
@@ -162,7 +163,8 @@ def get_self():
     return user
 
 
-@users.route('/editself', methods=['PUT', 'PATCH'])
+@users.route('/self', methods=['PUT', 'PATCH'])
+@users.route('/editself', methods=['PUT', 'PATCH'])  # deprecaated
 @auth_required
 @KubeUtils.jsonwrap
 @use_kwargs({}, allow_unknown=True)

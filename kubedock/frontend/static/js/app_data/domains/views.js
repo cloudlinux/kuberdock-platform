@@ -1,141 +1,149 @@
-define([
-    'app_data/app', 'app_data/controller', 'app_data/utils',
+import App from 'app_data/app';
+import * as utils from 'app_data/utils';
 
-    'app_data/domains/templates/list/empty.tpl',
-    'app_data/domains/templates/list/item.tpl',
-    'app_data/domains/templates/list/list.tpl',
+import domainsListItemEmptyTpl from 'app_data/domains/templates/list/empty.tpl';
+import domainsListItemTpl from 'app_data/domains/templates/list/item.tpl';
+import domainsListTpl from 'app_data/domains/templates/list/list.tpl';
 
-    'app_data/domains/templates/add_domain.tpl',
-    'app_data/domains/templates/domains_layout.tpl',
-], function(
-    App, Controller, utils,
+import domainsAddDomainTpl from 'app_data/domains/templates/add_domain.tpl';
+import domainsLayoutTpl from 'app_data/domains/templates/domains_layout.tpl';
 
-    domainsListItemEmptyTpl,
-    domainsListItemTpl,
-    domainsListTpl,
+export const DomainsListItemEmptyView = Marionette.ItemView.extend({
+    template: domainsListItemEmptyTpl,
+    tagName: 'tr',
+});
 
-    domainsAddDomainTpl,
-    domainsLayoutTpl
-){
-    var views = {};
+export const DomainsListItemView = Marionette.ItemView.extend({
+    template: domainsListItemTpl,
+    tagName: 'tr',
 
-    views.DomainsListItemEmptyView = Marionette.ItemView.extend({
-        template: domainsListItemEmptyTpl,
-        tagName: 'tr',
-    });
+    ui: {
+        deleteDomain : '.delete-domain',
+        tooltip : '[data-toggle="tooltip"]',
+    },
 
-    views.DomainsListItemView = Marionette.ItemView.extend({
-        template: domainsListItemTpl,
-        tagName: 'tr',
+    events: {
+        'click @ui.deleteDomain': 'deleteDomain',
+    },
 
-        ui: {
-            deleteDomain: '.delete-domain',
-            tooltip     : '[data-toggle="tooltip"]',
-        },
+    onDomRefresh(){ this.ui.tooltip.tooltip(); },
+    deleteDomain(evt){
+        let that = this,
+            domain = this.model.get('name');
 
-        events: {
-            'click @ui.deleteDomain': 'deleteDomain',
-        },
-
-        onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
-        deleteDomain: function(evt){
-            var that = this,
-                domain = this.model.get('name');
-
-            utils.modalDialogDelete({
-                title: 'Remove domain',
-                body: "Are you sure you want to remove domain '" +
-                    domain + "'?",
-                small: true,
-                show: true,
-                footer: {
-                    buttonOk: function(){
-                        utils.preloader.show();
-                        that.model.destroy({wait: true})
-                            .done(function(){
-                                utils.notifyWindow(
-                                    'Domain "' + domain + '" removed',
-                                    'success');
-                            })
-                            .always(utils.preloader.hide)
-                            .fail(utils.notifyWindow);
-                    },
-                    buttonCancel: true,
+        utils.modalDialogDelete({
+            title: 'Remove domain',
+            body: "Are you sure you want to remove domain '" +
+                domain + "'?",
+            small: true,
+            show: true,
+            footer: {
+                buttonOk(){
+                    utils.preloader.show();
+                    that.model.destroy({wait: true})
+                        .done(function(){
+                            utils.notifyWindow(`Domain "${domain}" removed`,
+                                               'success');
+                        })
+                        .always(utils.preloader.hide)
+                        .fail(utils.notifyWindow);
                 },
-            });
-        },
-    });
+                buttonCancel: true,
+            },
+        });
+    },
+});
 
-    views.DomainsListView = Marionette.CompositeView.extend({
-        template: domainsListTpl,
-        childView: views.DomainsListItemView,
-        emptyView: views.DomainsListItemEmptyView,
-        childViewContainer: 'tbody',
-    });
+export const DomainsListView = Marionette.CompositeView.extend({
+    template: domainsListTpl,
+    childView: DomainsListItemView,
+    emptyView: DomainsListItemEmptyView,
+    childViewContainer: 'tbody',
+});
 
-    views.DomainsAddDomainView = Marionette.ItemView.extend({
-        template: domainsAddDomainTpl,
-        tagName: 'div',
+export const DomainsAddDomainView = Marionette.ItemView.extend({
+    template: domainsAddDomainTpl,
+    tagName: 'div',
 
-        ui: {
-            'domain'    : 'input#domain',
-            'add_button': '#domain-add-btn',
-        },
+    ui: {
+        'key'         : 'textarea#key',
+        'domain'      : 'input#domain',
+        'add_button'  : '#domain-add-btn',
+        'certificate' : 'textarea#certificate'
+    },
 
-        events: {
-            'click @ui.add_button': 'onSave',
-            'focus @ui.domain'    : 'removeError',
-            'keypress @ui.domain' : 'onInputKeypress',
-        },
+    events: {
+        'click @ui.add_button'  : 'onSave',
+        'focus @ui.domain'      : 'removeError',
+        'focus @ui.key'         : 'removeError',
+        'focus @ui.certificate' : 'removeError',
+        'keypress @ui.domain'   : 'onInputKeypress',
+    },
 
-        onInputKeypress: function(evt){
-            if (evt.which === utils.KEY_CODES.enter){
-                evt.stopPropagation();
-                this.onSave();
+    onInputKeypress(evt){
+        if (evt.which === utils.KEY_CODES.enter){
+            evt.stopPropagation();
+            this.onSave();
+        }
+    },
+
+    templateHelpers(){
+        return {
+            isNew: this.model.isNew(),
+        };
+    },
+
+    removeError(e){ utils.removeError($(e.target)); },
+
+    onSave(){
+        var isNew = this.model.isNew(),
+            key = this.ui.key.val().trim(),
+            domain = this.ui.domain.val().trim(),
+            cert = this.ui.certificate.val().trim(),
+            data = {
+                name: domain,
+                certificate: cert ? {cert, key} : null,
+            },
+            validDomain = /^(?:[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.)+(?:[a-zA-Z]{2,})$/;
+
+        if (!validDomain.test(domain)){
+            utils.scrollTo(this.ui.domain);
+            utils.notifyInline('Wrong domain name', this.ui.domain);
+            return;
+        }
+
+        if (!!cert !== !!key) {
+            if (!cert){
+                utils.notifyInline(`Certificate can't be empty`, this.ui.certificate);
             }
-        },
-
-        removeError: function(e){ utils.removeError($(e.target)); },
-
-        onSave: function(){
-            var domain = this.ui.domain.val().trim(),
-                data = {name: domain},
-                validDomain = /^(?:[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.)+(?:[a-zA-Z]{2,})$/;
-
-            if (!validDomain.test(domain)){
-                utils.scrollTo(this.ui.domain);
-                utils.notifyInline('Wrong domain name', this.ui.domain);
-                return;
+            if (!key){
+                utils.notifyInline(`Key can't be empty`, this.ui.key);
             }
+            return;
+        }
 
-            App.getDomainsCollection().done(function(domainCollection){
-                utils.preloader.show();
-                domainCollection.create(data, {
-                    wait: true,
-                    complete: utils.preloader.hide,
-                    success: function(){
-                        App.navigate('domains', {trigger: true});
-                        utils.notifyWindow(
-                            'Domain "' + domain + '" added', 'success');
-                    },
-                    error: function(collection, response){
-                        utils.notifyWindow(response);
-                    },
-                });
-            });
-        },
-    });
+        utils.preloader.show();
+        this.model.save(data)
+            .always(utils.preloader.hide)
+            .then(function(){
+                App.navigate('domains', {trigger: true});
+                utils.notifyWindow(
+                    `Domain "${domain}" ${isNew ? 'added' : 'updated'}`, 'success');
+            }, utils.notifyWindow);
 
-    views.DomainsLayoutView = Marionette.LayoutView.extend({
-        template: domainsLayoutTpl,
-        regions: {
-            breadcrumb: '#breadcrumb',
-            main      : '#main',
-            pager     : '#pager',
-        },
-        onBeforeShow: function(){ utils.preloader.show(); },
-        onShow: function(){ utils.preloader.hide(); },
-    });
+        App.getDomainsCollection().done((domainCollection) => {
+            domainCollection.add(this.model, {merge: true});
+        });
+    },
+});
 
-    return views;
+export const DomainsLayoutView = Marionette.LayoutView.extend({
+    template: domainsLayoutTpl,
+    regions: {
+        breadcrumb: '#breadcrumb',
+        main      : '#main',
+        pager     : '#pager',
+    },
+    onBeforeShow: utils.preloader.show,
+    onShow: utils.preloader.hide
 });

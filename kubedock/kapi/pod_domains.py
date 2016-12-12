@@ -2,13 +2,9 @@ import socket
 import string
 
 from ..core import ExclusiveLockContextManager
-from ..domains.models import PodDomain, BaseDomain
-from ..exceptions import (
-    DomainNotFound,
-    InternalAPIError,
-    PodDomainExists,
-    PublicAccessAssigningError,
-)
+from ..domains.models import BaseDomain, PodDomain
+from ..exceptions import (DomainNotFound, InternalAPIError, PodDomainExists,
+                          PublicAccessAssigningError)
 from ..settings import PUBLIC_ACCESS_ASSIGNING_TIMEOUT
 from ..utils import domainize, randstr
 

@@ -157,8 +157,29 @@ $(document).on('click', '.notifyjs-bootstrap-error', function(event) {
 });
 
 export const preloader = {
-    show: function(){ $('#page-preloader').addClass('show'); },
-    hide: function(){ $('#page-preloader').removeClass('show'); }
+    show: function(){ $('.page-preloader').addClass('show'); },
+    hide: function(){ $('.page-preloader').removeClass('show'); }
+};
+
+/**
+ * Preloader that can be nested.
+ *
+ * DON'T USE WITH the old `preloader`!
+ *
+ * If you called `show` twice, you'll need to call `hide` twice.
+ * This way you can call preloader on any operation you need, without worrying
+ * that some nested op will hide preloader shown by an outer op.
+ */
+export const preloader2 = {
+    state: 0,  // how many times you called show() but didn't call hide()
+    show(){
+        if (!this.state++)
+            $('.page-preloader').addClass('show');
+    },
+    hide(){
+        if (!--this.state)
+            $('.page-preloader').removeClass('show');
+    },
 };
 
 export const hasScroll = function() {
@@ -194,8 +215,10 @@ export const notifyInline = function (message, el){
 };
 // Just a shortcut to remove error from input (or group of inputs)
 export const removeError = function(el){
-    if (el.hasClass('error'))
+    if (el.hasClass('error')){
+        el.removeClass('error');
         el.parents('td, .form-group').find('.notifyjs-metro-error').trigger('notify-hide');
+    }
 };
 
 $(document).on('notify-hide', '.notifyjs-metro-error', function(event) {
@@ -204,7 +227,7 @@ $(document).on('notify-hide', '.notifyjs-metro-error', function(event) {
 });
 $(document).on('click', '.notifyjs-metro-error', function(event) {
     $(this).trigger('notify-hide')
-        .parents('.notifyjs-wrapper').next('input').focus();
+        .parents('.notifyjs-wrapper').next().focus();
 });
 
 /* Returns string representing date&time with timezone converted to
@@ -277,4 +300,160 @@ export const copyLink = function(text, successMessage, messageState){
             'Copy to clipboard:\nSelect, Cmd+C, Enter', link);
     }
     $txa.remove();
+};
+
+export const restUnwrapper = function(response) {
+    return response.hasOwnProperty('data') ? response.data : response;
+};
+
+
+/**
+ * Create a function that will return promise for Backbone.Model,
+ * Backbone.Collection, or plain data. It will try to find resource in
+ * the `cache`, and, if failed, try to fetch from server and put in the `cache`.
+ * TODO: maybe it better to use Models everywhere, get rid of urls and plain data.
+ *
+ * @param {Object} cache - object that will serve as a cache
+ * @param {string} name - unique name of the resource.
+ *      Used as id in _cache (and backendData)
+ * @param {Backbone.Model|Backbone.Collection|string} ResourceClass -
+ *      Used to fetch data from server or convert backendData.
+ *      Url as a string may be used to get raw data.
+ * @param {Object} context - context for resolve and reject.
+ * @returns {Function} - function that returns a Promise
+ */
+export const resourcePromiser = function(cache, name, ResourceClass, context = this){
+    let url;
+    if (typeof ResourceClass === 'string')
+        [url, ResourceClass] = [ResourceClass, null];
+
+    return ({updateCache} = {}) => {
+        let deferred = $.Deferred(),
+            done = resp => {
+                deferred.resolveWith(context, [cache[name] = resp]);
+            },
+            fail = resp => {
+                notifyWindow(resp);
+                deferred.rejectWith(context, [resp]);
+            };
+        if (!updateCache && cache[name] != null) {
+            if (ResourceClass != null && !(cache[name] instanceof ResourceClass))
+                cache[name] = new ResourceClass(cache[name]);
+            deferred.resolveWith(context, [cache[name]]);
+        } else if (ResourceClass != null) {
+            new ResourceClass().fetch({
+                wait: true,
+                success: done,
+                error(resource, response){ fail(response); },
+            });
+        } else {
+            $.ajax({authWrap: true, url})
+                .then(data => done(restUnwrapper(data)), fail);
+        }
+        return deferred.promise();
+    };
+};
+
+
+export const parseJWT = function(token){
+    let [header, payload] = token.split('.').slice(0, 2).map(atob).map(JSON.parse);
+    return {header, payload};
+};
+
+
+export const checkToken = function(authData){
+    if (!authData) return;
+    let header = parseJWT(authData).header;
+    if (header.exp > +new Date() / 1000)
+        return authData;
+};
+
+
+/**
+ * Connect to SSE stream
+ *
+ * @param {Object} [options]
+ * @param {string} [options.token]
+ * @param {number} [options.lastEventId]
+ * @param {number} [options.error] - on error callback
+ * @param {number} [options.context] - context (for stuff like lastEventId,
+ *      source)
+ * @param {string} [options.url='/api/stream']
+ * @returns {EventSource}
+ */
+export class EventHandler {
+    constructor({token, lastEventId, error, url = '/api/stream'} = {}){
+        if (typeof EventSource === undefined) {
+            console.log(  // eslint-disable-line no-console
+                'ERROR: EventSource is not supported by browser');
+            return;
+        }
+        Object.assign(this, {token, lastEventId, error, url});
+        this.connect();
+    }
+
+    retry(){
+        this.connect();
+        return this;
+    }
+
+    kill(){
+        if (this.source)
+            this.source.close();
+        this.killed = true;
+    }
+
+    connect(){
+        if (this.killed) return;
+        let url = this.url + (this.url.includes('?') ? '&' : '?') + $.param(
+            this.lastEventId != null
+                ? {token2: this.token, lastid: this.lastEventId}
+                : {token2: this.token});
+
+        this.source = new EventSource(url);
+
+        this.source.onopen = function(){
+            console.log('Connected!');  // eslint-disable-line no-console
+        };
+        this.source.onerror = () => {
+            console.log('SSE Error.');  // eslint-disable-line no-console
+            this.error();
+            if (this.source.readyState === 2)
+                this.source.close();
+        };
+        return this;
+    }
+}
+
+export const collectionEvent = (sse, collectionGetter, eventType = 'change') => {
+    return (ev) => {
+        collectionGetter().then((collection) => {
+            let fullCollection = collection.fullCollection || collection;
+            sse.lastEventId = ev.lastEventId;
+            let data = JSON.parse(ev.data);
+            if (eventType === 'delete'){
+                fullCollection.remove(data.id);
+                return;
+            }
+            let item = fullCollection.get(data.id);
+            if (item) {
+                item.fetch({statusCode: null}).fail(function(xhr){
+                    if (xhr.status === 404)  // "delete" event was missed
+                        fullCollection.remove(item);
+                });
+            } else {  // it's a new item, or we've missed some event
+                collection.fetch();
+            }
+        });
+    };
+};
+
+
+export const promiseDOMReady = function(){
+    return new Promise(resolve => {
+        if (document.readyState === 'complete')
+            resolve();
+        else
+            document.addEventListener('DOMContentLoaded', resolve);
+    });
 };

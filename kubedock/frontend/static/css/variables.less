@@ -4,6 +4,8 @@
 @semibold: "open_sanssemibold";
 @materials: "Material Icons";
 
+* { .box-sizing(); }
+
 .clearfix{
     zoom: 1;
     &:before, &:after{
@@ -179,6 +181,9 @@
 .margin-bottom-4(){
     margin-bottom: 40px;
 }
+.border-top{
+    border-top: 1px solid #e5e5e5;
+}
 .mdi(@content, @iconSize, @color, @hoverColor, @textsize : 13px, @marginRight : 5px){
     font-size: 0;
     &:before{
@@ -215,6 +220,12 @@
     bottom: 0;
     margin: auto;
     position: absolute;
+}
+.no-padding-right{
+    padding-right: 0;
+}
+.no-padding{
+    padding: 0;
 }
 .kuberdock-scroll{
     &::-webkit-scrollbar {

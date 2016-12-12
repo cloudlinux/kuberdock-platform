@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>{% block title %}KuberDock{% endblock %}</title>
+        <meta charset="utf8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1"/>
+
+        <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
+
+        <link rel="stylesheet" href="{{ url_for('static', filename='prepared-isv.css') }}">
+
+        <style>
+            body {
+                background-color: #F8F8F8;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="kd-isv-container container">Please, wait...</div>
+
+        {% if token %}
+        <script>
+            window.localStorage.authData = {{ token|tojson|safe }};
+        </script>
+        {% endif %}
+
+        {% block app_js_asset %}
+        <script src="{{ url_for('static', filename='prepared-init.js') }}"></script>
+        <script src="{{ url_for('static', filename='prepared-isv.bundle.js') }}"></script>
+        {% endblock %}
+
+    </body>
+</html>

@@ -8,7 +8,7 @@
 
         <link rel="shortcut icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon" />
 
-        <link rel="stylesheet" href="{{ url_for('static', filename='prepared.css') }}">
+        <link rel="stylesheet" href="{{ url_for('static', filename='prepared-full.css') }}">
     </head>
     <body>
         <div class="pre-render">Please, wait...</div>
@@ -20,7 +20,8 @@
         {% endif %}
 
         {% block app_js_asset %}
-        <script src="{{ url_for('static', filename='prepared.js') }}"></script>
+        <script src="{{ url_for('static', filename='prepared-init.js') }}"></script>
+        <script src="{{ url_for('static', filename='prepared-full.bundle.js') }}"></script>
         {% endblock %}
 
     </body>

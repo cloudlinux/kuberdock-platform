@@ -320,8 +320,8 @@ export const AllUsersActivitiesView = Marionette.ItemView.extend({
             maxDate: now
         });
         this.ui.dateTo.datepicker({
-                dateFormat : "yy-mm-dd",
-                maxDate: now
+            dateFormat : "yy-mm-dd",
+            maxDate: now
         });
         // Set default date
         this.ui.dateFrom.val(now);
@@ -362,7 +362,7 @@ export const AllUsersActivitiesView = Marionette.ItemView.extend({
     },
 
     back: function(){
-       App.navigate('users', {trigger: true});
+        App.navigate('users', {trigger: true});
     }
 });
 
@@ -415,19 +415,19 @@ export const UserFormBaseView = Marionette.ItemView.extend({
 
     getData: function(passwordAgain){
         let data = {
-                'username'        : this.ui.username.val(),
-                'first_name'      : this.ui.first_name.val(),
-                'last_name'       : this.ui.last_name.val(),
-                'middle_initials' : this.ui.middle_initials.val(),
-                'password'        : this.ui.password.val(),
-                'password_again'  : this.ui.password_again.val(),
-                'email'           : this.ui.email.val(),
-                'timezone'        : this.ui.timezone.val(),
-                'active'          : this.ui.user_status.val() === '1',
-                'suspended'       : this.ui.user_suspend.prop('checked'),
-                'rolename'        : this.ui.role_select.val(),
-                'package'         : this.ui.package_select.val(),
-            };
+            'username'        : this.ui.username.val(),
+            'first_name'      : this.ui.first_name.val(),
+            'last_name'       : this.ui.last_name.val(),
+            'middle_initials' : this.ui.middle_initials.val(),
+            'password'        : this.ui.password.val(),
+            'password_again'  : this.ui.password_again.val(),
+            'email'           : this.ui.email.val(),
+            'timezone'        : this.ui.timezone.val(),
+            'active'          : this.ui.user_status.val() === '1',
+            'suspended'       : this.ui.user_suspend.prop('checked'),
+            'rolename'        : this.ui.role_select.val(),
+            'package'         : this.ui.package_select.val(),
+        };
         if (!passwordAgain) data = _.omit(data, 'password_again');
         return data;
     },
@@ -480,8 +480,9 @@ export const UserFormBaseView = Marionette.ItemView.extend({
             case symbols.test(that.ui.first_name.val()) ||
                  spaces.test(that.ui.first_name.val()) ||
                  numbers.test(that.ui.first_name.val()) :
-                    that.addError(that.ui.first_name, 'First name can\'t have special' +
-                                                     ' symbols, numbers or spaces');
+                that.addError(
+                    that.ui.first_name,
+                    'First name can\'t have special symbols, numbers or spaces');
                 break;
             case that.ui.last_name.val().length > 25:
                 that.addError(that.ui.last_name, 'Maximum length is 25 symbols.');
@@ -489,8 +490,9 @@ export const UserFormBaseView = Marionette.ItemView.extend({
             case symbols.test(that.ui.last_name.val()) ||
                  spaces.test(that.ui.last_name.val()) ||
                  numbers.test(that.ui.last_name.val()) :
-                    that.addError(that.ui.last_name, 'Last name can\'t have special' +
-                                                     ' symbols, numbers or spaces');
+                that.addError(
+                    that.ui.last_name,
+                    'Last name can\'t have special symbols, numbers or spaces');
                 break;
             case that.ui.middle_initials.val().length > 25:
                 that.addError(that.ui.middle_initials, 'Maximum length is 25 symbols.');
@@ -498,8 +500,9 @@ export const UserFormBaseView = Marionette.ItemView.extend({
             case symbols.test(that.ui.middle_initials.val()) ||
                  spaces.test(that.ui.middle_initials.val()) ||
                  numbers.test(that.ui.middle_initials.val()) :
-                    that.addError(that.ui.middle_initials,
-                        'Middle initials can\'t have special symbols, numbers or spaces');
+                that.addError(
+                    that.ui.middle_initials,
+                    'Middle initials can\'t have special symbols, numbers or spaces');
                 break;
             /* password */
             case that.ui.password.val() !== that.ui.password_again.val():

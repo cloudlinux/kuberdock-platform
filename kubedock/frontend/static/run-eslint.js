@@ -1,7 +1,7 @@
 /* eslint-env node, es6 */
 /* eslint no-console: off */
 
-var ERRORS_THRESHOLD = 137;
+var ERRORS_THRESHOLD = 20;
 
 var CLIEngine = require('eslint').CLIEngine;
 var process = require('process');
@@ -9,7 +9,7 @@ var process = require('process');
 var cli = new CLIEngine({configFile: '.eslintrc'});
 var formatter = cli.getFormatter();
 
-var report = cli.executeOnFiles(["./js/app_data/"]),
+var report = cli.executeOnFiles(['./js/app_data/', './js/isv/']),
     errorCount = report.errorCount + report.warningCount;
 
 console.log(formatter(report.results));

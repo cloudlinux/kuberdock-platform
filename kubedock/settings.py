@@ -314,6 +314,9 @@ WITH_TESTING = False
 # Calico network (must be defined during deployment)
 CALICO_NETWORK = '10.1.0.0/16'
 
+# Enable /hosted/ url
+ISV_MODE_ENABLED = False
+
 # Import hoster settings in update case
 
 

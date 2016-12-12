@@ -1,41 +1,44 @@
-define(['app_data/app', 'app_data/model', 'app_data/utils',
-        'app_data/pods/templates/layout_container.tpl',
+define([
+    'app_data/app', 'app_data/model', 'app_data/utils',
+    'app_data/pods/templates/layout_container.tpl',
 
-        'app_data/pods/templates/volume_mounts_table/empty.tpl',
-        'app_data/pods/templates/volume_mounts_table/item.tpl',
-        'app_data/pods/templates/volume_mounts_table/list.tpl',
-        'app_data/pods/templates/ports_table/empty.tpl',
-        'app_data/pods/templates/ports_table/item.tpl',
-        'app_data/pods/templates/ports_table/list.tpl',
-        'app_data/pods/templates/pod_container_tab_general.tpl',
+    'app_data/pods/templates/volume_mounts_table/empty.tpl',
+    'app_data/pods/templates/volume_mounts_table/item.tpl',
+    'app_data/pods/templates/volume_mounts_table/list.tpl',
+    'app_data/pods/templates/ports_table/empty.tpl',
+    'app_data/pods/templates/ports_table/item.tpl',
+    'app_data/pods/templates/ports_table/list.tpl',
+    'app_data/pods/templates/pod_container_tab_general.tpl',
 
-        'app_data/pods/templates/pod_container_tab_env.tpl',
-        'app_data/pods/templates/env_table_row_empty.tpl',
-        'app_data/pods/templates/env_table_row.tpl',
+    'app_data/pods/templates/pod_container_tab_env.tpl',
+    'app_data/pods/templates/env_table_row_empty.tpl',
+    'app_data/pods/templates/env_table_row.tpl',
 
-        'app_data/pods/templates/pod_container_tab_logs.tpl',
-        'app_data/pods/templates/pod_container_tab_stats.tpl',
-        'app_data/pods/templates/pod_item_graph.tpl',
-        'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer',
-        'bootstrap-select', 'tooltip'],
-       function(App, Model, utils,
-                layoutWizardTpl,
+    'app_data/pods/templates/pod_container_tab_logs.tpl',
+    'app_data/pods/templates/pod_container_tab_stats.tpl',
+    'app_data/pods/templates/pod_item_graph.tpl',
+    'bootstrap-editable', 'jqplot', 'jqplot-axis-renderer',
+    'bootstrap-select', 'tooltip'
+], function(
+    App, Model, utils,
+    layoutWizardTpl,
 
-                volumeMountsTableEmplyTpl,
-                volumeMountsTableItemTpl,
-                volumeMountsTableTpl,
-                portsTableEmplyTpl,
-                portsTableItemTpl,
-                portsTableTpl,
-                podContainerGeneralTabTpl,
+    volumeMountsTableEmplyTpl,
+    volumeMountsTableItemTpl,
+    volumeMountsTableTpl,
+    portsTableEmplyTpl,
+    portsTableItemTpl,
+    portsTableTpl,
+    podContainerGeneralTabTpl,
 
-                podContainerEnvTabTpl,
-                envTableRowEmptyTpl,
-                envTableRowTpl,
+    podContainerEnvTabTpl,
+    envTableRowEmptyTpl,
+    envTableRowTpl,
 
-                podContainerLogsTabTpl,
-                podContainerStatsTabTpl,
-                podItemGraphTpl){
+    podContainerLogsTabTpl,
+    podContainerStatsTabTpl,
+    podItemGraphTpl
+){
 
     var views = {};
 

@@ -340,7 +340,6 @@ def add_custom_domain(namespace, service, containers, domain, certificate=None):
     resource.add_http_rule(domain, service)
     client.update_or_create(resource)
 
-
 def remove_custom_domain(namespace, service, containers, domain):
     """Removes a user provided domain from existin ingress resource
     Containers param is used do determine if we should enable TLS or not

@@ -50,7 +50,7 @@ define([
             var target = $(e.target);
             target.toggleClass('rotate');
             this.ui.planDetails.slideToggle('fast');
-         },
+        },
         choosePackage: function(){
             this.pod.cmdSwitchPackage(this.model.collection.indexOf(this.model))
                 .done(_.bind(function(){

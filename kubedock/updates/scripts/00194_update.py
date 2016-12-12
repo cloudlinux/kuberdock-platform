@@ -1,11 +1,19 @@
-from kubedock.updates import helpers
+"""Upgrade permissions for yaml_pods"""
+from kubedock.rbac import fixtures as rbac_fixtures
+
+new_permissions = [
+    ('yaml_pods', 'Admin', 'create_non_owned', True),
+    ('yaml_pods', 'User', 'create_non_owned', False),
+    ('yaml_pods', 'LimitedUser', 'create_non_owned', False),
+    ('yaml_pods', 'TrialUser', 'create_non_owned', False),
+]
 
 
-def upgrade(upd, with_testing, *args, **kwargs):
-    upd.print_log('Upgrading db...')
-    helpers.upgrade_db(revision='50e4a32fa6c3')
+def upgrade(upd, *args, **kwargs):
+    upd.print_log('Upgrade permissions')
+    rbac_fixtures._add_permissions(new_permissions)
 
 
-def downgrade(upd, with_testing,  exception, *args, **kwargs):
-    upd.print_log('Downgrading db...')
-    helpers.downgrade_db()
+def downgrade(upd, *args, **kwargs):
+    upd.print_log('Downgrade permissions')
+    rbac_fixtures._delete_permissions(new_permissions)

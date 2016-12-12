@@ -291,9 +291,10 @@ define([
                 'app_data/pods/views/pod_container',
                 'app_data/pods/views/messages',
             ], function(Views, PodMessages){
-                $.when(App.getPodCollection(),
+                $.when(
+                    App.getPodCollection(),
                     App.getSystemSettingsCollection()
-                    ).done(function(podCollection, settings){
+                ).done(function(podCollection, settings){
                     var wizardLayout = new Views.PodWizardLayout(),
                         pod = podCollection.fullCollection.get(id),
                         diffCollection = pod.getContainersDiffCollection(),
@@ -953,9 +954,9 @@ define([
                         breadcrumbsLayout.create.show(
                             new Breadcrumbs.Text({text: 'Add node'}));
                         view = new Views.NodeAddStep({
-                                model: new Model.NodeModel(),
-                                setupInfo: setupInfo
-                            });
+                            model: new Model.NodeModel(),
+                            setupInfo: setupInfo
+                        });
                         layoutView.main.show(view);
                     });
                     App.rootLayout.contents.show(layoutView);
@@ -1218,23 +1219,23 @@ define([
                         };
 
                     that.listenTo(mainLayout, 'show', function(){
-                            var appModel = id !== null
-                                    ? appCollection.fullCollection.get(id)
-                                    : new Model.AppModel(),
-                                tmpModel = new Model.AppModel(utils.deepClone(appModel.toJSON())),
-                                breadcrumbLink = new Breadcrumbs.Link({
-                                    text: 'Predefined Apps',
-                                    href:'#predefined-apps'}),
-                                breadcrumbText = new Breadcrumbs.Text({
-                                    text: id !== null
-                                        ? "Edit application"
-                                        : "Add new application" }),
-                                view = new Views.AppLoader({model: tmpModel});
+                        var appModel = id !== null
+                                ? appCollection.fullCollection.get(id)
+                                : new Model.AppModel(),
+                            tmpModel = new Model.AppModel(utils.deepClone(appModel.toJSON())),
+                            breadcrumbLink = new Breadcrumbs.Link({
+                                text: 'Predefined Apps',
+                                href:'#predefined-apps'}),
+                            breadcrumbText = new Breadcrumbs.Text({
+                                text: id !== null
+                                    ? "Edit application"
+                                    : "Add new application" }),
+                            view = new Views.AppLoader({model: tmpModel});
 
-                            mainLayout.breadcrumbs.show(breadcrumbsLayout);
-                            breadcrumbsLayout.pa.show(breadcrumbLink);
-                            breadcrumbsLayout.tabName.show(breadcrumbText);
-                            mainLayout.main.show(view);
+                        mainLayout.breadcrumbs.show(breadcrumbsLayout);
+                        breadcrumbsLayout.pa.show(breadcrumbLink);
+                        breadcrumbsLayout.tabName.show(breadcrumbText);
+                        mainLayout.main.show(view);
                     });
 
                     /* triggers */
@@ -1398,17 +1399,15 @@ define([
                                 var networkModel = new Model.NetworkModel({id: 'aws'});
                                 networkModel.fetch().fail(utils.notifyWindow)
                                     .done(function () {
-                                        var collection = networkModel.getIPs().getFiltered(function (m) {
-                                            return true;
+                                        var collection = networkModel.getIPs().getFiltered(m => true);
+                                        view = new Views.SubnetIpsListView({
+                                            ipPoolMode:ipPoolMode,
+                                            model: networkModel,
+                                            collection: collection
                                         });
-                                    view = new Views.SubnetIpsListView({
-                                        ipPoolMode:ipPoolMode,
-                                        model: networkModel,
-                                        collection: collection
+                                        layoutView.main.show(view);
+                                        layoutView.pager.show(new Pager.PaginatorView({view: view}));
                                     });
-                                layoutView.main.show(view);
-                                layoutView.pager.show(new Pager.PaginatorView({view: view}));
-                                });
                             } else {
                                 button = {id: 'create_network',
                                           href: '#ippool/create',
@@ -1497,23 +1496,33 @@ define([
             });
         },
 
-        showAddDomain: function(){
+        showAddDomain: function(id){
             if (!this.checkPermissions(['Admin']))
                 return;
             var that = this;
             require(['app_data/domains/views'], function(Views){
-                var layoutView = new Views.DomainsLayoutView(),
-                    breadcrumbsLayout = new Breadcrumbs.Layout({points: ['domains', 'add']});
-                that.listenTo(layoutView, 'show', function(){
-                    layoutView.breadcrumb.show(breadcrumbsLayout);
-                    breadcrumbsLayout.domains.show(
-                        new Breadcrumbs.Link({text: 'Domains Control', href:'#domains'}));
-                    breadcrumbsLayout.add.show(new Breadcrumbs.Text({text: 'Add domain'}));
-                    layoutView.main.show(
-                        new Views.DomainsAddDomainView()
-                    );
+                App.getDomainsCollection().done(function(domainCollection){
+                    var layoutView = new Views.DomainsLayoutView(),
+                        domainModel = id !== null
+                            ? domainCollection.fullCollection.get(id)
+                            : new Model.DomainModel(),
+                        breadcrumbsLayout = new Breadcrumbs.Layout({points: ['domains', 'add']}),
+                        breadcrumbText = new Breadcrumbs.Text({
+                            text: id !== null
+                                ? "Edit domain"
+                                : "Add domain" });
+                    that.listenTo(layoutView, 'show', function(){
+                        layoutView.breadcrumb.show(breadcrumbsLayout);
+                        breadcrumbsLayout.domains.show(
+                            new Breadcrumbs.Link({text: 'Domains Control', href:'#domains'})
+                        );
+                        breadcrumbsLayout.add.show(breadcrumbText);
+                        layoutView.main.show(
+                            new Views.DomainsAddDomainView({model: domainModel})
+                        );
+                    });
+                    App.rootLayout.contents.show(layoutView);
                 });
-                App.rootLayout.contents.show(layoutView);
             });
         },
 

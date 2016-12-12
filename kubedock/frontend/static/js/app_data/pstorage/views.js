@@ -1,14 +1,17 @@
-define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
-        'app_data/pstorage/templates/pv_list.tpl',
-        'app_data/pstorage/templates/pv_list_empty.tpl',
-        'app_data/pstorage/templates/pv_list_item.tpl',
-        'app_data/pstorage/templates/pv_layout.tpl',
-        'tooltip'],
-       function(App, Controller, Marionette, utils,
-                pvListTpl,
-                pvListEmptyTpl,
-                pvListItemTpl,
-                pvLayoutTpl){
+define([
+    'app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
+    'app_data/pstorage/templates/pv_list.tpl',
+    'app_data/pstorage/templates/pv_list_empty.tpl',
+    'app_data/pstorage/templates/pv_list_item.tpl',
+    'app_data/pstorage/templates/pv_layout.tpl',
+    'tooltip'
+], function(
+    App, Controller, Marionette, utils,
+    pvListTpl,
+    pvListEmptyTpl,
+    pvListItemTpl,
+    pvLayoutTpl
+){
 
     var views = {};
 
@@ -102,7 +105,7 @@ define(['app_data/app', 'app_data/controller', 'marionette', 'app_data/utils',
         templateHelpers: function(){
             return {
                 sortingType : this.collection.orderAsDict()
-            }
+            };
         },
 
         onShow: function(){

@@ -1,6 +1,6 @@
 #domain-controls{
     min-height: 400px;
-    padding-bottom: 45px;
+    padding-bottom: 30px;
     border-bottom: 1px solid #e5e5e5;
     .status-line{
         margin-bottom: 37px;
@@ -8,13 +8,12 @@
     .form-group{
         margin-left: 40px;
         margin-bottom: 0;
-        input{
+        input, textarea{
             .placeholder(#b4b4b4);
             width: 100%;
-            height: 51px;
             display: block;
             padding: 0 20px;
-            margin-bottom: 25px;
+            margin-bottom: 30px;
             background-color: #fff;
             border: 1px solid #e5e5e5;
             &:focus{
@@ -24,6 +23,24 @@
             &.error{
                 border-color: red;
             }
+        }
+        input{
+            height: 51px;
+            &[disabled]{
+                .opacity(0.5);
+                cursor: not-allowed;
+            }
+        }
+        textarea{
+            .kuberdock-scroll();
+            height: auto;
+            resize: vertical;
+            font-size: 13px;
+            min-height: 200px;
+            line-height: 23px;
+            padding-top: 17px;
+            padding-bottom: 17px;
+            letter-spacing: 0.5px;
         }
         label{
             margin-bottom: 13px;

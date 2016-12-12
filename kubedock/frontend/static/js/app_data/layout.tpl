@@ -17,7 +17,7 @@
     </div>
 </div>
 <div id="message-popup"></div>
-<div id="page-preloader">
+<div class="page-preloader">
     <div class="description">
         <h1>Loading data, please wait</h1>
     </div>

@@ -3,6 +3,8 @@ Defines and exports global kuberdock exceptions
 """
 from abc import ABCMeta
 
+from flask import current_app
+
 
 class APIError(Exception):
     """
@@ -218,6 +220,10 @@ class BillingExc(object):
         message_template = 'An internal error occurred (billing): {message}'
 
 
+class ContainerCommandExecutionError(APIError):
+    message_template = 'Failed to execute command in container.'
+
+
 class AlreadyExistsError(APIError):
     message_template = 'Resource already exists'
     status_code = 409
@@ -297,10 +303,14 @@ class CustomDomainIsNotReady(APIError):
     status_code = 400
     message_template = \
         "Custom domain {domain} does not resolve yet. " \
-        "Please check your DNS records or wait till DNS zone update propagates"
+        "Please check your DNS records ({record_type} record was added) or " \
+        "wait till DNS zone update propagates"
 
     def __init__(self, domain):
-        details = {'domain': domain}
+        details = {
+            'domain': domain,
+            'record_type': 'A' if current_app.config['AWS'] else 'CNAME'
+        }
         super(CustomDomainIsNotReady, self).__init__(details=details)
 
 

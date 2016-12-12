@@ -1,0 +1,151 @@
+.kd-content{
+    a,
+    span.page-action{
+        color: #3197ee;
+        &:hover{
+            color: #103c5e;
+            cursor: pointer;
+            text-decoration: none;
+        }
+    }
+    .isv-block{
+        margin-bottom: 40px;
+        p{
+            margin-bottom: 0;
+        }
+    }
+    h2{
+        margin-top: 0;
+        font-size: 20px;
+        line-height: 27px;
+        margin-bottom: 40px;
+        padding-bottom: 19px;
+        border-bottom: solid 1px #e5e5e5;
+    }
+    .storage{
+        .mdi('storage', 80px, #bac1c7, #bac1c7);
+        &:hover{ cursor: default; }
+    }
+    .layers{
+        .mdi('layers', 80px, #bac1c7, #bac1c7);
+        &:hover{ cursor: default; }
+    }
+    .info-outline{
+        .mdi('info_outline', 80px, #bac1c7, #bac1c7);
+        &:hover{ cursor: default; }
+    }
+    .copy-ssh-link,
+    .copy-password,
+    .copy-ssh-password{
+        .mdi('content_copy', 21px, #bac1c7, #103c5e);
+        vertical-align: top;
+        display: inline-block;
+    }
+    .reset-ssh-password{
+        .mdi('autorenew', 21px, #bac1c7, #103c5e);
+        vertical-align: top;
+        display: inline-block;
+    }
+    .settings-ethernet{
+        .mdi('settings_ethernet', 80px, #bac1c7, #bac1c7);
+        &:hover{ cursor: default; }
+    }
+    .edit-domain{
+        .mdi('mode_edit', 21px, #bac1c7, #103c5e);
+        display: inline-block;
+        vertical-align: middle;
+    }
+    .container-info{
+        padding-top: 40px;
+    }
+    .statuses{
+        padding-left: 20px;
+        &:before{
+            top: 0;
+            bottom: 0;
+            margin: auto;
+        }
+    }
+    .restore{
+        .mdi('restore', 21px, #b5bbc1, #103c5e);
+        display: inline-block;
+    }
+    .export{
+        .mdi('exit_to_app', 21px, #b5bbc1, #103c5e);
+        display: inline-block;
+    }
+    ul{
+        &.nav{
+            &.nav-tabs{
+                padding-left: initial;
+                border-bottom: 1px solid #e4e4e4;
+                @media only screen and (max-width: 768px) {
+                    padding-left: 15px;
+                }
+                li{
+                    &.container-tab{
+                        .border-radiuses(3px, 0, 0, 3px);
+                        color: #1d1d1d;
+                        font-size: 14px;
+                        padding: 5px 15px;
+                        background-color: transparent;
+                        &:hover, &.active{
+                            font-weight: 700;
+                            background-color: #e4e4e4;
+                        }
+                        &:hover{
+                            cursor: pointer;
+                            &.active{
+                                cursor: default;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    table{
+        &.backups-table{
+            th{
+                background-color: #f8f8f8;
+            }
+        }
+    }
+    .form-group{
+        label{
+            display: block;
+            margin-bottom: 30px;
+        }
+
+        input,
+        textarea{
+            .placeholder(#b4b4b4);
+            .box-shadow(none);
+            outline: 0;
+            width: 100%;
+            height: 49px;
+            padding: 0 20px;
+            font-size: 13px;
+            position: relative;
+            font-weight: normal;
+            background-color: #fff;
+            border: 1px solid #e5e5e5;
+            &:focus{
+                .transition(color 500ms ease);
+                border-color: #3197ee;
+            }
+        }
+        input,
+        select{
+            .placeholder(#b4b4b4);
+            margin-bottom: 25px;
+        }
+        textarea{
+            resize: none;
+            height: auto;
+            min-height: 200px;
+            padding-top: 17px;
+            padding-bottom: 17px;
+        }
+    }
+}

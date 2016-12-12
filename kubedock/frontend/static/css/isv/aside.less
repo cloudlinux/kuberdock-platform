@@ -1,0 +1,51 @@
+@import "../variables.less";
+
+.kd-sidebar{
+    .user-select(none);
+    margin-bottom: 25px;
+    .nav-sidebar{
+        li{
+            font-size: 13px;
+            line-height: 22px;
+            margin-bottom: 5px;
+            font-family: @regular;
+            a{
+                padding: 0;
+                width: calc(~'100% - 18px');
+                &:hover, &:focus{
+                    color: inherit;
+                    background-color: transparent;
+                }
+            }
+            &:last-child{
+                margin-bottom: 0;
+            }
+        }
+    }
+}
+
+.nav-sidebar{
+    li{
+        span, a{ color: #1D1D1D; }
+        &.monitoring{
+            .mdi('timeline',18px, #B5BBC1, #103c5e);
+            &:hover span, a{color: darken(#1d1d1d, 20%) }
+        }
+        &.conf{
+            .mdi('settings',18px, #B5BBC1, #103c5e);
+            &:hover span, a{color: darken(#1d1d1d, 20%) }
+        }
+        &.details{
+            .mdi('layers',18px, #B5BBC1, #103c5e);
+        }
+        &.backups{
+            .mdi('restore',18px, #B5BBC1, #103c5e);
+        }
+        &.active{
+            &:before, span, a{ color: #103c5e }
+            &:hover{
+                &:before, span, a{ color: #103c5e }
+            }
+        }
+    }
+}

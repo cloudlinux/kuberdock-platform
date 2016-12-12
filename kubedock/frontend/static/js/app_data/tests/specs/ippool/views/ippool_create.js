@@ -1,4 +1,5 @@
 /* eslint-env mocha */
+/* eslint-disable no-unused-expressions */
 mocha.allowUncaught();
 
 import {expect} from 'chai';
@@ -15,9 +16,9 @@ describe('ippool.views.IppoolCreateSubnetworkView', function(){
         let box, utils, resetRewired;
 
         beforeEach(function(){
-          [{utils}, resetRewired] = rewired(ViewRewireAPI, 'utils');
-          box = sinon.sandbox.create();
-          box.stub(utils, 'notifyInline');
+            [{utils}, resetRewired] = rewired(ViewRewireAPI, 'utils');
+            box = sinon.sandbox.create();
+            box.stub(utils, 'notifyInline');
         });
         afterEach(function(){ box.restore(); resetRewired(); });
 
@@ -44,9 +45,9 @@ describe('ippool.views.IppoolCreateSubnetworkView', function(){
         for (let value of badNetworks) {
             it(`should return "false" to networks "${value}"`, function() {
                 let fakeData = {
-                        network : value,
-                        autoblock : ''
-                    };
+                    network : value,
+                    autoblock : ''
+                };
 
                 view = new View();
                 view.ipPoolMode = true;
@@ -57,9 +58,9 @@ describe('ippool.views.IppoolCreateSubnetworkView', function(){
 
         it('should return "false" if autoblock is incorrect', function() {
             let fakeData = {
-                    network : '192.168.0.1/32',
-                    autoblock : '312312'
-                };
+                network : '192.168.0.1/32',
+                autoblock : '312312'
+            };
 
             view = new View();
             view.ipPoolMode = true;
@@ -70,9 +71,9 @@ describe('ippool.views.IppoolCreateSubnetworkView', function(){
         for (let value of goodNetworks) {
             it(`should return "true" to networks "${value}"`, function() {
                 let fakeData = {
-                        network : value,
-                        autoblock : ''
-                    };
+                    network : value,
+                    autoblock : ''
+                };
 
                 view = new View();
                 view.ipPoolMode = true;
@@ -82,9 +83,9 @@ describe('ippool.views.IppoolCreateSubnetworkView', function(){
 
         it('should return "true" if all params is correct', function() {
             let fakeData = {
-                    network : '192.168.0.0/30',
-                    autoblock : '192.168.0.1'
-                };
+                network : '192.168.0.0/30',
+                autoblock : '192.168.0.1'
+            };
 
             view = new View();
             view.ipPoolMode = true;

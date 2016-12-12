@@ -1,0 +1,84 @@
+@import "variables.less";
+
+.login-page{
+    .container{
+        .logo{
+            height: 84px;
+            margin-bottom: 40px;
+            background: url(../img/logo-login.png) center center no-repeat;
+        }
+        &.login-form{
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 0;
+            margin: auto;
+            width: 320px;
+            height: 430px;
+            display: block;
+            position: absolute;
+            .form-group{
+                position: relative;
+                .error-message{
+                    top: -25px;
+                    color: #f1485c;
+                    font-size: 13px;
+                    position: absolute;
+                }
+                .group{
+                    outline: 0;
+                    display: block;
+                    margin-bottom: 0;
+                    input[type="text"], input[type="email"], input[type="password"] {
+                        .box-sizing (border-box);
+                        .transition (all 300ms);
+                        .placeholder(#b4b4b4);
+                        height: 45px;
+                        width: 100%;
+                        padding: 0 15px;
+                        font-size: 13px;
+                        margin-bottom: 20px;
+                        border: 1px solid #dbd9d9;
+                        &:focus{
+                            border-color: #188eed;
+                            .transition(color 500ms ease);
+                        }
+                    }
+                    input[type="text"]{
+                        margin-bottom: 15px;
+                    }
+                    .login{
+                        .border-radius(2px);
+                        outline: 0;
+                        width: 100%;
+                        border: none;
+                        height: 48px;
+                        color: #ffffff;
+                        padding: 0 42px;
+                        line-height: 40px;
+                        background-color: #2490EA;
+                    }
+                    .lost{
+                        color: #3197ee;
+                        font-size: 13px;
+                        text-decoration: none;
+                        &:hover{
+                            cursor: pointer;
+                            text-decoration: none;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    .blue-line{
+        left: 0;
+        bottom: 0;
+        width: 100%;
+        height: 7px;
+        display: block;
+        position: absolute;
+        background-color: #0074BF;
+    }
+}

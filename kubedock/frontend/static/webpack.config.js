@@ -6,28 +6,35 @@ var LessPluginCleanCSS = require('less-plugin-clean-css');
 var ExtractTextPlugin = require('extract-text-webpack-plugin');
 var conf = require('./config');
 
+
+// sets a more convenient names of sources in sourceMaps and fixes ExtractTextPlugin bug:
+// kd-js:// -- our js
+// kd-css:// -- our less/css
+// webpack:// -- everything else: libs, frameworks (in node_modules, js/lib, and css)
+var prettySourceMapName = (info) => {
+    var result = info.absoluteResourcePath.replace(__dirname, '');
+    if (/^\/js\/(?:app_data|isv)\/.*?\.(js|tpl)/.test(result))
+        return result.replace(/^\/js\/(app_data|isv)\//, 'kd-js:///$1/');
+    if (/^(?:webpack:\/\/)?\/css\/.*?\.less/.test(result))
+        return result.replace(/^(?:webpack:\/\/)?\/css\//, 'kd-css:///');
+    return 'webpack:///' + result.replace(  // all libs and webpack buidins
+        /^(?:webpack:\/\/)?(?:\/js\/lib|\/node_modules|webpack)\//, '');
+};
+
+
 var webpackConfig = {
-    entry: [
-        'babel-polyfill',
-        './js/app_data/entry.js',
-    ],
+    entry: {
+        full: ['babel-polyfill', './js/app_data/entry.js'],
+        isv: ['babel-polyfill', './js/isv/entry.js'],
+    },
     output: {
         publicPath: '/static/',
         path: __dirname,
-        filename: `${conf.BUILD_PREFIX}.js`,
-        // set more convenient names of sources in sourceMaps:
-        // kd-js:// -- our js
-        // kd-css:// -- our less/css
-        // webpack:// -- everything else: libs, frameworks (in node_modules, js/lib, and css)
-        devtoolModuleFilenameTemplate: (info) => {
-            var result = info.absoluteResourcePath.replace(__dirname, '');
-            if (/^\/js\/app_data\//.test(result))
-                return result.replace(/^\/js\/app_data\//, 'kd-js:///');
-            if (/^webpack:\/\/\/css\/.*?\.less$/.test(result))
-                return result.replace(/^webpack:\/\/\/css\//, 'kd-css:///');
-            return 'webpack:///' + result.replace(  // all libs and webpack buidins
-                /^(?:webpack:\/\/)?(?:\/js\/lib|\/node_modules|webpack)\//, '');
-        },
+        filename: `${conf.BUILD_PREFIX}-[name].bundle.js`,
+        chunkFilename: `${conf.BUILD_PREFIX}-[id].chunk.js`,
+        devtoolModuleFilenameTemplate: prettySourceMapName,
+        devtoolFallbackModuleFilenameTemplate: info => (
+            `${prettySourceMapName(info)}?${info.hash}`),
     },
     resolve: {
         // roots for imports, apart from node_modules
@@ -41,12 +48,14 @@ var webpackConfig = {
             // prepackaged versions (due to large size or fucked-up internal imports)
             'js-yaml'             : 'js-yaml/dist/js-yaml.min',
             'sinon'               : 'sinon/pkg/sinon',
+            'babel-polyfill'      : 'babel-polyfill/dist/polyfill.min.js',
         }
     },
     module: {
         noParse: [  // do not mess with prepackaged modules
             /\/node_modules\/sinon\//,
             /\/node_modules\/js-yaml\/dist\//,
+            /\/node_modules\/babel-polyfill\/dist\//,
         ],
         loaders: [{
             // add bootstrap-select styles as dependency for bootstrap-select js
@@ -73,7 +82,7 @@ var webpackConfig = {
             test: /\.(?:png|gif|svg|ttf|woff2?|eot)$/, exclude: /node_modules/,
             loader: 'url', query: {limit: 16384, name: '[path][name].[ext]', emitFile: false},
         }, {
-            test: /\.js$/, include: /\/js\/app_data\//, loader: 'babel',
+            test: /\.js$/, include: /\/js\/(?:app_data|isv)\//, loader: 'babel',
             query: {cacheDirectory: !conf.PROD,  // do not use cache in prod
                     plugins: [
                         'transform-decorators',
@@ -116,7 +125,7 @@ var webpackConfig = {
         new webpack.optimize.LimitChunkCountPlugin({maxChunks: 1}),
 
         // put css in a separate file (not in prepared.js)
-        new ExtractTextPlugin(`${conf.BUILD_PREFIX}.css`, {allChunks: true}),
+        new ExtractTextPlugin(`${conf.BUILD_PREFIX}-[name].css`, {allChunks: true}),
 
         // make those modueles available in every other module: {globalName: 'module',..}
         new webpack.ProvidePlugin({
@@ -128,6 +137,7 @@ var webpackConfig = {
             PROD: JSON.stringify(conf.PROD),
             TEST: JSON.stringify(conf.TEST),
         }),
+        new webpack.optimize.CommonsChunkPlugin(`${conf.BUILD_PREFIX}-init.js`),
     ],
 };
 

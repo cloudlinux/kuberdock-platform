@@ -37,10 +37,9 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                 'packageCollection', 'kubeTypeCollection', 'packageKubeCollection'
             ], function(name){ delete this[name]; }, this);
             for (var resource in this._cache) delete this._cache[resource];
-            if (this.sseEventSource) {  // close SSE stream
-                this.sseEventSource.close();
-                delete this.sseEventSource;
-                clearTimeout(this.eventHandlerReconnectTimeout);
+            if (this.sse) {  // close SSE stream
+                this.sse.kill();
+                delete this.sse;
             }
             return this;
         },
@@ -54,57 +53,8 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
             App.storage.authData = token;
         },
 
-        /**
-         * Create a function that will return promise for Backbone.Model,
-         * Backbone.Collection, or plain data. It will try to find resource in
-         * App._cache (initially it's a copy of backendData), and, if failed,
-         * try to fetch from server and put in App._cache.
-         * TODO: maybe it better to use Models everywhere, get rid of urls and plain data.
-         *
-         * @param {string} name - unique name of the resource.
-         *      Used as id in _cache (and backendData)
-         * @param {Backbone.Model|Backbone.Collection|string} ResourceClass -
-         *      Used to fetch data from server or convert backendData.
-         *      Url as a string may be used to get raw data.
-         * @returns {Function} - function that returns a Promise
-         */
         resourcePromiser: function(name, ResourceClass){
-            var cache = this._cache, url;
-            if (typeof ResourceClass === 'string'){
-                url = ResourceClass;
-                ResourceClass = null;
-            }
-            return _.bind(function({updateCache} = {}){
-                var deferred = $.Deferred();
-                if (!updateCache && cache[name] != null) {
-                    if (ResourceClass != null && !(cache[name] instanceof ResourceClass))
-                        cache[name] = new ResourceClass(cache[name]);
-                    deferred.resolveWith(this, [cache[name]]);
-                } else if (ResourceClass != null) {
-                    new ResourceClass().fetch({
-                        wait: true,
-                        success: function(resource, resp, options){
-                            deferred.resolveWith(App, [cache[name] = resource]);
-                        },
-                        error: function(resource, response) {
-                            Utils.notifyWindow(response);
-                            deferred.rejectWith(App, [response]);
-                        },
-                    });
-                } else {
-                    $.ajax({
-                        authWrap: true,
-                        url: url,
-                    }).done(function(data){
-                        cache[name] = _.has(data, 'data') ? data.data : data;
-                        deferred.resolveWith(App, [cache[name]]);
-                    }).fail(function(response){
-                        Utils.notifyWindow(response);
-                        deferred.rejectWith(App, [response]);
-                    });
-                }
-                return deferred.promise();
-            }, this);
+            return Utils.resourcePromiser(this._cache, name, ResourceClass, this);
         },
 
         /**
@@ -151,20 +101,12 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
      * @returns {Object|undefined} - auth data
      */
     App.getCurrentAuth = function(){
-        var authData = this.storage.authData,
-            tokenPos = window.location.href.indexOf('token2'),
-            token;
+        var tokenPos = window.location.href.indexOf('token2');
         if (tokenPos !== -1 && window.history.pushState) {
             var newurl = Utils.removeURLParameter(window.location.href, 'token2');
             window.history.pushState({path:newurl}, '', newurl);
         }
-        if (authData){
-            token = _.chain(authData.split('.')).first(2)
-                .map(atob).object(['header', 'payload']).invert()
-                .mapObject(JSON.parse).value();
-            if (token.header.exp > +new Date() / 1000)
-                return authData;
-        }
+        return Utils.checkToken(this.storage.authData);
     };
 
     /**
@@ -174,74 +116,70 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
      * @returns {Promise} - promise of auth data
      */
     App.getAuth = function(){
-        var deferred = $.Deferred(),
+        let deferred = $.Deferred(),
             authData = this.getCurrentAuth();
-        if (authData)
-            return deferred.resolveWith(this, [authData]).promise();
-        this.cleanUp().controller.doLogin().done(function(authData){
-            this.initApp().then(deferred.resolve, deferred.reject);
-        });
+        if (authData){
+            let token = Utils.parseJWT(authData);
+            if (token.payload.auth){
+                // need to replace SSO token with session token
+                $.ajax({
+                    url: '/api/v1/users/self',
+                    headers: {'X-Auth-Token': authData},
+                }).then((data, status, xhr) => {
+                    this.updateAuth(xhr.getResponseHeader('X-Auth-Token'));
+                    deferred.resolveWith(this, [this.getCurrentAuth()]);
+                }, () => this.cleanUp().getAuth());
+            } else {
+                return deferred.resolveWith(this, [authData]).promise();
+            }
+        } else {
+            this.cleanUp().controller.doLogin().then(authData => {
+                this.initApp().then(deferred.resolve, deferred.reject);
+            });
+        }
         return deferred.promise();
     };
 
     /**
      * Connect to SSE stream
-     *
-     * @param {Object} [options]
-     * @param {string} [options.url='/api/stream']
-     * @param {number} [options.lastID]
      */
     App.eventHandler = function(options){
-        options = options || {};
-        var token = App.getCurrentAuth();
+        let token = App.getCurrentAuth();
         if (!token)
             return;
-        var url = options.url || '/api/stream',
-            lastID = options.lastID,
+        let sse = new Utils.EventHandler({token, error: () => {
+            let timeOut = 5000;
+            if (sse.source.readyState === 0){
+                Utils.notifyWindow(
+                    'The page you are looking for is temporarily unavailable. ' +
+                    'Please try again later');
+                timeOut = 30000;
+            }
+            if (sse.source.readyState !== 2)
+                return;
+
+            // Try to ping API first: if the token has expired or got blocked,
+            // the user will be automatically redirected to the "log in" page.
+            this.currentUser.fetch().always(() => {
+                setTimeout(() => this.addEventListenersSSE(sse.retry()), timeOut);
+            });
+        }});
+        this.sse = sse;
+        this.addEventListenersSSE(sse);
+    };
+
+    App.addEventListenersSSE = function(sse){
+        let events,
             nodes = App.currentUser.roleIs('Admin'),
-            that = this;
+            collectionEvent = (...args) => Utils.collectionEvent(sse, ...args);
 
-        url += (url.indexOf('?') === -1 ? '?' : '&')
-            + $.param(lastID != null
-                      ? {token2: token, lastid: lastID}
-                      : {token2: token});
-        var source = App.sseEventSource = new EventSource(url),
-            events;
-        var collectionEvent = function(collectionGetter, eventType){
-            eventType = eventType || 'change';
-            return function(ev){
-                collectionGetter.apply(that).done(function(collection){
-                    that.lastEventId = ev.lastEventId;
-                    var data = JSON.parse(ev.data);
-                    if (eventType === 'delete'){
-                        collection.fullCollection.remove(data.id);
-                        return;
-                    }
-                    var item = collection.fullCollection.get(data.id);
-                    if (item) {
-                        item.fetch({statusCode: null}).fail(function(xhr){
-                            if (xhr.status === 404)  // "delete" event was missed
-                                collection.remove(item);
-                        });
-                    } else {  // it's a new item, or we've missed some event
-                        collection.fetch();
-                    }
-                });
-            };
-        };
-
-        if (typeof EventSource === undefined) {
-            console.log(  // eslint-disable-line no-console
-                'ERROR: EventSource is not supported by browser');
-            return;
-        }
         if (nodes) {
             events = {
-                'node:change': collectionEvent(that.getNodeCollection),
-                // 'ippool:change': collectionEvent(that.getIPPoolCollection),
-                // 'user:change': collectionEvent(that.getUserCollection),
+                'node:change': collectionEvent(App.getNodeCollection),
+                // 'ippool:change': collectionEvent(App.getIPPoolCollection),
+                // 'user:change': collectionEvent(App.getUserCollection),
                 'node:installLog': function(ev){
-                    that.getNodeCollection().done(function(collection){
+                    App.getNodeCollection().done(function(collection){
                         var decoded = JSON.parse(ev.data),
                             node = collection.get(decoded.id);
                         if (typeof node !== 'undefined')
@@ -251,32 +189,32 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
             };
         } else {
             events = {
-                'pod:change': collectionEvent(that.getPodCollection),
-                'pod:delete': collectionEvent(that.getPodCollection, 'delete'),
+                'pod:change': collectionEvent(App.getPodCollection),
+                'pod:delete': collectionEvent(App.getPodCollection, 'delete'),
                 // 'pd:change':
             };
         }
 
         events['kube:add'] = events['kube:change'] = function(ev) {
-            that.lastEventId = ev.lastEventId;
+            sse.lastEventId = ev.lastEventId;
             var data = JSON.parse(ev.data);
-            that.kubeTypeCollection.add(data, {merge: true});
+            App.kubeTypeCollection.add(data, {merge: true});
         };
 
         events['notify:warning'] = function(ev) {
-            that.lastEventId = ev.lastEventId;
+            sse.lastEventId = ev.lastEventId;
             var data = JSON.parse(ev.data);
             Utils.notifyWindow(data.message, 'warning');
         };
 
         events['notify:error'] = function(ev) {
-            that.lastEventId = ev.lastEventId;
+            sse.lastEventId = ev.lastEventId;
             var data = JSON.parse(ev.data);
             Utils.notifyWindow(data.message);
         };
 
         events['node:deleted'] = function(ev) {
-            that.lastEventId = ev.lastEventId;
+            sse.lastEventId = ev.lastEventId;
             var data = JSON.parse(ev.data);
             Utils.notifyWindow(data.message, 'success');
             App.navigate('nodes');
@@ -284,13 +222,13 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         };
 
         events['advise:show'] = function(ev) {
-            that.lastEventId = ev.lastEventId;
+            sse.lastEventId = ev.lastEventId;
             var data = JSON.parse(ev.data);
             App.controller.attachNotification(data);
         };
 
         events['advise:hide'] = function(ev) {
-            that.lastEventId = ev.lastEventId;
+            sse.lastEventId = ev.lastEventId;
             var data = JSON.parse(ev.data);
             App.controller.detachNotification(data);
         };
@@ -301,32 +239,8 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
         };
 
         _.mapObject(events, function(handler, eventName){
-            source.addEventListener(eventName, handler, false);
+            sse.source.addEventListener(eventName, handler, false);
         });
-        source.onopen = function(){
-            console.log('Connected!');  // eslint-disable-line no-console
-        };
-        source.onerror = function () {
-            console.log('SSE Error. Reconnecting...');  // eslint-disable-line no-console
-            var timeOut = 5000;
-            if (source.readyState === 0){
-                Utils.notifyWindow(
-                    'The page you are looking for is temporarily unavailable. '
-                    + 'Please try again later');
-                timeOut = 30000;
-            }
-            if (source.readyState !== 2)
-                return;
-            source.close();
-
-            // Try to ping API first: if the token has expired or got blocked,
-            // the user will be automatically redirected to the "log in" page.
-            App.currentUser.fetch().always(function(){
-                var lastEventId = that.lastEventId || options.lastID,
-                    newOptions = _.extend(_.clone(options), {lastID: lastEventId});
-                setTimeout(_.bind(that.eventHandler, that, newOptions), timeOut);
-            });
-        };
     };
 
     /**
@@ -341,9 +255,11 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
                 deferred.resolveWith(App, [authData]);
                 return;
             }
-            $.when(App.getCurrentUser(),
-                   App.getMenuCollection(),
-                   App.getPackages()).done(function(user, menu, packages){
+            $.when(
+                App.getCurrentUser(),
+                App.getMenuCollection(),
+                App.getPackages()
+            ).done(function(user, menu, packages){
                 // These resources must be fetched every time user logins in, and they
                 // are widely used immediately after start, so let's just save them as
                 // properties, so we won't need to go async every time we need them.
@@ -365,19 +281,17 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
 
     App.on('start', function(){
         Utils.preloader.show();
-        require(['app_data/controller', 'app_data/router'],
-                function(Controller, Router){
+        const Controller = require('app_data/controller');
+        const Router = require('app_data/router');
+        new Router({controller: App.controller = new Controller()});
 
-            var controller = App.controller = new Controller();
-            new Router({controller: controller});
-            App.rootLayout.render();
+        App.rootLayout.render();
 
-            if (Backbone.history) {
-                Backbone.history.start({root: '/', silent: true});
-                Utils.preloader.hide();
-                App.initApp();
-            }
-        });
+        if (Backbone.history) {
+            Backbone.history.start({root: '/', silent: true});
+            Utils.preloader.hide();
+            App.initApp();
+        }
     });
 
 

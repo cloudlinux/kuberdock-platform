@@ -265,6 +265,31 @@ pod_resolve_schema = {
     }
 }
 
+app_commands_schema = {
+    'type': 'dict',
+    'nullable': True,
+    'valueschema': {
+        'type': 'dict',
+        'schema': {
+            'type': {
+                'type': 'string',
+                'required': True,
+                'empty': False,
+                'allowed': [
+                    'execInContainer',
+                    # 'httpRequest',
+                ],
+            },
+            'container': container_name_schema,
+            'command': {
+                'type': 'string',
+                'required': True,
+                'empty': False,
+            },
+        },
+    },
+}
+
 
 def validate_cert(field, value, error):
     try:
@@ -460,6 +485,7 @@ edited_pod_config_schema = {
     },
     'domain': domain_schema,
     'custom_domain': domain_schema,
+    'appCommands': app_commands_schema,
 }
 
 new_pod_schema = deepcopy(edited_pod_config_schema)
@@ -471,6 +497,10 @@ new_pod_schema.update({
     },
     'appVariables': {  # $VARIABLE$ to value mapping that was used to fill PA
         'type': 'dict',
+    },
+    'appLastUpdate': {
+        'type': 'string',
+        'nullable': True,
     },
     'kuberdock_template_id': {
         'type': 'integer',
@@ -724,6 +754,7 @@ predefined_apps_kuberdock_schema = {
             'schema': app_package_schema,
         },
     },
+    'commands': app_commands_schema,
     'resolve': pod_resolve_schema,
 }
 predefined_apps_spec_schema = {

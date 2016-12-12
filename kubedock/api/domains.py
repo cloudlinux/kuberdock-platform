@@ -98,7 +98,7 @@ class DomainsAPI(KubeUtils, MethodView):
     @maintenance_protected
     @check_permission('edit', 'domains')
     @atomic(EditDomainInternalError.from_exc, nested=False)
-    @use_kwargs({'name': domain_schema}, allow_unknown=True)
+    @use_kwargs(base_domain_schema, allow_unknown=True)
     def put(self, domain_id, **params):
         """Updates BaseDomain model in database.
 
@@ -118,6 +118,9 @@ class DomainsAPI(KubeUtils, MethodView):
             if BaseDomain.query.filter(BaseDomain.name == name).first():
                 raise AlreadyExistsError()
             domain.name = name
+        certificate = params.get('certificate')
+        if certificate:
+            domain.certificate = certificate
         return domain.to_dict()
 
     patch = put

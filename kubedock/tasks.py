@@ -1,5 +1,5 @@
-import os
 import json
+import os
 import re
 import socket
 import subprocess
@@ -9,48 +9,37 @@ from datetime import datetime, timedelta
 
 import ipaddress
 import requests
+from flask import current_app
 from sqlalchemy import event
 
-# requests .json() errors handling workaround.
-# requests module uses simplejson as json by default
-# that raises JSONDecodeError if .json() method fails
-# but if simplejson is not available requests uses json module
-# that raises ValueError in this case
-try:
-    from simplejson import JSONDecodeError
-except ImportError:
-    JSONDecodeError = ValueError
-
-from flask import current_app
+from . import dns_management
 from .core import db, ssh_connect
-from .utils import (
-    update_dict, get_api_url, send_event, send_logs, k8s_json_object_hook,
-    get_timezone, NODE_STATUSES, POD_STATUSES
-)
+from .kapi.collect import collect, send
+from .kapi.helpers import KubeQuery, raise_if_failure
+from .kapi.node import Node as K8SNode
+from .kapi.node_utils import (
+    setup_storage_to_aws_node, add_volume_to_node_ls,
+    complete_calico_node_config)
+from .kapi.pstorage import (
+    delete_persistent_drives, remove_drives_marked_for_deletion,
+    check_namespace_exists)
+from .kapi.usage import update_states
+from .kd_celery import celery, exclusive_task
 from .models import Pod, ContainerState, PodState, PersistentDisk, User
 from .nodes.models import Node, NodeAction, NodeFlag, NodeFlagNames
-from .users.models import SessionData
 from .rbac.models import Role
-from .system_settings.models import SystemSettings
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
     NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH,
     CEPH_POOL_NAME, CEPH_CLIENT_USER,
     KUBERDOCK_INTERNAL_USER, NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT,
     CALICO, NODE_STORAGE_MANAGE_DIR, ZFS, NODE_TOBIND_EXTERNAL_IPS)
-from .kapi.collect import collect, send
-from .kapi.pstorage import (
-    delete_persistent_drives, remove_drives_marked_for_deletion,
-    check_namespace_exists)
-from .kapi.usage import update_states
-from .kapi.node import Node as K8SNode
-from .kapi.node_utils import (
-    setup_storage_to_aws_node, add_volume_to_node_ls,
-    complete_calico_node_config)
-
-from .kapi.helpers import KubeQuery, raise_if_failure
-
-from .kd_celery import celery, exclusive_task
+from .system_settings.models import SystemSettings
+from .users.models import SessionData
+from .utils import (
+    update_dict, get_api_url, send_event, send_event_to_role, send_logs,
+    k8s_json_object_hook, get_timezone, NODE_STATUSES, POD_STATUSES
+)
 
 
 class NodeInstallException(Exception):
@@ -639,3 +628,43 @@ def make_backup():
                     time.sleep(0.2)
             except socket.timeout:
                 continue
+
+
+@celery.task(bind=True, max_retries=5, default_retry_delay=10,
+             ignore_results=True)
+def create_wildcard_dns_record(self, base_domain):
+    domain = '*.{}'.format(base_domain)
+    if current_app.config['AWS']:
+        ok, message = dns_management.create_or_update_record(
+            domain, 'CNAME')
+    else:
+        ok, message = dns_management.create_or_update_record(
+            domain, 'A')
+    if not ok:
+        if self.request.retries < self.max_retries:
+            self.retry(args=(base_domain,))
+        msg = 'Failed to create DNS record for domain "{domain}": {reason}'
+        send_event_to_role(
+            'notify:error',
+            {'message': msg.format(domain=base_domain, reason=message)},
+            'Admin')
+
+
+@celery.task(bind=True, max_retries=5, default_retry_delay=10,
+             ignore_results=True)
+def delete_wildcard_dns_record(self, base_domain):
+    domain = '*.{}'.format(base_domain)
+    if current_app.config['AWS']:
+        ok, message = dns_management.delete_record(
+            domain, 'CNAME')
+    else:
+        ok, message = dns_management.delete_record(
+            domain, 'A')
+    if not ok:
+        if self.request.retries < self.max_retries:
+            self.retry(args=(base_domain,))
+        msg = 'Failed to delete DNS record for domain "{domain}": {reason}'
+        send_event_to_role(
+            'notify:error',
+            {'message': msg.format(domain=base_domain, reason=message)},
+            'Admin')

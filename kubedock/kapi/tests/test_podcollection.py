@@ -575,8 +575,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
     @mock.patch.object(podcollection.helpers, 'replace_pod_config')
     @mock.patch.object(podcollection, '_try_to_update_existing_rc')
     @mock.patch.object(podcollection.ingress_resource, 'create_ingress')
-    @mock.patch.object(podcollection.dns_management,
-                       'create_or_update_record')
+    @mock.patch.object(podcollection.dns_management, 'delete_record')
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection, 'run_service')
     @mock.patch.object(podcollection.podutils, 'raise_if_failure')
@@ -584,7 +583,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
     @mock.patch.object(podcollection.PodCollection, 'has_public_ports')
     def test_pod_prepare_and_run(
             self, has_public_ports_mock, post_mock, raise_if_failure_mock,
-            run_service_mock, dbpod_mock, create_or_update_record_mock,
+            run_service_mock, dbpod_mock, delete_record_mock,
             create_ingress_mock, try_update_rc_mock, replace_pod_config_mock,
             send_event_to_user_mock, podcollection_update_mock, db_mock):
         """
@@ -602,7 +601,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         dbpod_config = {'volumes': []}
         dbpod.get_dbconfig.return_value = dbpod_config
         run_service_mock.return_value = (None, None)
-        create_or_update_record_mock.return_value = (True, None)
+        delete_record_mock.return_value = (True, None)
         try_update_rc_mock.return_value = False
 
         # Actual call
@@ -619,7 +618,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
             self.test_pod, dbpod.get_dbconfig.return_value)
         self.test_pod.set_status.assert_called_with(
             POD_STATUSES.pending, send_update=True)
-        create_or_update_record_mock.assert_called_once_with(
+        delete_record_mock.assert_called_once_with(
             self.test_pod.domain, 'A'
         )
         create_ingress_mock.assert_called_once_with(
@@ -788,16 +787,14 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
 
     @mock.patch.object(podcollection, '_try_to_update_existing_rc')
     @mock.patch.object(podcollection.ingress_resource, 'create_ingress')
-    @mock.patch.object(podcollection.dns_management,
-                       'create_or_update_record')
+    @mock.patch.object(podcollection.dns_management, 'delete_record')
     @mock.patch.object(podcollection, 'run_service')
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection.KubeQuery, 'post')
     @mock.patch.object(podcollection.PodCollection, 'has_public_ports')
     def test_pod_prepare_and_run_task_second_start(
             self, has_public_ports_mock, post_, dbpod_mock, run_service_mock,
-            create_or_update_record_mock, create_ingress_mock,
-            try_update_rc_mock):
+            delete_record_mock, create_ingress_mock, try_update_rc_mock):
         """
         Test second _start_pod in usual case
         :type post_: mock.Mock
@@ -817,7 +814,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         }
         dbpod.get_dbconfig.return_value = dbpod.config
         run_service_mock.return_value = (None, None)
-        create_or_update_record_mock.return_value = (True, None)
+        delete_record_mock.return_value = (True, None)
         try_update_rc_mock.return_value = False
 
         # Actual call
@@ -830,7 +827,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
             ns=self.test_pod.namespace)
         self.test_pod.set_status.assert_called_with(
             POD_STATUSES.pending, send_update=True)
-        create_or_update_record_mock.assert_called_once_with(
+        delete_record_mock.assert_called_once_with(
             self.test_pod.domain, 'A'
         )
         create_ingress_mock.assert_called_once_with(

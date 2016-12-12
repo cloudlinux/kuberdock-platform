@@ -1,6 +1,7 @@
 import os
 from contextlib import contextmanager
 from string import Template
+from time import sleep
 
 import yaml
 from flask import current_app
@@ -16,6 +17,7 @@ from .. import utils
 from .. import validation
 from ..billing.models import Kube
 from ..constants import (
+    AWS_UNKNOWN_ADDRESS,
     KUBERDOCK_BACKEND_POD_NAME,
     KUBERDOCK_INGRESS_POD_NAME,
     KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
@@ -123,6 +125,7 @@ def _create_ingress_controller_pod():
         PodCollection(kd_user).update(
             ingress_pod['id'], {'command': 'synchronous_start'})
         current_app.logger.debug('Ingress controller created and started')
+        return ingress_pod['id']
 
     def _on_error(e):
         current_app.logger.exception(
@@ -133,11 +136,45 @@ def _create_ingress_controller_pod():
     handled_exceptions = (IntegrityError, APIError)
 
     try:
-        utils.retry_with_catch(_create_pod, max_tries=5, retry_pause=10,
-                               exc_types=handled_exceptions,
-                               callback_on_error=_on_error)
+        pod_id = utils.retry_with_catch(
+            _create_pod, max_tries=5, retry_pause=10,
+            exc_types=handled_exceptions, callback_on_error=_on_error)
     except handled_exceptions as e:
         raise IngressControllerNotReady(e.message)
+
+    public_address = _wait_for_pod_public_address(kd_user, pod_id)
+
+    if public_address:
+        current_app.logger.debug(
+            'Public address of ingress controller: %s', public_address)
+    else:
+        raise APIError(
+            'Failed to get public address of ingress controller pod')
+
+
+def _wait_for_pod_public_address(owner, pod_id):
+    tries = 30
+    interval = 2
+
+    rv = None
+
+    if current_app.config['AWS']:
+        public_address_field = 'public_aws'
+    else:
+        public_address_field = 'public_ip'
+    none_values = (None, AWS_UNKNOWN_ADDRESS)
+
+    for _ in range(tries):
+        pod = PodCollection(owner).get(pod_id, as_json=False)
+        public_address = pod[public_address_field]
+        if public_address in none_values:
+            sleep(interval)
+            continue
+        else:
+            rv = public_address
+            break
+
+    return rv
 
 
 def _get_backend_address(default_backend_pod_config):

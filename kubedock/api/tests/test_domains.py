@@ -26,7 +26,7 @@ def tearDownModule():
 
 class TestDomains(APITestCase):
     @mock.patch('kubedock.kapi.ingress.is_subsystem_up')
-    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.delay')
+    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.si')
     @mock.patch('kubedock.dns_management.check_if_zone_exists')
     def test_create_domain_with_absent_zone(
             self, check_if_zone_exists_mock, prepare_ip_sharing_mock,
@@ -42,7 +42,7 @@ class TestDomains(APITestCase):
         self.assertIsNone(BaseDomain.filter_by(name=test_name).first())
 
     @mock.patch('kubedock.kapi.ingress.is_subsystem_up')
-    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.delay')
+    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.si')
     @mock.patch('kubedock.dns_management.check_if_zone_exists')
     def test_ingress_up_called_at_first_call(
             self, check_if_zone_exists_mock, prepare_ip_sharing_mock,
@@ -57,7 +57,7 @@ class TestDomains(APITestCase):
         self.assertTrue(prepare_ip_sharing_mock.called)
 
     @mock.patch('kubedock.kapi.ingress.is_subsystem_up')
-    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.delay')
+    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.si')
     @mock.patch('kubedock.dns_management.check_if_zone_exists')
     def test_ingress_up_not_called_again(
             self, check_if_zone_exists_mock, prepare_ip_sharing_mock,
@@ -71,7 +71,7 @@ class TestDomains(APITestCase):
         self.assert200(response)
         self.assertFalse(prepare_ip_sharing_mock.called)
 
-    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.delay')
+    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.si')
     @mock.patch('kubedock.dns_management.check_if_zone_exists')
     def test_create_domain(self, check_if_zone_exists_mock,
                            prepare_ip_sharing_mock):
@@ -115,7 +115,7 @@ class TestDomains(APITestCase):
         dbdomains = db.session.query(BaseDomain).all()
         self.assertEqual(len(dbdomains), 2)
 
-    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.delay')
+    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.si')
     @mock.patch('kubedock.dns_management.check_if_zone_exists')
     def test_domain_creation_with_missing_certificate_fails(
             self, check_if_zone_exists_mock, prepare_ip_sharing_mock):
@@ -125,7 +125,7 @@ class TestDomains(APITestCase):
 
         self.assert400(response)
 
-    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.delay')
+    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.si')
     @mock.patch('kubedock.dns_management.check_if_zone_exists')
     def test_domain_creation_with_incorrect_certificate_fails(
             self, check_if_zone_exists_mock, prepare_ip_sharing_mock):
@@ -139,7 +139,7 @@ class TestDomains(APITestCase):
         response = self.admin_open('/domains/', method='POST', json=data)
         self.assert400(response)
 
-    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.delay')
+    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.si')
     @mock.patch('kubedock.dns_management.check_if_zone_exists')
     def test_domain_creation_with_incorrect_private_key_fails(
             self, check_if_zone_exists_mock, prepare_ip_sharing_mock):
@@ -153,7 +153,7 @@ class TestDomains(APITestCase):
         response = self.admin_open('/domains/', method='POST', json=data)
         self.assert400(response)
 
-    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.delay')
+    @mock.patch('kubedock.kapi.ingress.prepare_ip_sharing_task.si')
     @mock.patch('kubedock.dns_management.check_if_zone_exists')
     def test_domain_creation_with_certificate_fails_if_domain_does_not_match(
             self, check_if_zone_exists_mock, prepare_ip_sharing_mock):

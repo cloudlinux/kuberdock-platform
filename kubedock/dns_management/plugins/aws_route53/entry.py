@@ -1,6 +1,13 @@
 from boto.route53.connection import Route53Connection
-
 from flask import current_app
+
+
+def _make_qualified(domain):
+    if domain.startswith('*.'):
+        domain = r'\052' + domain[1:]
+    if not domain.endswith('.'):
+        domain += '.'
+    return domain
 
 
 def delete_type_A_record(domain, **kwargs):
@@ -12,8 +19,8 @@ def delete_type_A_record(domain, **kwargs):
         AWS ROUTE 53
     :return: None
     """
-    if not domain.endswith('.'):
-        domain += '.'
+    domain = _make_qualified(domain)
+
     main_domain = domain.split('.', 1)[-1]
 
     conn = Route53Connection(kwargs['id'], kwargs['secret'])
@@ -38,8 +45,8 @@ def delete_type_CNAME_record(domain, **kwargs):
         AWS ROUTE 53
     :return: None
     """
-    if not domain.endswith('.'):
-        domain += '.'
+    domain = _make_qualified(domain)
+
     main_domain = domain.split('.', 1)[-1]
 
     conn = Route53Connection(kwargs['id'], kwargs['secret'])
@@ -65,8 +72,8 @@ def create_or_update_type_A_record(domain, new_ips, **kwargs):
         AWS ROUTE 53
     :return:
     """
-    if not domain.endswith('.'):
-        domain += '.'
+    domain = _make_qualified(domain)
+
     main_domain = domain.split('.', 1)[-1]
 
     conn = Route53Connection(kwargs['id'], kwargs['secret'])
@@ -106,8 +113,7 @@ def create_or_update_type_A_record(domain, new_ips, **kwargs):
 
 def check_if_zone_exists(domain, **kwargs):
     # For Route53 domain should end with dot
-    if not domain.endswith('.'):
-        domain += '.'
+    domain = _make_qualified(domain)
 
     conn = Route53Connection(kwargs['id'], kwargs['secret'])
     zone = conn.get_zone(domain)
@@ -124,8 +130,8 @@ def create_or_update_type_CNAME_record(domain, target, **kwargs):
         AWS ROUTE 53
     :return:
     """
-    if not domain.endswith('.'):
-        domain += '.'
+    domain = _make_qualified(domain)
+
     main_domain = domain.split('.', 1)[-1]
 
     conn = Route53Connection(kwargs['id'], kwargs['secret'])
@@ -140,7 +146,7 @@ def create_or_update_type_CNAME_record(domain, target, **kwargs):
         zone.add_cname(domain, target)
         current_app.logger.debug(
             'Create new record CNAME in zone "{zone}" with '
-            '"{domain}" and taget "{target}"'.format(
+            '"{domain}" and target "{target}"'.format(
                 zone=zone.name, domain=domain, target=target,
             )
         )

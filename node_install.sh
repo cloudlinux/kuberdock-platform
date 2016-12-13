@@ -143,6 +143,11 @@ clean_node(){
     echo "=== Node clean up started ==="
     echo "ALL PACKAGES, CONFIGS AND DATA RELATED TO KUBERDOCK AND PODS WILL BE DELETED"
 
+    # Delete this before stopping docker because we use 10min timeout for docker service stop/restart
+    # and don't need to wait it during cleanup
+    del_existed /etc/systemd/system/docker.service.d/*
+    systemctl daemon-reload
+
     echo "Stop and disable services..."
     for i in kubelet docker kube-proxy kuberdock-watcher ntpd; do
         systemctl disable $i &> /dev/null
@@ -211,7 +216,6 @@ clean_node(){
     del_existed $KD_KERNEL_VARS
 
     del_existed /etc/sysconfig/docker*
-    del_existed /etc/systemd/system/docker.service.d/*
     del_existed /etc/systemd/system/docker.service*
     del_existed /etc/systemd/system/kube-proxy.service*
     del_existed /etc/systemd/system/ntpd.service*

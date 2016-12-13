@@ -152,7 +152,11 @@ def do_remove_storage(_):
     return readable statuses of performed operation.
 
     """
-    all_names = _list_zpools()
+    try:
+        all_names = _list_zpools()
+    except Exception:
+        return False, ('Unable to list ZFS pools. Maybe ZFS is not properly installed yet, '
+                       'skip this if this is during node cleanup process')
     if KD_ZPOOL_NAME not in all_names:
         return True, []
     try:

@@ -38,7 +38,6 @@ class TestContainerLogs(DBTestCase):
             last_event_time=datetime(2015, 2, 6),
             last_event='MODIFIED',
             hostname='kdnode1',
-            kube_id=bill_models.Kube.get_default_kube_type(),
         )
         self.container_state_1 = usage_models.ContainerState(
             pod_state=self.pod_state,
@@ -285,7 +284,6 @@ class TestCheckLogsPod(DBTestCase):
             last_event_time=datetime.utcnow(),
             last_event='MODIFIED',
             hostname=self.node.hostname,
-            kube_id=self.pod.kube_id,
         )
 
         db.session.add_all([

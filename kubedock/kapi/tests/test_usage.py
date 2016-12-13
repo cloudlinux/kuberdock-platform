@@ -146,9 +146,7 @@ class TestPodStates(DBTestCase):
                     kwargs['last_event_time'] = kwargs.get('start_time')
                 elif kwargs.get('last_event') == 'DELETED':
                     kwargs['last_event_time'] = kwargs.get('end_time')
-            return PodState(**dict({'pod': self.pod1,
-                                    'kube_id': self.pod1.kube_id,
-                                    'last_event': 'ADDED'}, **kwargs))
+            return PodState(**dict({'pod': self.pod1, 'last_event': 'ADDED'}, **kwargs))
 
         pod_states = [
             PS(start_time=dt - timedelta(hours=50),
@@ -171,21 +169,6 @@ class TestPodStates(DBTestCase):
         pod_states[3].end_time = dt - timedelta(hours=35)
         self.assertEqual([ps.to_dict() for ps in self.pod1.states],
                          [ps.to_dict() for ps in pod_states])
-
-    def test_kube_id_state(self):
-        pod1_id = self.pod1.id
-        self.pod1.kube_id = 0
-        self._upd_state(pod1_id, 'ADDED', datetime(2015, 11, 25, 11))
-        self.pod1.kube_id = 1
-        self._upd_state(pod1_id, 'MODIFIED', datetime(2015, 11, 25, 12))
-        states = PodState.query.all()
-        self.assertEqual(len(states), 2)
-        self.assertEqual(states[0].pod_id, pod1_id)
-        self.assertEqual(states[0].last_event, 'MODIFIED')
-        self.assertIsNone(states[0].end_time)
-        self.assertEqual(states[0].kube_id, 1)
-        self.assertEqual(states[1].kube_id, 0)
-        self.pod1.kube_id = bill_models.Kube.get_default_kube_type(),
 
 
 @mock.patch.object(usage, 'fix_pods_timeline_heavy', mock.Mock())
@@ -235,7 +218,6 @@ class TestUpdateStates(DBTestCase):
 
         self.pod_state = usage.PodState(
             pod_id=self.pod.id,
-            kube_id=self.pod.kube_id,
             start_time=self.event_started['status']['startTime']).save()
 
     def test_kubes_are_saved(self):

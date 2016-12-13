@@ -79,7 +79,6 @@ class PodState(BaseModelMixin, db.Model):
     last_event = db.Column(db.String(255), nullable=True)
     hostname = db.Column(db.String(255), nullable=True)
     pod = db.relationship('Pod', backref='states')
-    kube_id = db.Column(db.Integer, nullable=False)
 
     @classmethod
     def save_state(cls, pod_id, event, hostname):

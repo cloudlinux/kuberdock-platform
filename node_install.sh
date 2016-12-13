@@ -343,6 +343,37 @@ if [[ $WARNS ]]; then
     printf "$WARNS"
     printf "For details refer Requirements section of KuberDock Documentation, http://docs.kuberdock.com/index.html?requirements.htm\n"
 fi
+
+# Check kernel
+current_kernel=$(uname -r)
+check_kernel=$(chk_ver "$current_kernel" "3.10.0-327.4.4")
+
+if [ "$check_kernel" == "True" ]
+then
+    if [ "$ZFS" = yes ]; then
+        echo "================================================================================"
+        echo "Your kernel is too old, please upgrade it first, reboot the machine and readd the node to KuberDock to " \
+             "continue installation"
+        exit 1
+    fi
+
+    # If ZFS was not needed it is safe to upgrade the kernel
+    echo "Current kernel is $current_kernel, upgrading..."
+    yum_wrapper -y install kernel
+    yum_wrapper -y install kernel-tools
+    yum_wrapper -y install kernel-tools-libs
+    yum_wrapper -y install kernel-headers
+    yum_wrapper -y install kernel-devel
+
+elif [ "$ZFS" = yes ]; then
+   yum info $(rpm --quiet -q epel-release && echo '--disablerepo=epel') -q kernel-devel-$current_kernel
+   if [ $? -ne 0 ]; then
+       echo "================================================================================"
+       echo "kernel-devel-$current_kernel is not available. Please install it manually or upgrade kernel and " \
+            "readd the node to KuberDock to continue installation"
+       exit 1
+   fi
+fi
 # ================= // Various KD requirements checking ====================
 
 
@@ -853,21 +884,7 @@ Restart=always
 RestartSec=1s" > /etc/systemd/system/ntpd.service.d/restart.conf
 systemctl daemon-reload
 
-# 13. Check kernel
-current_kernel=$(uname -r)
-check_kernel=$(chk_ver "$current_kernel" "3.10.0-327.4.4")
-
-if [ "$check_kernel" == "True" ]
-then
-    echo "Current kernel is $current_kernel, upgrading..."
-    yum_wrapper -y install --disablerepo=kube kernel
-    yum_wrapper -y install --disablerepo=kube kernel-tools
-    yum_wrapper -y install --disablerepo=kube kernel-tools-libs
-    yum_wrapper -y install --disablerepo=kube kernel-headers
-    yum_wrapper -y install --disablerepo=kube kernel-devel
-fi
-
-# 14. Install and configure CEPH client if CEPH config is defined in envvar
+# 13. Install and configure CEPH client if CEPH config is defined in envvar
 #     Or packages for local storage backend
 if [ ! -z "$CEPH_CONF" ]; then
 
@@ -883,8 +900,8 @@ else
         yum_wrapper -y install --nogpgcheck http://download.zfsonlinux.org/epel/zfs-release$(rpm -E %dist).noarch.rpm
         # Use exact version of kernel-headers as current kernel.
         # If it differs, then installation of spl-dkms, zfs-dkms will fail
-        yum_wrapper -y install kernel-devel-$current_kernel zfs
-
+        yum_wrapper -y install kernel-devel-$current_kernel
+        yum_wrapper -y install zfs
         # Zfs could mount pools automatically at boot time even without
         # fstab records, but this is disabled by default in most
         # cases (e.g. AWS case) so enable this:
@@ -921,7 +938,7 @@ else
 fi
 
 
-# 15. Set valid performance profile.
+# 14. Set valid performance profile.
 # We need maximum performance to valid work of cpu limits and multipliers.
 # All CPUfreq drivers are built in as part of the kernel-tools package.
 systemctl reenable tuned
@@ -940,7 +957,7 @@ else
 fi
 
 
-# 16. Run Docker and Calico node
+# 15. Run Docker and Calico node
 echo "Starting Calico node..."
 systemctl restart docker
 yum_wrapper -y install calicoctl-0.22.0-3.el7
@@ -958,7 +975,7 @@ echo "Starting Calico node..."
 ETCD_AUTHORITY="$MASTER_IP:2379" ETCD_SCHEME=https ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key HOSTNAME="$NODENAME" /opt/bin/calicoctl node --ip="$NODE_IP" --node-image="$CALICO_NODE_IMAGE"
 check_status
 
-# 17. Reboot will be executed in python function
+# 16. Reboot will be executed in python function
 echo "Node deploy script finished: $(date)"
 
 exit 0

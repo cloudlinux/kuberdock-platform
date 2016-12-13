@@ -63,10 +63,15 @@ class TestHealthCheck(unittest.TestCase):
         msg = health_check.check_nodes()
         self.assertGreater(len(msg), 0)
 
+    @mock.patch.object(health_check, 'check_tunl')
+    @mock.patch.object(health_check, 'check_calico_node')
     @mock.patch.object(health_check, 'get_services_state')
     @mock.patch.object(health_check, 'check_disk_space')
-    def test_check_master(self, mock_check_disk, mock_get_services):
+    def test_check_master(self, mock_check_disk, mock_get_services,
+                          mock_cn, mock_tunl):
         mock_check_disk.return_value = True
+        mock_cn.return_value = True
+        mock_tunl.return_value = True
         mock_get_services.return_value = {
             'ntpd': True,
             'etcd': True

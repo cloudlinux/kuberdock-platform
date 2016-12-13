@@ -60,7 +60,7 @@ Use {0} {1} on|off to manually switch cluster work mode (careful!)\
 SUCCESSFUL_DOWNGRADE_MESSAGE = """\
 Downgrade looks successful but please ensure that all works properly.
 Kuberdock has been restarted.\
-""".format(os.path.basename(__file__), CLI_COMMANDS.set_maintenance)
+"""
 
 
 SUCCESSFUL_UPDATE_MESSAGE = """
@@ -94,7 +94,7 @@ def set_schedulable(node_id, value, upd=None):
     """
     url = get_api_url('nodes', node_id, namespace=False)
     try_times = 100
-    for i in range(try_times):
+    for _ in range(try_times):
         try:
             node = requests.get(url).json()
             node['spec']['unschedulable'] = not value
@@ -133,10 +133,10 @@ def load_update(upd):
             upd, e.__repr__())
         return None, None, None, None, None, None
 
-    in_db_update = Updates.query.get(upd) or \
-                   Updates.create(fname=upd,
-                                  status=UPDATE_STATUSES.started,
-                                  start_time=datetime.utcnow())
+    in_db_update = (Updates.query.get(upd) or
+                    Updates.create(fname=upd,
+                                   status=UPDATE_STATUSES.started,
+                                   start_time=datetime.utcnow()))
     in_db_update.start_time = datetime.utcnow()
     db.session.add(in_db_update)
     db.session.commit()
@@ -153,7 +153,8 @@ def load_update(upd):
     downgrade_node_func = None
     if hasattr(module, 'upgrade_node') and callable(module.upgrade_node):
         upgrade_node_func = module.upgrade_node
-        if hasattr(module, 'downgrade_node') and callable(module.downgrade_node):
+        if (hasattr(module, 'downgrade_node') and
+                callable(module.downgrade_node)):
             downgrade_node_func = module.downgrade_node
         else:
             in_db_update.print_log(
@@ -517,22 +518,22 @@ def parse_cmdline():
 
     subparsers = root_parser.add_subparsers(dest='command', help='Commands')
 
-    upgrade_cmd = subparsers.add_parser(
+    subparsers.add_parser(
         CLI_COMMANDS.upgrade,
         help='Upgrade Kuberdock. '
              'Default command, no need to specify explicitly')
 
-    health_check_only_cmd = subparsers.add_parser(
+    subparsers.add_parser(
         CLI_COMMANDS.health_check_only,
         help='Perform cluster health check only, without upgrade')
 
-    resume_upgrade_cmd = subparsers.add_parser(
+    subparsers.add_parser(
         CLI_COMMANDS.resume_upgrade,
         help='Tries to restart failed upgrade scripts. '
              'Useful if you fix all problems manually, but in common case '
              'failed update scripts will be restarted during update to new '
-             'package release from repo via "{0}" command'
-             .format(CLI_COMMANDS.upgrade))
+             'package release from repo via "{0}" command'.format(
+                 CLI_COMMANDS.upgrade))
 
     maintenance_cmd = subparsers.add_parser(
         CLI_COMMANDS.set_maintenance,
@@ -580,7 +581,8 @@ def parse_cmdline():
         help='Name of last update file to concat (without path)')
 
     # for default subparser
-    if filter(lambda x: not x.startswith('__') and x in CLI_COMMANDS.__dict__.values(), sys.argv[1:]):
+    if (filter(lambda x: not x.startswith('__') and
+               x in CLI_COMMANDS.__dict__.values(), sys.argv[1:])):
         return root_parser.parse_args()
     else:
         return root_parser.parse_args(sys.argv[1:] + [CLI_COMMANDS.upgrade])
@@ -694,7 +696,9 @@ if __name__ == '__main__':
                                        args.local])
                 # To clean up repo cache:
                 ybase = prepare_repos(args.use_testing)
-                new_kuberdocks = [] if res and not args.reinstall else [args.local]
+                new_kuberdocks = [args.local]
+                if res and not args.reinstall:
+                    new_kuberdocks = []
             else:
                 new_kuberdocks = get_kuberdocks_toinstall(args.use_testing)
             if new_kuberdocks:
@@ -706,8 +710,9 @@ if __name__ == '__main__':
                 if ask_upgrade():
                     if pre_upgrade():
                         sys.exit(3)
-                    err = helpers.install_package(pkg, args.use_testing,
-                          action='reinstall' if args.reinstall else 'install')
+                    err = helpers.install_package(
+                        pkg, args.use_testing,
+                        action='reinstall' if args.reinstall else 'install')
                     if err:
                         post_upgrade(for_successful=False,
                                      reason="Update package to {0} has failed."

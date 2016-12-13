@@ -4,6 +4,7 @@ import os
 import re
 import sys
 import subprocess
+import elasticsearch
 from fabric.api import env, run, output
 from fabric.network import disconnect_all
 from fabric.exceptions import NetworkError, CommandTimeout
@@ -19,8 +20,12 @@ from kubedock.users.models import User
 from kubedock.kapi.node_utils import get_nodes_collection
 from kubedock.kapi.podcollection import PodCollection
 from kubedock.kapi.nodes import get_kuberdock_logs_pod_name
+from kubedock.kapi.helpers import LocalService
+from kubedock.kapi import pstorage
+from kubedock.pods.models import Pod
 from kubedock.updates.helpers import setup_fabric
-from kubedock.settings import KUBERDOCK_INTERNAL_USER
+from kubedock.settings import KUBERDOCK_INTERNAL_USER, ELASTICSEARCH_REST_PORT
+from kubedock.settings import CEPH, CEPH_POOL_NAME
 from kubedock.utils import POD_STATUSES
 
 
@@ -29,11 +34,19 @@ MAX_DISK_PERCENTAGE = 90
 MESSAGES = {
     'disk': "\tLow disk space: {}",
     'services': "\tSome services in wrong state: {}",
-    'ntp': "\tTime not synced. Please either synchronize it manually or wait several minutes (up to 20) and repeat",
+    'ntp': ("\tTime not synced. Please either synchronize it manually "
+            "or wait several minutes (up to 20) and repeat"),
     NODE_STATUSES.running: "\tNode not running in kubernetes",
     'ssh': "\tCan't access node from master through ssh",
     'pods': "Some internal pods in wrong state: {}",
-    NODE_STATUSES.pending: "\tThe node is under installation. Please wait for its completion to upgrade"
+    NODE_STATUSES.pending: ("\tThe node is under installation."
+                            "Please wait for its completion to upgrade"),
+    'calico-node': "\tcalico-node container is not running",
+    'tunl': "\tError while get tunl0 IP: {}",
+    'bird': "\t{}",
+    'elastic': "\t{}",
+    'ceph': "\tCan't access CEPH storage: {}",
+    'error': "\tCan't get node state: {}"
 }
 
 master_services = ['etcd', 'influxdb', 'kube-apiserver', 'docker',
@@ -84,14 +97,16 @@ def get_node_state(node):
     hostname = node['hostname']
     status[NODE_STATUSES.running] = node.get('status') == NODE_STATUSES.running
     env.host_string = hostname
+    status['bird'] = check_node_bird_route(node)
+    status['elastic'] = check_elastic_access(node)
     try:
         status['ntp'] = False
         status['services'] = False
         # AC-3105 Fix. Check if master can connect to node via ssh.
         if can_ssh_to_host(hostname):
-            rv = run('ntpstat', quiet=True, timeout=SSH_TIMEOUT)
-            if rv.succeeded:
-                status['ntp'] = True
+            rv = run('timedatectl status', quiet=True, timeout=SSH_TIMEOUT)
+            status['ntp'] = all([line.split()[-1] == 'yes'
+                                 for line in rv.splitlines() if 'NTP' in line])
             status['ssh'] = True
             stopped = get_stopped_services(node_services, local=False)
             status['services'] = stopped if stopped else True
@@ -106,8 +121,12 @@ def get_node_state(node):
 def get_nodes_state():
     setup_fabric()
     nodes = get_nodes_collection()
-    nodes_status = {
-        node['hostname']: get_node_state(node) for node in nodes}
+    nodes_status = {}
+    for node in nodes:
+        try:
+            nodes_status[node['hostname']] = get_node_state(node)
+        except Exception as e:
+            nodes_status[node['hostname']] = {'error': e}
     return nodes_status
 
 
@@ -115,7 +134,8 @@ def get_internal_pods_state():
     ki = User.filter_by(username=KUBERDOCK_INTERNAL_USER).first()
     pod_statuses = {}
     for pod in PodCollection(ki).get(as_json=False):
-        pod_statuses[pod['name']] = pod['status'] == POD_STATUSES.running
+        pod_statuses[pod['name']] = (pod['status'] == POD_STATUSES.running and
+                                     pod['ready'])
     return pod_statuses
 
 
@@ -152,6 +172,11 @@ def check_master():
     stopped = get_stopped_services(master_services)
     if stopped:
         msg.append(MESSAGES['services'].format(', '.join(stopped)))
+    if not check_calico_node():
+        msg.append(MESSAGES['calico-node'])
+    tunl_status = check_tunl()
+    if isinstance(tunl_status, str):
+        msg.append(MESSAGES['tunl'].format(tunl_status))
     return os.linesep.join(msg)
 
 
@@ -170,12 +195,20 @@ def check_nodes():
                 msg.extend(node_msg)
     except (SystemExit, Exception) as e:
         msg.append("Can't get nodes list because of {}".format(e.message))
+    # list of pending nodes, so log pod for this nodes can be not healthy
     pendings = [get_kuberdock_logs_pod_name(node)
                 for node, state in states.items() if
                 NODE_STATUSES.pending in state]
+    # we check that there are some nodes and not all of them in pending states,
+    # so dns pod and policy agent pod shoud be running
     if states and len(pendings) != len(states):
+        ceph_status = check_ceph()
+        if isinstance(ceph_status, str):
+            msg.append(MESSAGES['ceph'].format(ceph_status))
         try:
             pod_states = get_internal_pods_state()
+            # list of stopped internal pods. we don't count log pods of pending
+            # nodes
             stopped = [pod for pod, status in pod_states.items()
                        if pod not in pendings and not status]
             if stopped:
@@ -184,6 +217,68 @@ def check_nodes():
             msg.append("Can't get internal pods states because of {}".format(
                 e.message))
     return os.linesep.join(msg)
+
+
+def check_calico_node():
+    try:
+        subprocess.check_output(
+            'docker ps --format "{{.Names}}" | grep "^calico-node$"',
+            shell=True)
+        return True
+    except subprocess.CalledProcessError:
+        return False
+
+
+def check_tunl():
+    try:
+        subprocess.check_output('ip addr show dev tunl0 | grep inet',
+                                shell=True, stderr=subprocess.STDOUT)
+        return True
+    except subprocess.CalledProcessError as e:
+        return e.output.strip()
+
+
+def check_node_bird_route(node):
+    try:
+        rv = subprocess.check_output(['ip', 'route', 'show', 'dev', 'tunl0',
+                                      'via', node['ip'], 'proto', 'bird'],
+                                     stderr=subprocess.STDOUT)
+        return True if rv else "There is no bird route to node from master"
+    except subprocess.CalledProcessError as e:
+        msg = "Error while try to find bird route to node from master: {}"
+        return msg.format(e.output.strip())
+
+
+def check_elastic_access(node):
+    internal_user = User.get_internal()
+    pod_name = get_kuberdock_logs_pod_name(node['hostname'])
+    db_pod = Pod.query.filter(Pod.status != POD_STATUSES.deleted,
+                              Pod.name == pod_name,
+                              Pod.owner_id == internal_user.id).first()
+    pod = PodCollection(internal_user).get(db_pod.id, as_json=False)
+    if not pod or pod['status'] != POD_STATUSES.running:
+        return True
+    services = LocalService()
+    clusterIP = services.get_clusterIP_by_pods(pod['id'])
+    if not clusterIP:
+        return "Can't find elasticsearch service with clusterIP"
+    try:
+        ip = clusterIP[pod['id']]
+        es = elasticsearch.Elasticsearch(ip, port=ELASTICSEARCH_REST_PORT)
+        return es.ping()
+    except Exception:
+        return "Can't access elasticsearch on node"
+
+
+def check_ceph():
+    if not CEPH:
+        return True
+    try:
+        pstorage.STORAGE_CLASS().run_on_first_node('rbd {} ls {}'.format(
+            pstorage.get_ceph_credentials(), CEPH_POOL_NAME), timeout=10)
+        return True
+    except pstorage.NodeCommandError as e:
+        return str(e)
 
 
 def check_cluster():

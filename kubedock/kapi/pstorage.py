@@ -636,9 +636,9 @@ def execute_run(command, timeout=NODE_COMMAND_TIMEOUT, jsonresult=False,
         )
     if result.return_code != 0:
         if not catch_exitcodes or result.return_code not in catch_exitcodes:
-            raise NodeCommandError(
-                'Remote command `{0}` execution failed (exit code = {1})'
-                .format(command, result.return_code)
+            m = ('Remote command `{0}` execution failed (exit code = {1}), '
+                   'stdout: {2}')
+            raise NodeCommandError(m.format(command, result.return_code, result)
             )
         raise NodeCommandWrongExitCode(code=result.return_code)
     if jsonresult:

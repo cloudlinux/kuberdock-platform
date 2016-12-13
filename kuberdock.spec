@@ -24,7 +24,6 @@ Requires: docker == 1:1.12.1-4.el7
 Requires: docker-selinux == 1:1.12.1-4.el7
 Requires: calicoctl == 0.22.0-3.el7
 Requires: kubernetes-policy == 0.1.4-2.el7
-
 # For semanage, but in new CentOS it's installed by default:
 Requires: policycoreutils-python >= 2.2
 Requires: python-uwsgi
@@ -76,6 +75,7 @@ Requires: PyYAML
 Requires: python-cloudflare
 Requires: python-etcd
 Requires: pyOpenSSL
+Requires: python2-pyasn1 == 0:0.1.9-7.el7
 
 # AutoReq: 0
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)

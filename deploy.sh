@@ -162,14 +162,14 @@ fi
 
 trap catchExit EXIT
 
-RELEASE="CentOS Linux release 7.2"
+RELEASE="CentOS Linux release 7.[2-3]"
 ARCH="x86_64"
 MIN_RAM_KB=1572864
 MIN_DISK_SIZE=10
 
 check_release()
 {
-    cat /etc/redhat-release | grep "$RELEASE" > /dev/null
+    cat /etc/redhat-release | grep -P "$RELEASE" > /dev/null
     if [ $? -ne 0 ] || [ `uname -m` != $ARCH ];then
         ERRORS="$ERRORS Inappropriate OS version\n"
     fi
@@ -702,7 +702,7 @@ else
 fi
 
 
-# Workaround for CentOS 7 minimal CD bug.
+# Workaround for CentOS 7 minimal CD bug:
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787
 SWITCH=`cat /etc/nsswitch.conf | grep "^hosts:"`
 if [ -z "$SWITCH" ];then

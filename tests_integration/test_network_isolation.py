@@ -52,24 +52,98 @@ HOST_UP_UDP_SERVER_CMD = (
     'udp.sendto("PONG", (addr[0], addr[1]))\''
 )
 
+USER1 = 'test_user'
+USER2 = 'alt_test_user'
 
-def setup_pods(cluster):
-    # test_user: iso1@node1 iso3@node2 iso4@node1
-    # alt_test_user: iso2@node2
-    pods = {
-        'iso1': cluster.pods.create(
-            'hub.kuberdock.com/nginx', 'iso1', owner='test_user',
-            ports=[Port(HTTP_PORT, public=True),
-                   Port(UDP_PORT, proto='udp', public=True)]),
-        'iso2': cluster.pods.create(
-            'hub.kuberdock.com/nginx', 'iso2', owner='alt_test_user',
-            ports=[Port(HTTP_PORT, public=True)], kube_type='Tiny'),
-        'iso3': cluster.pods.create(
-            'hub.kuberdock.com/nginx', 'iso3', owner='test_user',
-            kube_type='Tiny'),
-        'iso4': cluster.pods.create(
-            'hub.kuberdock.com/nginx', 'iso4', owner='test_user'),
+ISOLATION_TESTS_PODS = [
+    {
+        'name': 'iso1',
+        'image': 'hub.kuberdock.com/nginx',
+        'owner': USER1,
+        'ports': [Port(HTTP_PORT, public=True),
+                  Port(UDP_PORT, proto='udp', public=True)],
+    },
+    {
+        'name': 'iso2',
+        'image': 'hub.kuberdock.com/nginx',
+        'owner': USER2,
+        'ports': [Port(HTTP_PORT, public=True)],
+        'kube_type': 'Tiny',
+    },
+    {
+        'name': 'iso3',
+        'image': 'hub.kuberdock.com/nginx',
+        'owner': USER1,
+        'kube_type': 'Tiny',
+    },
+    {
+        'name': 'iso4',
+        'image': 'hub.kuberdock.com/nginx',
+        'owner': USER1,
     }
+]
+
+
+POSTFIX_IMAGE = 'tozd/postfix'
+NGINX_PYTHON_IMAGE = 'aku1/nginx'
+
+MAIL_TESTS_PODS = [
+    {
+        # user1 pod on node1, has public IP
+        'name': 'server1',
+        'image': POSTFIX_IMAGE,
+        'owner': USER1,
+        'open_all_ports': True,
+    },
+    {
+        # user1 pod on node2
+        'name': 'server2',
+        'image': POSTFIX_IMAGE,
+        'owner': USER1,
+        'kube_type': 'Tiny',
+    },
+    {
+        # user1 pod on node1
+        'name': 'server3',
+        'image': NGINX_PYTHON_IMAGE,
+        'ports': [Port(25, container_port=80)],
+        'owner': USER1,
+    },
+    {
+        # user1 pod on node1
+        'name': 'client1',
+        'image': NGINX_PYTHON_IMAGE,
+        'owner': USER1,
+    },
+    {
+        # user1 pod on node2
+        'name': 'client2',
+        'image': NGINX_PYTHON_IMAGE,
+        'owner': USER1,
+        'kube_type': 'Tiny',
+    },
+    {
+        # user2 pod on node1
+        'name': 'client3',
+        'image': NGINX_PYTHON_IMAGE,
+        'owner': USER2,
+        'ports': [Port(25, container_port=80, public=True)]
+    },
+    {
+        # user2 pod on node2
+        'name': 'client4',
+        'image': NGINX_PYTHON_IMAGE,
+        'owner': USER2,
+        'kube_type': 'Tiny',
+    }
+]
+
+
+def setup_pods(cluster, pods_params=ISOLATION_TESTS_PODS):
+    pods = dict()
+    for pod_params in pods_params:
+        pods[pod_params['name']] = cluster.pods.create(**pod_params)
+
     for pod in pods.values():
         pod.wait_for_status('running')
     specs = {
@@ -102,8 +176,14 @@ def ping(pod, container_id, host):
     pod.docker_exec(container_id, 'ping -c 2 {}'.format(host))
 
 
-def http_check(pod, container_id, host):
-    pod.docker_exec(container_id, 'curl -m 5 -k http://{}'.format(host))
+def http_check(pod, container_id, host, port=None):
+    if port is None:
+        _, out, _ = pod.docker_exec(
+            container_id, 'curl -m 5 -k http://{}'.format(host))
+    else:
+        _, out, _ = pod.docker_exec(
+            container_id, 'curl -m 5 -k http://{}:{}'.format(host, port))
+    return out
 
 
 def https_check(pod, container_id, host):
@@ -640,7 +720,8 @@ def test_network_isolation_pods_from_cluster(cluster):
 @pipeline('networking')
 @pipeline('networking_upgraded')
 def test_intercontainer_communication(cluster):
-    def _check_access_through_localhost(pa):
+    def _check_access_through_localhost(pa, elastic_port=ES_PORT,
+                                        wp_port=HTTP_PORT):
         containers = pa.containers
         wp_container_id = [
             c['containerID'] for c in containers
@@ -648,31 +729,36 @@ def test_intercontainer_communication(cluster):
         es_container_id = [
             c['containerID'] for c in containers if c['name'] == 'elastic'][0]
 
-        # Wordpress container has access to itself via localhost
-        LOG.debug('{}"Wordpress" container can access to itself via localhost '
-                  '"localhost:80"{}'.format(Fore.CYAN, Style.RESET_ALL))
-        pa.docker_exec(wp_container_id, 'curl -k -m5 -v http://localhost')
-
-        # Wordpress container has access to elasticsearch container via
-        # localhost
-        LOG.debug('{}"Wordpress" container can access "Elasticsearch" '
-                  'container: "localhost:9200"{}'.format(Fore.CYAN,
-                                                         Style.RESET_ALL))
+        utils.log_debug(
+            "'Wordpress' container can access itself via localhost "
+            "'localhost:{}/wp-admin/install.php'".format(wp_port), LOG)
         pa.docker_exec(
-            wp_container_id, 'curl -k -m5 -XGET localhost:{}'.format(ES_PORT))
+            wp_container_id,
+            'curl -k -m5 -v http://localhost:{}/wp-admin/install.php'.format(
+                wp_port))
 
-        # Elasticsearch container has access to itself via localhost
-        LOG.debug('{}"Elasticsearch" container can itself via localhost '
-                  '"localhost:9200"{}'.format(Fore.CYAN, Style.RESET_ALL))
+        utils.log_debug(
+            "'Wordpress' container can access 'Elasticsearch' container via "
+            "localhost 'localhost:{}'".format(elastic_port), LOG)
         pa.docker_exec(
-            es_container_id, 'curl -k -m5 -XGET localhost:{}'.format(ES_PORT))
+            wp_container_id,
+            'curl -k -m5 -XGET localhost:{}'.format(elastic_port))
 
-        # Elasticsearch container has access to wordpress container via
-        # localhost
-        LOG.debug('{}"Elasticsearch" container can access "Wordpress" '
-                  'container: "localhost:80"{}'.format(Fore.CYAN,
-                                                       Style.RESET_ALL))
-        pa.docker_exec(es_container_id, 'curl -k -m5 -v http://localhost')
+        utils.log_debug(
+            "'Elasticsearch' container can access itself via localhost: "
+            "'localhost:{}'".format(elastic_port), LOG)
+        pa.docker_exec(
+            es_container_id,
+            'curl -k -m5 -XGET localhost:{}'.format(elastic_port))
+
+        utils.log_debug(
+            "'Elasticsearch' container can access 'Wordpress' container via "
+            "localhost: 'localhost:{}/wp-admin/install.php'".format(wp_port),
+            LOG)
+        pa.docker_exec(
+            es_container_id,
+            'curl -k -m5 -v http://localhost:{}/wp-admin/install.php'.format(
+                wp_port))
 
     # ----- Containers inside one pod can communicate through localhost -----
 
@@ -681,7 +767,7 @@ def test_intercontainer_communication(cluster):
     # We are going to create 'wordpress_elasticsearch' PA, because both
     # elasticsearch and wordpress containers have 'curl' and we can check
     # inter-container communication
-    LOG.debug('{}Create PA on node1{}'.format(Fore.CYAN, Style.RESET_ALL))
+    utils.log_debug("Create PA on node1", LOG)
     # By setting 'plan_id==1' we ensure that pod lands on 'node1'
     pa_node1 = cluster.pods.create_pa(
         'wordpress_elasticsearch.yaml', wait_for_status='running',
@@ -689,12 +775,29 @@ def test_intercontainer_communication(cluster):
     _check_access_through_localhost(pa_node1)
     pa_node1.delete()
 
-    LOG.debug('{}Create PA on node2{}'.format(Fore.CYAN, Style.RESET_ALL))
+    utils.log_debug('Create PA on node2', LOG)
     # By setting 'plan_id==0' we ensure that pod lands on 'node2'
-    pa_node1 = cluster.pods.create_pa(
+    pa_node2 = cluster.pods.create_pa(
         'wordpress_elasticsearch.yaml', wait_for_status='running',
         wait_ports=True, plan_id=0)
-    _check_access_through_localhost(pa_node1)
+    _check_access_through_localhost(pa_node2)
+
+    # ------- Following is one of the testcases from AC-4092 -------------
+    utils.log_debug(
+        "Change default pod port corresponding to 'Wordpress' container' to "
+        "{}".format(SMTP_PORT))
+    pa_node2.change_pod_ports(
+        ports=[Port(SMTP_PORT, container_port=HTTP_PORT, public=True)])
+    pa_node2.wait_for_status('running')
+    pa_node2.wait_for_ports(ports=[SMTP_PORT])
+
+    utils.local_exec(
+        'curl curl -k -m5 -v http://{}:{}/wp-admin/install.php'.format(
+            pa_node2.public_ip, SMTP_PORT), shell=True)
+
+    # NOTE: This doesn't work. Containers within a pod still communicate
+    # via their container ports, not pod ports.
+    # _check_access_through_localhost(pa_node2, wp_port=SMTP_PORT)
 
 
 @pipeline('fixed_ip_pools',
@@ -855,3 +958,269 @@ def paramiko_expect_udp_server(cluster, node, port):
         yield
     finally:
         server.close()
+
+
+def restricted_ports_list(cluster):
+    _, out, _ = cluster.kdctl('restricted-ports list', out_as_dict=True)
+    return out['data']
+
+
+def restricted_ports_open(cluster, port, proto):
+    _, out, _ = cluster.kdctl('restricted-ports open {port} {proto}'.format(
+        port=port, proto=proto))
+    return out
+
+
+def restricted_ports_close(cluster, port, proto):
+    _, out, _ = cluster.kdctl('restricted-ports close {port} {proto}'.format(
+        port=port, proto=proto))
+    return out
+
+
+HELO_CMD = (
+    'python -c "'
+    'from smtplib import SMTP; '
+    's = SMTP(\'{host}\', port={port}, timeout={timeout}); '
+    's.helo(); '
+    'print(str(s.helo_resp))"'
+)
+
+DEFAULT_CONNECT_TIMEOUT = 10
+SMTP_PORT = 25
+
+
+def check_mail_traffic(src_pod, src_container, dst, port=SMTP_PORT):
+    cmd = HELO_CMD.format(host=dst, port=port,
+                          timeout=DEFAULT_CONNECT_TIMEOUT)
+    _, out, _ = src_pod.docker_exec(src_container, cmd)
+    return out
+
+
+@pipeline('networking')
+@pipeline('networking_upgraded')
+def test_outgoing_traffic_via_smtp_port(cluster):
+    """
+    The following scenario will be tested here:
+    1. Create client and server pods. Server pods will run postfix and nginx
+       servers. Nginx servers will respond on SMTP port. Some client pods
+       also have their pod port changed to SMTP port.
+    2. Check that by default SMTP port 25 is closed and no outgoing traffic
+       from cluster via that port is allowed
+    3. Open port 25 and check that outgoing traffic from cluster via port 25
+       is working
+    4. Close port 25 again ahd check that outgoing traffic from cluster via
+       port 25 is blocked again
+    NOTE: Tests are performed from both cluster nodes.
+    """
+    container_ids, container_ips, pods, specs = setup_pods(
+        cluster, MAIL_TESTS_PODS)
+    user1_client_pods = [
+        pod['name'] for pod in MAIL_TESTS_PODS
+        if pod['owner'] == USER1 and 'client' in pod['name']]
+    user1_nginx_servers = [
+        pod['name'] for pod in MAIL_TESTS_PODS
+        if pod['owner'] == USER1 and 'server' in pod['name'] and
+        pod['image'] == NGINX_PYTHON_IMAGE]
+    user2_client_pods = [
+        pod['name'] for pod in MAIL_TESTS_PODS
+        if pod['owner'] == USER2 and 'client' in pod['name']]
+
+    utils.log_debug("Check that port '{}' is closed by default".format(
+        SMTP_PORT), LOG)
+    # All clients
+    for pod_name in itertools.chain(user1_client_pods, user2_client_pods):
+        with utils.assert_raises(NonZeroRetCodeException, 'timed out'):
+            check_mail_traffic(pods[pod_name], container_ids[pod_name],
+                               'smtp.o2.ie')
+    # user1 servers with nginx+python
+    for pod_name in user1_nginx_servers:
+        with utils.assert_raises(NonZeroRetCodeException, 'timed out'):
+            check_mail_traffic(pods[pod_name], container_ids[pod_name],
+                               'smtp.o2.ie')
+
+    restricted_ports_open(cluster, port=SMTP_PORT, proto='tcp')
+
+    utils.log_debug("Check that port '{}' is open".format(
+        SMTP_PORT), LOG)
+    # All clients
+    for pod_name in itertools.chain(user1_client_pods, user2_client_pods):
+        res = check_mail_traffic(pods[pod_name], container_ids[pod_name],
+                                 'smtp.o2.ie')
+        utils.assert_in('o2.ie', res)
+        utils.assert_in('OK', res)
+    # user1 servers with nginx+python
+    for pod_name in user1_nginx_servers:
+        res = check_mail_traffic(pods[pod_name], container_ids[pod_name],
+                                 'smtp.o2.ie')
+        utils.assert_in('o2.ie', res)
+        utils.assert_in('OK', res)
+
+    restricted_ports_close(cluster, port=SMTP_PORT, proto='tcp')
+
+    utils.log_debug("Check that port '{}' is closed".format(
+        SMTP_PORT), LOG)
+    # All clients
+    for pod_name in itertools.chain(user1_client_pods, user2_client_pods):
+        with utils.assert_raises(NonZeroRetCodeException, 'timed out'):
+            check_mail_traffic(pods[pod_name], container_ids[pod_name],
+                               'smtp.o2.ie')
+    # user1 servers with nginx+python
+    for pod_name in user1_nginx_servers:
+        with utils.assert_raises(NonZeroRetCodeException, 'timed out'):
+            check_mail_traffic(pods[pod_name], container_ids[pod_name],
+                               'smtp.o2.ie')
+
+
+def _check_traffic_to_hosts(
+        src_pod, container_id, dst_pod, dst_hosts, check, assertion=None,
+        assertion_msg=None, traffic_allowed=True):
+    """
+    Check that there is traffic from pod 'src_pod' to pod 'dst_pod' via
+    IPs in 'dst_hosts'.
+    :param assertion: assertion to make after check or None
+    :param assertion_msg: assertion message or message in exception if
+        traffic_allowed is False
+    :param traffic_allowed: if True then 'assertion' is made after 'check',
+        otherwise we expect an exception to be raised and 'assertion_msg' text
+        should be in exception message.
+    """
+    msg = (
+        "Check that '{user1}' pod '{pod1}' on '{node1}' {can} access '{user2}'"
+        " pod '{pod2}' on '{node2}' via '{ip}'")
+    for host in dst_hosts:
+        if traffic_allowed:
+            utils.log_debug(
+                msg.format(
+                    user1=src_pod.owner, pod1=src_pod.name, node1=src_pod.node,
+                    can='CAN', user2=dst_pod.owner, pod2=dst_pod.name,
+                    node2=src_pod.node, ip=host),
+                LOG)
+            out = check(src_pod, container_id, host, port=SMTP_PORT)
+            assertion(assertion_msg, out)
+        else:
+            utils.log_debug(
+                msg.format(
+                    user1=src_pod.owner, pod1=src_pod.name, node1=src_pod.node,
+                    can='CAN NOT', user2=dst_pod.owner, pod2=dst_pod.name,
+                    node2=src_pod.node, ip=host),
+                LOG)
+            with utils.assert_raises(NonZeroRetCodeException, assertion_msg):
+                check(src_pod, container_id, host, port=SMTP_PORT)
+
+
+@pipeline('networking')
+@pipeline('networking_upgraded')
+def test_traffic_between_pods_via_smtp_port(cluster):
+    """
+    The following cases will be tested here:
+    1. Create two mail server pods on different nodes
+    2. Same user pods communicating via SMTP port
+    3. Diffrent user pods communicating via SMTP port
+    NOTE: Tests are performed when client and server pods are both on the same
+    and different cluster nodes.
+    """
+    container_ids, container_ips, pods, specs = setup_pods(
+        cluster, MAIL_TESTS_PODS)
+    user1_servers = [
+        pod['name'] for pod in MAIL_TESTS_PODS
+        if 'server' in pod['name'] and pod['owner'] == USER1]
+
+    user1_client_pods = [
+        pod['name'] for pod in MAIL_TESTS_PODS
+        if 'client' in pod['name'] and pod['owner'] == USER1]
+    user2_client_pods = [
+        pod['name'] for pod in MAIL_TESTS_PODS
+        if 'client' in pod['name'] and pod['owner'] == USER2]
+
+    def is_postfix(pod):
+        return pod.image == POSTFIX_IMAGE
+
+    utils.log_debug(
+        "Check that pods of the same user can communicate via port "
+        "'{smtp_port}' inside a cluster".format(smtp_port=SMTP_PORT))
+    test_table = [
+        {
+            'src_pod': pods[src],
+            'dst_pod': pods[dst],
+            'container_id': container_ids[src],
+            'dst_hosts':
+                # NOTE: Changing pod port doesn't affect pod IPs, so we don't
+                # include pod IPs for these pods.
+                [container_ips[dst], specs[dst]['podIP']]
+                if is_postfix(pods[dst]) else [specs[dst]['podIP']] +
+                [pods[dst].public_ip] if pods[dst].public_ip else [],
+            'check':
+                check_mail_traffic if is_postfix(pods[dst]) else
+                http_check,
+            'assertion':
+                utils.assert_eq if is_postfix(pods[dst]) else
+                utils.assert_in,
+            'assertion_msg':
+                ('mail.example.com' if is_postfix(pods[dst]) else
+                 'Welcome to nginx'),
+        }
+        for src, dst in itertools.product(user1_client_pods, user1_servers)
+    ]
+    for test_case_kwargs in test_table:
+        _check_traffic_to_hosts(**test_case_kwargs)
+
+    utils.log_debug(
+        "Check that pods of different users can't communicate via non-public "
+        "port '{smtp_port}' inside a cluster".format(smtp_port=SMTP_PORT))
+    test_table = [
+        {
+            'src_pod': pods[src],
+            'dst_pod': pods[dst],
+            'container_id': container_ids[src],
+            'dst_hosts':
+                # NOTE: Changing pod port doesn't affect pod IPs, so we don't
+                # include pod IPs for these pods.
+                [container_ips[dst], specs[dst]['podIP']]
+                if is_postfix(pods[dst]) else [specs[dst]['podIP']],
+            'check':
+                check_mail_traffic if is_postfix(pods[dst]) else
+                http_check,
+            'assertion': None,
+            'assertion_msg': (
+                'timed out' if is_postfix(pods[dst]) else
+                '(timed out|refused)'),
+            'traffic_allowed': False
+        }
+        for src, dst in itertools.product(
+            user2_client_pods,
+            [pod for pod in user1_servers if pods[pod].public_ip is None])
+    ]
+    for test_case_kwargs in test_table:
+        _check_traffic_to_hosts(**test_case_kwargs)
+
+    utils.log_debug(
+        "Check that pods of different users can communicate via public port "
+        "'{smtp_port}' inside a cluster".format(smtp_port=SMTP_PORT), LOG)
+    test_table = [
+        {
+            'src_pod': pods[src],
+            'dst_pod': pods[dst],
+            'container_id': container_ids[src],
+            'dst_hosts':
+                # NOTE: Changing pod port doesn't affect pod IPs, so we don't
+                # include pod IPs for these pods.
+                [container_ips[dst], specs[dst]['podIP'], pods[dst].public_ip]
+                if is_postfix(pods[dst]) else
+                [specs[dst]['podIP'], pods[dst].public_ip],
+            'check':
+                check_mail_traffic if is_postfix(pods[dst]) else
+                http_check,
+            'assertion':
+                utils.assert_eq if is_postfix(pods[dst]) else
+                utils.assert_in,
+            'assertion_msg': (
+                'mail.example.com' if is_postfix(pods[dst]) else
+                'Welcome to nginx'),
+        }
+        for src, dst in itertools.product(
+            user2_client_pods,
+            [pod for pod in user1_servers if pods[pod].public_ip])
+    ]
+
+    for test_case_kwargs in test_table:
+        _check_traffic_to_hosts(**test_case_kwargs)

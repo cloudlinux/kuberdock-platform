@@ -69,7 +69,9 @@ class NetworkingPipeline(Pipeline):
         # Ex: pod with kube_type==Standard -> node1, kube_type==Tiny -> node2
         'KD_NODE_TYPES': 'node1=Standard,node2=Tiny',
         # rhost: use the same template as for master/nodes - cent7
-        'KD_NEBULA_RHOST_TEMPLATE_ID': os.environ.get('KD_NEBULA_TEMPLATE_ID'),
+        'KD_NEBULA_RHOST_TEMPLATE_ID':
+            os.environ.get('KD_NEBULA_TEMPLATE_ID') or
+            os.environ.get('KD_NEBULA_TEMPLATE'),
         # NOTE: PAs are used as a workaround for AC-4925.
         # Once AC-4448 is complete, this can be removed and test reworked.
         'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
@@ -88,6 +90,8 @@ class NetworkingPipeline(Pipeline):
         self.cluster.preload_docker_image('wordpress:4')
         self.cluster.preload_docker_image('kuberdock/mysql:5.7')
         self.cluster.preload_docker_image('elasticsearch:1.7.3')
+        self.cluster.preload_docker_image('aku1/nginx')
+        self.cluster.preload_docker_image('tozd/postfix')
         self.cluster.wait_for_service_pods()
         # NOTE: Open some custom ports and check that isolation is still
         # working properly

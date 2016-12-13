@@ -185,6 +185,9 @@ clean_node(){
         # non-lvm LocalStorage
         # Use "raw" yum because yum_wrapper needs kube repos
         yum -d 1 -y install lvm2-python-libs
+        # AC-5434 Not sure, but looks like this is temporary workaround during CentOS 7.2 to 7.3 upgrade period,
+        # without this Yum will 100% fail to install any package:
+        vgs &> /dev/null
 
         PYTHONPATH=/ python2 -m ${NODE_STORAGE_MANAGE_DIR}.manage remove-storage
         remove_unneeded zfs

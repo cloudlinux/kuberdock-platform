@@ -377,13 +377,14 @@ define([
         editableAttributes: [
             // difference in other attributes won't be interpreted as "change"
             'kube_type', 'restartPolicy', 'volumes', 'containers',
-            'kuberdock_resolve',
+            'base_domain', 'domain', 'custom_domain', 'kuberdock_resolve',
         ],
         persistentAttributes: [
             // only those attributes will be copied in a new `edited_config`
             // we don't need stuff like "status" there
-            'kube_type', 'restartPolicy', 'volumes', 'containers',
-            'kuberdock_resolve', 'domain',
+            'kube_type', 'restartPolicy', 'volumes', 'containers', 'public_ip',
+            'public_aws', 'kuberdock_resolve', 'domain', 'base_domain',
+             'public_access_type', 'custom_domain', 'certificate'
         ],
         isChanged: function(compareTo){
             if (!compareTo){

@@ -81,6 +81,15 @@ domain_schema = {
     },
 }
 
+domain_nullable_schema = dict(domain_schema, empty=True, nullable=True)
+
+public_access_type_schema = {
+    'type': 'string',
+    'empty': False,
+    'required': False,
+    'allowed': ['public_ip', 'public_aws', 'domain']
+}
+
 email_local_regex = re.compile(
     r"(^[-!#$%&'*+/=?^_`{}|~0-9A-Z]+"
     r"(\.[-!#$%&'*+/=?^_`{}|~0-9A-Z]+)*\Z"  # dot-atom
@@ -504,8 +513,10 @@ edited_pod_config_schema = {
         'required': False,
         'internal_only': True,
     },
-    'domain': domain_schema,
+    'domain': domain_nullable_schema,
+    'base_domain': domain_schema,
     'custom_domain': domain_schema,
+    'public_access_type': public_access_type_schema,
     'appCommands': app_commands_schema,
 }
 

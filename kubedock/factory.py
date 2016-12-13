@@ -1,14 +1,14 @@
-import os
 import datetime
+import os
 
 import pytz
+from fabric.api import env
 from flask import Flask
 from flask.json import JSONEncoder
-from fabric.api import env
 
-from .core import db, login_manager
-from kubedock.settings import SSH_KEY_FILENAME, SENTRY_ENABLE
 from kubedock.billing.resolver import BillingFactory
+from kubedock.core import db, login_manager
+from kubedock.settings import SSH_KEY_FILENAME, SENTRY_ENABLE
 
 
 class APIJSONEncoder(JSONEncoder):
@@ -84,9 +84,12 @@ def make_celery(app=None):
         flask_app = app
 
         def __call__(self, *args, **kwargs):
-            with app.app_context():
-                env.user = 'root'
-                env.key_filename = SSH_KEY_FILENAME
+            if self.request.called_directly:
                 return TaskBase.__call__(self, *args, **kwargs)
+            else:
+                with app.app_context():
+                    env.user = 'root'
+                    env.key_filename = SSH_KEY_FILENAME
+                    return TaskBase.__call__(self, *args, **kwargs)
     celery.Task = ContextTask
     return celery

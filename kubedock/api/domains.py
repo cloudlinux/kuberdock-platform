@@ -9,7 +9,7 @@ from ..decorators import maintenance_protected
 from ..domains.models import BaseDomain
 from ..exceptions import (AlreadyExistsError, CannotBeDeletedError,
                           InternalAPIError, DomainNotFound, DNSPluginError,
-                          DomainZoneDoesNotExist, CertificatDoesNotMatchDomain)
+                          DomainZoneDoesNotExist)
 from ..kapi import ingress
 from ..login import auth_required
 from ..rbac import check_permission

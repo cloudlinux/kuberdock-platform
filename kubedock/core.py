@@ -18,7 +18,11 @@ from .settings import (REDIS_HOST, REDIS_PORT,
 
 login_manager = LoginManager()
 
-db = SQLAlchemy()
+db = SQLAlchemy(session_options={
+    'autocommit': False,
+    'autoflush': False,
+})
+
 cache = RedisCache(host=REDIS_HOST, port=REDIS_PORT)
 
 

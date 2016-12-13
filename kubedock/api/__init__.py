@@ -108,7 +108,7 @@ def on_app_error(e):
             send_event_to_role('notify:error',
                                {'message': 'Unexpected error: ' + repr(e)},
                                'Admin')
-            _jsonify_api_error(
+            return _jsonify_api_error(
                 APIError('Internal error, please contact administrator', 500))
 
 

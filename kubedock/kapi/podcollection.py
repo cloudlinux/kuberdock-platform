@@ -23,8 +23,9 @@ from images import Image
 from kubedock.exceptions import (
     ContainerCommandExecutionError, NotFound,
     NoFreeIPs, NoSuitableNode, SubsystemtIsNotReadyError, ServicePodDumpError,
-    CustomDomainIsNotReady)
+    CustomDomainIsNotReady, InternalAPIError)
 from kubedock.kapi.lbpoll import get_service_provider
+from kubedock.validation import ValidationError
 from network_policies import (
     allow_public_ports_policy,
     allow_same_user_policy,
@@ -33,14 +34,16 @@ from network_policies import (
 from node import Node as K8SNode
 from node import NodeException
 from pod import Pod
+from .pod_locks import (
+    PodOperations, get_pod_lock, pod_lock_context, catch_locked_pod,
+    task_release_podlock, PodIsLockedError)
 from .. import billing
 from .. import certificate_utils
 from .. import dns_management
-from .. import settings
 from .. import utils
 from ..constants import AWS_UNKNOWN_ADDRESS
 from ..core import ExclusiveLockContextManager, db
-from ..domains.models import PodDomain
+from ..domains.models import PodDomain, BaseDomain
 from ..exceptions import (
     APIError,
     InsufficientData,
@@ -55,11 +58,7 @@ from ..pods.models import (
 from ..system_settings import keys as settings_keys
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
-from ..users.models import User
 from ..utils import POD_STATUSES, NODE_STATUSES, nested_dict_utils
-from .pod_locks import (
-    PodOperations, get_pod_lock, pod_lock_context, catch_locked_pod,
-    task_release_podlock, PodIsLockedError)
 
 # We use only 30 because useradd limits name to 32, and ssh client limits
 # name only to 30 (may be this is configurable) so we use lowest possible
@@ -68,7 +67,8 @@ from .pod_locks import (
 DIRECT_SSH_USERNAME_LEN = 30
 DIRECT_SSH_ERROR = "Error retrieving ssh access, please contact administrator"
 CHANGE_IP_MESSAGE = ('Please, take into account that IP address of pod '
-'{pod_name} was changed from {old_ip} to {new_ip}')
+                     '{pod_name} was changed from {old_ip} to {new_ip}')
+
 
 def _check_license():
     if not licensing.is_valid():
@@ -94,6 +94,53 @@ def _secrets_dict_to_list(d):
             for k, v in d.iteritems()]
 
 
+class PodsTask(celery.Task):
+    """Base class for celery tasks that manipulates with pods.
+
+    On APIError send notifications to pod's owner and on other errors send
+    notifications to admin.
+
+    Attention: `pod_id` must be in kwargs or the first of args.
+    """
+
+    abstract = True
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):
+        with self.flask_app.app_context():
+            pod_id = kwargs.get('pod_id', args[0])
+            owner_id = DBPod.query.get(pod_id).owner_id
+
+            if isinstance(exc, InternalAPIError):
+                return self._on_internal_api_error(owner_id, exc)
+            elif isinstance(exc, APIError):
+                return self._on_api_error(owner_id, exc)
+            else:
+                return self._on_unknown_error(owner_id, exc)
+
+    @staticmethod
+    def _on_internal_api_error(owner_id, exc):
+        msg = 'Internal error, please contact administrator'
+        utils.send_event_to_user(
+            'notify:error', {'message': msg}, owner_id)
+        utils.send_event_to_role(
+            'notify:error', {'message': exc.message}, 'Admin')
+
+    @staticmethod
+    def _on_api_error(owner_id, exc):
+        utils.send_event_to_user(
+            'notify:error', {'message': exc.message}, owner_id)
+
+    @staticmethod
+    def _on_unknown_error(owner_id, exc):
+        msg = 'Internal error, please contact administrator'
+        utils.send_event_to_user(
+            'notify:error', {'message': msg}, owner_id)
+        utils.send_event_to_role(
+            'notify:error',
+            {'message': 'Unexpected error: {}'.format(exc.message)},
+            'Admin')
+
+
 def get_user_namespaces(user):
     return {pod.namespace for pod in user.pods if not pod.is_deleted}
 
@@ -113,14 +160,15 @@ def _get_network_policy_api():
     """Returns KubeQuery object configured to send requests to k8s network
     policy API.
     """
-    return KubeQuery(api_version=settings.KUBE_NP_API_VERSION,
-                     base_url=settings.KUBE_NP_BASE_URL)
+    return KubeQuery(api_version=current_app.config['KUBE_NP_API_VERSION'],
+                     base_url=current_app.config['KUBE_NP_BASE_URL'])
 
 
 class PublicAccessType:
     PUBLIC_IP = 'public_ip'
     PUBLIC_AWS = 'public_aws'
     DOMAIN = 'domain'
+    allowed = (PUBLIC_IP, PUBLIC_AWS, DOMAIN)
 
 
 class PodCollection(object):
@@ -167,7 +215,7 @@ class PodCollection(object):
         # DNS management system is ok (if required)
         # ...
 
-        # check public adresses before create
+        # check public addresses before create
         self._check_public_address_available(params, original_pod=original_pod)
 
         if self.owner is not None:
@@ -221,7 +269,8 @@ class PodCollection(object):
         if not skip_check:
             if self.owner is not None:  # may not have an owner in dry-run
                 self._check_trial(containers, original_pod=original_pod)
-            Image.check_containers(containers, secrets)
+            with db.session.begin_nested():
+                Image.check_containers(containers, secrets)
 
     def _check_status(self, pod_data):
         billing_type = SystemSettings.get_by_name(
@@ -234,18 +283,49 @@ class PodCollection(object):
 
     @staticmethod
     def _preprocess_public_access(pod_data):
-        """Preprocess public access parameters.
+        """Preprocess and check public access parameters."""
+        t_specified = pod_data.get('public_access_type')
+        if t_specified and t_specified not in PublicAccessType.allowed:
+            _raise_unexpected_access_type(t_specified)
 
-        Apply it to the new pods.
-        """
-        if pod_data.get('domain', None):
-            pod_data['public_access_type'] = PublicAccessType.DOMAIN
-            pod_data['base_domain'] = pod_data.pop('domain')
-        else:
-            if settings.AWS:
-                pod_data['public_access_type'] = PublicAccessType.PUBLIC_AWS
+        possible_types = []
+
+        if 'domain' in pod_data or 'base_domain' in pod_data:
+            possible_types.append(PublicAccessType.DOMAIN)
+        if 'public_aws' in pod_data or current_app.config['AWS']:
+            possible_types.append(PublicAccessType.PUBLIC_AWS)
+        if 'public_ip' in pod_data:
+            possible_types.append(PublicAccessType.PUBLIC_IP)
+
+        if len(possible_types) > 1:
+            raise ValidationError('Inconsistent public access data')
+        elif not possible_types:
+            if current_app.config['AWS']:
+                t = PublicAccessType.PUBLIC_AWS
             else:
-                pod_data['public_access_type'] = PublicAccessType.PUBLIC_IP
+                t = PublicAccessType.PUBLIC_IP
+        else:
+            t = possible_types[0]
+
+        if t_specified and t_specified != t:
+            raise ValidationError('Inconsistent public access data')
+
+        pod_data['public_access_type'] = t
+
+        if t == PublicAccessType.DOMAIN:
+            if 'base_domain' not in pod_data:
+                pod_data['base_domain'] = pod_data.pop('domain')
+            pod_data.setdefault('domain', None)
+            validate_domains(pod_data)
+
+        elif t == PublicAccessType.PUBLIC_AWS:
+            pod_data.setdefault('public_aws', None)
+
+        elif t == PublicAccessType.PUBLIC_IP:
+            pod_data.setdefault('public_ip', None)
+
+        else:
+            _raise_unexpected_access_type(t)
 
     def _add_pod(self, data, secrets, skip_check, reuse_pv):
         self._preprocess_volumes(data)
@@ -268,14 +348,6 @@ class PodCollection(object):
             # create PD models in db and change volumes schema in config
             pod.compose_persistent(reuse_pv=reuse_pv)
             db_pod = self._save_pod(pod)
-
-            if self.has_public_ports(data):
-                if getattr(db_pod, 'public_ip', None):
-                    pod.public_ip = db_pod.public_ip
-                if getattr(db_pod, 'public_aws', None):
-                    pod.public_aws = db_pod.public_aws
-                if getattr(db_pod, 'domain', None):
-                    pod.domain = db_pod.domain
             pod.forge_dockers()
 
         namespace = pod.namespace
@@ -382,6 +454,8 @@ class PodCollection(object):
             reject_replica_with_pv(new_pod_data, key='volumes')
 
             self._preprocess_public_access(new_pod_data)
+            self._update_public_access(original_pod.id, original_db_pod_config,
+                                       new_pod_data, check_only=True)
 
             data, secrets = self._preprocess_new_pod(
                 new_pod_data, original_pod=original_pod, skip_check=skip_check)
@@ -409,6 +483,9 @@ class PodCollection(object):
             original_config = original_db_pod.get_dbconfig()
             original_config['edited_config'] = original_pod.edited_config
             original_db_pod.set_dbconfig(original_config, save=False)
+
+            utils.send_pod_status_update(
+                original_db_pod.status, original_db_pod, 'MODIFIED')
 
             return original_pod.as_dict()
 
@@ -510,22 +587,24 @@ class PodCollection(object):
             else:
                 public_ip = config.get('public_ip', None)
             if not public_ip:
-                node = original_pod.node if original_pod and \
-                                            settings.FIXED_IP_POOLS else None
+                node = original_pod.node \
+                    if original_pod and current_app.config['FIXED_IP_POOLS'] \
+                    else None
                 IPPool.get_free_host(as_int=True, node=node)
         elif access_type == PublicAccessType.DOMAIN:
-            domain = (config.get('domain', None) or config.get('base_domain'))
+            domain = config.get('domain', None)
 
-            if not domain:
-                raise NoDomain
-
-            # If certificate is provided it's applied to the custom_domain
-            # if present. Otherwise is used with the domain from KD.
-            # This check is also performed later, on pod start. It is here
-            # for the user's convience only
-            if config.get('certificate'):
-                certificate_utils.check_cert_is_valid_for_domain(
-                    domain, config['certificate']['cert'])
+            if domain:
+                # If no domain provided, skip check. It will be perfomed later,
+                # when domain will be set.
+                #
+                # If certificate is provided it's applied to the custom_domain
+                # if present. Otherwise is used with the domain from KD.
+                # This check is also performed later, on pod start. It is here
+                # for the user's convience only
+                if config.get('certificate'):
+                    certificate_utils.check_cert_is_valid_for_domain(
+                        domain, config['certificate']['cert'])
         elif access_type == PublicAccessType.PUBLIC_AWS:
             pass
         else:
@@ -533,47 +612,53 @@ class PodCollection(object):
 
     @staticmethod
     @utils.atomic()
-    def _prepare_for_public_address(pod, config):
-        """Prepare pod for Public IP assigning"""
+    def _prepare_for_public_address(db_pod, db_config):
+        """Prepare pod for Public IP assigning.
 
-        if not PodCollection.has_public_ports(config):
-            pod.set_dbconfig(config, save=False)
+        :type db_pod: DBPod
+        :type db_config: dict
+        """
+
+        if not PodCollection.has_public_ports(db_config):
+            for f in ('public_ip', 'public_aws', 'domain'):
+                db_config.pop(f, None)
+            db_pod.set_dbconfig(db_config, save=False)
             return
 
-        access_type = config.get('public_access_type',
-                                 PublicAccessType.PUBLIC_IP)
+        access_type = db_config.get('public_access_type',
+                                    PublicAccessType.PUBLIC_IP)
 
         if access_type == PublicAccessType.PUBLIC_IP:
-            if not config.get('public_ip', None):
+            if not db_config.get('public_ip', None):
                 IPPool.get_free_host(as_int=True)
                 # 'true' indicates that this Pod needs Public IP to be assigned
-                config['public_ip'] = pod.public_ip = 'true'
+                db_config['public_ip'] = 'true'
 
         elif access_type == PublicAccessType.PUBLIC_AWS:
-            config.setdefault('public_aws', AWS_UNKNOWN_ADDRESS)
+            db_config.setdefault('public_aws', AWS_UNKNOWN_ADDRESS)
 
         elif access_type == PublicAccessType.DOMAIN:
-            domain_name = (config.get('domain', None) or
-                           config.get('base_domain'))
+            domain_name = (db_config.get('domain', None) or
+                           db_config.get('base_domain'))
             if not domain_name:
                 raise NoDomain
 
             with utils.atomic(PublicAccessAssigningError(
                     details={'message': 'Error while getting Pod Domain'})):
                 pod_domain, pod_domain_created = \
-                    pod_domains.get_or_create_pod_domain(pod, domain_name)
+                    pod_domains.get_or_create_pod_domain(db_pod, domain_name)
                 if pod_domain_created:
                     db.session.add(pod_domain)
-            config['domain'] = pod.domain = str(pod_domain)
+            db_config['domain'] = str(pod_domain)
 
-            if config.get('certificate'):
+            if db_config.get('certificate'):
                 certificate_utils.check_cert_is_valid_for_domain(
-                    pod.domain, config['certificate']['cert'])
+                    db_config['domain'], db_config['certificate']['cert'])
 
         else:
             _raise_unexpected_access_type(access_type)
 
-        pod.set_dbconfig(config, save=False)
+        db_pod.set_dbconfig(db_config, save=False)
 
     @catch_locked_pod
     @utils.atomic(nested=False)
@@ -720,36 +805,46 @@ class PodCollection(object):
         cls._prepare_for_public_address(pod, pod_config)
 
     @utils.atomic()
-    def _save_pod(self, obj, db_pod=None):
+    def _save_pod(self, pod, db_pod=None):
         """
-        Save pod data to db.
+        Save pod data to db, prepare it for public access and update kapi pod.
 
-        :param obj: kapi-Pod
+        :param pod: kapi-Pod
         :param db_pod: update existing db-Pod
+        :type pod: Pod
+        :type db_pod: DBPod
         """
-        template_id = getattr(obj, 'kuberdock_template_id', None)
+        template_id = getattr(pod, 'kuberdock_template_id', None)
         template_version_id = getattr(
-            obj, 'kuberdock_template_version_id', None)
-        template_plan_name = getattr(obj, 'kuberdock_plan_name', None)
-        status = getattr(obj, 'status', POD_STATUSES.stopped)
+            pod, 'kuberdock_template_version_id', None)
+        template_plan_name = getattr(pod, 'kuberdock_plan_name', None)
+        status = getattr(pod, 'status', POD_STATUSES.stopped)
         excluded = (  # duplicates of model's fields
             'kuberdock_template_id', 'kuberdock_plan_name',
             'kuberdock_template_version_id',
             'owner', 'kube_type', 'status', 'id', 'name')
-        data = {k: v for k, v in vars(obj).iteritems() if k not in excluded}
+        data = {k: v for k, v in vars(pod).iteritems() if k not in excluded}
         if db_pod is None:
-            db_pod = DBPod(name=obj.name, config=json.dumps(data), id=obj.id,
-                           status=status, template_id=template_id,
-                           template_version_id=template_version_id,
-                           template_plan_name=template_plan_name,
-                           kube_id=obj.kube_type, owner=self.owner)
+            db_pod = DBPod.create(
+                name=pod.name, config=json.dumps(data), id=pod.id,
+                status=status, template_id=template_id,
+                template_version_id=template_version_id,
+                template_plan_name=template_plan_name, kube_id=pod.kube_type,
+                owner=self.owner)
             db.session.add(db_pod)
         else:
             db_pod.status = status
-            db_pod.kube_id = obj.kube_type
+            db_pod.kube_id = pod.kube_type
             db_pod.owner = self.owner
-
         self._prepare_for_public_address(db_pod, data)
+        # update kapi pod
+        for f in ('public_ip', 'public_aws', 'domain'):
+            try:
+                delattr(pod, f)
+            except AttributeError:
+                pass
+        for k, v in data.items():
+            setattr(pod, k, v)
         return db_pod
 
     def update(self, pod_id, data):
@@ -800,8 +895,7 @@ class PodCollection(object):
     def delete(self, pod_id, force=False):
         pod = self._get_by_id(pod_id)
 
-        if pod.owner.username == settings.KUBERDOCK_INTERNAL_USER \
-                and not force:
+        if pod.owner.is_internal() and not force:
             podutils.raise_('Service pod cannot be removed', 400)
         with pod_lock_context(pod_id, operation=PodOperations.DELETE):
             pod.set_status(POD_STATUSES.deleting, send_update=True, force=True)
@@ -926,7 +1020,7 @@ class PodCollection(object):
             owner_repr = str(self.owner.id)
             config = {
                 "kind": "Namespace",
-                "apiVersion": settings.KUBE_API_VERSION,
+                "apiVersion": current_app.config['KUBE_API_VERSION'],
                 "metadata": {
                     "annotations": {
                         "net.alpha.kubernetes.io/network-isolation": "yes"
@@ -1054,7 +1148,7 @@ class PodCollection(object):
         """Check if public address not set and try to get it from
         services. Update public address if found one.
         """
-        if settings.AWS:
+        if current_app.config['AWS']:
             if getattr(pod, 'public_aws', AWS_UNKNOWN_ADDRESS) \
                     == AWS_UNKNOWN_ADDRESS:
                 dns = get_service_provider().get_dns_by_pods(pod.id)
@@ -1157,16 +1251,16 @@ class PodCollection(object):
         reject_replica_with_pv(new_config)
         if not internal_edit:
             new_config['forbidSwitchingAppPackage'] = 'the pod was edited'
-        fields_to_copy = ['podIP', 'service', 'postDescription', 'public_ip',
-                          'public_aws', 'domain', 'base_domain',
-                          'appVariables', 'service_annotations',
-                          'custom_domain', 'public_access_type', 'certificate']
+        fields_to_copy = ['podIP', 'service', 'postDescription',
+                          'appVariables', 'service_annotations', ]
         for k in fields_to_copy:
             v = getattr(old_pod, k, None)
             if v is not None:
                 new_config[k] = v
         updated_dt = datetime.utcnow().replace(tzinfo=pytz.UTC).isoformat()
         new_config['appLastUpdate'] = updated_dt
+
+        self._update_public_access(pod.id, old_config, new_config)
 
         # re-check images, PDs, etc.
         new_config, _ = self._preprocess_new_pod(
@@ -1181,72 +1275,99 @@ class PodCollection(object):
         pod.kube_type = db_pod.kube_id
         pod.status = old_pod.status
         pod.forge_dockers()
-        new_config = db_pod.get_dbconfig()
-        self._update_public_access(pod, old_config, new_config)
         return pod, db_pod.get_dbconfig()
 
-    def _update_public_access(self, pod, old_config, new_config):
+    def _update_public_access(self, pod_id, old_config, new_config,
+                              check_only=False):
         if old_config == new_config:
             return
 
         access_type = old_config.get('public_access_type',
                                      PublicAccessType.PUBLIC_IP)
+        if (access_type != new_config.setdefault('public_access_type',
+                                                 access_type)):
+            raise APIError('Changing of public access type does not support')
 
         if access_type == PublicAccessType.PUBLIC_IP:
-            self._update_public_ip(pod, old_config, new_config)
+            self._update_public_ip(pod_id, old_config, new_config, check_only)
 
         elif access_type == PublicAccessType.PUBLIC_AWS:
-            self._update_public_aws(pod, old_config, new_config)
+            self._update_public_aws(pod_id, old_config, new_config, check_only)
 
         elif access_type == PublicAccessType.DOMAIN:
-            self._update_domain(pod, old_config, new_config)
+            self._update_domain(pod_id, old_config, new_config, check_only)
 
         else:
             _raise_unexpected_access_type(access_type)
 
-    def _update_public_ip(self, pod, old_config, new_config):
+    def _update_public_ip(self, pod_id, old_config, new_config, check_only):
+        if check_only:
+            return
+
         had_public_ports = self.has_public_ports(old_config)
         has_public_ports = self.has_public_ports(new_config)
 
         if had_public_ports and not has_public_ports:
-            self._remove_public_ip(pod.id)
-            pod.public_ip = None
-        elif has_public_ports and not had_public_ports:
-            pod.public_ip = 'true'
+            self._remove_public_ip(pod_id)
+            new_config['public_ip'] = None
 
-    def _update_public_aws(self, pod, old_config, new_config):
+    def _update_public_aws(self, pod_id, old_config, new_config, check_only):
+        if check_only:
+            return
+
         has_public_ports = self.has_public_ports(new_config)
 
         if not has_public_ports:
-            pod.public_aws = None
+            new_config['public_aws'] = None
 
-    def _update_domain(self, pod, old_config, new_config):
+    def _update_domain(self, pod_id, old_config, new_config, check_only):
         old_ports = {port.get('hostPort') or port['containerPort']: port
                      for port in self.get_public_ports(old_config)}
         new_ports = {port.get('hostPort') or port['containerPort']: port
                      for port in self.get_public_ports(new_config)}
+        old_pod_domain = old_config.get('domain')
+        ing_client = ingress_resource.IngressResourceClient()
 
-        if old_ports == new_ports:
-            # nothing changes
-            pass
+        need_remove_ing = False
+        need_remove_domain = False
 
-        elif not new_ports:
-            # no opened ports
-            client = ingress_resource.IngressResourceClient()
-            client.remove_by_name(pod.namespace)
-            self._remove_pod_domain(pod.id, pod.domain)
-            pod.domain = None
+        if new_config.get('base_domain') != old_config.get('base_domain'):
+            # base domain changed, need to reassign domain and delete old one
+            need_remove_ing = True
+            need_remove_domain = True
+            new_config['domain'] = None
 
-        else:
-            # ports changed, remove old ingress and create again
-            client = ingress_resource.IngressResourceClient()
-            client.remove_by_name(pod.namespace)
-            # new ones will be created at prepare_and_run_pod(...)
+        if not new_ports:
+            need_remove_domain = True
+            need_remove_ing = True
+            new_config['domain'] = None
+
+        if old_pod_domain != new_config.get('domain'):
+            need_remove_domain = True
+            need_remove_ing = True
+
+        if old_ports != new_ports:
+            need_remove_ing = True
+
+        if old_config.get('certificate') != new_config.get('certificate'):
+            need_remove_ing = True
+
+        if old_config.get('custom_domain') != new_config.get('custom_domain'):
+            need_remove_ing = True
+        ###
+
+        if check_only:
+            return
+
+        if need_remove_ing:
+            ing_client.remove_by_name(old_config.get('namespace'))
+        if need_remove_domain:
+            self._remove_pod_domain(pod_id, old_pod_domain)
 
     def _sync_start_pod(self, pod, data=None, lock=False):
         if data is None:
             data = {}
-        nested_dict_utils.set(data, 'commandOptions.asyncPodCreate', False)
+        nested_dict_utils.set(data, 'commandOptions.async', False)
         return self._start_pod(pod, data=data, lock=lock)
 
     @catch_locked_pod
@@ -1254,7 +1375,6 @@ class PodCollection(object):
         if data is None:
             data = {}
         command_options = data.get('commandOptions', {})
-        async_pod_create = command_options.get('asyncPodCreate', True)
 
         with pod_lock_context(pod.id,
                               operation=PodOperations.PREPARE_FOR_START,
@@ -1292,15 +1412,13 @@ class PodCollection(object):
                 # public_ip could not have time to save before read
                 db.session.commit()
 
-        if async_pod_create:
-            prepare_and_run_pod_task.delay(
-                pod, db_pod.id, db_config, lock=lock
-            )
+        if command_options.get('async', True):
+            prepare_and_run_pod.delay(db_pod.id, lock=lock)
+            return pod.as_dict()
         else:
             with pod_lock_context(pod.id, operation=PodOperations.START,
                                   acquire_lock=lock):
-                prepare_and_run_pod(pod, db_pod, db_config)
-        return pod.as_dict()
+                return prepare_and_run_pod(db_pod.id)
 
     def _handle_shared_ip(self, pod):
         ok, message = dns_management.is_domain_system_ready()
@@ -1341,7 +1459,8 @@ class PodCollection(object):
             with ExclusiveLockContextManager(
                     'PodCollection._assing_public_ip',
                     blocking=True,
-                    ttl=settings.PUBLIC_ACCESS_ASSIGNING_TIMEOUT) as lock:
+                    ttl=current_app.config[
+                        'PUBLIC_ACCESS_ASSIGNING_TIMEOUT']) as lock:
                 if not lock:
                     raise PublicAccessAssigningError(details={
                         'message': 'Timeout getting Public IP'
@@ -1403,8 +1522,8 @@ class PodCollection(object):
     @catch_locked_pod
     def _stop_pod(pod, data=None, raise_=True, block=False, lock=False):
         podlock = None
+        release_lock = True
         try:
-            release_lock = True
             podlock = get_pod_lock(pod.id, operation=PodOperations.STOP,
                                    acquire_lock=lock)
             # Call PD release in all cases. If the pod was already stopped and
@@ -1419,7 +1538,8 @@ class PodCollection(object):
                 if hasattr(pod, 'sid'):
                     pod.set_status(POD_STATUSES.stopping, send_update=True)
                     if block:
-                        scale_replicationcontroller(pod.id)
+                        scale_replicationcontroller(pod.id, pod.namespace,
+                                                    pod.sid)
                         pod = wait_pod_status(
                             pod.id, POD_STATUSES.stopped,
                             error_message=(
@@ -1432,8 +1552,9 @@ class PodCollection(object):
                             serialized_lock = podlock.serialize()
                         else:
                             serialized_lock = None
-                        scale_replicationcontroller_task.delay(
-                            pod.id, serialized_lock=serialized_lock)
+                        scale_replicationcontroller.delay(
+                            pod.id, pod.namespace, pod.sid,
+                            serialized_lock=serialized_lock)
 
                     # Remove ingresses if shared IP was used
                     if hasattr(pod, 'domain'):
@@ -1505,13 +1626,10 @@ class PodCollection(object):
     @catch_locked_pod
     def _redeploy(self, pod, data, lock=False):
         podlock = None
-        owner_id = None
-        if self.owner:
-            owner_id = self.owner.id
+        # In case of any exception, release lock while we did not call
+        # celery task finish_redeploy
+        release_lock = True
         try:
-            # In case of any exception, release lock while we did not call
-            # celery task finish_redeploy
-            release_lock = True
             podlock = get_pod_lock(pod.id, operation=PodOperations.REDEPLOY,
                                    acquire_lock=lock)
             command_options = data.get('commandOptions', {})
@@ -1524,16 +1642,15 @@ class PodCollection(object):
             if do_async:
                 # pass acquired lock to nested task, it must release the lock
                 release_lock = False
-                finish_redeploy_task.delay(
+                finish_redeploy.delay(
                     pod.id, data, serialized_lock=serialized_lock)
+                rv = pod.as_dict()
             else:
-                finish_redeploy(pod.id, data)
+                rv = finish_redeploy(pod.id, data)
         finally:
             if podlock and release_lock:
                 podlock.release()
-        # return updated pod
-        return PodCollection(owner=User.get(owner_id)).get(pod.id,
-                                                           as_json=False)
+        return rv
 
     def exec_in_container(self, pod_id, container_name, command):
         k8s_pod = self._get_by_id(pod_id)
@@ -1794,7 +1911,9 @@ class PodCollection(object):
 
 
 def _raise_unexpected_access_type(access_type):
-    raise Exception('Unexpected public access type: %s' % access_type)
+    raise ValidationError(details={
+        'public_access_type': 'Unknown type: %s' % access_type
+    })
 
 
 def _check_if_domain_system_ready():
@@ -1833,51 +1952,43 @@ def wait_pod_status(pod_id, wait_status, interval=1, max_retries=120,
 
 
 @celery.task(bind=True, default_retry_delay=1, max_retries=10)
-def wait_for_rescaling_task(self, pod, size):
-    rc = get_replicationcontroller(pod.namespace, pod.sid)
+def wait_for_rescaling(self, namespace, sid, size):
+    rc = get_replicationcontroller(namespace, sid)
     if rc['status']['replicas'] != size:
         try:
             self.retry()
         except MaxRetriesExceededError:
             current_app.logger.error("Can't scale rc: max retries exceeded")
+            raise APIError('Cannot scale replication controller')
 
 
-def scale_replicationcontroller(pod_id, size=0):
+@celery.task(bind=True, base=PodsTask, ignore_results=True)
+@task_release_podlock
+def scale_replicationcontroller(self, pod_id, namespace, sid, size=0,
+                                serialized_lock=None):
     """Set new replicas size and wait until replication controller increase or
-    decrease real number of pods or max retries exceed
+    decrease real number of pods or max retries exceed.
+
+    Notes:
+        `pod_id` is needed for PodsTask.
+        `bind=True` is needed for `@task_release_podlock`.
     """
-    pc = PodCollection()
-    pod = pc._get_by_id(pod_id)
     data = json.dumps({'spec': {'replicas': size}})
-    rc = pc.k8squery.patch(
-        ['replicationcontrollers', pod.sid], data, ns=pod.namespace)
+    rc = KubeQuery().patch(['replicationcontrollers', sid], data, ns=namespace)
     podutils.raise_if_failure(rc, "Couldn't set replicas to {}".format(size))
 
     if rc['status']['replicas'] != size:
-        wait_for_rescaling_task.apply_async((pod, size))
+        wait_for_rescaling.delay(namespace, sid, size).get()
 
 
-@celery.task(bind=True, ignore_results=True)
+@celery.task(bind=True, base=PodsTask, ignore_results=True)
 @task_release_podlock
-def scale_replicationcontroller_task(self, pod_id, size=0,
-                                     serialized_lock=None):
-    scale_replicationcontroller(pod_id, size=size)
-
-
-def finish_redeploy(pod_id, data, start=True):
+def finish_redeploy(self, pod_id, data, start=True):
     db_pod = DBPod.query.get(pod_id)
     pod_collection = PodCollection(db_pod.owner)
     pod = pod_collection._get_by_id(pod_id)
-    try:
-        with utils.atomic(nested=False):
-            pod_collection._stop_pod(pod, block=True, raise_=False, lock=False)
-    except APIError as e:
-        utils.send_event_to_user('notify:error', {'message': e.message},
-                                 db_pod.owner_id)
-        utils.send_event_to_role('notify:error', {'message': e.message},
-                                 'Admin')
-        return
-
+    with utils.atomic(nested=False):
+        pod_collection._stop_pod(pod, block=True, raise_=False, lock=False)
     command_options = data.get('commandOptions') or {}
     if command_options.get('wipeOut'):
         for volume in pod.volumes_public:
@@ -1900,7 +2011,7 @@ def finish_redeploy(pod_id, data, start=True):
             pstorage.delete_drive_by_id(pd.id)
 
     if start:  # start updated pod
-        PodCollection(db_pod.owner).update_with_options(
+        return PodCollection(db_pod.owner).update_with_options(
             pod_id,
             {
                 # already in celery, use the same task, sync
@@ -1912,12 +2023,8 @@ def finish_redeploy(pod_id, data, start=True):
             # long as the task called without locking.
             lock=False
         )
-
-
-@celery.task(bind=True, ignore_results=True)
-@task_release_podlock
-def finish_redeploy_task(self, pod_id, data, start=True, serialized_lock=None):
-    finish_redeploy(pod_id, data, start)
+    else:
+        return pod.as_dict()
 
 
 def restore_containers_host_ports_config(pod_containers, db_containers):
@@ -2014,89 +2121,91 @@ def fix_relative_mount_paths(containers):
                 path.join('/', mount['mountPath']))
 
 
-@celery.task(ignore_results=True)
-def prepare_and_run_pod_task(pod, pod_id, db_config, lock=False):
-    with pod_lock_context(pod.id, operation=PodOperations.START,
+@celery.task(base=PodsTask, ignore_results=True)
+def prepare_and_run_pod(pod_id, lock=False):
+    with pod_lock_context(pod_id, operation=PodOperations.START,
                           acquire_lock=lock):
+
         db_pod = DBPod.query.get(pod_id)
-        return prepare_and_run_pod(pod, db_pod, db_config)
+        db_config = db_pod.get_dbconfig()
+        pod = PodCollection(db_pod.owner)._get_by_id(pod_id)
 
+        try:
+            _process_persistent_volumes(pod, db_config.get('volumes', []))
 
-def prepare_and_run_pod(pod, db_pod, db_config):
-    """:type db_pod: DBPod"""
-    try:
-        _process_persistent_volumes(pod, db_config.get('volumes', []))
+            service_annotations = db_config.get('service_annotations')
+            local_svc, _ = run_service(pod, service_annotations)
+            if local_svc:
+                db_config['service'] = pod.service \
+                    = local_svc['metadata']['name']
+                db_config['podIP'] = LocalService().get_clusterIP(local_svc)
+                try:
+                    db_pod.set_dbconfig(db_config, save=True)
+                except:
+                    msg = 'Error saving Pod config to Database'
+                    current_app.logger.exception(msg)
+                    raise PodStartFailure(msg)
 
-        service_annotations = db_config.get('service_annotations')
-        local_svc, _ = run_service(pod, service_annotations)
-        if local_svc:
-            db_config['service'] = pod.service = local_svc['metadata']['name']
-            db_config['podIP'] = LocalService().get_clusterIP(local_svc)
-            try:
-                db_pod.set_dbconfig(db_config, save=True)
-            except:
-                current_app.logger.exception(
-                    'Error saving Pod config to Database')
-                raise PodStartFailure('Error saving Pod config to Database')
+            config = pod.prepare()
+            k8squery = KubeQuery()
+            if not _try_to_update_existing_rc(pod, config):
+                rc = k8squery.post(
+                    ['replicationcontrollers'], json.dumps(config),
+                    ns=pod.namespace, rest=True)
+                err_msg = "Could not start '{0}' pod".format(
+                    pod.name.encode('ascii', 'replace'))
 
-        config = pod.prepare()
-        k8squery = KubeQuery()
-        if not _try_to_update_existing_rc(pod, config):
-            rc = k8squery.post(['replicationcontrollers'],
-                               json.dumps(config), ns=pod.namespace, rest=True)
-            err_msg = "Could not start '{0}' pod".format(
-                pod.name.encode('ascii', 'replace'))
+                podutils.raise_if_failure(
+                    rc,
+                    message=err_msg,
+                    api_error=PodStartFailure(message=err_msg)
+                )
 
-            podutils.raise_if_failure(
-                rc,
-                message=err_msg,
-                api_error=PodStartFailure(message=err_msg)
-            )
+            for container in pod.containers:
+                # TODO: create CONTAINER_STATUSES
+                container['state'] = POD_STATUSES.pending
 
-        for container in pod.containers:
-            # TODO: create CONTAINER_STATUSES
-            container['state'] = POD_STATUSES.pending
-
-        if hasattr(pod, 'domain') and PodCollection.has_public_ports(
-                db_config):
-            _ensure_old_dns_record_removed(pod.domain)
-            custom_domain = getattr(pod, 'custom_domain', None)
-            ok, message = ingress_resource.create_ingress(
-                pod.containers, pod.namespace, pod.service, pod.domain,
-                custom_domain, pod.certificate)
-            if not ok:
-                msg = u'Failed to run pod with domain "{}": {}'
-                utils.send_event_to_role(
-                    'notify:error',
-                    {'message': msg.format(pod.domain, message)}, 'Admin')
-                # "pod stop" will be called below
-                raise APIError(msg)
-    except Exception as err:
-        current_app.logger.exception('Failed to run pod: %s', pod)
-        # We have to stop pod here to release all the things that was allocated
-        # during partial start
-        pods = PodCollection()
-        pods.update_with_options(pod.id, {'command': 'stop'}, lock=False)
-        # If we forget to do commit here all Pod's status changes will be lost
-        # with rollback on raise as well as other changes related to
-        # "teardown" part like releasing of PDs
+            if getattr(pod, 'domain', None):
+                # if no open ports domain set to None
+                # in `prepare_for_public_access`
+                _ensure_old_dns_record_removed(pod.domain)
+                custom_domain = getattr(pod, 'custom_domain', None)
+                ok, message = ingress_resource.create_ingress(
+                    pod.containers, pod.namespace, pod.service, pod.domain,
+                    custom_domain, pod.certificate)
+                if not ok:
+                    msg = u'Failed to run pod with domain "{}": {}'
+                    utils.send_event_to_role(
+                        'notify:error',
+                        {'message': msg.format(pod.domain, message)}, 'Admin')
+                    # "pod stop" will be called below
+                    raise APIError(msg)
+        except Exception as err:
+            current_app.logger.exception('Failed to run pod: %s', pod)
+            # We have to stop pod here to release all the things that was
+            # allocated during partial start
+            pods = PodCollection()
+            pods._stop_pod(pod, raise_=False, block=False, lock=False)
+            # If we forget to do commit here all Pod's status changes will
+            # be lost with rollback on raise as well as other changes related
+            # to "teardown" part like releasing of PDs
+            db.session.commit()
+            if isinstance(err, APIError):
+                # We need to update db_pod in case if the pod status was
+                # changed since the last retrieval from DB
+                db.session.refresh(db_pod)
+                if isinstance(err, PodStartFailure):
+                    err_msg = u'{}. Please, contact administrator.'.format(err)
+                else:
+                    err_msg = err.message
+                if not db_pod.is_deleted:
+                    utils.send_event_to_user(
+                        'notify:error', {'message': err_msg},
+                        db_pod.owner_id)
+            raise
+        pod.set_status(POD_STATUSES.pending, send_update=True)
         db.session.commit()
-        if isinstance(err, APIError):
-            # We need to update db_pod in case if the pod status was changed
-            # since the last retrieval from DB
-            db.session.refresh(db_pod)
-            if isinstance(err, PodStartFailure):
-                err_msg = u'{}. Please, contact administrator.'.format(err)
-            else:
-                err_msg = err.message
-            if not db_pod.is_deleted:
-                utils.send_event_to_user(
-                    'notify:error', {'message': err_msg},
-                    db_pod.owner_id)
-        raise
-    pod.set_status(POD_STATUSES.pending, send_update=True)
-    db.session.commit()
-    return pod.as_dict()
+        return pod.as_dict()
 
 
 def _ensure_old_dns_record_removed(pod_domain):
@@ -2242,7 +2351,7 @@ def ingress_public_ports(pod_id, namespace, ports, owner, publicIP=None,
     services = svc.get_by_pods(pod_id)
     if not services and ports:
         service = svc.get_template(pod_id, ports, annotations)
-        if not settings.AWS:
+        if not current_app.config['AWS']:
             service = svc.set_publicIP(service, publicIP)
         rv = svc.post(service, namespace)
         podutils.raise_if_failure(rv, "Could not ingress public ports")
@@ -2462,3 +2571,41 @@ def reject_replica_with_pv(config, key='volumes_public'):
                     if 'persistentDisk' in volume])
     if have_pvs and config.get('replicas', 1) > 1:
         raise APIError("We don't support replications for pods with PV yet")
+
+
+def validate_domains(pod_config):
+    if pod_config.get('public_access_type') != PublicAccessType.DOMAIN:
+        return
+
+    pod_domain = pod_config.get('domain')  # type: str
+    base_domain = pod_config.get('base_domain')  # type: str
+
+    if not base_domain:
+        raise ValidationError(
+            details={'base_domain': 'Base domain cannot be empty when '
+                                    'public access type is "domain"'})
+
+    db_base_domain = BaseDomain.filter_by(name=base_domain).first()
+    if not db_base_domain:
+        raise ValidationError(
+            details={'base_domain': 'Base domain "{}" not found'
+                                    .format(base_domain)})
+
+    if pod_domain:
+        errors = []
+        try:
+            sub_domain_part, base_domain_part = pod_domain.split('.', 1)
+        except ValueError:
+            errors.append({'domain': 'Domain "{}" is not subdomain of "{}"'
+                                     .format(pod_domain, base_domain)})
+        else:
+            if base_domain_part != base_domain:
+                errors.append({'domain': 'Domain "{}" is not subdomain of "{}"'
+                                         .format(pod_domain, base_domain)})
+            if PodDomain.filter_by(
+                    name=sub_domain_part, base_domain=db_base_domain).first():
+                errors.append({'domain': 'Pod domain "{}" already exists'
+                                         .format(pod_domain)})
+
+        if errors:
+            raise ValidationError(details=errors)

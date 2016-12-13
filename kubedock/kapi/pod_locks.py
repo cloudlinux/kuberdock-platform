@@ -11,6 +11,8 @@ import time
 from contextlib import contextmanager
 from functools import wraps
 
+import celery
+
 from ..exceptions import PodIsLockedByAnotherOperation
 from ..core import ExclusiveLock
 
@@ -163,6 +165,8 @@ def task_release_podlock(func):
     """
     @wraps(func)
     def wrapped(self, *args, **kwargs):
+        assert isinstance(self, celery.Task), \
+            "Decorated celery task must be declared with bind=True"
         serialized_lock = kwargs.pop('serialized_lock', None)
         podlock = _podlock_task_reinit(serialized_lock, self)
         try:

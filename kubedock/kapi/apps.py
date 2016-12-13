@@ -519,7 +519,7 @@ class PredefinedApp(object):
     def _update_IPs(pod, root, pod_config, dry_run=False):
         """
         Toggles pod publicIP
-        :param pod: obj -> pod to be processed
+        :param pod: Pod -> pod to be processed
         :param root: dict -> modified pod config spec
         :param pod_config: dict -> current pod config spec
         """

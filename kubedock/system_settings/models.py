@@ -22,7 +22,9 @@ class SystemSettings(db.Model):
     def get_all(cls):
         result = []
         for row in cls.query.all():
-            data = {k: v for k, v in vars(row).items() if not k.startswith('_')}
+            data = {k: v
+                    for k, v in vars(row).items()
+                    if not k.startswith('_')}
             if data['options']:
                 data['options'] = json.loads(data['options'])
             result.append(data)

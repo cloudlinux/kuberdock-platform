@@ -35,6 +35,9 @@ class FlaskTestCase(FlaskBaseTestCase):
     PRESERVE_CONTEXT_ON_EXCEPTION = False
     LOGIN_DISABLED = False
 
+    def create_app(self):
+        return create_app(self)
+
 
 @attr('db')
 class DBTestCase(FlaskTestCase):
@@ -49,9 +52,6 @@ class DBTestCase(FlaskTestCase):
                                '{3}'.format(DB_USER, DB_PASSWORD,
                                             DB_HOST, DB_NAME))
     fixtures = fixtures
-
-    def create_app(self):
-        return create_app(self)
 
     def run(self, *args, **kwargs):
         try:

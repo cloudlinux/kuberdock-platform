@@ -206,8 +206,9 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
                 node.upgrade_status = UPDATE_STATUSES.failed
             db.session.add(node)
             db.session.commit()
-            db_upd.print_log('Failed to make node {0} unschedulable. Skip node.'
-                             .format(node.hostname))
+            db_upd.print_log(
+                'Failed to make node {0} unschedulable. Skip node.'
+                .format(node.hostname))
             continue
 
         env.host_string = node.hostname
@@ -262,9 +263,7 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
         # TODO return boolean whether this upgrade is compatible with
         # not upgraded nodes. For now - always is.
         upgrade_func(db_upd, with_testing)
-        db.session.add(db_upd)
     except Exception as e:
-        db.session.add(db_upd)
         db.session.rollback()
         db_upd.status = UPDATE_STATUSES.failed
         db_upd.capture_traceback(

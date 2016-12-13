@@ -54,7 +54,7 @@ class BaseDomain(BaseModelMixin, db.Model):
         }
 
 
-class PodDomain(db.Model):
+class PodDomain(BaseModelMixin, db.Model):
     """Subdomains for BaseDomain which used for pods.
     PodDomain.name + '.' + BaseDomain.name = full domain name of a pod.
     """

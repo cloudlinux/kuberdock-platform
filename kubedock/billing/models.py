@@ -1,8 +1,9 @@
 from collections import namedtuple
+
 from ..core import db
+from ..models_mixin import BaseModelMixin
 from ..users.models import User
 from ..utils import send_event_to_user, send_event_to_role
-from ..models_mixin import BaseModelMixin
 
 # Package and Kube with id=0 are default
 DEFAULT_KUBE_TYPE = 1
@@ -19,8 +20,10 @@ Limits = namedtuple('Limits', ['cpu', 'memory', 'disk_space'])
 
 class PackageKube(BaseModelMixin, db.Model):
     __tablename__ = 'package_kube'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
-    package_id = db.Column(db.Integer, db.ForeignKey('packages.id'), nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True,
+                   nullable=False)
+    package_id = db.Column(db.Integer, db.ForeignKey('packages.id'),
+                           nullable=False)
     kube_id = db.Column(db.Integer, db.ForeignKey('kubes.id'), nullable=False)
     kube_price = db.Column(db.Float, default=0.0, nullable=False)
 
@@ -34,7 +37,8 @@ class PackageKube(BaseModelMixin, db.Model):
 
 class Package(BaseModelMixin, db.Model):
     __tablename__ = 'packages'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True,
+                   nullable=False)
     name = db.Column(db.String(64), unique=True, nullable=False)
     first_deposit = db.Column(db.Float, default=0.0, nullable=False)
     currency = db.Column(db.String(16), default='USD', nullable=False)
@@ -47,8 +51,11 @@ class Package(BaseModelMixin, db.Model):
     is_default = db.Column(db.Boolean, default=None)
     count_type = db.Column(db.String, nullable=False, default='fixed')
 
-    __table_args__ = (db.Index('packages_is_default_key', 'is_default', unique=True,
-                               postgresql_where=is_default.is_(True)),)
+    __table_args__ = (
+        db.Index(
+            'packages_is_default_key', 'is_default', unique=True,
+            postgresql_where=is_default.is_(True)),
+    )
 
     users = db.relationship('User', backref='package')
 
@@ -71,7 +78,8 @@ class Package(BaseModelMixin, db.Model):
 
     @classmethod
     def remove_default_flags(cls):
-        cls.query.update({Package.is_default: None}, synchronize_session='fetch')
+        cls.query.update({Package.is_default: None},
+                         synchronize_session='fetch')
 
     @classmethod
     def get_default(cls):
@@ -80,7 +88,8 @@ class Package(BaseModelMixin, db.Model):
 
 class Kube(BaseModelMixin, db.Model):
     __tablename__ = 'kubes'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True,
+                   nullable=False)
     name = db.Column(db.String(64), unique=True, nullable=False)
     cpu = db.Column(db.Float, default=0.0, nullable=False)
     cpu_units = db.Column(db.String(32), default='Cores', nullable=False)
@@ -116,7 +125,8 @@ class Kube(BaseModelMixin, db.Model):
         return cls.query.filter(cls.id == kubeid).first()
 
     def to_limits(self, kubes=1):
-        return Limits(kubes * self.cpu, kubes * self.memory, kubes * self.disk_space)
+        return Limits(kubes * self.cpu, kubes * self.memory,
+                      kubes * self.disk_space)
 
     @classmethod
     def get_by_name(cls, name, *additional_filters):
@@ -163,15 +173,17 @@ class Kube(BaseModelMixin, db.Model):
 
     def send_event(self, name):
         event_name, data = 'kube:{0}'.format(name), self.to_dict()
+        packages_ids = [p.package_id for p in self.packages]
         for (user_id,) in db.session.query(User.id).filter(
-                User.package_id.in_([p.package_id for p in self.packages])).all():
+                User.package_id.in_(packages_ids)).all():
             send_event_to_user(event_name, data, user_id)
         send_event_to_role(event_name, data, 1)
 
 
 class ExtraTax(BaseModelMixin, db.Model):
     __tablename__ = 'extra_taxes'
-    id = db.Column(db.Integer, primary_key=True, autoincrement=True, nullable=False)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True,
+                   nullable=False)
     key = db.Column(db.String(64), unique=True)
     name = db.Column(db.String(64), unique=True)
     price = db.Column(db.Float, default=0.0, nullable=False)

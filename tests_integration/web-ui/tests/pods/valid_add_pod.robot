@@ -8,7 +8,7 @@ Test Teardown     Logout
 
 *** Test Cases ***
 Create pod with nginx container, start and remove pod
-    Select billing status "No billing"
+    Select billing type "No billing"
     Go to the Users page
     Login as "test_user"
     Main View Should Be Open

@@ -1,6 +1,8 @@
 import os
 import shutil
 from robot.libraries.BuiltIn import BuiltIn
+import re
+price_pattern = re.compile(r'[\d.,]+')
 
 
 class Utils(object):
@@ -84,3 +86,18 @@ class Utils(object):
                 BuiltIn().run_keyword('Click', delete_button)
                 BuiltIn().run_keyword('Click "Delete" In Modal Dialog')
                 break
+
+    def get_link_from_clipboard(self):
+        try:
+            # Python2
+            import Tkinter as tk
+        except ImportError:
+            # Python3
+            import tkinter as tk
+        return unicode(tk.Tk().clipboard_get())
+
+    @staticmethod
+    def correct_actual_price(price_string):
+        price = float(price_pattern.search(price_string).group().replace(',',
+                                                                         '.'))
+        return price

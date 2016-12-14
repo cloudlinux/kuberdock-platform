@@ -8,6 +8,7 @@ def test_web_ui(cluster):
     env = {
         'ROBOT_ARGS': (" -v SERVER:{0}"
                        " -v ADMIN_PASSWORD:admin"
+                       " --exclude billing"
                        # " -v BROWSER:firefox"
                        " /tests").format(master_ip)
     }

@@ -8,7 +8,7 @@ Library           Utils
 
 
 *** Variables ***
-${SERVER}                   192.168.33.114
+${SERVER}                   192.168.33.130
 ${BROWSER}                  Chrome
 ${ADMIN PASSWORD}           admin
 ${TIMEOUT}                  10 s
@@ -28,7 +28,7 @@ Click
     [Documentation]
     ...  Wait until element is visible and animations are finished then click
     Sleep    ${delay}
-    Wait Until Keyword Succeeds    ${timeout}    0.1s    Click Element    ${locator}
+    Wait Until Keyword Succeeds    ${timeout}    0.1 s    Click Element    ${locator}
 
 Login into the Kuberdock as "${username}" with password "${password}"
     Input Text    css=#login-form-username-field    ${username}
@@ -49,7 +49,7 @@ Logout
     Login Page Should Be Open
 
 Breadcrumb Should Contain "${text}"
-    Wait Until Page Contains Element    jquery=ul.breadcrumb:contains("${text}")
+    Wait Until Element Is Visible    jquery=ul.breadcrumb:contains("${text}")  20 s
 
 Breadcrumb Should Contain Button "${text}"
     Page Should Contain Element    jquery=.breadcrumbs .control-group:contains("${text}")
@@ -59,24 +59,25 @@ Breadcrumb Should Not Contain Button "${text}"
 
 "${name}" View Should Be Open
     Breadcrumb Should Contain "${name}"
-    Wait Until Keyword Succeeds    ${timeout}    0.1
+    Wait Until Keyword Succeeds    ${timeout}    0.1 s
     ...  Element Should Be Visible    jquery=.profile-menu > a    menu in header was not fully rendered
 
 Main View Should Be Open
     ${nodes}=    Run Keyword And Return Status    "Nodes" View Should Be Open
     Run Keyword Unless    ${nodes}    "Pods" View Should Be Open
 
-Page Should Not Contain Error Messages
+Page Should Not Contain Messages
     Page Should Not Contain Element    jquery=.notifyjs-container
 
 Page Should Contain Inline Error Message "${text}"
     Wait Until Page Contains Element    jquery=.notifyjs-container span:contains("${text}")
 
-Page Should Contain Error Message "${text}"
-    Wait Until Page Contains Element    jquery=.notifyjs-container:contains("${text}")
+Page Should Contain Message "${text}"
+    ${escaped text}=  Escapes a string  ${text}
+    Wait Until Page Contains Element    jquery=.notifyjs-container:contains("${escaped text}")
 
 Page Should Contain Only Error Message "${text}"
-    Page Should Contain Error Message "${text}"
+    Page Should Contain Message "${text}"
     ${elements}=    Get Webelements    jquery=.notifyjs-container
     Length Should Be    ${elements}    1    There is more than one error message.
     Page Should Not Contain Element    jquery=.notify-multi    There is more than one error message.
@@ -94,6 +95,9 @@ Go to the Users page
     "Users" View Should Be Open
 
 Go to the Predefined Apps page
+     ${present}=  Run Keyword And Return Status    Element Should Be Visible
+    ...          id=message-header-text
+    Run Keyword If    ${present}    Click  css=#message-header .toggler
     Click    jquery=.navbar a:contains(Predefined Applications)
     "Predefined Apps" View Should Be Open
 
@@ -110,3 +114,21 @@ Login as "${username}"
 All pods should be "${status}"
     Wait Until Page Does Not Contain Element
     ...    jquery=#podlist-table tr td:nth-of-type(3):not(:contains(${status}))
+
+Input "${value}" in "${field_name}" field
+    Input Text    jquery=label:contains("${field_name}") ~ input   ${value}
+
+PA Order Page Link
+    ${link}=    Utils.Get Link From Clipboard
+    [Return]    ${link}
+
+Scroll Page To Location
+    [Arguments]    ${x_location}    ${y_location}
+    Execute JavaScript    window.scrollTo(${x_location},${y_location})
+
+
+Escapes a string
+    [Arguments]  ${string}
+    ${string escaped}=    Regexp Escape    ${string}
+    ${string escaped twice}=    Regexp Escape    ${string escaped}
+    Return From Keyword  ${string escaped twice}

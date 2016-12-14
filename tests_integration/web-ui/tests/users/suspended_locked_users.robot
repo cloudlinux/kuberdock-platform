@@ -18,7 +18,7 @@ Create suspended user and try to create pods
 Create locked user and try to login
     &{user_data}=    Add user and login     status=Locked
     Login Page Should Be Open
-    Page Should Contain Error Message "Insufficient permissions for requested action"
+    Page Should Contain Message "Insufficient permissions for requested action"
     [Teardown]  Proceed to delete user    ${user_data.username}
 
 *** Keywords ***

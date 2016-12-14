@@ -3,17 +3,11 @@ Documentation     A resource file for pods tests
 
 Resource          global_resources.robot
 Resource          ../users/resource.robot
+Resource          ../billing/whmcs_admin_resource.robot
 
 Library           String
 
 *** Keywords ***
-Select billing status "${value}"
-    Go to the Settings page
-    Click    jquery=a:contains(Billing)
-    Click    jquery=button[data-id="billing_type"]
-    Click    jquery=a:contains("${value}")
-    Click    jquery=button:contains(Save)
-
 Delete New Pod
     Click    jquery=span.terminate-btn
     Click "Delete" In Modal Dialog
@@ -80,10 +74,19 @@ Access New Pod's Public IP ${times} Times
 
 Go To New Pod's ${container} Container Page And Wait For ${number} Access Logs To Appear
     Click   jquery=a:contains(${container})
-    Wait Until Keyword Succeeds    2 min    20 sec    Locator Should Match X Times    jquery=div.container-logs > p:contains(GET / HTTP/1.1)  ${number}
+    Wait Until Keyword Succeeds    2 m    20 s    Locator Should Match X Times    jquery=div.container-logs > p:contains(GET / HTTP/1.1)  ${number}
 
 Open All Ports
     Wait Until Page Contains Element    jquery=thead:contains(Container port)
     @{check_boxes}  Get Webelements  css=td.public > label.custom > span
     :FOR  ${check_box}  IN  @{check_boxes}
     \    Click Element  ${check_box}
+
+Delete Pod On Pod Info Page
+    Click  jquery=span:contains(Manage pod)
+    Click  jquery=span:contains(Delete)
+    Click  jquery=button:contains(Delete)
+    Sleep  1.5 s
+    Wait Until Element Is Not Visible  css=.loader  15 s
+    Sleep  0.5 s
+    Breadcrumb Should Contain "Pods"

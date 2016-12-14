@@ -15,10 +15,6 @@ Go to the Profile page
     Click    jquery=.profile-menu a:contains(Settings)    1 s
     "Settings" view should be open
 
-
-Input "${value}" in "${field_name}" field
-    Input Text    jquery=label:contains("${field_name}") ~ input   ${value}
-
 Fill Password
     [Arguments]    ${password}    ${password_again}=${password}
     Input Text    jquery=label:contains(Password) ~ input:first   ${password}
@@ -86,3 +82,12 @@ Add user and log in
     Logout
     Login into the Kuberdock as "${user_data.username}" with password "${user_data.password}"
     [Return]    &{user_data}
+
+
+Check User Status
+    [Arguments]  ${username}  ${expected status}
+    Go to the Users page
+    ${actual status}  Get Text  jquery=tr:has(a:contains(${username})) .active
+    ${is status ok}=  Evaluate  '${expected status}' == '${actual status}'
+    Run Keyword If  ${is status ok} == False  Fail
+    ...   QA: Incorrect KD user status!!!

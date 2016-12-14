@@ -12,7 +12,7 @@ def upgrade(upd, with_testing, *args, **kwargs):
     cpanel_host = setting_by_name(keys.DNS_MANAGEMENT_CPANEL_HOST)
     dns_management = setting_by_name(keys.DNS_MANAGEMENT_SYSTEM)
     if not cpanel_host.value and dns_management.value == 'cpanel_dnsonly':
-        dns_management.value = 'No billing'
+        dns_management.value = 'No provider'
     dns_management.label = 'Select your DNS management system'
     cpanel_host.label = 'cPanel URL for DNS management'
     cpanel_host.placeholder = 'Enter URL for cPanel which serve your DNS ' \

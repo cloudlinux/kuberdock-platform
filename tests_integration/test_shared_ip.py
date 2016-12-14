@@ -6,9 +6,8 @@ from kubedock.constants import KUBERDOCK_INGRESS_POD_NAME
 from tests_integration.lib.exceptions import StatusWaitException
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.pod import KDPod
-from tests_integration.lib.utils import assert_eq, get_rnd_low_string, hooks,\
-    log_debug, retry
-
+from tests_integration.lib.utils import assert_eq, escape_command_arg, \
+    get_rnd_low_string, hooks, log_debug, retry
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
@@ -20,7 +19,7 @@ def _add_domain(cluster):
 
     for k, v in creds.items():
         if k != "domain":
-            cluster.set_system_setting(v, name=k)
+            cluster.set_system_setting(escape_command_arg(v), name=k)
 
     # Wait till DNS Pod is running
     # It's impossible to import KUBERDOCK_DNS_POD_NAME from kubedock/kapi/nodes

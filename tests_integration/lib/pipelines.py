@@ -7,7 +7,7 @@ from shutil import rmtree
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
 from tests_integration.lib.utils import set_eviction_timeout, get_rnd_string, \
-    enable_beta_repos, log_debug, assert_eq, assert_in
+    enable_beta_repos, log_debug, assert_eq, assert_in, wait_for_status
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tempfile import NamedTemporaryFile, mkdtemp
 
@@ -24,9 +24,23 @@ class MainPipeline(Pipeline):
         'KD_TIMEZONE': 'Europe/Moscow'
     }
 
+    def set_up(self):
+        super(MainPipeline, self).set_up()
+
+        # In one of the tests node is rebooted, so we need to make sure that
+        # it is running before executing any tests
+        nodes = self.cluster.node_names
+        for node in nodes:
+            node_obj = self.cluster.nodes.get_node(node)
+            wait_for_status(node_obj, 'running', tries=24, interval=10)
+
     def post_create_hook(self):
         super(MainPipeline, self).post_create_hook()
         self.cluster.wait_for_service_pods()
+        # NOTE: One of the tests reboots node and checks whether pod becomes
+        # 'running' afterwards, by lowering eviction timeout pod is
+        # terminated faster (default is 5 minutes)
+        set_eviction_timeout(self.cluster, '30s')
 
 
 class MainUpgradedPipeline(UpgradedPipelineMixin, MainPipeline):

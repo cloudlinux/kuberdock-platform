@@ -4,6 +4,7 @@ from urllib2 import HTTPError
 
 from tests_integration.lib import utils
 from tests_integration.lib.pipelines import pipeline
+from tests_integration.lib.pod import Port
 
 LOG = logging.getLogger(__name__)
 
@@ -39,7 +40,7 @@ def test_a_pv_created_together_with_pod(cluster):
     pv = cluster.pvs.add("dummy", pv_name, mount_path)
     pod = cluster.pods.create("nginx", "test_nginx_pod_1", pvs=[pv],
                               start=True, wait_for_status='running',
-                              wait_ports=True, ports_to_open=(80, ))
+                              wait_ports=True, open_all_ports=True)
     utils.assert_eq(pv.exists(), True)
 
     c_id = pod.get_container_id(container_image='nginx')
@@ -52,7 +53,7 @@ def test_a_pv_created_together_with_pod(cluster):
     # It is possible to create an nginx pod using existing PV
     pod = cluster.pods.create("nginx", "test_nginx_pod_2", pvs=[pv],
                               start=True, wait_for_status='running',
-                              wait_ports=True, ports_to_open=(80, ))
+                              wait_ports=True, open_all_ports=True)
     ret = pod.do_GET(path='/test.txt')
     utils.assert_eq('TEST', ret)
     pod.delete()
@@ -65,7 +66,7 @@ def test_a_pv_created_together_with_pod(cluster):
     pv = cluster.pvs.add('dummy', pv_name, mount_path)
     pod = cluster.pods.create(
         'nginx', 'test_nginx_pod_3', pvs=[pv], start=True,
-        wait_for_status='running', wait_ports=True, ports_to_open=(80, ))
+        wait_for_status='running', wait_ports=True, open_all_ports=True)
     utils.assert_eq(pv.exists(), True)
 
     # '/test.txt' is not on newly created PV, we expect HTTP Error 404
@@ -128,7 +129,7 @@ def test_can_create_pod_without_volumes_and_ports(cluster):
 @pipeline("main_aws")
 def test_nginx_with_healthcheck(cluster):
     # type: (KDIntegrationTestAPI) -> None
-    cluster.pods.create("nginx", "test_nginx_pod_1", ports_to_open=(80, ),
+    cluster.pods.create("nginx", "test_nginx_pod_1", open_all_ports=True,
                         start=True, wait_ports=True, healthcheck=True,
                         wait_for_status='running')
 
@@ -139,12 +140,12 @@ def test_nginx_with_healthcheck(cluster):
 def test_recreate_pod_with_real_ip(cluster):
     # type: (KDIntegrationTestAPI) -> None
     pod = cluster.pods.create("nginx", "test_nginx_pod_4",
-                              ports_to_open=(80, ), wait_ports=True,
+                              open_all_ports=True, wait_ports=True,
                               start=True, wait_for_status='running')
     pod.healthcheck()
     pod.delete()
     pod = cluster.pods.create("nginx", "test_nginx_pod_4",
-                              ports_to_open=(80, ), wait_ports=True,
+                              open_all_ports=True, wait_ports=True,
                               start=True, wait_for_status='running')
     pod.healthcheck()
     pod.delete()
@@ -155,8 +156,7 @@ def test_recreate_pod_with_real_ip(cluster):
 @pipeline("main_aws")
 def test_nginx_kublet_resize(cluster):
     # type: (KDIntegrationTestAPI) -> None
-    pod = cluster.pods.create("nginx", "test_nginx_pod_1",
-                              ports_to_open=(80, ),
+    pod = cluster.pods.create("nginx", "test_nginx_pod_1", open_all_ports=True,
                               start=True, wait_ports=True, healthcheck=True,
                               wait_for_status='running')
     pod.change_kubes(kubes=2, container_image='nginx')
@@ -169,9 +169,27 @@ def test_nginx_kublet_resize(cluster):
 @pipeline("main_aws")
 def test_start_pod_and_reboot_node(cluster):
     node = cluster.nodes.get_node("node1")
-    pod = cluster.pods.create("nginx", "nginx_pod", ports_to_open=[80],
+    pod = cluster.pods.create("nginx", "nginx_pod", open_all_ports=True,
                               wait_ports=True, healthcheck=True)
 
+    c_id = pod.get_container_id(container_image='nginx')
     node.reboot()
+
+    # NOTE: Potentially node can reboot faster than pod status change occurs
+    # and comparing container ids before reboot and after differ is a more
+    # accurate way to check that pod was redeployed as well.
+    utils.wait_for(
+        lambda: c_id != pod.get_container_id(container_image='nginx'))
     pod.wait_for_status("running")
     pod.healthcheck()
+
+
+# FIXME: Remove this later
+@pipeline('main')
+def test_custom_pod_port(cluster):
+    pod = cluster.pods.create(
+        'nginx', 'nginx_test_pod',
+        ports=[Port(123, container_port=80, public=True)], start=True,
+        wait_for_status='running', wait_ports=True)
+
+    pod.do_GET(path='/', port=123)

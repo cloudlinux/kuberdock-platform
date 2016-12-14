@@ -5,8 +5,6 @@ import pipes
 import sys
 import urllib2
 
-from collections import namedtuple
-
 from tests_integration.lib import utils
 from tests_integration.lib import exceptions
 
@@ -56,11 +54,22 @@ class RESTMixin(object):
         utils.retry(check, tries=tries, internal=internal)
 
 
+class Port(object):
+    def __init__(self, port, proto='tcp', container_port=None, public=False):
+        self.port = port
+        self.proto = proto
+        self.container_port = container_port if container_port else port
+        self.is_public = public
+
+    def __str__(self):
+        return "<port={0} proto='{1}' container_port={2}>".format(
+            self.port, self.proto, self.container_port)
+
+
 class KDPod(RESTMixin):
     # Image or PA name
     SRC = None
     WAIT_PORTS_TIMEOUT = DEFAULT_WAIT_PORTS_TIMEOUT
-    Port = namedtuple('Port', 'port proto')
 
     def __init__(self, cluster, image, name, kube_type, kubes,
                  open_all_ports, restart_policy, pvs, owner):
@@ -105,13 +114,16 @@ class KDPod(RESTMixin):
 
     @classmethod
     def create(cls, cluster, image, name, kube_type, kubes, open_all_ports,
-               restart_policy, pvs, owner, password, ports_to_open, domain):
+               restart_policy, pvs, owner, password, domain, ports=None):
         """
         Create new pod in kuberdock
         :param open_all_ports: if true, open all ports of image (does not mean
-        these are Public IP ports, depends on a cluster setup)
-        :param ports_to_open: if open_all_ports is False, open only the ports
-        from this list
+            these are Public IP ports, depends on a cluster setup)
+        :param ports: List of Port objects or None. Port objects contain
+            information about pod-to-container port mapping as well as whether
+            port is public or not (a way to make some ports public).
+            In case of 'None' - container image ports will be used and
+            pod ports will default to container ports.
         :return: object via which Kuberdock pod can be managed
         """
 
@@ -120,8 +132,22 @@ class KDPod(RESTMixin):
                 'image_info {}'.format(img), out_as_dict=True, user=owner)
 
             return [
-                cls.Port(int(port['number']), port['protocol'])
+                Port(int(port['number']), port['protocol'])
                 for port in out['ports']]
+
+        def _update_image_ports(image_ports, ports):
+            for p in ports:
+                try:
+                    image_port = next(i for i in image_ports
+                                      if i.container_port == p.container_port)
+                    image_port.is_public = p.is_public
+                    image_port.port = p.port
+                except StopIteration:
+                    raise Exception(
+                        "Port '{port}:{proto}' was not found in container "
+                        "image ports".format(port=p.container_port,
+                                             proto=p.proto))
+            return image_ports
 
         def _ports_to_dict(ports):
             """
@@ -130,10 +156,10 @@ class KDPod(RESTMixin):
             """
             ports_list = []
             for port in ports:
-                ports_list.append(dict(containerPort=port.port,
+                ports_list.append(dict(containerPort=port.container_port,
                                        hostPort=port.port,
                                        isPublic=(open_all_ports or
-                                                 port.port in ports_to_open),
+                                                 port.is_public),
                                        protocol=port.proto))
             return ports_list
 
@@ -148,12 +174,16 @@ class KDPod(RESTMixin):
                         name=escaped_name)
         container = dict(kubes=kubes, image=image,
                          name=utils.get_rnd_low_string(length=11))
-        ports = utils.retry(_get_image_ports, img=image)
-        container.update(ports=_ports_to_dict(ports))
+        image_ports = utils.retry(_get_image_ports, img=image)
+        if ports is None:
+            pod_ports = image_ports
+        else:
+            pod_ports = _update_image_ports(image_ports, ports)
+        container.update(ports=_ports_to_dict(pod_ports))
         if pvs is not None:
             container.update(volumeMounts=[pv.volume_mount_dict for pv in pvs])
             pod_spec.update(volumes=[pv.volume_dict for pv in pvs])
-        pod_spec.update(containers=[container])
+        pod_spec.update(containers=[container], replicas=1)
         if domain:
             pod_spec["domain"] = domain
         pod_spec = json.dumps(pod_spec, ensure_ascii=False)
@@ -291,8 +321,6 @@ class KDPod(RESTMixin):
         # NOTE: we still don't know if this is in a routable network, so
         # open_all_ports does not exactly mean wait_for_ports pass.
         # But for sure it does not make sense to wait if no ports open.
-        # Currently all ports can be open by setting open_all_ports, or some
-        # ports can be open by setting ports_to_open while creating a pod
         timeout = timeout or self.WAIT_PORTS_TIMEOUT
         if not (self.open_all_ports or self.ports):
             raise Exception("Cannot wait for ports on a pod with no"
@@ -537,7 +565,9 @@ class _NginxPod(KDPod):
 
     def wait_for_ports(self, ports=None, timeout=DEFAULT_WAIT_PORTS_TIMEOUT):
         # Though nginx also has 443, it is not turned on in a clean image.
-        ports = ports or [80]
+        ports = ports or self.ports
+        if 443 in ports:
+            ports.remove(443)
         self._wait_for_ports(ports, timeout)
 
     def healthcheck(self):

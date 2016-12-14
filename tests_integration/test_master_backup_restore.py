@@ -5,6 +5,7 @@ from collections import defaultdict
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.utils import hooks
 from tests_integration.lib.pipelines import pipeline
+from tests_integration.lib.pod import Port
 
 BACKUP_FOLDER = "/root/backups"
 DEFAULT_SETTING_VALUE = "10"
@@ -47,7 +48,8 @@ def test_master_backup_restore(cluster):
         pod.healthcheck()
     cluster.pods.create("nginx", "test_nginx_pod_3", open_all_ports=True,
                         start=True, wait_ports=True,
-                        wait_for_status='running', ports_to_open=[80])
+                        wait_for_status='running',
+                        ports=(Port(80, public=True), ))
 
 
 def _cleanup_master(cluster):
@@ -79,7 +81,8 @@ def _fill_master_with_data_to_backup(cluster):
     cluster.preload_docker_image('nginx')
     return [cluster.pods.create("nginx", name, open_all_ports=True,
                                 start=True, wait_ports=True,
-                                wait_for_status='running', ports_to_open=[80])
+                                wait_for_status='running',
+                                ports=(Port(80, public=True), ))
             for name in ("test_nginx_pod_1", "test_nginx_pod_2")]
 
 

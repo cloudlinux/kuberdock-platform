@@ -23,7 +23,7 @@ def _add_domain(cluster):
 
     # Wait till DNS Pod is running
     # It's impossible to import KUBERDOCK_DNS_POD_NAME from kubedock/kapi/nodes
-    # because nodes tries import from flask which isn't installed on the CI host
+    # because nodes try import from flask which isn't installed on the CI host
     dns_pod = KDPod.get_internal_pod(cluster, "kuberdock-dns")
     dns_pod.wait_for_status("running")
 
@@ -51,9 +51,9 @@ def test_pod_with_domain_name(cluster):
     with open("tests_integration/assets/cpanel_credentials.json") as f:
         creds = json.load(f)
     log_debug("Start a pod with shared IP", LOG)
-    pod = cluster.pods.create("nginx", pod_name, ports_to_open=[80],
-                              wait_for_status="running", domain=creds["domain"],
-                              healthcheck=True, wait_ports=True)
+    pod = cluster.pods.create(
+        "nginx", pod_name, open_all_ports=True, wait_for_status="running",
+        domain=creds["domain"], healthcheck=True, wait_ports=True)
     log_debug("Restart the pod with shared IP", LOG)
     pod.redeploy()
     try:
@@ -106,9 +106,8 @@ def test_pod_with_long_domain_name(cluster):
 
     log_debug("Start the pod with shared IP, having domain name consisting "
               "of 63 symbols", LOG)
-    pod = cluster.pods.create("nginx", pod_name, ports_to_open=[80],
-                              wait_for_status="running", domain=creds["domain"],
-                              healthcheck=True, wait_ports=True)
+    pod = cluster.pods.create(
+        "nginx", pod_name, open_all_ports=True, wait_for_status="running",
+        domain=creds["domain"], healthcheck=True, wait_ports=True)
     assert_eq(pod.domain, "testuser-{}.{}".
               format(pod_name, creds["domain"]))
-

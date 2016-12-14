@@ -12,6 +12,7 @@ from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib import utils
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.vendor.paramiko_expect import SSHClientInteraction
+from tests_integration.lib.pod import Port
 
 
 LOG = logging.getLogger(__name__)
@@ -58,10 +59,11 @@ def setup_pods(cluster):
     pods = {
         'iso1': cluster.pods.create(
             'hub.kuberdock.com/nginx', 'iso1', owner='test_user',
-            ports_to_open=[HTTP_PORT, UDP_PORT]),
+            ports=[Port(HTTP_PORT, public=True),
+                   Port(UDP_PORT, proto='udp', public=True)]),
         'iso2': cluster.pods.create(
             'hub.kuberdock.com/nginx', 'iso2', owner='alt_test_user',
-            ports_to_open=[HTTP_PORT], kube_type='Tiny'),
+            ports=[Port(HTTP_PORT, public=True)], kube_type='Tiny'),
         'iso3': cluster.pods.create(
             'hub.kuberdock.com/nginx', 'iso3', owner='test_user',
             kube_type='Tiny'),

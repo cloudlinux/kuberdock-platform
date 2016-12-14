@@ -67,7 +67,9 @@ class KDNode(object):
             # has rebooted
             pass
 
-        utils.wait_for_status(self, "running", tries=24, interval=10)
+        # NOTE: Number of tries were intentionally increased, because of the
+        # load on Nebula clusters.
+        utils.wait_for_status(self, "running", tries=48, interval=10)
 
     @property
     def info(self):

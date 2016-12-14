@@ -5,6 +5,7 @@ from time import sleep
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib import utils
 from tests_integration.lib.exceptions import NonZeroRetCodeException
+from tests_integration.lib.pod import Port
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
@@ -248,8 +249,9 @@ def test_zfs_volumes_mount_properly(cluster):
     pv_mpath = '/usr/share/nginx/html'
     pv = cluster.pvs.add('dummy', pv_name, pv_mpath)
     pod = cluster.pods.create(
-        image, 'nginx_zfs_volume_mounts', pvs=[pv], ports_to_open=(80, ),
-        start=True, wait_for_status='running', wait_ports=True)
+        image, 'nginx_zfs_volume_mounts', pvs=[pv],
+        ports=[Port(80, public=True)], start=True, wait_for_status='running',
+        wait_ports=True)
 
     pod_owner = cluster.users.get(name=pod.owner)
     pv_mountpoint = os.path.join(ZFS_POOL_MOUNTPOINT, str(pod_owner.get('id')),

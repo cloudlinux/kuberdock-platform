@@ -43,8 +43,7 @@ def upgrade():
             {'kube_id': kube_id})
     session.commit()
 
-    op.alter_column('pod_states', sa.Column('kube_id', sa.Integer(),
-                                          nullable=False))
+    op.alter_column('pod_states', 'kube_id', nullable=False)
 
 
 def downgrade():

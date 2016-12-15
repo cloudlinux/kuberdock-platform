@@ -689,6 +689,19 @@ class KDPod(RESTMixin):
     def gen_workload(self, load_time):
         pass
 
+    def set_restart_policy(self, policy):
+        edit_data = self.__get_edit_data()
+        edit_data['edited_config']['restartPolicy'] = policy
+
+        _, out, _ = self.cluster.kcli2(
+            "pods update --name '{}' '{}'".format(self.name,
+                                                  json.dumps(edit_data)),
+            out_as_dict=True, user=self.owner)
+        utils.log_debug("Pod {} updated.\nEdited config:\n{}".format(
+            self.name, out))
+        self.redeploy(applyEdit=True)
+        self.restart_policy = policy
+
 
 class _NginxPod(KDPod):
     SRC = "nginx"

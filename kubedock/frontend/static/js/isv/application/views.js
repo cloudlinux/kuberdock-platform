@@ -24,14 +24,17 @@ export const Details = Marionette.ItemView.extend({
         tooltip: '[data-toggle="tooltip"]',
         resetAdminPassword: '.reset-admin-password',
         copyAdminPassword: '.copy-password',
-        checkVersionUpdate: '.check-version-update'
+        checkVersionUpdate: '.check-version-update',
+        updateAvailable: '.update-available'
     },
 
     events: {
         'click @ui.resetAdminPassword': 'resetAdminPassword',
         'click @ui.copyAdminPassword': 'copyAdminPassword',
         'click @ui.checkVersionUpdate': 'checkVersionUpdate',
+        'click @ui.updateAvailable': 'checkVersionUpdate',
     },
+    initialize(options){ this.updateData = options.updateData; },
 
     onDomRefresh(){ this.ui.tooltip.tooltip(); },
 
@@ -44,6 +47,8 @@ export const Details = Marionette.ItemView.extend({
             }),
             price: App.config.price,
             dueDate: App.config.dueDate,
+            updateAvailable: this.model.get('template_version_id') <
+                this.updateData.activeVersionID,
         };
     },
     resetAdminPassword(){

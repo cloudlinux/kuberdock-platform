@@ -339,6 +339,9 @@ Pod = Backbone.AssociatedModel.extend({
                 buttonOk: () => {
                     utils.preloader2.show();
                     new AppUpdate({}, {container: model}).save()
+                        .done(() => {
+                            model.set('template_version_id', version);
+                        })
                         .always(utils.preloader2.hide).fail(utils.notifyWindow);
                 },
                 buttonOkText: 'Update now',

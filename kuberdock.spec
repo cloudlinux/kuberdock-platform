@@ -75,7 +75,7 @@ Requires: PyYAML
 Requires: python-cloudflare
 Requires: python-etcd
 Requires: pyOpenSSL
-Requires: python2-pyasn1 == 0:0.1.9-7.el7
+Requires: python2-pyasn1
 
 # AutoReq: 0
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)

@@ -33,6 +33,9 @@
             <span class="check-version-update"
                   data-toggle="tooltip" data-placement="top"
                   data-original-title="Check version update"></span>
+            <% if (updateAvailable){ %>
+                <span class="page-action update-available">Update available</span>
+            <% } %>
         </p>
         <p>Last update: <%- appLastUpdate %></p>
     </div>

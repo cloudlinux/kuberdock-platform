@@ -8,6 +8,7 @@ import {Details as AppDetailsView,
         } from 'isv/application/views';
 import {Backup as AppBackupView} from 'isv/backup/views';
 import {Topbar, Sidebar} from 'isv/misc/views';
+import {AppUpdate} from 'isv/model';
 
 const controller = {
     doLogin(){
@@ -32,9 +33,14 @@ const controller = {
                 // TODO: redirect to "order app" page
                 return;
             }
-            let detailsView = new AppDetailsView({model: pod});
-            this.showApplicationView(detailsView, 'details');
-            utils.preloader2.hide();
+            new AppUpdate({}, {container: pod}).fetch().done(appUpdate => {
+                let detailsView = new AppDetailsView({
+                    model: pod,
+                    updateData: appUpdate.data
+                });
+                this.showApplicationView(detailsView, 'details');
+                utils.preloader2.hide();
+            });
         });
     },
 
@@ -69,17 +75,20 @@ const controller = {
     appBackups(){
         utils.preloader2.show();
         $.when(App.getPodCollection(), App.getBackupCollection())
-                .then((podCollection, backupCollection) => {
-            const pod = podCollection.at(0);
-            if (!pod){
-                utils.notifyWindow('Application not found');
-                // TODO: redirect to "order app" page
-                return;
-            }
-            let backupView = new AppBackupView({collection: backupCollection, model: pod});
-            this.showApplicationView(backupView, 'backups');
-            utils.preloader2.hide();
-        });
+            .then((podCollection, backupCollection) => {
+                const pod = podCollection.at(0);
+                if (!pod) {
+                    utils.notifyWindow('Application not found');
+                    // TODO: redirect to "order app" page
+                    return;
+                }
+                let backupView = new AppBackupView({
+                    collection: backupCollection,
+                    model: pod
+                });
+                this.showApplicationView(backupView, 'backups');
+                utils.preloader2.hide();
+            });
     },
 };
 

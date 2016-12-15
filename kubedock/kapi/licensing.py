@@ -50,6 +50,8 @@ def get_license_info():
     data = _load_license()
     if data is not None:
         _check_license_sign(data)
+        if not is_timestamp_ok(data) and data.get('data'):
+            data['data']['license']['status'] = 'expired'
     else:
         generate_auth_key()
         data = _load_license()
@@ -98,7 +100,8 @@ def update_installation_id(installation_id):
 
 
 def is_status_ok(lic):
-    if lic.get('data', {}).get('license', {}).get('status', '') == 'ok':
+    if lic.get('data', {}).get('license', {}).get('status', '') == 'ok' and \
+       is_timestamp_ok(lic):
         return True
     return False
 

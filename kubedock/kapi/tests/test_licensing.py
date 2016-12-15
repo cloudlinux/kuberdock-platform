@@ -38,6 +38,19 @@ class TestLicenseValidation(unittest.TestCase):
         with mocked_license(self.license):
             self.assertFalse(licensing.is_valid())
 
+    def test_license_status_response_if_correct(self):
+        with mocked_license(self.license):
+            license_data = licensing.get_license_info()
+            self.assertEqual(license_data[u'data'][u'license'][u'status'],
+                             'ok')
+
+    def test_license_status_response_if_expired_more_than_1_days_ago(self):
+        self._move_license_expiration(-4)
+        with mocked_license(self.license):
+            license_data = licensing.get_license_info()
+            self.assertEqual(license_data[u'data'][u'license'][u'status'],
+                             'expired')
+
     def test_new_but_incorrect_license_is_valid(self):
         self.license[u'data'][u'license'][u'status'] = None
         with mocked_license(self.license):

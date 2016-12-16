@@ -382,7 +382,8 @@ def get_external_node_ip(node_ip, ssh_to_node, raise_on_error):
     return o.read().strip('\n')
 
 
-def extend_ls_volume(hostname, devices=None, ebs_volume=None, size=None):
+def extend_ls_volume(hostname, devices=None, ebs_volume=None, size=None,
+                     ebs_volume_type=None, ebs_volume_iops=None):
     """Adds volume to local storage of a node
     :param hostname: Host name of the node
     :param devices: List of block devices. That devices must be attached to
@@ -396,6 +397,13 @@ def extend_ls_volume(hostname, devices=None, ebs_volume=None, size=None):
         If no size is specified and no 'devices', 'ebs_volume' are specified,
         then will be used default size (settings.AWS_EBS_EXTEND_STEP):
         will be created new EBS volume with default size.
+    :param ebs_volume_type: volume type for EBS volume. It will be used if none
+        of parameters 'devices', 'ebs_volume' is defined. (Only for
+        AWS-clusters). If it is not specified, then will be used default value
+        from AWS_DEFAULT_EBS_VOLUME_TYPE
+    :param ebs_volume_iops: integer value for EBS volume iops. It is applicable
+        only for ebs_volume_type = 'io1'. If it is not specified, then will be
+        used default value from AWS_DEFAULT_EBS_VOLUME_IOPS
     :return: tuple of success flag and error message
     """
     node = Node.get_by_name(hostname)
@@ -422,7 +430,8 @@ def extend_ls_volume(hostname, devices=None, ebs_volume=None, size=None):
             #   Here is provided (1) & (2) methods.
             #   (3) method will be applied in 'else' branch.
             return setup_storage_to_aws_node(
-                ssh, node.id, EBS_volume_name=ebs_volume, size=size
+                ssh, node.id, EBS_volume_name=ebs_volume, size=size,
+                volume_type=ebs_volume_type, volume_iops=ebs_volume_iops
             )
         else:
             if not devices:
@@ -432,14 +441,17 @@ def extend_ls_volume(hostname, devices=None, ebs_volume=None, size=None):
         ssh.close()
 
 
-def setup_storage_to_aws_node(ssh, node_id, EBS_volume_name=None, size=None):
+def setup_storage_to_aws_node(ssh, node_id, EBS_volume_name=None, size=None,
+                              volume_type=None, volume_iops=None):
     """Attaches EBS volume to AWS instance. If EBS_volume_name is not
     specified, then creates new one with random name.
     Makes LVM volume group with that EBS volume and single LVM logical volume
     on the node.
     """
     from kubedock.settings import (
-        AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_EBS_EXTEND_STEP)
+        AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_EBS_EXTEND_STEP,
+        AWS_DEFAULT_EBS_VOLUME_TYPE, AWS_DEFAULT_EBS_VOLUME_IOPS,
+        AWS_IOPS_PROVISION_VOLUME_TYPES)
     cmd = NODE_STORAGE_MANAGE_CMD + ' ebs-attach '\
         '--aws-access-key-id {0} --aws-secret-access-key {1}'.format(
             AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
@@ -451,6 +463,14 @@ def setup_storage_to_aws_node(ssh, node_id, EBS_volume_name=None, size=None):
         if size is None:
             size = AWS_EBS_EXTEND_STEP
         cmd += ' --size {0}'.format(size)
+        if not volume_type:
+            volume_type = AWS_DEFAULT_EBS_VOLUME_TYPE
+        cmd += ' --volume-type {0}'.format(volume_type)
+        if volume_type in AWS_IOPS_PROVISION_VOLUME_TYPES:
+            if not volume_iops:
+                volume_iops = AWS_DEFAULT_EBS_VOLUME_IOPS
+            cmd += ' --iops {0}'.format(volume_iops)
+
     cmd += ' --name {0}'.format(EBS_volume_name)
     _, o, e = ssh.exec_command(cmd)
     result = o.read()

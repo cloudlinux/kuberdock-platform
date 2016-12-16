@@ -132,6 +132,18 @@ COMMANDS = {
 }
 
 
+def validate_int_range(minvalue, maxvalue):
+    def inner_checker(value):
+        ivalue = int(value)
+        if ivalue < minvalue or ivalue > maxvalue:
+            raise argparse.ArgumentTypeError(
+                'The value should be in range {} - {}'.format(
+                    minvalue, maxvalue)
+            )
+        return ivalue
+    return inner_checker
+
+
 def process_args():
     parser = argparse.ArgumentParser("Kuberdock local storage manager")
     subparsers = parser.add_subparsers(
@@ -156,6 +168,16 @@ def process_args():
                             help='AWS secret access key')
     attach_ebs.add_argument('--name',
                             help='Name of EBS volume to attach')
+    attach_ebs.add_argument('--volume-type',
+                            dest='volume_type',
+                            help='EBS volume type',
+                            choices=aws.ALL_EBS_TYPES)
+    attach_ebs.add_argument(
+        '--iops',
+        dest='iops',
+        help='IOPS for provisioned iops volume types ({}).'.format(
+            aws.VOL_TYPE_IO),
+        type=validate_int_range(*aws.VOL_IOPS_RANGE))
 
     add_volume = subparsers.add_parser(
         'add-volume',

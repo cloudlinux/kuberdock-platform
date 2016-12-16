@@ -40,6 +40,7 @@ export const Topbar = Marionette.ItemView.extend({
     },
     modelEvents: {
         'change:status': 'render',
+        'change:ready': 'render',
     },
 
     templateHelpers() {

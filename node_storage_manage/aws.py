@@ -6,6 +6,17 @@ import subprocess
 
 from .common import OK, ERROR, TimeoutError
 
+# Available EBS volume types
+VOL_TYPE_ST = 'standard'
+VOL_TYPE_IO = 'io1'
+VOL_TYPE_GP = 'gp2'
+DEFAULT_EBS_VOLUME_TYPE = VOL_TYPE_ST
+# Acceptable range for iops value
+# http://docs.aws.amazon.com/cli/latest/reference/ec2/create-volume.html
+VOL_IOPS_RANGE = (100, 20000)
+
+ALL_EBS_TYPES = (VOL_TYPE_ST, VOL_TYPE_IO, VOL_TYPE_GP)
+
 
 def get_aws_instance_meta(utils):
     identity = utils.get_instance_identity()
@@ -62,9 +73,27 @@ def do_ebs_attach(call_args):
             break
     if not volume:
         err_msg = 'Failed to create EBS volume: {}'
+        volume_type = call_args.volume_type
+        iops = None
+        if volume_type == VOL_TYPE_IO:
+            iops = call_args.iops
+            if not iops:
+                return (
+                    ERROR,
+                    {
+                        'message': err_msg.format(
+                            'iops should be specified for volume type "{}"'\
+                            .format(volume_type)
+                        )
+                    }
+                )
+        elif not volume_type:
+            volume_type = DEFAULT_EBS_VOLUME_TYPE
+
         try:
             volume = create_ebs_volume(
-                connection, av_zone, name, call_args.size
+                connection, av_zone, name, call_args.size,
+                volume_type=volume_type, iops=iops
             )
         except (boto.exception.BotoClientError,
                 boto.exception.BotoServerError,
@@ -80,11 +109,13 @@ def do_ebs_attach(call_args):
         return ERROR, {'message': 'Failed to attach volume: {}'.format(err)}
 
 
-def create_ebs_volume(connection, availability_zone, name, size):
+def create_ebs_volume(connection, availability_zone, name, size,
+                      volume_type, iops):
     """Creates new EBS volume"""
     # timeout to wait until volume will be available (15 minutes)
     wait_time = 15 * 60
-    volume = connection.create_volume(size, availability_zone)
+    volume = connection.create_volume(size, availability_zone,
+                                      volume_type=volume_type, iops=iops)
     start_time = time.time()
     if volume:
         volume.add_tag('Name', name)

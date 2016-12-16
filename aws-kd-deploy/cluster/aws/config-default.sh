@@ -86,6 +86,12 @@ NODE_ROOT_DISK_TYPE="${NODE_ROOT_DISK_TYPE:-gp2}"
 NODE_ROOT_DISK_SIZE=${NODE_ROOT_DISK_SIZE:-15}
 # EBS Storage initial size
 AWS_EBS_DEFAULT_SIZE=${AWS_EBS_DEFAULT_SIZE:-20}
+# Default EBS volume type for node storage (standard, io1, gp2)
+AWS_DEFAULT_EBS_VOLUME_TYPE=${AWS_DEFAULT_EBS_VOLUME_TYPE:-standard}
+# Default EBS volume iops for node storage (only applicable to volume
+# type 'io1'). Acceptable range: 100 - 20000
+# max iops to Gb ratio is 50.
+AWS_DEFAULT_EBS_VOLUME_IOPS=${AWS_DEFAULT_EBS_VOLUME_IOPS:-1000}
 
 MASTER_NAME="${INSTANCE_PREFIX}-master"
 MASTER_TAG="${INSTANCE_PREFIX}-master"

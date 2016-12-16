@@ -257,6 +257,12 @@ ASSETS_PATH = '/var/opt/kuberdock/kubedock/assets'
 ZFS = False
 
 AWS = False
+# Default EBS volume type for node storage on AWS.
+# Available types are: 'standard', 'io1', 'gp2'
+AWS_DEFAULT_EBS_VOLUME_TYPE = 'standard'
+AWS_DEFAULT_EBS_VOLUME_IOPS = 1000
+# AWS EBS volume types which support provisioned iops
+AWS_IOPS_PROVISION_VOLUME_TYPES = ('io1',)
 
 MASTER_IP = ''
 MASTER_TOBIND_FLANNEL = 'enp0s5'
@@ -359,6 +365,12 @@ if cp.read(KUBERDOCK_SETTINGS_FILE) and cp.has_section('main'):
         AWS_SECRET_ACCESS_KEY = cp.get('main', 'AWS_SECRET_ACCESS_KEY')
     if cp.has_option('main', 'AWS_EBS_DEFAULT_SIZE'):
         AWS_EBS_EXTEND_STEP = cp.get('main', 'AWS_EBS_DEFAULT_SIZE')
+    if cp.has_option('main', 'AWS_DEFAULT_EBS_VOLUME_TYPE'):
+        AWS_DEFAULT_EBS_VOLUME_TYPE = cp.get(
+            'main', 'AWS_DEFAULT_EBS_VOLUME_TYPE')
+    if cp.has_option('main', 'AWS_DEFAULT_EBS_VOLUME_IOPS'):
+        AWS_DEFAULT_EBS_VOLUME_IOPS = cp.get(
+            'main', 'AWS_DEFAULT_EBS_VOLUME_IOPS')
     if cp.has_option('main', 'CALICO_NETWORK'):
         CALICO_NETWORK = cp.get('main', 'CALICO_NETWORK')
 

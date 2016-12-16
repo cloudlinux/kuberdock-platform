@@ -35,7 +35,7 @@ def test_two_pods_cant_use_same_pv(cluster):
     pv = cluster.pvs.add('dummy', 'nginxpv', '/nginxpv')
     pod1 = cluster.pods.create(
         'nginx', 'test_nginx_pod_1', pvs=[pv], start=True,
-        wait_for_status='running')
+        wait_for_status=utils.POD_STATUSES.running)
     pod2 = cluster.pods.create('nginx', 'test_nginx_pod_2', pvs=[pv],
                                start=False)
 
@@ -45,7 +45,7 @@ def test_two_pods_cant_use_same_pv(cluster):
     # FIXME: Need a proper way to determain that some resources where not
     # available when we tried to start the pod
     sleep(120)
-    pod2.wait_for_status('stopped')
+    pod2.wait_for_status(utils.POD_STATUSES.stopped)
 
     pod1.delete()
     pod2.delete()
@@ -61,15 +61,19 @@ def test_move_pods_and_delete_node_with_ceph_storage(cluster):
     # NOTE: we want to make sure that pod lands on 'node1', because 'node4'
     # will be deleted later on.
     with cluster.temporary_stop_host('node4'):
+        cluster.nodes.get_node('node4').wait_for_status(
+            utils.NODE_STATUSES.troubles)
         pod = cluster.pods.create('nginx', 'test_nginx_pod_1', pvs=[pv],
                                   start=False)
         pod.start()
-        pod.wait_for_status('running')
+        pod.wait_for_status(utils.POD_STATUSES.running)
 
     prev_node = pod.node
     with cluster.temporary_stop_host(prev_node):
+        cluster.nodes.get_node(prev_node).wait_for_status(
+            utils.NODE_STATUSES.troubles)
         utils.wait_for(lambda: pod.node != prev_node)
-        pod.wait_for_status('running')
+        pod.wait_for_status(utils.POD_STATUSES.running)
 
     utils.log_debug(
         "Delete node '{}' which is hosting the pod. Pod should move to "
@@ -78,7 +82,7 @@ def test_move_pods_and_delete_node_with_ceph_storage(cluster):
     hosting_node.delete()
 
     utils.wait_for(lambda: pod.node == prev_node)
-    pod.wait_for_status('running')
+    pod.wait_for_status(utils.POD_STATUSES.running)
 
 
 @pipeline('main')
@@ -102,8 +106,9 @@ def test_overuse_pv_quota(cluster):
     pv_name = utils.get_rnd_low_string(prefix='integr_test_disk_')
     mount_path = '/nginxpv'
     pv = cluster.pvs.add('dummy', pv_name, mount_path)
-    pod = cluster.pods.create('nginx', 'test_nginx_pod_1', pvs=[pv],
-                              start=True, wait_for_status='running')
+    pod = cluster.pods.create(
+        'nginx', 'test_nginx_pod_1', pvs=[pv], start=True,
+        wait_for_status=utils.POD_STATUSES.running)
 
     container_id = pod.get_container_id(container_image='nginx')
     # write 640MB to PV
@@ -124,7 +129,7 @@ def test_overuse_pv_quota(cluster):
     pod.redeploy(wipeOut=True)
     utils.wait_for(
         lambda: container_id != pod.get_container_id(container_image='nginx'))
-    pod.wait_for_status('running')
+    pod.wait_for_status(utils.POD_STATUSES.running)
     container_id = pod.get_container_id(container_image='nginx')
 
     utils.log_debug('After wipe out: write 640MBs to disk', LOG)
@@ -168,12 +173,12 @@ def test_delete_node_with_pv(cluster):
         'nginx', 'test_nginx_pod_1', pvs=[pv1], start=False)
     pod2 = cluster.pods.create(
         'nginx', 'test_nginx_pod_2', pvs=[pv1, pv2], start=True,
-        wait_for_status='running')
+        wait_for_status=utils.POD_STATUSES.running)
 
     hosting_node = cluster.nodes.get_node(pod2.node)
 
     pod2.stop()
-    pod2.wait_for_status('stopped')
+    pod2.wait_for_status(utils.POD_STATUSES.stopped)
 
     # Try to delete node with pv1 and pv2 on it. Should fail.
     with utils.assert_raises(
@@ -250,8 +255,8 @@ def test_zfs_volumes_mount_properly(cluster):
     pv = cluster.pvs.add('dummy', pv_name, pv_mpath)
     pod = cluster.pods.create(
         image, 'nginx_zfs_volume_mounts', pvs=[pv],
-        ports=[Port(80, public=True)], start=True, wait_for_status='running',
-        wait_ports=True)
+        ports=[Port(80, public=True)], start=True, wait_ports=True,
+        wait_for_status=utils.POD_STATUSES.running)
 
     pod_owner = cluster.users.get(name=pod.owner)
     pv_mountpoint = os.path.join(ZFS_POOL_MOUNTPOINT, str(pod_owner.get('id')),
@@ -284,7 +289,7 @@ def test_zfs_volumes_mount_properly(cluster):
     pod.redeploy()
 
     utils.wait_for(lambda: c_id != pod.get_container_id(container_image=image))
-    pod.wait_for_status('running')
+    pod.wait_for_status(utils.POD_STATUSES.running)
 
     check_volume_mounts(cluster, pod, log_msg_prefix='AFTER POD RESTART: ')
 

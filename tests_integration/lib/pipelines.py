@@ -10,8 +10,9 @@ from tests_integration.lib.cluster_utils import enable_beta_repos, \
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
-from tests_integration.lib.utils import (log_debug, assert_eq, assert_in,
-                                         wait_for_status, get_rnd_string)
+from tests_integration.lib.utils import (
+    log_debug, assert_eq, assert_in, wait_for_status, get_rnd_string,
+    NODE_STATUSES)
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)
@@ -33,7 +34,8 @@ class MainPipeline(Pipeline):
         nodes = self.cluster.node_names
         for node in nodes:
             node_obj = self.cluster.nodes.get_node(node)
-            wait_for_status(node_obj, 'running', tries=24, interval=10)
+            wait_for_status(node_obj, NODE_STATUSES.running, tries=24,
+                            interval=10)
 
     def post_create_hook(self):
         super(MainPipeline, self).post_create_hook()
@@ -113,7 +115,7 @@ class NetworkingPipeline(Pipeline):
                       custom_ports)
 
         except (NonZeroRetCodeException, AssertionError) as e:
-            log_debug("Couldn't open ports. Reason: {}".format(e))
+            log_debug("Couldn't open ports. Reason: {}".format(e), LOG)
 
 
 class NetworkingPipelineAWS(NetworkingPipeline):
@@ -147,6 +149,11 @@ class FixedIPPoolsPipeline(Pipeline):
         'KD_NODES_COUNT': '2',
     }
 
+    def post_create_hook(self):
+        super(FixedIPPoolsPipeline, self).post_create_hook()
+        set_eviction_timeout(self.cluster, '30s')
+        self.cluster.wait_for_service_pods()
+
     def cleanup(self):
         super(FixedIPPoolsPipeline, self).cleanup()
         self.cluster.ip_pools.clear()
@@ -169,9 +176,6 @@ class CephPipeline(Pipeline):
         'KD_PD_NAMESPACE': 'jenkins_pool'
     }
 
-    def set_up(self):
-        pass
-
     def tear_down(self):
         """
         Remove all CEPH volumes (PVs) after each test
@@ -185,6 +189,17 @@ class CephPipeline(Pipeline):
 
 class CephUpgradedPipeline(UpgradedPipelineMixin, CephPipeline):
     NAME = 'ceph_upgraded'
+
+
+class CephFixedIPPoolsPipeline(CephPipeline):
+    NAME = 'ceph_fixed_ip_pools'
+    ENV = {
+        'KD_FIXED_IP_POOLS': 'true',
+    }
+
+    def cleanup(self):
+        super(CephFixedIPPoolsPipeline, self).cleanup()
+        self.cluster.ip_pools.clear()
 
 
 class KubeTypePipeline(Pipeline):
@@ -213,8 +228,9 @@ class MovePodsPipeline(Pipeline):
     }
 
     def post_create_hook(self):
+        super(MovePodsPipeline, self).post_create_hook()
         set_eviction_timeout(self.cluster, '30s')
-        return super(MovePodsPipeline, self).post_create_hook()
+        self.cluster.wait_for_service_pods()
 
 
 class MovePodsPipelineAWS(MovePodsPipeline):
@@ -320,8 +336,8 @@ class SSHPipeline(Pipeline):
     }
 
     def set_up(self):
-        self.cluster.temp_files = self._create_temp_files()
         super(SSHPipeline, self).set_up()
+        self.cluster.temp_files = self._create_temp_files()
 
     def tear_down(self):
         super(SSHPipeline, self).tear_down()

@@ -9,12 +9,9 @@ import paramiko
 import requests
 from ipaddress import IPv4Network
 
-from exceptions import NonZeroRetCodeException, ClusterUpgradeError, \
-    PANotFoundInCatalog
 from kubedock.constants import KUBERDOCK_INGRESS_POD_NAME
 from tests_integration.lib import exceptions
 from tests_integration.lib import utils
-from tests_integration.lib.infra_providers import InfraProvider
 from tests_integration.lib.node import KDNode
 from tests_integration.lib.pa import KDPAPod
 from tests_integration.lib.pod import KDPod
@@ -186,11 +183,13 @@ class KDIntegrationTestAPI(object):
 
         :param host:  Name of the host to be powered off.
         """
-        self.power_off(host)
+        self._provider.suspend(host)
         try:
             yield
         finally:
             self.power_on(host)
+            self.nodes.get_node(host).wait_for_status(
+                utils.NODE_STATUSES.running)
 
     @log_timing
     def power_off(self, host):
@@ -244,7 +243,7 @@ class KDIntegrationTestAPI(object):
             LOG.debug("SSH connection to host '{}' is OK.".format(host))
 
     @log_timing
-    def wait_for_service_pods(self):
+    def wait_for_service_pods(self, _raise=True):
         def _check_service_pods():
             _, response, _ = self.kdctl(
                 'pods list --owner kuberdock-internal', out_as_dict=True)
@@ -252,7 +251,7 @@ class KDIntegrationTestAPI(object):
             if not all(s == 'running' for s in statuses):
                 raise exceptions.ServicePodsNotReady()
 
-        utils.retry(_check_service_pods, tries=40, interval=15)
+        utils.retry(_check_service_pods, tries=40, interval=15, _raise=_raise)
 
     @log_timing
     def healthcheck(self):
@@ -471,6 +470,11 @@ class NodeList(object):
             u'node-info -n {}'.format(pipes.quote(name)), out_as_dict=True)
         return out
 
+    def wait_all(self):
+        for hostname in self.cluster.node_names:
+            self.get_node(hostname).wait_for_status(
+                utils.NODE_STATUSES.running)
+
 
 class PAList(object):
     def __init__(self, cluster):
@@ -505,7 +509,7 @@ class PAList(object):
         for pa in _all:
             if pa['name'] == name:
                 return pa
-        raise PANotFoundInCatalog()
+        raise exceptions.PANotFoundInCatalog()
 
     def delete(self, id_):
         self.cluster.kdctl("predefined-apps delete --id {}".format(id_))
@@ -682,7 +686,7 @@ class DomainList(object):
         # It's impossible to import KUBERDOCK_DNS_POD_NAME from kubedock/kapi/nodes
         # because nodes try import from flask which isn't installed on the CI host
         dns_pod = KDPod.get_internal_pod(self.cluster, "kuberdock-dns")
-        dns_pod.wait_for_status("running")
+        dns_pod.wait_for_status(utils.POD_STATUSES.running)
         # TODO: add auto-generation of certificate (by openssl for example)
         domain = dict([(k, v) for (k, v) in creds.items()
                        if k in ("name", "certificate")])
@@ -692,7 +696,7 @@ class DomainList(object):
                     cluster=self.cluster, pod_name=KUBERDOCK_INGRESS_POD_NAME)
         ingress_pod = KDPod.get_internal_pod(self.cluster,
                                              KUBERDOCK_INGRESS_POD_NAME)
-        ingress_pod.wait_for_status("running")
+        ingress_pod.wait_for_status(utils.POD_STATUSES.running)
 
     def stop_sharing_ip(self):
         self.cluster.pods.clear()

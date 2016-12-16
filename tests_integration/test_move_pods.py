@@ -1,11 +1,19 @@
+import logging
+
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
-from tests_integration.lib.utils import assert_raises, wait_for
+from tests_integration.lib.utils import (
+    assert_raises, wait_for, log_debug, hooks, POD_STATUSES, NODE_STATUSES,
+    assert_eq)
 from tests_integration.lib.pipelines import pipeline
+
+
+LOG = logging.getLogger(__name__)
+LOG.setLevel(logging.DEBUG)
 
 
 @pipeline('move_pods')
 @pipeline('move_pods_aws')
+@hooks(teardown=lambda c: c.nodes.wait_all())
 def test_pods_with_local_storage_stop(cluster):
     # type: (KDIntegrationTestAPI) -> None
     """
@@ -15,26 +23,52 @@ def test_pods_with_local_storage_stop(cluster):
     pv = cluster.pvs.add('dummy', 'fakepv', '/nginxpv')
     pod = cluster.pods.create(
         'nginx', 'test_nginx_pod', pvs=[pv], start=True)
-    pod.wait_for_status('running')
+    pod.wait_for_status(POD_STATUSES.running)
     host = pod.info['host']
     with cluster.temporary_stop_host(host):
-        pod.wait_for_status('stopped')
+        cluster.nodes.get_node(host).wait_for_status(NODE_STATUSES.troubles)
+        pod.wait_for_status(POD_STATUSES.stopped)
 
 
+@pipeline('fixed_ip_pools')
 @pipeline('move_pods')
 @pipeline('move_pods_aws')
+@hooks(teardown=lambda c: c.nodes.wait_all())
 def test_pods_move_on_failure(cluster):
     # type: (KDIntegrationTestAPI) -> None
     """
-    Tests that the pod without local storage will move to another host in case
-    of failure.
+    Tests that the pod without local storage and public IPs will move to
+    another host in case of failure.
     """
     pod = cluster.pods.create('nginx', 'test_nginx_pod', start=True)
-    pod.wait_for_status('running')
-    host = pod.info['host']
-    with cluster.temporary_stop_host(host):
-        wait_for(lambda: pod.info['host'] != host)
-        pod.wait_for_status('running')
+    pod.wait_for_status(POD_STATUSES.running)
+    hostname = pod.info['host']
+    log_debug(
+        "Check that pod with no PV and public IP (not fixed IP cluster) "
+        "migrates to another node when the hosting node fails", LOG)
+    with cluster.temporary_stop_host(hostname):
+        wait_for(lambda: pod.info['host'] != hostname)
+        pod.wait_for_status(POD_STATUSES.running)
+
+
+@pipeline('move_pods')
+@hooks(teardown=lambda c: c.nodes.wait_all())
+def test_pods_with_public_ip_move(cluster):
+    """
+    Test that pod with public IP and no PV moves to another node in case of
+    hosting node failure
+    """
+    pod = cluster.pods.create(
+        'nginx', 'test_move_pods_with_pub_ip', open_all_ports=True,
+        start=True, wait_for_status=POD_STATUSES.running)
+
+    hostname = pod.node
+    log_debug(
+        "Check that pod with no PV, but with public IP (not fixed IP cluster) "
+        "migrates to another node when the hosting node fails", LOG)
+    with cluster.temporary_stop_host(hostname):
+        wait_for(lambda: pod.node != hostname)
+        pod.wait_for_status(POD_STATUSES.running)
 
 
 @pipeline('move_pods')
@@ -54,12 +88,12 @@ def test_error_start_with_shutdown_local_storage(cluster):
     """
     pv = cluster.pvs.add('dummy', 'fakepv', '/nginxpv')
     pod = cluster.pods.create('nginx', 'test_nginx_pod', pvs=[pv],
-                              start=True, wait_for_status='running')
+                              start=True, wait_for_status=POD_STATUSES.running)
     host = pod.info['host']
     pod.stop()
-    pod.wait_for_status('stopped')
+    pod.wait_for_status(POD_STATUSES.stopped)
     with cluster.temporary_stop_host(host):
-        wait_for(lambda: cluster.get_host_status(host) == 'troubles')
+        cluster.nodes.get_node(host).wait_for_status(NODE_STATUSES.troubles)
         new_pod = cluster.pods.create('nginx', 'test_nginx_pod_new',
                                       pvs=[pv],
                                       start=False)
@@ -68,7 +102,7 @@ def test_error_start_with_shutdown_local_storage(cluster):
                 "There are no suitable nodes for the pod. Please try"
                 " again later or contact KuberDock administrator"):
             new_pod.start()
-        assert new_pod.status == 'stopped'
+        assert_eq(new_pod.status, POD_STATUSES.stopped)
 
 
 @pipeline('move_pods')
@@ -89,17 +123,17 @@ def test_error_with_shutdown_local_storage(cluster):
     """
     pv = cluster.pvs.add('dummy', 'fakepv', '/nginxpv')
     pod = cluster.pods.create('nginx', 'test_nginx_pod', pvs=[pv],
-                              start=True, wait_for_status='running')
+                              start=True, wait_for_status=POD_STATUSES.running)
     host = pod.info['host']
     pod.stop()
-    pod.wait_for_status('stopped')
+    pod.wait_for_status(POD_STATUSES.stopped)
     with cluster.temporary_stop_host(host):
         new_pod = cluster.pods.create('nginx', 'test_nginx_pod_new',
                                       pvs=[pv],
                                       start=False)
         new_pod.start()
-        new_pod.wait_for_status('pending')
-        new_pod.wait_for_status('stopped')
+        new_pod.wait_for_status(POD_STATUSES.pending)
+        new_pod.wait_for_status(POD_STATUSES.stopped)
 
 
 @pipeline('move_pods')
@@ -123,17 +157,17 @@ def test_pod_not_start_with_pv_on_shut_down_host(cluster):
     """
     pv = cluster.pvs.add('dummy', 'pv', '/nginxpv')
     pod = cluster.pods.create('nginx', 'test_nginx_pod', pvs=[pv],
-                              start=True, wait_for_status='running')
+                              start=True, wait_for_status=POD_STATUSES.running)
     pod.delete()
     pv.delete()
     pv = cluster.pvs.add('dummy', 'pv', '/nginxpv')
     pod = cluster.pods.create('nginx', 'test_nginx_pod', pvs=[pv],
-                              start=True, wait_for_status='running')
+                              start=True, wait_for_status=POD_STATUSES.running)
     host = pod.info['host']
     pod.stop()
-    pod.wait_for_status('stopped')
+    pod.wait_for_status(POD_STATUSES.stopped)
     with cluster.temporary_stop_host(host):
-        wait_for(lambda: cluster.get_host_status(host) == 'troubles')
+        cluster.nodes.get_node(host).wait_for_status(NODE_STATUSES.troubles)
         new_pod = cluster.pods.create('nginx', 'test_nginx_pod_new',
                                       pvs=[pv],
                                       start=False)
@@ -142,4 +176,4 @@ def test_pod_not_start_with_pv_on_shut_down_host(cluster):
                 "There are no suitable nodes for the pod. Please try"
                 " again later or contact KuberDock administrator"):
             new_pod.start()
-        assert new_pod.status == 'stopped'
+        assert_eq(new_pod.status, POD_STATUSES.stopped)

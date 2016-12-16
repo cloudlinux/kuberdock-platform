@@ -1,7 +1,8 @@
 import json
 
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.utils import assert_raises, assert_eq, hooks
+from tests_integration.lib.utils import (
+    assert_raises, assert_eq, hooks, POD_STATUSES)
 from tests_integration.lib.pipelines import pipeline
 
 PREDEFINED_APPLICATION_FILES = {
@@ -321,9 +322,10 @@ def test_validating_yaml_before_updating_pa_template(cluster):
 def test_add_and_run_pa(cluster):
     name = "dokuwiki.yaml"
     _pa_create(cluster, name, f=PREDEFINED_APPLICATION_FILES["dokuwiki"])
-    pod = cluster.pods.create_pa(name, command="kdctl", owner="test_user",
-                                 rnd_str="kdctl", wait_ports=True,
-                                 wait_for_status='running', healthcheck=True)
+    pod = cluster.pods.create_pa(
+        name, command="kdctl", owner="test_user", healthcheck=True,
+        rnd_str="kdctl", wait_ports=True, wait_for_status=POD_STATUSES.running)
+
     pod.delete()
 
 

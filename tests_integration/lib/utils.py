@@ -33,6 +33,36 @@ NO_FREE_IPS_ERR_MSG = 'no free public IP-addresses'
 LOG = logging.getLogger(__name__)
 
 
+class POD_STATUSES:
+    """
+    NOTE: Copied from kubedock.utils
+    Possible pods statuses
+    """
+    running = 'running'
+    stopped = 'stopped'
+    pending = 'pending'
+    succeeded = 'succeeded'
+    failed = 'failed'
+    unpaid = 'unpaid'  # TODO make this dbpod flag, not status
+    preparing = 'preparing'
+    stopping = 'stopping'
+    deleting = 'deleting'
+    deleted = 'deleted'
+
+
+class NODE_STATUSES:
+    """
+    NOTE: Copied from kubedock.utils
+    Possible node statuses
+    """
+    completed = 'completed'
+    pending = 'pending'
+    running = 'running'
+    deletion = 'deletion'
+    autoadded = 'autoadded'
+    troubles = 'troubles'
+
+
 def _proceed_exec_result(out, err, ret_code, check_retcode):
     err, out = force_unicode(err), force_unicode(out)
 
@@ -507,7 +537,7 @@ def highlight_code(code):
                      Terminal256Formatter(style='manni'))
 
 
-def wait_for_status(obj, status, tries=50, interval=5, delay=0):
+def wait_for_status(obj, status, tries=50, interval=5, delay=0, _raise=True):
     """
     Wait till pod's or node's status changes to the given one
 
@@ -526,9 +556,10 @@ def wait_for_status(obj, status, tries=50, interval=5, delay=0):
         if st == status:
             return
         time.sleep(interval)
-    raise StatusWaitException(expected=status,
-                              actual=st,
-                              timeout=delay + (interval * _))
+    if _raise:
+        raise StatusWaitException(expected=status,
+                                  actual=st,
+                                  timeout=delay + (interval * tries))
 
 
 def wait_for_status_not_equal(obj, status, tries=50, interval=5, delay=0):

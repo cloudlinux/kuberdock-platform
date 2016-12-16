@@ -39,8 +39,8 @@ def test_a_pv_created_together_with_pod(cluster):
     # It is possible to create an nginx pod together with new PV
     pv = cluster.pvs.add("dummy", pv_name, mount_path)
     pod = cluster.pods.create("nginx", "test_nginx_pod_1", pvs=[pv],
-                              start=True, wait_for_status='running',
-                              wait_ports=True, open_all_ports=True)
+                              start=True, wait_ports=True, open_all_ports=True,
+                              wait_for_status=utils.POD_STATUSES.running)
     utils.assert_eq(pv.exists(), True)
 
     c_id = pod.get_container_id(container_image='nginx')
@@ -52,8 +52,8 @@ def test_a_pv_created_together_with_pod(cluster):
 
     # It is possible to create an nginx pod using existing PV
     pod = cluster.pods.create("nginx", "test_nginx_pod_2", pvs=[pv],
-                              start=True, wait_for_status='running',
-                              wait_ports=True, open_all_ports=True)
+                              start=True, wait_ports=True, open_all_ports=True,
+                              wait_for_status=utils.POD_STATUSES.running)
     ret = pod.do_GET(path='/test.txt')
     utils.assert_eq('TEST', ret)
     pod.delete()
@@ -66,7 +66,8 @@ def test_a_pv_created_together_with_pod(cluster):
     pv = cluster.pvs.add('dummy', pv_name, mount_path)
     pod = cluster.pods.create(
         'nginx', 'test_nginx_pod_3', pvs=[pv], start=True,
-        wait_for_status='running', wait_ports=True, open_all_ports=True)
+        wait_for_status=utils.POD_STATUSES.running, wait_ports=True,
+        open_all_ports=True)
     utils.assert_eq(pv.exists(), True)
 
     # '/test.txt' is not on newly created PV, we expect HTTP Error 404
@@ -96,7 +97,7 @@ def test_a_pv_created_separately(cluster):
 
     # It's possible to use separately created PV for nginx pod
     cluster.pods.create("nginx", "test_nginx_pod_3", pvs=[pv],
-                        wait_for_status='running')
+                        wait_for_status=utils.POD_STATUSES.running)
 
     # TODO: place correct exception and regexp to args of assertRaisesRegexp
     # TODO: and uncomment the next block. Currently blocked by AC-3689
@@ -105,7 +106,7 @@ def test_a_pv_created_separately(cluster):
     with cluster.assertRaisesRegexp(some_exception, some_regexp):
         pod = cluster.pods.create("nginx", "test_nginx_pod_4",
                                       start=True, wait_ports=False,
-                                      wait_for_status='running',
+                                      wait_for_status=utils.POD_STATUSES.running,
                                       healthcheck=False, pv_size=pv.size,
                                       pv_name=pv.name,
                                       pv_mount_path='/nginxpv')
@@ -121,7 +122,8 @@ def test_can_create_pod_without_volumes_and_ports(cluster):
     # FROM busybox
     # CMD ["/bin/sh", "-c", "while true; do sleep 1; done"]
     cluster.pods.create("apopova/busybox", "test_busybox_pod_1",
-                        wait_for_status='running', healthcheck=True)
+                        wait_for_status=utils.POD_STATUSES.running,
+                        healthcheck=True)
 
 
 @pipeline('main')
@@ -131,7 +133,7 @@ def test_nginx_with_healthcheck(cluster):
     # type: (KDIntegrationTestAPI) -> None
     cluster.pods.create("nginx", "test_nginx_pod_1", open_all_ports=True,
                         start=True, wait_ports=True, healthcheck=True,
-                        wait_for_status='running')
+                        wait_for_status=utils.POD_STATUSES.running)
 
 
 @pipeline('main')
@@ -140,13 +142,13 @@ def test_nginx_with_healthcheck(cluster):
 def test_recreate_pod_with_real_ip(cluster):
     # type: (KDIntegrationTestAPI) -> None
     pod = cluster.pods.create("nginx", "test_nginx_pod_4",
-                              open_all_ports=True, wait_ports=True,
-                              start=True, wait_for_status='running')
+                              open_all_ports=True, wait_ports=True, start=True,
+                              wait_for_status=utils.POD_STATUSES.running)
     pod.healthcheck()
     pod.delete()
     pod = cluster.pods.create("nginx", "test_nginx_pod_4",
-                              open_all_ports=True, wait_ports=True,
-                              start=True, wait_for_status='running')
+                              open_all_ports=True, wait_ports=True, start=True,
+                              wait_for_status=utils.POD_STATUSES.running)
     pod.healthcheck()
     pod.delete()
 
@@ -158,7 +160,7 @@ def test_nginx_kublet_resize(cluster):
     # type: (KDIntegrationTestAPI) -> None
     pod = cluster.pods.create("nginx", "test_nginx_pod_1", open_all_ports=True,
                               start=True, wait_ports=True, healthcheck=True,
-                              wait_for_status='running')
+                              wait_for_status=utils.POD_STATUSES.running)
     pod.change_kubes(kubes=2, container_image='nginx')
     time.sleep(20)
     pod.wait_for_ports()
@@ -180,7 +182,7 @@ def test_start_pod_and_reboot_node(cluster):
     # accurate way to check that pod was redeployed as well.
     utils.wait_for(
         lambda: c_id != pod.get_container_id(container_image='nginx'))
-    pod.wait_for_status("running")
+    pod.wait_for_status(utils.POD_STATUSES.running)
     pod.healthcheck()
 
 
@@ -190,6 +192,6 @@ def test_custom_pod_port(cluster):
     pod = cluster.pods.create(
         'nginx', 'nginx_test_pod',
         ports=[Port(123, container_port=80, public=True)], start=True,
-        wait_for_status='running', wait_ports=True)
+        wait_for_status=utils.POD_STATUSES.running, wait_ports=True)
 
     pod.do_GET(path='/', port=123)

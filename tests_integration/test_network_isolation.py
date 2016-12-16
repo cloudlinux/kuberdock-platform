@@ -145,7 +145,7 @@ def setup_pods(cluster, pods_params=ISOLATION_TESTS_PODS):
         pods[pod_params['name']] = cluster.pods.create(**pod_params)
 
     for pod in pods.values():
-        pod.wait_for_status('running')
+        pod.wait_for_status(utils.POD_STATUSES.running)
     specs = {
         name: pods[name].get_spec()
         for name in pods.keys()
@@ -770,16 +770,16 @@ def test_intercontainer_communication(cluster):
     utils.log_debug("Create PA on node1", LOG)
     # By setting 'plan_id==1' we ensure that pod lands on 'node1'
     pa_node1 = cluster.pods.create_pa(
-        'wordpress_elasticsearch.yaml', wait_for_status='running',
-        wait_ports=True, plan_id=1)
+        'wordpress_elasticsearch.yaml', wait_ports=True, plan_id=1,
+        wait_for_status=utils.POD_STATUSES.running)
     _check_access_through_localhost(pa_node1)
     pa_node1.delete()
 
     utils.log_debug('Create PA on node2', LOG)
     # By setting 'plan_id==0' we ensure that pod lands on 'node2'
     pa_node2 = cluster.pods.create_pa(
-        'wordpress_elasticsearch.yaml', wait_for_status='running',
-        wait_ports=True, plan_id=0)
+        'wordpress_elasticsearch.yaml', wait_ports=True, plan_id=0,
+        wait_for_status=utils.POD_STATUSES.running)
     _check_access_through_localhost(pa_node2)
 
     # ------- Following is one of the testcases from AC-4092 -------------
@@ -788,16 +788,12 @@ def test_intercontainer_communication(cluster):
         "{}".format(SMTP_PORT))
     pa_node2.change_pod_ports(
         ports=[Port(SMTP_PORT, container_port=HTTP_PORT, public=True)])
-    pa_node2.wait_for_status('running')
+    pa_node2.wait_for_status(utils.POD_STATUSES.running)
     pa_node2.wait_for_ports(ports=[SMTP_PORT])
 
     utils.local_exec(
         'curl curl -k -m5 -v http://{}:{}/wp-admin/install.php'.format(
             pa_node2.public_ip, SMTP_PORT), shell=True)
-
-    # NOTE: This doesn't work. Containers within a pod still communicate
-    # via their container ports, not pod ports.
-    # _check_access_through_localhost(pa_node2, wp_port=SMTP_PORT)
 
 
 @pipeline('fixed_ip_pools',

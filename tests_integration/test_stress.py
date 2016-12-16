@@ -7,7 +7,7 @@ from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.exceptions import KDIsNotSane
 from tests_integration.lib.load_testing_utils import check_sanity
 from tests_integration.lib.utils import (pod_factory, loglevel,
-                                         log_workload)
+                                         log_workload, POD_STATUSES)
 from tests_integration.lib.cluster_utils import set_kubelet_multipliers
 
 LOG = logging.getLogger(__name__)
@@ -102,7 +102,7 @@ def check_recovery(cluster, pods):
 
 
 get_pod = pod_factory("hub.kuberdock.com/webhook:v1",
-                      start=True, wait_for_status='running',
+                      start=True, wait_for_status=POD_STATUSES.running,
                       kube_type='Tiny')
 
 
@@ -138,7 +138,7 @@ def test_statistic_stress(cluster):
                    "POST request to {} different wordpress pods.").format(
                        STATISTIC_FAKE_PODS_COUNT)
     pod = cluster.pods.create_pa('wordpress.yaml', wait_ports=True,
-                                 wait_for_status='running',
+                                 wait_for_status=POD_STATUSES.running,
                                  healthcheck=True)
     LOG.debug("Do some load on wordpress")
     pod.gen_workload(STATISTIC_COLLECTION_PERIOD)

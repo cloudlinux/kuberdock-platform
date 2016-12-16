@@ -11,7 +11,7 @@ from tests_integration.lib.cluster_utils import add_pa_from_url, \
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.utils import (
-    assert_in, get_rnd_string)
+    assert_in, POD_STATUSES)
 
 LOG = logging.getLogger(__name__)
 
@@ -40,7 +40,8 @@ def test_change_pod_kube_quantity_on_loaded_cluster(cluster):
     name = add_pa_from_url(cluster, pa_url)
 
     try:
-        pods = [cluster.pods.create_pa(name, wait_for_status="running",
+        pods = [cluster.pods.create_pa(name,
+                                       wait_for_status=POD_STATUSES.running,
                                        healthcheck=True)
                 for _ in range(total_pods)]
         for p in pods:
@@ -49,7 +50,7 @@ def test_change_pod_kube_quantity_on_loaded_cluster(cluster):
         cluster.ssh_exec('node1', 'top -bn3 | head -20')
 
     # Selecting control pod from the middle of the batch.
-    wp_pod = pods[len(pods)/2]
+    wp_pod = pods[len(pods) / 2]
     custom_cont = "Testing pod content after resize"
     custom_post_path = wp_pod.publish_post(content=custom_cont)
     LOG.debug("Pod '{}' is a Control WP pod with a custom content.".format(
@@ -65,7 +66,7 @@ def test_change_pod_kube_quantity_on_loaded_cluster(cluster):
                             redeploy=False)
         wp_pod.change_kubes(kubes=10, container_name='mysql',
                             redeploy=True)
-        wp_pod.wait_for_status("running")
+        wp_pod.wait_for_status(POD_STATUSES.running)
         wp_pod.wait_http_resp()
         assert_in(custom_cont, wp_pod.do_GET(path=custom_post_path))
 

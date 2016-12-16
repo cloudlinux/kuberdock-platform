@@ -4,6 +4,7 @@ import logging
 from time import sleep
 
 from tests_integration.lib.exceptions import NonZeroRetCodeException
+from tests_integration.lib.utils import NODE_STATUSES
 
 
 LOG = logging.getLogger(__name__)
@@ -85,7 +86,7 @@ def set_kubelet_multipliers(cluster, cpu_mult=None, ram_mult=None):
     sleep(5)
     # wait until nodes are active (kubelet restart)
     for n_name in cluster.node_names:
-        cluster.nodes.get_node(n_name).wait_for_status("running")
+        cluster.nodes.get_node(n_name).wait_for_status(NODE_STATUSES.running)
 
 
 def add_pa_from_url(cluster, url):

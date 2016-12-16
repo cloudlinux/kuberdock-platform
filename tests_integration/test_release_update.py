@@ -2,6 +2,7 @@
 
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
+from tests_integration.lib.utils import POD_STATUSES
 
 
 @pipeline('release_update')
@@ -26,9 +27,10 @@ def test_release_update(cluster):
                                open_all_ports=True, start=True)
     pod3 = cluster.pods.create("nginx", u"測試nginx的莢1",
                                open_all_ports=True, start=True)
+
     def healthcheck_all():
         for p in (pod1, pod2, pod3):
-            p.wait_for_status("running")
+            p.wait_for_status(POD_STATUSES.running)
             p.wait_for_ports()
             p.healthcheck()
     healthcheck_all()

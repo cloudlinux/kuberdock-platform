@@ -11,7 +11,7 @@ from shutil import rmtree
 from colorama import Style, Fore
 
 from tests_integration.lib.utils import retry, ssh_exec, get_ssh, \
-    get_rnd_string
+    get_rnd_string, POD_STATUSES
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.exceptions import FileTransferValidationFailed
 
@@ -23,7 +23,7 @@ logger.setLevel(logging.DEBUG)
 @pipeline('ssh_feature_aws')
 def test_ssh_feature(cluster):
     pod = cluster.pods.create('nginx', 'ssh_test_nginx_pod', start=True,
-                              wait_for_status='running')
+                              wait_for_status=POD_STATUSES.running)
     creds = pod.ssh_credentials
     users, hosts, password = creds['users'], creds['hosts'], creds['password']
 
@@ -51,7 +51,7 @@ def test_ssh_feature(cluster):
         f(hosts[0], users[0], password)
     # Test ssh to stopped pods
     pod.stop()
-    pod.wait_for_status('stopped')
+    pod.wait_for_status(POD_STATUSES.stopped)
     _test_ssh_to_stopped_container(hosts[0], users[0], password)
 
 

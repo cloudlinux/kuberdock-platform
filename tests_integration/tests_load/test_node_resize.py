@@ -5,7 +5,7 @@ from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.infra_providers import InstanceSize
 from tests_integration.lib.exceptions import StatusWaitException
 from tests_integration.lib.utils import log_debug, log_info, assert_eq, \
-    wait_pods_status
+    wait_pods_status, NODE_STATUSES, POD_STATUSES
 
 
 LOG = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ LOG = logging.getLogger(__name__)
 def test_fill_node_and_resize(cluster):
 
     node1 = cluster.nodes.get_node('node1')
-    node1.wait_for_status("running", tries=24, interval=5)
+    node1.wait_for_status(NODE_STATUSES.running, tries=24, interval=5)
     time.sleep(20)  # Workaround for AC-5403
     pods = _try_fill_node(cluster, 'nginx', prefix="before_resize_")
     log_info("Created {} pods".format(len(pods)))
@@ -24,10 +24,10 @@ def test_fill_node_and_resize(cluster):
     log_debug(node1.info)
     node1.resize(InstanceSize.Large)
     log_info(node1.info)
-    wait_pods_status(pods, status='running')
+    wait_pods_status(pods, status=POD_STATUSES.running)
     pods2 = _try_fill_node(cluster, 'nginx', prefix="after_resize_")
     log_info("Created {} pods".format(len(pods2)))
-    wait_pods_status(pods2, status='running')
+    wait_pods_status(pods2, status=POD_STATUSES.running)
     log_debug("Pods before resize - {}".format([p.name for p in pods]))
     log_debug("Pods after resize - {}".format([p.name for p in pods2]))
     assert_eq(len(pods2) >= len(pods), True)
@@ -40,7 +40,7 @@ def _try_fill_node(cluster, name, prefix=None, max_pods=500):
         pod = cluster.pods.create(image=name, kubes=4, name="{}{}_{}".format(
             prefix or '', name, _))
         try:
-            pod.wait_for_status(status='running', tries=36)
+            pod.wait_for_status(status=POD_STATUSES.running, tries=36)
             pods.append(pod)
         except StatusWaitException as ex:
             log_debug("Pod isn't started - {}".format(ex))

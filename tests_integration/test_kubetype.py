@@ -1,5 +1,5 @@
 from tests_integration.lib.utils import assert_eq, kube_type_to_int, \
-    gen_rnd_ceph_pv_name, assert_in
+    gen_rnd_ceph_pv_name, assert_in, POD_STATUSES
 from tests_integration.lib.pipelines import pipeline
 
 
@@ -18,8 +18,8 @@ def test_pod_lands_on_correct_node_given_a_kubetype(cluster):
     pod2 = cluster.pods.create(
         "nginx", "test_nginx_pod_2", kube_type='Tiny')
 
-    pod1.wait_for_status('running')
-    pod2.wait_for_status('running')
+    pod1.wait_for_status(POD_STATUSES.running)
+    pod2.wait_for_status(POD_STATUSES.running)
 
     pod_hosts = {
         n['name']: n['host'] for n in cluster.pods.filter_by_owner()}
@@ -41,17 +41,17 @@ def test_pod_lands_on_correct_node_after_change_kubetype(cluster):
     pod = cluster.pods.create(
         "nginx", "test_nginx_pod", kube_type='Tiny',
         wait_ports=True, healthcheck=True,
-        wait_for_status='running', open_all_ports=True)
+        wait_for_status=POD_STATUSES.running, open_all_ports=True)
     assert_eq(pod.node, 'node2')
 
     pod.change_kubetype(kube_type=1)
-    pod.wait_for_status('running')
+    pod.wait_for_status(POD_STATUSES.running)
     pod.wait_for_ports()
     pod.healthcheck()
     assert_eq(pod.node, 'node1')
 
     pod.change_kubetype(kube_type=2)
-    pod.wait_for_status('running')
+    pod.wait_for_status(POD_STATUSES.running)
     pod.wait_for_ports()
     pod.healthcheck()
     assert_in(pod.node, 'node3')
@@ -78,7 +78,7 @@ def test_pod_migrate_on_correct_node_after_change_kubetype(cluster):
     pv = cluster.pvs.add("dummy", pv_name, mount_path)
     pod = cluster.pods.create("nginx", "test_nginx_pod",
                               pvs=[pv], kube_type='Tiny',
-                              start=True, wait_for_status='running',
+                              start=True, wait_for_status=POD_STATUSES.running,
                               wait_ports=True, open_all_ports=True)
     assert_eq(pv.exists(), True)
     assert_eq(pod.node, 'node2')
@@ -90,14 +90,14 @@ def test_pod_migrate_on_correct_node_after_change_kubetype(cluster):
     assert_eq('TEST', ret)
 
     pod.change_kubetype(kube_type=1)
-    pod.wait_for_status('running')
+    pod.wait_for_status(POD_STATUSES.running)
     pod.wait_for_ports()
     ret = pod.do_GET(path='/test.txt')
     assert_eq('TEST', ret)
     assert_in(pod.node, ['node1', 'node4'])
 
     pod.change_kubetype(kube_type=2)
-    pod.wait_for_status('running')
+    pod.wait_for_status(POD_STATUSES.running)
     pod.wait_for_ports()
     ret = pod.do_GET(path='/test.txt')
     assert_eq('TEST', ret)

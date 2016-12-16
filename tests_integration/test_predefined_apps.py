@@ -1,10 +1,10 @@
-from tests_integration.lib.utils import assert_eq
+from tests_integration.lib.utils import assert_eq, POD_STATUSES
 from tests_integration.lib.pipelines import pipeline
 
 
 def check_pa(cluster, template_name):
     cluster.pods.create_pa(template_name, wait_ports=True,
-                           wait_for_status='running',
+                           wait_for_status=POD_STATUSES.running,
                            healthcheck=True)
 
 
@@ -156,7 +156,7 @@ def test_wordpressbackup_pa(cluster):
 def test_redis_pa_tiny(cluster):
     pod = cluster.pods.create_pa('custom_redis.yaml', plan_id=0,
                                  wait_ports=True,
-                                 wait_for_status='running',
+                                 wait_for_status=POD_STATUSES.running,
                                  healthcheck=True)
     spec = pod.get_spec()
     assert_eq(spec['containers'][0]['kubes'], 1)
@@ -166,7 +166,7 @@ def test_redis_pa_tiny(cluster):
 def test_redis_pa_standard(cluster):
     pod = cluster.pods.create_pa('custom_redis.yaml', plan_id=1,
                                  wait_ports=True,
-                                 wait_for_status='running',
+                                 wait_for_status=POD_STATUSES.running,
                                  healthcheck=True)
     spec = pod.get_spec()
     assert_eq(spec['containers'][0]['kubes'], 2)
@@ -176,7 +176,7 @@ def test_redis_pa_standard(cluster):
 def test_redis_pa_highmem(cluster):
     pod = cluster.pods.create_pa('custom_redis.yaml', plan_id=2,
                                  wait_ports=True,
-                                 wait_for_status='running',
+                                 wait_for_status=POD_STATUSES.running,
                                  healthcheck=True)
     spec = pod.get_spec()
     assert_eq(spec['containers'][0]['kubes'], 4)

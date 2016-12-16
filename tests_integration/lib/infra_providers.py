@@ -18,8 +18,7 @@ import oca
 from exceptions import VmCreateError, VmProvisionError, VmNotFoundError
 from tests_integration.lib.nebula_ip_pool import NebulaIPPool
 from tests_integration.lib.timing import log_timing_ctx, log_timing
-from tests_integration.lib.utils import retry, all_subclasses, log_dict, \
-    suppress, local_exec_live, local_exec, wait_ssh_conn, wait_for
+from tests_integration.lib import utils
 
 LOG = logging.getLogger(__name__)
 logging.getLogger('boto').setLevel(logging.WARNING)
@@ -52,7 +51,7 @@ class InfraProvider(object):
     @classmethod
     def from_name(cls, provider_name, env, provider_args):
         # type: (str, dict, dict) -> InfraProvider
-        providers = {c.NAME: c for c in all_subclasses(cls)}
+        providers = {c.NAME: c for c in utils.all_subclasses(cls)}
         return providers[provider_name](env, provider_args)
 
     @abstractmethod
@@ -189,7 +188,7 @@ class VagrantProvider(InfraProvider):
     def power_on(self, host):
         vm_name = self.vm_names[host]
         LOG.debug("VM Power On: '{}'".format(vm_name))
-        retry(self.vagrant.up, tries=3, vm_name=vm_name)
+        utils.retry(self.vagrant.up, tries=3, vm_name=vm_name)
 
     def power_off(self, host):
         vm_name = self.vm_names[host]
@@ -221,7 +220,7 @@ class VboxProvider(VagrantProvider):
         return self.vagrant.conf()["IdentityFile"]
 
     def start(self):
-        log_dict(self.vagrant.env, "Cluster settings:")
+        utils.log_dict(self.vagrant.env, "Cluster settings:")
         LOG.debug("Running vagrant provision")
         try:
             with log_timing_ctx("vagrant up (with provision)"):
@@ -279,13 +278,13 @@ class OpenNebulaProvider(VagrantProvider):
     def start(self):
         self._delay()
         self._reserve_ips()
-        log_dict(self.env, "Cluster settings:")
+        utils.log_dict(self.env, "Cluster settings:")
 
         LOG.debug("Running vagrant up...")
         try:
             with log_timing_ctx("vagrant up --no-provision"):
-                retry(self.vagrant.up, tries=3, interval=15,
-                      provider="opennebula", no_provision=True)
+                utils.retry(self.vagrant.up, tries=3, interval=15,
+                            provider="opennebula", no_provision=True)
             self.created_at = datetime.utcnow()
             self._log_vm_ips()
         except subprocess.CalledProcessError:
@@ -334,9 +333,9 @@ class OpenNebulaProvider(VagrantProvider):
 
     @log_timing
     def destroy(self):
-        with suppress():
+        with utils.suppress():
             self.routable_ip_pool.free_reserved_ips()
-        with suppress():
+        with utils.suppress():
             self.vagrant.destroy()
 
     def resize(self, host, size):
@@ -350,20 +349,23 @@ class OpenNebulaProvider(VagrantProvider):
                         cpu=cpu, ram=ram)
         self._oca.call('vm.resize', vm.id, template, False)
         self.power_on(host)
-        wait_ssh_conn([self.get_host_ip(host)],
-                      user=self.ssh_user,
-                      key_filename=self.ssh_key)
+        utils.wait_ssh_conn([self.get_host_ip(host)],
+                            user=self.ssh_user,
+                            key_filename=self.ssh_key)
 
     def power_off(self, host):
+        POWEROFF_STATE = 8
         LOG.debug("VM Power Off: '{}'".format(host))
         vm = self._get_oca_instance(host)
         vm.poweroff()
 
         def is_shutdown():
             vm.info()
-            return vm.state == 8
+            utils.log_debug('VM state: {} waiting for: {}'.format(
+                vm.state, POWEROFF_STATE))
+            return vm.state == POWEROFF_STATE
 
-        wait_for(is_shutdown)
+        utils.wait_for(is_shutdown)
 
     def power_on(self, host):
         LOG.debug("VM Power on: '{}'".format(host))
@@ -374,7 +376,17 @@ class OpenNebulaProvider(VagrantProvider):
             vm.info()
             return vm.state == vm.ACTIVE
 
-        wait_for(is_active)
+        utils.wait_for(is_active)
+
+    def suspend(self, host):
+        vm = self._get_oca_instance(host)
+        vm.suspend()
+
+        def is_suspended():
+            vm.info()
+            return vm.state == vm.SUSPENDED
+
+        utils.wait_for(is_suspended)
 
 
 class AwsProvider(InfraProvider):
@@ -491,7 +503,7 @@ class AwsProvider(InfraProvider):
         with tempfile.NamedTemporaryFile(prefix="inv-", delete=False) as inv:
             hosts = {}
             for name in ['master', ] + self.node_names:
-                hosts[name] = retry(
+                hosts[name] = utils.retry(
                     self.get_host_ip, tries=3, interval=20,
                     hostname=name)
             for host, host_ip in hosts.items():
@@ -578,7 +590,7 @@ class AwsProvider(InfraProvider):
 
     @log_timing
     def start(self):
-        log_dict(self.env, "Cluster settings:")
+        utils.log_dict(self.env, "Cluster settings:")
         LOG.debug("Running aws-kd-deploy.sh...")
 
         if self._ec2 is None:
@@ -588,18 +600,18 @@ class AwsProvider(InfraProvider):
 
         # FIXME local_exec_live does not work here because of syntax like
         # sudo yum -y update | cat" < <(cat) 2>"$LOG"
-        local_exec([
+        utils.local_exec([
             "bash", "-c",
             "aws-kd-deploy/cluster/aws-kd-deploy.sh"], env=self.env)
 
-        log_dict(self.env, "Cluster settings:")
+        utils.log_dict(self.env, "Cluster settings:")
         LOG.debug("Generating inventory")
         self._inventory = self._get_inventory()
         LOG.debug("Running ansible provision...")
         skip_tags = ','.join(
             self.env['KD_DEPLOY_SKIP'].split(',') + ['non_aws', ])
         extra_vars = self.extra_vars
-        local_exec_live([
+        utils.local_exec_live([
             "ansible-playbook", "dev-utils/dev-env/ansible/main.yml",
             "-i", self._inventory, "--skip-tags", skip_tags,
             "--extra-vars", extra_vars], env=self.env)
@@ -608,8 +620,8 @@ class AwsProvider(InfraProvider):
     def destroy(self):
         LOG.debug("Running aws-kd-down.sh...")
         # FIXME local_exec_live does not work
-        local_exec(['bash', 'aws-kd-deploy/cluster/aws-kd-down.sh'],
-                   env=self.env)
+        utils.local_exec(['bash', 'aws-kd-deploy/cluster/aws-kd-down.sh'],
+                         env=self.env)
         os.remove(self._inventory)
 
     def power_off(self, host):
@@ -629,6 +641,6 @@ class AwsProvider(InfraProvider):
         instance.modify_attribute(Attribute='instanceType',
                                   Value=instance_type)
         self.power_on(host)
-        wait_ssh_conn([self.get_host_ip(host)],
-                      user=self.ssh_user,
-                      key_filename=self.ssh_key)
+        utils.wait_ssh_conn([self.get_host_ip(host)],
+                            user=self.ssh_user,
+                            key_filename=self.ssh_key)

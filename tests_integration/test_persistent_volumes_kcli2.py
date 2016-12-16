@@ -1,6 +1,7 @@
 import logging
 
-from tests_integration.lib.utils import assert_eq, assert_raises, log_debug
+from tests_integration.lib.utils import (
+    assert_eq, assert_raises, log_debug, POD_STATUSES)
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 
@@ -58,7 +59,7 @@ def test_pv_states_and_deletion_via_kcli2(cluster):
     pod_name = 'test_nginx_pv_states_via_kcli'
     pod = cluster.pods.create(
         'nginx', pod_name, pvs=[pv1, pv2], start=True,
-        wait_for_status='running')
+        wait_for_status=POD_STATUSES.running)
 
     log_debug('Get PV info via kcli2 using PV name', LOG)
     pv1_info = pv1.info()
@@ -111,7 +112,7 @@ def test_pv_states_and_deletion_via_kcli2(cluster):
 
     # Stop the pod
     pod.stop()
-    pod.wait_for_status('stopped')
+    pod.wait_for_status(POD_STATUSES.stopped)
 
     log_debug("Try to delete PVs 'disk1' and 'disk2' with pod 'stopped'", LOG)
     with assert_raises(NonZeroRetCodeException, 'Volume can not be deleted.'

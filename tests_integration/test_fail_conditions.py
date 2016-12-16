@@ -38,10 +38,10 @@ def test_resume_halt_host(cluster):
     node = cluster.nodes.get_node('node1')
 
     cluster.power_off('node1')
-    node.wait_for_status('troubles')
+    node.wait_for_status(utils.NODE_STATUSES.troubles)
 
     cluster.power_on('node1')
-    node.wait_for_status('running')
+    node.wait_for_status(utils.NODE_STATUSES.running)
     cluster.ssh_exec('node1', "echo 'hello world'", check_retcode=True)
 
 
@@ -56,7 +56,7 @@ def test_pod_restart_policy(cluster):
     }
 
     for pod in pods.values():
-        pod.wait_for_status('running')
+        pod.wait_for_status(utils.POD_STATUSES.running)
 
     # FIXME in AC-4123. Expected test behavior is not implemented inside KD yet
     # _test_hosting_node_failure(cluster, pods)
@@ -96,7 +96,7 @@ def _test_container_failure(cluster, pod):
             "Pod '{}' should become 'failed' after container failure".format(
                 pod.name),
             LOG)
-        pod.wait_for_status('failed')
+        pod.wait_for_status(utils.POD_STATUSES.failed)
     else:
         utils.log_debug(
             "Pod '{}' should become 'running' after container failure "
@@ -104,7 +104,7 @@ def _test_container_failure(cluster, pod):
             LOG)
         utils.wait_for(
             lambda: c_id != pod.get_container_id(container_image=IMAGE))
-        pod.wait_for_status('running')
+        pod.wait_for_status(utils.POD_STATUSES.running)
 
 
 def _test_change_restart_policy(cluster, pod, policy):
@@ -114,7 +114,7 @@ def _test_change_restart_policy(cluster, pod, policy):
     utils.log_debug(msg.format(pod.name, pod.restart_policy, policy), LOG)
     pod.set_restart_policy(policy)
     utils.wait_for(lambda: c_id != pod.get_container_id(container_image=IMAGE))
-    pod.wait_for_status('running')
+    pod.wait_for_status(utils.POD_STATUSES.running)
 
     _test_container_failure(cluster, pod)
 
@@ -131,7 +131,7 @@ def _test_hosting_node_failure(cluster, pods):
     with cluster.temporary_stop_host(hosting_node):
         for pod_name, pod in pods.items():
             utils.log_debug(msg.format(pod_name), LOG)
-            pod.wait_for_status('pending')
+            pod.wait_for_status(utils.POD_STATUSES.pending)
 
     msg = "Wait until container ID for pod '{}' changes"
     for pod_name, c_id in container_ids.items():
@@ -141,4 +141,4 @@ def _test_hosting_node_failure(cluster, pods):
 
     # Wait until pods become running again
     for pod in pods.values():
-        pod.wait_for_status('running')
+        pod.wait_for_status(utils.POD_STATUSES.running)

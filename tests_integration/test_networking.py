@@ -1,7 +1,7 @@
 
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.utils import NO_FREE_IPS_ERR_MSG, assert_raises, \
-    assert_eq
+    assert_eq, POD_STATUSES
 from tests_integration.lib.pipelines import pipeline
 
 
@@ -22,7 +22,7 @@ def test_pod_ip_resource(cluster):
     # It's still possible to create a pod without a public IP
     cluster.pods.create("nginx", "test_nginx_pod_3",
                         start=True, open_all_ports=False,
-                        wait_for_status='running')
+                        wait_for_status=POD_STATUSES.running)
 
 
 @pipeline('networking')
@@ -32,7 +32,7 @@ def test_create_delete_ippool(cluster):
     nginx1 = cluster.pods.create("nginx", "test_nginx_pod_1",
                                  open_all_ports=True, start=True,
                                  healthcheck=True, wait_ports=True,
-                                 wait_for_status='running')
+                                 wait_for_status=POD_STATUSES.running)
 
     with assert_raises(NonZeroRetCodeException,
                        text='.*You cannot delete this network.*',

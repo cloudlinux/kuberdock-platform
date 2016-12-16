@@ -60,7 +60,7 @@ class KDNode(object):
 
         try:
             utils.wait_for_status_not_equal(
-                self, "running", tries=24, interval=5)
+                self, utils.NODE_STATUSES.running, tries=24, interval=5)
         except StatusWaitException:
             # If rebooted, node sometimes goes into "Troubles" and "Pending"
             # states, however sometimes Kuberdock doesn't "notice" that node
@@ -69,10 +69,8 @@ class KDNode(object):
 
         # NOTE: Number of tries were intentionally increased, because of the
         # load on Nebula clusters.
-        utils.wait_for_status(self, "running", tries=48, interval=10)
-
-    def wait_for_status(self, status, tries=20, interval=3):
-        wait_for_status(self, status, tries=tries, interval=interval)
+        utils.wait_for_status(self, utils.NODE_STATUSES.running, tries=48,
+                              interval=5)
 
     @property
     def info(self):
@@ -88,8 +86,10 @@ class KDNode(object):
     def wait_ssh_conn(self):
         self.cluster.wait_ssh_conn(self.name)
 
-    def wait_for_status(self, status, tries=50, interval=5, delay=0):
-        utils.wait_for_status(self, status, tries, interval, delay)
+    def wait_for_status(self, status, tries=48, interval=10, delay=0,
+                        _raise=True):
+        utils.wait_for_status(self, status, tries, interval, delay,
+                              _raise=_raise)
 
     def get_stat(self):
         self.cluster.kcli2(u"stats node {}".format(self.name))

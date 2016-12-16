@@ -4,11 +4,9 @@ from os.path import basename, normpath
 
 from tests_integration.lib.cluster_utils import http_share
 from tests_integration.lib.exceptions import NonZeroRetCodeException
-from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.pod import Port
-from tests_integration.lib.utils import assert_in, assert_raises, assert_eq, \
-    assert_not_eq, get_rnd_low_string, hooks
+from tests_integration.lib import utils
 
 USER = "test_user"
 USER_ID = 3
@@ -46,7 +44,7 @@ def setup_pv_test(cluster):
 
 
 @pipeline('pod_restore')
-@hooks(setup=setup_non_pv_test)
+@utils.hooks(setup=setup_non_pv_test)
 def test_restore_pod_from_cmd(cluster):
     """Test that pod can be restored from the cmd
     and that pod can't be restored if is't name is already in use.
@@ -54,8 +52,8 @@ def test_restore_pod_from_cmd(cluster):
     :type cluster: KDIntegrationTestAPI
     """
     # Test that pod can be restored from the cmd
-    _, pod_dump, _ = cluster.ssh_exec("master",
-                                      "cat {}".format(NGINX_WITHOUT_PV['master_path']))
+    _, pod_dump, _ = cluster.ssh_exec(
+        "master", "cat {}".format(NGINX_WITHOUT_PV['master_path']))
     pod = cluster.pods.restore(USER, pod_dump=pod_dump)
     pod.wait_for_ports()
     pod.healthcheck()
@@ -63,7 +61,7 @@ def test_restore_pod_from_cmd(cluster):
 
 @pipeline('pod_restore')
 @pipeline('pod_restore_aws')
-@hooks(setup=setup_non_pv_test)
+@utils.hooks(setup=setup_non_pv_test)
 def test_restore_from_file(cluster):
     """Test that pod without PVs can be restored from json-file.
 
@@ -74,7 +72,7 @@ def test_restore_from_file(cluster):
 
 @pipeline('pod_restore')
 @pipeline('pod_restore_aws')
-@hooks(setup=setup_domain_test, teardown=teardown_domain_test)
+@utils.hooks(setup=setup_domain_test, teardown=teardown_domain_test)
 def test_restore_pod_with_domain_from_file(cluster):
     """Test that pod without PVs can be restored from json-file.
 
@@ -85,7 +83,7 @@ def test_restore_pod_with_domain_from_file(cluster):
 
 @pipeline('pod_restore')
 @pipeline('pod_restore_aws')
-@hooks(setup=setup_pv_test)
+@utils.hooks(setup=setup_pv_test)
 def test_pod_with_pv_restore(cluster):
     """Test that pod with PVs can be restored.
 
@@ -113,22 +111,22 @@ def test_pod_with_pv_restore(cluster):
     pod = cluster.pods.restore(USER, file_path=file_name,
                                pv_backups_location=backup_url,
                                pv_backups_path_template=path_template,
-                               wait_for_status="running")
+                               wait_for_status=utils.POD_STATUSES.running)
     pod.wait_for_ports()
-    assert_in("This page has been restored from tar.gz",
-              pod.do_GET(path='/restored_location/'))
+    utils.assert_in("This page has been restored from tar.gz",
+                    pod.do_GET(path='/restored_location/'))
     old_id = pod.pod_id
 
     # Test that pod isn't removed if pod with same name is restored with
     # --force-not-delete flag
-    with assert_raises(NonZeroRetCodeException,
-                       'Pod with name .* already exists'):
+    with utils.assert_raises(NonZeroRetCodeException,
+                             'Pod with name .* already exists'):
         cluster.pods.restore(USER, file_path=file_name,
                              pv_backups_location=backup_url,
                              pv_backups_path_template=path_template,
                              flags="--force-not-delete")
     # If pod has't been restored, it's id should not be changed
-    assert_eq(old_id, pod.pod_id)
+    utils.assert_eq(old_id, pod.pod_id)
 
     # Test that pod is removed together with disks if pod with same name
     # and same disks names is restored with --force-delete flag
@@ -140,10 +138,10 @@ def test_pod_with_pv_restore(cluster):
                                 return_as_json=True)
     # If pod was restored than it's id should distinguish from id of pod
     # with same name, that has just been removed
-    assert_not_eq(old_id, pod2.pod_id)
+    utils.assert_not_eq(old_id, pod2.pod_id)
     pod2.wait_for_ports()
-    assert_in("This page has been restored from tar.gz",
-              pod2.do_GET(path='/restored_location/'))
+    utils.assert_in("This page has been restored from tar.gz",
+                    pod2.do_GET(path='/restored_location/'))
 
 
 def _generate_restore_file_with_pv(cluster):
@@ -192,16 +190,16 @@ def _create_nginx_pod_with_pv(cluster):
     pod_name = "nginx_with_pv"
     pv = cluster.pvs.add("dummy", pv_name, mount_path)
     pod = cluster.pods.create("nginx", pod_name, pvs=[pv], start=True,
-                              wait_for_status='running',
+                              wait_for_status=utils.POD_STATUSES.running,
                               ports=[Port(80, public=True)])
     return pod, pv
 
 
 def _create_nginx_pod_without_pv(cluster):
     """:type cluster: KDIntegrationTestAPI"""
-    pod_name = "nginx{}".format(get_rnd_low_string(length=5))
+    pod_name = "nginx{}".format(utils.get_rnd_low_string(length=5))
     pod = cluster.pods.create("nginx", pod_name, start=True,
-                              wait_for_status='running',
+                              wait_for_status=utils.POD_STATUSES.running,
                               ports=[Port(80, public=True)],
                               domain=cluster.domains.get_first_domain())
     return pod
@@ -244,7 +242,7 @@ def _restore_from_file(cluster, domain):
         USER,
         file_path=NGINX_WITH_DOMAIN['master_path'] if domain else
                   NGINX_WITHOUT_PV['master_path'],
-        wait_for_status='running')
+        wait_for_status=utils.POD_STATUSES.running)
     pod.wait_for_ports()
     pod.healthcheck()
     cluster.assert_pods_number(1)

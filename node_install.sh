@@ -348,40 +348,6 @@ if [[ $WARNS ]]; then
     printf "For details refer Requirements section of KuberDock Documentation, http://docs.kuberdock.com/index.html?requirements.htm\n"
 fi
 
-# Check kernel
-current_kernel=$(uname -r)
-check_kernel=$(chk_ver "$current_kernel" "3.10.0-327.4.4")
-
-if [ "$check_kernel" == "True" ]
-then
-    if [ "$ZFS" = yes ]; then
-        echo "================================================================================"
-        echo "Your kernel is too old, please upgrade it first, reboot the machine and readd the node to KuberDock to " \
-             "continue installation"
-        exit 1
-    fi
-
-    # If ZFS was not needed it is safe to upgrade the kernel
-    echo "Current kernel is $current_kernel, upgrading..."
-    yum_wrapper -y install kernel
-    yum_wrapper -y install kernel-tools
-    yum_wrapper -y install kernel-tools-libs
-    yum_wrapper -y install kernel-headers
-    yum_wrapper -y install kernel-devel
-
-elif [ "$ZFS" = yes ]; then
-   yum info $(rpm --quiet -q epel-release && echo '--disablerepo=epel') -q kernel-devel-$current_kernel
-   if [ $? -ne 0 ]; then
-       echo "================================================================================"
-       echo "kernel-devel-$current_kernel is not available. Please install it manually or upgrade kernel and " \
-            "readd the node to KuberDock to continue installation"
-       exit 1
-   fi
-fi
-# ================= // Various KD requirements checking ====================
-
-
-
 setup_ntpd ()
 {
     # TODO Actually we can use here yum wrapper if we sure about added repos
@@ -582,6 +548,40 @@ yum --enablerepo=kube,kube-testing clean metadata
 setup_ntpd
 
 enable_epel
+
+# Check kernel
+current_kernel=$(uname -r)
+check_kernel=$(chk_ver "$current_kernel" "3.10.0-327.4.4")
+
+if [ "$check_kernel" == "True" ]
+then
+    if [ "$ZFS" = yes ]; then
+        echo "================================================================================"
+        echo "Your kernel is too old, please upgrade it first, reboot the machine and readd the node to KuberDock to " \
+             "continue installation"
+        exit 1
+    fi
+
+    # If ZFS was not needed it is safe to upgrade the kernel
+    echo "Current kernel is $current_kernel, upgrading..."
+    yum_wrapper -y install kernel
+    yum_wrapper -y install kernel-tools
+    yum_wrapper -y install kernel-tools-libs
+    yum_wrapper -y install kernel-headers
+    yum_wrapper -y install kernel-devel
+
+elif [ "$ZFS" = yes ]; then
+   yum info --enablerepo=kube,kube-testing $(rpm --quiet -q epel-release && echo '--disablerepo=epel') -q kernel-devel-$current_kernel
+   if [ $? -ne 0 ]; then
+       echo "================================================================================"
+       echo "kernel-devel-$current_kernel is not available. Please install it manually or upgrade kernel and " \
+            "readd the node to KuberDock to continue installation"
+       exit 1
+   fi
+fi
+# ================= // Various KD requirements checking ====================
+
+
 
 # 2. install components
 echo "Installing kubernetes..."

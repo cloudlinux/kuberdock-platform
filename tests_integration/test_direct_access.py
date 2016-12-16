@@ -321,7 +321,7 @@ def _test_ssh_bash(host, user, password):
     i = ssh_cli.expect(['[Pp]assword: ', '\(yes/no\)\? '])
     if i == 1:
         ssh_cli.sendline('yes')
-        ssh_cli.pexpect('[Ppassword]: ')
+        ssh_cli.expect('[Ppassword]: ')
     ssh_cli.sendline(password)
     time.sleep(1)
     ssh_cli.expect('[\r\n]+')
@@ -383,7 +383,7 @@ def _test_ssh_with_wrong_credentials(host, user, password):
     cmd = 'ssh -o PreferredAuthentications=password -o ' \
           'PubkeyAuthentication=no {}@{}'.format(user, host)
     ssh_cli = pexpect.spawn(cmd)
-    i = ssh_cli.expect(['(yes/no)? ', '[Pp]assword: '])
+    i = ssh_cli.expect(['\(yes/no\)\? ', '[Pp]assword: '])
     if i == 0:
         ssh_cli.sendline('yes')
     ssh_cli.sendline(wrong_pass)
@@ -399,16 +399,22 @@ def _test_ssh_with_wrong_credentials(host, user, password):
     cmd = 'ssh -o PreferredAuthentications=password -o ' \
           'PubkeyAuthentication=no root@{}'.format(host)
     ssh_cli = pexpect.spawn(cmd)
-    i = ssh_cli.expect(['(yes/no)? ', '[Pp]assword: '])
+    # NOTE: on Amazon it's not possible to login as 'root', so the connection
+    # closes immediately without any prompts.
+    i = ssh_cli.expect(['\(yes/no\)\? ', '[Pp]assword: ',
+                        'denied \(publickey,gssapi-keyex,gssapi-with-mic\)'])
     if i == 0:
         ssh_cli.sendline('yes')
         ssh_cli.expect('[Pp]assword: ')
-    ssh_cli.sendline(password)
-    ssh_cli.expect('Permission denied, please try again.')
-    ssh_cli.expect('[Pp]assword: ')
-    ssh_cli.sendline(password)
-    ssh_cli.expect('Permission denied, please try again.')
-    ssh_cli.expect('[Pp]assword: ')
+    if i == 2:
+        ssh_cli.expect(pexpect.EOF)
+    else:
+        ssh_cli.sendline(password)
+        ssh_cli.expect('Permission denied, please try again.')
+        ssh_cli.expect('[Pp]assword: ')
+        ssh_cli.sendline(password)
+        ssh_cli.expect('Permission denied, please try again.')
+        ssh_cli.expect('[Pp]assword: ')
     if ssh_cli.isalive():
         ssh_cli.close()
 

@@ -2270,5 +2270,5 @@ def reject_replica_with_pv(config, key='volumes_public'):
     """
     have_pvs = any([True for volume in config.get(key, [])
                     if 'persistentDisk' in volume])
-    if have_pvs and config['replicas'] > 1:
+    if have_pvs and config.get('replicas', 1) > 1:
         raise APIError("We don't support replications for pods with PV yet")

@@ -1127,7 +1127,11 @@ function deploy-master(){
         ssh -oStrictHostKeyChecking=no -o KbdInteractiveAuthentication=no -o PreferredAuthentications=gssapi-with-mic,gssapi-keyex,hostbased,publickey -o PasswordAuthentication=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "echo OK" && break || sleep 5;
     done
 
-    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; sudo yum -y update | cat" < <(cat) 2>"$LOG"
+    # Temporary disable Master VM upgrade at least till KD 1.5.1 will be released (AC-5395) with
+    # full support of CentOS 7.3 built-in. Actually except for some minor issues 1.5.0 is almost
+    # compatible too (AC-5442)
+    # ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; sudo yum -y update | cat" < <(cat) 2>"$LOG"
+
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "stty raw -echo; sudo yum -y install wget rpm2cpio | cat" < <(cat) 2>"$LOG"
     echo "Kubernetes cluster created."
 

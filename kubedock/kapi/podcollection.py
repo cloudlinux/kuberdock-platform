@@ -2020,7 +2020,7 @@ def run_service(pod, annotations=None):
         pod: kapi/Pod object
     Returns:
         tuple with local and public services
-        or None if service allready exist on not needed
+        or None if service already exist or not needed
 
     """
     resolve = getattr(pod, 'kuberdock_resolve', [])

@@ -499,9 +499,7 @@ setup_ntpd ()
 
     log_it echo "Enabling restart for ntpd.service"
     do_and_log mkdir -p /etc/systemd/system/ntpd.service.d
-    do_and_log echo -e "[Service]
-    Restart=always
-    RestartSec=1s" > /etc/systemd/system/ntpd.service.d/restart.conf
+    do_and_log echo -e "[Service]\nRestart=always\nRestartSec=10s" > /etc/systemd/system/ntpd.service.d/restart.conf
     do_and_log systemctl daemon-reload
     do_and_log systemctl restart ntpd
     do_and_log systemctl reenable ntpd
@@ -891,9 +889,10 @@ EOF
 
 #7 Start as early as possible, because Flannel/Calico need it
 systemctl daemon-reload
-log_it echo 'Starting etcd...'
 do_and_log systemctl reenable etcd
+log_it echo 'Starting etcd...'
 log_it systemctl restart etcd
+log_it echo 'Waiting for healthy etcd...'
 waitAndCatchFailure 3 10 etcdctl cluster-health > /dev/null
 
 
@@ -1015,14 +1014,26 @@ ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl pool add "$CALICO_NE
 
 do_and_log systemctl disable docker-storage-setup
 do_and_log systemctl mask docker-storage-setup
-mkdir /etc/systemd/system/docker.service.d/
+
+mkdir -p /etc/systemd/system/kube-proxy.service.d
+echo -e "[Unit]
+After=network-online.target
+
+[Service]
+Restart=always
+RestartSec=5s" > /etc/systemd/system/kube-proxy.service.d/restart.conf
+
+mkdir -p /etc/systemd/system/docker.service.d/
 echo -e "[Service]\nTimeoutSec=600" > /etc/systemd/system/docker.service.d/timeouts.conf
+
 sed -i 's/^DOCKER_STORAGE_OPTIONS=/DOCKER_STORAGE_OPTIONS="--storage-driver=overlay"/' /etc/sysconfig/docker-storage
 systemctl daemon-reload
 do_and_log systemctl reenable docker
 log_it systemctl restart docker
+
 do_and_log systemctl reenable kube-proxy
 log_it systemctl restart kube-proxy
+
 waitAndCatchFailure 3 10 docker info > /dev/null
 
 
@@ -1318,9 +1329,11 @@ do_cleanup()
     for i in /var/run/kubernetes /etc/kubernetes /etc/pki/kube-apiserver/ /root/.etcd-ca \
              /var/opt/kuberdock /var/lib/kuberdock /etc/sysconfig/kuberdock /etc/pki/etcd \
              /etc/etcd/etcd.conf /var/lib/etcd /var/lib/docker \
+             /etc/systemd/system/kube-proxy.service.d /etc/systemd/system/docker.service.d/ \
+             /etc/systemd/system/ntpd.service.d/ \
              /var/log/calico /var/run/calico /opt/bin/calicoctl /opt/bin/policy \
              "$NGINX_SHARED_ETCD"; do
-        rm -rf $i
+        rm -rf "$i"
     done
 
 }

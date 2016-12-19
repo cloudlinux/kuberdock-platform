@@ -213,6 +213,8 @@ clean_node(){
     del_existed /etc/sysconfig/docker*
     del_existed /etc/systemd/system/docker.service.d/*
     del_existed /etc/systemd/system/docker.service*
+    del_existed /etc/systemd/system/kube-proxy.service*
+    del_existed /etc/systemd/system/ntpd.service*
 
     del_existed /var/lib/docker
     del_existed /var/lib/kubelet
@@ -861,6 +863,16 @@ echo "Enabling services..."
 systemctl daemon-reload
 systemctl reenable kubelet
 check_status
+
+mkdir -p /etc/systemd/system/kube-proxy.service.d
+echo -e "[Unit]
+After=network-online.target
+
+[Service]
+Restart=always
+RestartSec=5s" > /etc/systemd/system/kube-proxy.service.d/restart.conf
+systemctl daemon-reload
+
 systemctl reenable kube-proxy
 check_status
 

@@ -7,7 +7,9 @@ export const KEY_CODES = {
 };
 
 export const modalDialog = function(options){
-    var modal = $('.modal'),
+    var isvModal = $('.kd-isv-container .modal'),
+        commonModal = $('.modal'),
+        modal = isvModal.length ? isvModal : commonModal,
         modalDialog = modal.find('.modal-dialog');
     if ($('.modal-backdrop').is(':visible')) {
         // previous modal dialog is still visible. Delay until it's fully closed

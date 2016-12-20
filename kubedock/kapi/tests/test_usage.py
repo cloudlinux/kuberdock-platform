@@ -206,7 +206,9 @@ class TestUpdateStates(DBTestCase):
                     'name': self.containers[0]['name'],
                     'image': '45.55.52.203:5000/test-rc-pd',
                     'imageID': 'docker://a5790f69b866b30aa808d753c43e0a',
-                    'state': {'running': {'startedAt': datetime(2015, 11, 25, 12, 42, 45)}},
+                    'state': {'running': {
+                        'startedAt': '2015-11-25T12:42:45Z'
+                    }},
                     'ready': True,
                     'lastState': {},
                     'containerID': 'docker://41b699c3802b599be2656235f2'
@@ -215,7 +217,9 @@ class TestUpdateStates(DBTestCase):
                     'name': self.containers[1]['name'],
                     'image': '45.55.52.203:5000/test-rc-pd',
                     'imageID': 'docker://753c43e0aa5790f69b866b30aa808d',
-                    'state': {'running': {'startedAt': datetime(2015, 11, 25, 12, 42, 47)}},
+                    'state': {'running': {
+                        'startedAt': '2015-11-25T12:42:47Z'
+                    }},
                     'ready': True,
                     'lastState': {},
                     'containerID': 'docker://f35fd17d8e36702f55b06ede7b'
@@ -224,12 +228,34 @@ class TestUpdateStates(DBTestCase):
                     'name': self.containers[2]['name'],
                     'image': '45.55.52.203:5000/test-rc-pd',
                     'imageID': 'docker://0aa808d753c43e0aa5790f69b866b3',
-                    'state': {'running': {'startedAt': datetime(2015, 11, 25, 12, 42, 46)}},
+                    'state': {'running': {
+                        'startedAt': '2015-11-25T12:42:46Z'
+                    }},
                     'ready': True,
                     'lastState': {},
                     'containerID': 'docker://6702f55b06ede7bf35fd17d8e3'
                 }],
-                'startTime': datetime(2015, 11, 10, 12, 12, 12),
+                'startTime': '2015-11-10T12:12:12Z',
+            }
+        }
+
+        self.event_overlapped = {
+            'metadata': {'labels': {'kuberdock-pod-uid': self.pod.id}},
+            'spec': {},
+            'status': {
+                'containerStatuses': [{
+                    'restartCount': 1,
+                    'name': self.containers[0]['name'],
+                    'image': '45.55.52.203:5000/test-rc-pd',
+                    'imageID': 'docker://a5790f69b866b30aa808d753c43e0a',
+                    'state': {'running': {
+                        'startedAt': '2015-11-25T12:42:44Z'
+                    }},
+                    'ready': True,
+                    'lastState': {},
+                    'containerID': 'docker://41b699c3802b599be2656235f2'
+                }],
+                'startTime': '2015-11-10T12:12:12Z',
             }
         }
 
@@ -279,8 +305,10 @@ class TestUpdateStates(DBTestCase):
     def test_pod_start_time_used(self):
         db.session.delete(self.pod_state)
         usage.update_states(self.event_started)
-        self.assertEqual(self.pod.states[0].start_time,
-                         self.event_started['status']['startTime'])
+        event_time = datetime.strptime(
+            self.event_started['status']['startTime'], '%Y-%m-%dT%H:%M:%SZ'
+        )
+        self.assertEqual(self.pod.states[0].start_time, event_time)
 
     def test_event_time_used(self):
         db.session.delete(self.pod_state)
@@ -296,6 +324,28 @@ class TestUpdateStates(DBTestCase):
                 CS.kubes == container.get('kubes', 1),
                 CS.end_time == event_time,
             ).first())
+
+    def test_fix_overlap(self):
+        CS = usage.ContainerState
+        container_name = self.containers[0]['name']
+
+        usage.update_states(self.event_overlapped)
+        cs1 = CS.query.filter(CS.container_name == container_name).first()
+        self.assertIsNone(cs1.end_time)
+
+        # fix_overlap if end_time is None
+        usage.update_states(self.event_started)
+        db.session.refresh(cs1)
+        cs2 = CS.query.filter(CS.container_name == container_name,
+                              CS.start_time > cs1.start_time).first()
+        self.assertEqual(cs1.end_time, cs2.start_time)
+
+        # fix overlap if end_time > start_time of the next CS
+        cs1.end_time = cs2.start_time + timedelta(seconds=1)
+        db.session.commit()
+        usage.update_states(self.event_started)
+        db.session.refresh(cs1)
+        self.assertEqual(cs1.end_time, cs2.start_time)
 
 
 if __name__ == '__main__':

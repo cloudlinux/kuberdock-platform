@@ -41,6 +41,8 @@ class ContainerState(BaseModelMixin, db.Model):
     def fix_overlap(self, end_time):
         """Shift end_time timestamp of container state to fix overlaping."""
         db.session.refresh(self)
+        if isinstance(end_time, basestring):
+            end_time = datetime.strptime(end_time, '%Y-%m-%dT%H:%M:%SZ')
         if self.end_time is None or self.end_time > end_time:
             msg = 'Overlaping ContainerStates was found: ' \
                   '{0} at {1} ({2} -> {3}).' \

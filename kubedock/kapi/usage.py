@@ -58,8 +58,9 @@ def update_states(k8s_pod, event_type=None, event_time=None):
                                       PodState.pod_id == pod_id
                                       ).first()
     if pod_state is None:
-        current_app.logger.debug('create PS: {0} {1}'.format(pod_id, host,
-                                                             pod_start_time))
+        current_app.logger.debug(
+            'create PodState: {0} {1} {2}'.format(pod_id, host, pod_start_time)
+        )
         pod_state = PodState(pod_id=pod_id,
                              hostname=host,
                              start_time=pod_start_time,

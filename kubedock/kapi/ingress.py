@@ -224,7 +224,13 @@ def _get_ingress_pod_config(backend_ns, backend_svc, email, ip='10.254.0.100'):
 
 
 def _get_ingress_nginx_settings():
-    return _read_template(INGRESS_NGINX_SETTINGS_FILE, {})
+    # In AWS case ELB uses proxy protocol, so we need to enable it on Ingress
+    # Controller as well
+    if current_app.config['AWS']:
+        params = {'use_proxy_protocol': 'true'}
+    else:
+        params = {'use_proxy_protocol': 'false'}
+    return _read_template(INGRESS_NGINX_SETTINGS_FILE, params)
 
 
 def _check_cluster_email():
@@ -236,11 +242,6 @@ def _check_cluster_email():
 
 def _create_ingress_nginx_configmap():
     client = ConfigMapClient(KubeQuery())
-
-    # In AWS case ELB uses proxy protocol, so we need to enable it on Ingress
-    # Controller as well
-    if current_app.config['AWS']:
-        default_nginx_settings['use-proxy-protocol'] = 'true'
 
     try:
         client.create(

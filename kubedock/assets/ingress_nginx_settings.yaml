@@ -1,2 +1,3 @@
 server-name-hash-bucket-size: '128'
 proxy-read-timeout: '1800'
+use-proxy-protocol: '$use_proxy_protocol'

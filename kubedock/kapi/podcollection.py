@@ -1130,6 +1130,9 @@ class PodCollection(object):
         if had_public_ports and not has_public_ports:
             self._remove_public_ip(pod.id)
             pod.public_ip = None
+        elif has_public_ports and not had_public_ports:
+            pod.public_ip = True
+
 
     def _update_public_aws(self, pod, old_config, new_config):
         has_public_ports = self.has_public_ports(new_config)
@@ -1169,7 +1172,6 @@ class PodCollection(object):
     def _start_pod(self, pod, data=None):
         if data is None:
             data = {}
-
         command_options = data.get('commandOptions', {})
         db_pod = DBPod.query.get(pod.id)
         db_config = db_pod.get_dbconfig()
@@ -1260,18 +1262,13 @@ class PodCollection(object):
 
                 if notify_on_change and ip_address != utils.ip2int(desired_ip):
                     # send event 'IP changed'
-                    send_to_ids = {
-                        KubeUtils.get_current_user().id,
-                        pod.owner.id  # can be the same as current user
-                    }
                     msg = ('Please, take into account that IP address of pod '
                            '{pod_name} was changed from {old_ip} to {new_ip}'
                            .format(pod_name=pod.name, old_ip=desired_ip,
                                    new_ip=utils.int2ip(ip_address)))
-                    for user_id in send_to_ids:
-                        utils.send_event_to_user(
-                            event_name='notify:warning', data={'message': msg},
-                            user_id=user_id)
+                    utils.send_event_to_user(
+                        event_name='notify:warning', data={'message': msg},
+                        user_id=pod.owner.id)
 
                 network = IPPool.get_network_by_ip(ip_address)
 

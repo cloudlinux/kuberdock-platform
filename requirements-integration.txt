@@ -14,7 +14,7 @@ pexpect==4.2.0
 git+https://github.com/python-oca/python-oca@fe5e7fee2a3e9c21874f90aca8940ad895b529c8
 junit-xml==1.7
 requests==2.4.3
-redis==2.10.5
+redis==2.10.3 # keep in sync with KD requirements.txt for convenience
 python-memcached==1.58
 PyGreSQL==5.0.2
 pymongo==3.3.0

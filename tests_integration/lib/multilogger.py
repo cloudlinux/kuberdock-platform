@@ -56,12 +56,13 @@ class FilePerThreadHandler(logging.Handler):
         self.files = {}
 
     @property
-    def grouped_by_thread(self):
-        def _produce(fp):
-            fp.seek(0)
-            return fp.read()
+    def thread_names(self):
+        return self.files.keys()
 
-        return {name: _produce(fp) for name, fp in self.files.items()}
+    def get_thread_log(self, thread_name):
+        fp = self.files[thread_name]
+        fp.seek(0)
+        return fp.read()
 
 
 def init_handler(logger, live_log=False):

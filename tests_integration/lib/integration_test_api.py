@@ -11,6 +11,7 @@ from ipaddress import IPv4Network
 
 from exceptions import NonZeroRetCodeException, ClusterUpgradeError, \
     PANotFoundInCatalog
+from kubedock.constants import KUBERDOCK_INGRESS_POD_NAME
 from tests_integration.lib import exceptions
 from tests_integration.lib import utils
 from tests_integration.lib.infra_providers import InfraProvider
@@ -652,15 +653,52 @@ class DomainList(object):
         # type: (KDIntegrationTestAPI) -> None
         self.cluster = cluster
 
-    def add(self, name, ignore_duplicates=False):
+    def add(self, domain, ignore_duplicates=False):
         try:
-            self.cluster.kdctl(u"domains create --name {}".format(name))
+            # TODO: use kdctl when AC-5500 is implemented
+            token = self.cluster.get_admin_token()
+            cmd = "curl -i -L -X POST -H 'X-Auth-Token:{}' " \
+                  "-H 'Content-Type: application/json' " \
+                  "-k -d '{}' https://127.0.0.1/api/domains/". \
+                format(token, json.dumps(domain))
+            self.cluster.ssh_exec("master", cmd)
         except exceptions.NonZeroRetCodeException as e:
             if ignore_duplicates and \
                "Resource already exists" in e.stderr:
                 pass
             else:
                 raise
+
+    def configure_cpanel_integration(self):
+        with open("tests_integration/assets/cpanel_credentials.json") as f:
+            creds = json.load(f)
+
+        for k, v in creds.items():
+            if k not in ["name", "certificate"]:
+                self.cluster.set_system_setting(utils.escape_command_arg(v),
+                                                name=k)
+
+        # Wait till DNS Pod is running
+        # It's impossible to import KUBERDOCK_DNS_POD_NAME from kubedock/kapi/nodes
+        # because nodes try import from flask which isn't installed on the CI host
+        dns_pod = KDPod.get_internal_pod(self.cluster, "kuberdock-dns")
+        dns_pod.wait_for_status("running")
+        # TODO: add auto-generation of certificate (by openssl for example)
+        domain = dict([(k, v) for (k, v) in creds.items()
+                       if k in ("name", "certificate")])
+        self.add(domain, ignore_duplicates=True)
+        # Make sure ingress controller has been created
+        utils.retry(KDPod.get_internal_pod, tries=6, interval=10,
+                    cluster=self.cluster, pod_name=KUBERDOCK_INGRESS_POD_NAME)
+        ingress_pod = KDPod.get_internal_pod(self.cluster,
+                                             KUBERDOCK_INGRESS_POD_NAME)
+        ingress_pod.wait_for_status("running")
+
+    def stop_sharing_ip(self):
+        self.cluster.pods.clear()
+        self.delete_all()
+        self.cluster.set_system_setting("'No provider'",
+                                        name="dns_management_system")
 
     def delete(self, name=None, id_=None):
         cmd = u"domains delete "
@@ -677,6 +715,10 @@ class DomainList(object):
     def delete_all(self):
         for domain in self.list():
             self.delete(id_=domain["id"])
+
+    def get_first_domain(self):
+        domains = self.cluster.domains.list()
+        return domains[0]['name'] if domains else None
 
 
 class PV(object):

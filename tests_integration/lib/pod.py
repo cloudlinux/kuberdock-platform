@@ -331,7 +331,7 @@ class KDPod(RESTMixin):
             container = pod_dump['pod_data']["containers"]
             if len(container) > 1:
                 # In current implementation of KDPod class we cannot
-                # manage consisting of more than on container, therefore
+                # manage consisting of more than one container, therefore
                 # creation of such container is prohibited
                 raise exceptions.CannotRestorePodWithMoreThanOneContainer(
                     "Unfortunately currently we cannot restore pod with more "
@@ -377,9 +377,10 @@ class KDPod(RESTMixin):
         data = pod_description['data']
         name = data['name']
         kube_type = utils.kube_type_to_str(data['kube_type'])
+        kubes = data['containers'][0]['kubes']
         restart_policy = data['restartPolicy']
         this_pod_class = cls._get_pod_class(image)
-        return this_pod_class(cluster, "", name, kube_type, "", True,
+        return this_pod_class(cluster, "", name, kube_type, kubes, True,
                               restart_policy, "", owner)
 
     @classmethod
@@ -720,5 +721,21 @@ class _NginxPod(KDPod):
         self._generic_healthcheck()
         # if shared IP is used, 404 is returned in a response to GET on
         # pod's domain name for up to 40 seconds after pod is started
-        utils.retry(self.do_GET, tries=5, interval=10)
+        utils.retry(self.do_GET, tries=10, interval=10)
         utils.assert_in("Welcome to nginx!", self.do_GET())
+
+
+class _AptibleNginxPod(KDPod):
+    SRC = "quay.io/aptible/nginx"
+
+    def healthcheck(self):
+        if not (self.open_all_ports or self.ports):
+            raise Exception(
+                "Cannot perform nginx healthcheck without public IP")
+        self._generic_healthcheck()
+        utils.retry(self.do_GET, tries=10, interval=10)
+        utils.assert_in("Welcome to nginx!", self.do_GET())
+
+        if (443 in self.ports) or self.open_all_ports:
+            utils.retry(self.do_GET, tries=10, interval=10, scheme='https')
+            utils.assert_in("Welcome to nginx!", self.do_GET(scheme='https'))

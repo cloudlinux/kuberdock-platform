@@ -9,9 +9,9 @@ from tests_integration.lib.exceptions import NonZeroRetCodeException
 LOG = logging.getLogger(__name__)
 
 
-def http_share(cluster, host, shared_dir):
+def http_share(cluster, host, shared_dir=None):
     def _is_running():
-        cmd = "curl -X GET http://{}".format("127.0.0.1")
+        cmd = "curl -X GET http://{}".format("127.0.0.1:8080")
         try:
             cluster.ssh_exec(host, cmd)
             return True
@@ -19,8 +19,8 @@ def http_share(cluster, host, shared_dir):
             return False
 
     if not _is_running():
-        cmd = "docker run -d -p 80:80 -v {}:/usr/share/nginx/html/backups:ro" \
-              " nginx".format(shared_dir)
+        cmd = "docker run -d -p 8080:80 -v " \
+              "{}:/usr/share/nginx/html/backups:ro nginx".format(shared_dir)
         cluster.ssh_exec(host, cmd)
 
 

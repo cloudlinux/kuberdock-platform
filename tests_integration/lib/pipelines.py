@@ -237,9 +237,10 @@ class PodRestorePipeline(Pipeline):
         'KD_NODES_COUNT': '1',
     }
 
-    def cleanup(self):
-        super(PodRestorePipeline, self).cleanup()
-        self.cluster.recreate_routable_ip_pool()
+
+class PodRestorePipelineAWS(PodRestorePipeline):
+    INFRA_PROVIDER = 'aws'
+    NAME = 'pod_restore_aws'
 
 
 class MasterRestorePipeline(Pipeline):
@@ -468,8 +469,15 @@ class SharedIPPipeline(Pipeline):
     NAME = 'shared_ip'
     ROUTABLE_IP_COUNT = 1
     ENV = {
-        'KD_NODES_COUNT': '1',
+        'KD_NODES_COUNT': '2',
+        'KD_NODE_TYPES':
+            'node1=Standard,node2=High memory',
     }
+
+
+class SharedIPPipelineAWS(SharedIPPipeline):
+    INFRA_PROVIDER = 'aws'
+    NAME = 'shared_ip_aws'
 
 
 class VerticalScalabilityPipeline(Pipeline):

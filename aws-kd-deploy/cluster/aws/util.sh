@@ -55,6 +55,65 @@ if [[ "${OS_DISTRIBUTION}" == "ubuntu" ]]; then
   OS_DISTRIBUTION=wily
 fi
 
+# Check if a value is in array: in_array $search_str "${array[@]}"
+function in_array() {
+    search_str="${1}"
+    shift
+    arr=("${@}")
+    for item in "${arr[@]}"; do
+        if [[ "$search_str" == "$item" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+# Validates some kuberdock specific parameters
+function check_kuberdock_params () {
+    # Check if ebs volume type is valid
+    vol_types=("standard" "io1" "gp2")
+    if ! in_array "$AWS_DEFAULT_EBS_VOLUME_TYPE" "${vol_types[@]}"; then
+        echo "Invalid AWS_DEFAULT_EBS_VOLUME_TYPE: ${AWS_DEFAULT_EBS_VOLUME_TYPE}"
+        echo "Supported types: ${vol_types[@]}"
+        exit 1
+    fi
+
+    # Check volume size
+    if [[ "$AWS_DEFAULT_EBS_VOLUME_TYPE" == "standard" ]]; then
+        min_value=1
+        max_value=1000
+    elif [[ "$AWS_DEFAULT_EBS_VOLUME_TYPE" == "gp2" ]]; then
+        min_value=1
+        max_value=$((16 * 1000))
+    else # io1
+        min_value=4
+        max_value=$((16 * 1000))
+    fi
+
+    if (($AWS_EBS_DEFAULT_SIZE < $min_value || $AWS_EBS_DEFAULT_SIZE > $max_value)); then
+        echo "AWS_EBS_DEFAULT_SIZE is not in range: $min_value - $max_value"
+        exit 1
+    fi
+
+    # Check iops value and iops/Gb ratio for io1 volume type
+    if [[ "$AWS_DEFAULT_EBS_VOLUME_TYPE" == "io1" ]]; then
+        min_iops=100
+        max_iops=20000
+        if (($AWS_DEFAULT_EBS_VOLUME_IOPS < $min_iops || $AWS_DEFAULT_EBS_VOLUME_IOPS > $max_iops)); then
+            echo "AWS_DEFAULT_EBS_VOLUME_IOPS should be between $min_iops and $max_iops"
+            exit 1
+        fi
+        max_ratio=50
+        ratio=$(($AWS_DEFAULT_EBS_VOLUME_IOPS / $AWS_EBS_DEFAULT_SIZE))
+        if (($ratio < 0 || $ratio > $max_ratio)); then
+            echo "iops/GB ratio value is $ratio. It should be <= $max_ratio"
+            echo "AWS_DEFAULT_EBS_VOLUME_IOPS = $AWS_DEFAULT_EBS_VOLUME_IOPS"
+            echo "AWS_EBS_DEFAULT_SIZE = $AWS_EBS_DEFAULT_SIZE"
+            exit 1
+        fi
+    fi
+}
+
 # Loads the distro-specific utils script.
 # If the distro is not recommended, prints warnings or exits.
 function load_distro_utils () {
@@ -934,6 +993,9 @@ function subnet-setup {
 }
 
 function kube-up {
+  # check if kuberdock parameters are valid
+  check_kuberdock_params
+
   # check if aws credentials are set up
 
   if [ -z ${AWS_ACCESS_KEY_ID-} ] || [ -z ${AWS_SECRET_ACCESS_KEY-} ] ; then

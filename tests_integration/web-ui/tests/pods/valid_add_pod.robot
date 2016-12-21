@@ -3,9 +3,8 @@ Documentation     A test suite containing tests of adding, checking and deleting
 
 Resource          ./resource.robot
 
-Suite Teardown    Close All Browsers
-
 Test Setup        Login into the KuberDock
+Test Teardown     Logout
 
 *** Test Cases ***
 Create pod with nginx container, start and remove pod
@@ -13,7 +12,7 @@ Create pod with nginx container, start and remove pod
     Go to the Users page
     Login as "test_user"
     Main View Should Be Open
-    Create Pod With nginx Container From Docker Hub And Start It
+    Create Pod From Docker Hub Using Container Image    nginx
+    Start New Pod
     Delete New Pod
     Exit Login As Mode
-    [Teardown]    Logout

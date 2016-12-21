@@ -41,20 +41,20 @@
 <div class="control-icons col-md-10 col-md-offset-2 col-sm-12 clearfix">
     <div class="col-md-6 col-md-offset-0 col-sm-10 col-sm-offset-2 col-xs-12 info">
         <% if (publicIP && publicIP !== 'true' && isPublic) { %>
-            <div>Public IP: <a href="http://<%- publicIP %>/" rel="noopener" target="_blank"><%- publicIP %></a></div>
+            <div>Public IP: <a href="http://<%- publicIP %>/" rel="noopener" target="_blank" class="pod-public-address"><%- publicIP %></a></div>
         <% } else if (publicIP && publicIP === 'true') {%>
             <div>Public IP: Public IP is not assigned yet</div>
         <% } else if (typeof domain != 'undefined' && domain) {%>
             <div class="relative">
                 <span class="ellipsis-text">
-                    Service address: <a href="http://<%- domain %>/" rel="noopener" target="_blank"><%- domain %></a>
+                    Service address: <a href="http://<%- domain %>/" rel="noopener" target="_blank" class="pod-public-address"><%- domain %></a>
                 </span>
                 <i data-toggle="tooltip" data-placement="left" title="Copy link to clipboard" class="copy-link"></i>
             </div>
         <% } else if (publicName) { %>
             <div class="relative">
                 <span class="ellipsis-text">
-                    Service address: <a href="http://<%- publicName %>/" rel="noopener" target="_blank"><%- publicName %></a>
+                    Service address: <a href="http://<%- publicName %>/" rel="noopener" target="_blank" class="pod-public-address"><%- publicName %></a>
                 </span>
                 <i data-toggle="tooltip" data-placement="left" title="Copy link to clipboard" class="copy-link"></i>
             </div>

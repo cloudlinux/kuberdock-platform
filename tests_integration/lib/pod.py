@@ -201,7 +201,8 @@ class KDPod(RESTMixin):
 
     @classmethod
     def create(cls, cluster, image, name, kube_type, kubes, open_all_ports,
-               restart_policy, pvs, owner, password, domain, ports=None):
+               restart_policy, pvs, owner, password, domain, ports=None,
+               args=None):
         """
         Create new pod in kuberdock
         :param open_all_ports: if true, open all ports of image (does not mean
@@ -211,6 +212,9 @@ class KDPod(RESTMixin):
             port is public or not (a way to make some ports public).
             In case of 'None' - container image ports will be used and
             pod ports will default to container ports.
+        :param args: Override default container command args. Some containers
+            don't have one, which results in pod's succession before we can
+            even do anything with it.
         :return: object via which Kuberdock pod can be managed
         """
 
@@ -270,6 +274,8 @@ class KDPod(RESTMixin):
         if pvs is not None:
             container.update(volumeMounts=[pv.volume_mount_dict for pv in pvs])
             pod_spec.update(volumes=[pv.volume_dict for pv in pvs])
+        if args:
+            container.update(args=args)
         pod_spec.update(containers=[container], replicas=1)
         if domain:
             pod_spec["domain"] = domain
@@ -282,6 +288,31 @@ class KDPod(RESTMixin):
         this_pod_class = cls._get_pod_class(image)
         return this_pod_class(cluster, image, name, kube_type, kubes,
                               open_all_ports, restart_policy, pvs, owner)
+
+    def change_pod_ports(self, ports):
+        edit_data = self.__get_edit_data()
+
+        for port in ports:
+            try:
+                target_port = next(
+                    p for container in edit_data['edited_config']['containers']
+                    for p in container['ports']
+                    if p['containerPort'] == port.container_port)
+                target_port['hostPort'] = port.port
+                target_port['isPublic'] = port.is_public
+
+            except StopIteration:
+                raise Exception(
+                    "Port '{port}:{proto}' was not found in pod port "
+                    "list".format(
+                        port=port.container_port, proto=port.proto))
+
+        _, out, _ = self.cluster.kcli2(
+            "pods update --name '{}' '{}'".format(self.name,
+                                                  json.dumps(edit_data)),
+            out_as_dict=True, user=self.owner)
+        LOG.debug("Pod {} updated".format(out))
+        self.redeploy(applyEdit=True)
 
     @classmethod
     def restore(cls, cluster, user, file_path=None, pod_dump=None,

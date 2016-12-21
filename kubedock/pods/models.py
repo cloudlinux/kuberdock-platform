@@ -17,7 +17,12 @@ from ..exceptions import NoFreeIPs, PodExists
 from ..kapi import pd_utils
 from kubedock import utils
 from ..models_mixin import BaseModelMixin
-from ..settings import DOCKER_IMG_CACHE_TIMEOUT, KUBERDOCK_INTERNAL_USER
+from ..nodes.models import Node
+from ..settings import (
+    DOCKER_IMG_CACHE_TIMEOUT,
+    KUBERDOCK_INTERNAL_USER,
+    MASTER_IP,
+)
 from ..users.models import User
 
 
@@ -296,7 +301,7 @@ class IPPool(BaseModelMixin, db.Model):
     def iterpages(self):
         return ip_network(self.network).iterpages()
 
-    def get_blocked_set(self, as_int=False):
+    def get_blocked_set(self, as_int=True):
         network = ip_network(self.network)
 
         blocked_set = set()
@@ -329,7 +334,7 @@ class IPPool(BaseModelMixin, db.Model):
         :param ip: either a single ip or an iterable of ips
         :return: number of blocked ip addresses
         """
-        current_set = self.get_blocked_set(as_int=True)
+        current_set = self.get_blocked_set()
         new_set = current_set | self._to_ip_set(ip)
         self.blocked_list = json.dumps(list(new_set))
         return len(new_set) - len(current_set)
@@ -340,7 +345,7 @@ class IPPool(BaseModelMixin, db.Model):
         :param ip: either a single ip or an iterable of ips
         :return: number of unblocked ip addresses
         """
-        current_set = self.get_blocked_set(as_int=True)
+        current_set = self.get_blocked_set()
         new_set = current_set - self._to_ip_set(ip)
         self.blocked_list = json.dumps(list(new_set))
         return len(current_set) - len(new_set)
@@ -370,20 +375,21 @@ class IPPool(BaseModelMixin, db.Model):
         return hosts
 
     def free_hosts(self, as_int=None, page=None):
-        ip_list = [pod.ip_address
-                   for pod in PodIP.filter_by(network=self.network)]
-        ip_list = list(set(ip_list) | self.get_blocked_set(as_int=True))
+        ip_set = set(self.get_pod_ips())
+        overlapped_set = set(self.get_cluster_overlapped())
+        blocked_set = self.get_blocked_set()
+        ip_list = list(ip_set | overlapped_set | blocked_set)
         _hosts = self.hosts(as_int=as_int, exclude=ip_list, page=page)
         return _hosts
 
     def busy_and_block(self):
         network = ip_network(self.network)
-        ip_list = [pod.ip_address
-                   for pod in PodIP.filter_by(network=self.network)]
-        blocked_list = self.get_blocked_set(as_int=True)
-        blocked_list = filter(lambda x: ipaddress.ip_address(x) in network,
-                              blocked_list)
-        return list(set(ip_list) | set(blocked_list))
+        ip_set = set(self.get_pod_ips())
+        overlapped_set = set(self.get_cluster_overlapped())
+        blocked_set = self.get_blocked_set()
+        blocked_list = [ip for ip in blocked_set
+                        if ipaddress.ip_address(ip) in network]
+        return list(ip_set | overlapped_set | set(blocked_list))
 
     def host_count(self):
         network = self.network
@@ -394,22 +400,26 @@ class IPPool(BaseModelMixin, db.Model):
         return 2 ** suf_len
 
     def free_hosts_and_busy(self, as_int=None, page=None):
-        pods = PodIP.filter_by(network=self.network)
-        allocated_ips = {int(pod): pod.get_pod() for pod in pods}
-        blocked_ips = self.get_blocked_set(as_int=True)
+        cluster_overlapped = self.get_cluster_overlapped()
+        allocated_ips = self.get_pod_ips()
+        blocked_ips = self.get_blocked_set()
         hosts = self.hosts(as_int=True, page=page)
 
-        def get_ip_state(ip, pod):
+        def get_ip_state(ip, pod, host):
             if pod:
                 return 'busy'
+            elif host:
+                return 'cluster member'
             if ip in blocked_ips:
                 return 'blocked'
             return 'free'
 
         def get_ip_info(ip):
             pod = allocated_ips.get(ip)
-            state = get_ip_state(ip, pod)
-            return ip if as_int else str(ipaddress.ip_address(ip)), pod, state
+            host = cluster_overlapped.get(ip)
+            state = get_ip_state(ip, pod, host)
+            return (ip if as_int else
+                    str(ipaddress.ip_address(ip)), pod or host, state)
 
         return [get_ip_info(ip) for ip in hosts]
 
@@ -458,7 +468,7 @@ class IPPool(BaseModelMixin, db.Model):
             network=self.network,
             ipv6=self.ipv6,
             free_hosts=self.free_hosts(page=page),
-            blocked_list=list(self.get_blocked_set()),
+            blocked_list=list(self.get_blocked_set(as_int=False)),
             node=None if self.node is None else self.node.hostname,
             allocation=free_hosts_and_busy,
             page=page,
@@ -512,6 +522,24 @@ class IPPool(BaseModelMixin, db.Model):
         pages = (self.free_hosts(page=p) for p in self.iterpages())
         return ip in reduce(operator.add, pages)
 
+    def get_pod_ips(self, as_int=True):
+        pod_ips = {int(pod_ip) if as_int else pod_ip: pod_ip.pod.name
+                   for pod_ip in PodIP.filter_by(network=self.network)}
+        return pod_ips
+
+    def get_cluster_overlapped(self):
+        network = ip_network(self.network)
+        master_ip = unicode(MASTER_IP)
+        cluster_ips = {ipaddress.ip_address(master_ip): utils.get_hostname()}
+        node_ips = {ipaddress.ip_address(node.ip): node.hostname
+                    for node in Node.query}
+        cluster_ips.update(node_ips)
+        overlapped_ips = {
+            int(ip): hostname for ip, hostname in cluster_ips.iteritems()
+            if ip in network
+        }
+        return overlapped_ips
+
 
 class PodIP(BaseModelMixin, db.Model):
     __tablename__ = 'podip'
@@ -527,9 +555,6 @@ class PodIP(BaseModelMixin, db.Model):
 
     def __int__(self):
         return self.ip_address
-
-    def get_pod(self):
-        return Pod.query.get(self.pod_id).name
 
     def to_dict(self, include=None, exclude=None):
         ip = self.ip_address

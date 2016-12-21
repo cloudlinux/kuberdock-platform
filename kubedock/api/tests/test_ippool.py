@@ -2,6 +2,7 @@ import ipaddress
 import responses
 
 from kubedock.kapi.ippool import IpAddrPool, PodIP, IPPool
+from kubedock.pods import models as pods_models
 from kubedock.testutils.fixtures import K8SAPIStubs
 from kubedock.testutils.testcases import APITestCase
 
@@ -30,6 +31,8 @@ class BaseTestIPPool(APITestCase):
         self.stubs = K8SAPIStubs()
         self.stubs.node_info_in_k8s_api(self.node.hostname)
         self.stubs.node_info_update_in_k8s_api(self.node.hostname)
+
+        pods_models.MASTER_IP = '192.168.254.1'
 
 
 class TestIPPool(BaseTestIPPool):

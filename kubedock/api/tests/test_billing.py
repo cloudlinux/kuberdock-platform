@@ -1,5 +1,6 @@
 from mock import mock
 
+from kubedock.pods import models as pods_models
 from kubedock.pods.models import IPPool
 from kubedock.testutils.testcases import APITestCase
 
@@ -26,6 +27,10 @@ TEST_POD_DATA = {
             mock.Mock())
 class TestBilling(APITestCase):
     url = '/billing'
+
+    def setUp(self):
+        super(TestBilling, self).setUp()
+        pods_models.MASTER_IP = '192.168.254.1'
 
     @mock.patch('kubedock.kapi.apps.dispatch_kind', mock.Mock())
     @mock.patch('kubedock.kapi.apps.check_new_pod_data', mock.Mock(

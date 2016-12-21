@@ -10,6 +10,7 @@ from kubedock.core import db
 from kubedock.exceptions import APIError
 from kubedock.kapi import ippool
 from kubedock.kapi.node import Node as K8SNode
+from kubedock.pods import models as pods_models
 from kubedock.pods.models import IPPool
 from kubedock.testutils.fixtures import K8SAPIStubs, pod
 from kubedock.testutils.testcases import DBTestCase, attr
@@ -30,6 +31,7 @@ class TestIpPool(DBTestCase):
         self.stubs.node_info_update_in_k8s_api(self.node.hostname)
 
         current_app.config['FIXED_IP_POOLS'] = True
+        pods_models.MASTER_IP = '192.168.254.1'
 
     def test_get_returns_emtpy_list_by_default(self):
         res = ippool.IpAddrPool().get()
@@ -140,7 +142,7 @@ class TestIpPool(DBTestCase):
         pool = ippool.IpAddrPool().create(data)
         self.assertEqual({
             'network': pool.network,
-            'blocked_list': pool.get_blocked_set()
+            'blocked_list': pool.get_blocked_set(as_int=False)
         }, {
             'network': data['network'],
             'blocked_list': expected_block_ips,
@@ -184,7 +186,7 @@ class TestIpPool(DBTestCase):
 
         pool = ippool.IpAddrPool().update(network, None)
         self.assertIsNotNone(pool)
-        blocked_list1 = pool.get_blocked_set()
+        blocked_list1 = pool.get_blocked_set(as_int=False)
         self.assertEqual(pool.network, network)
 
         # add already blocked ip
@@ -197,7 +199,7 @@ class TestIpPool(DBTestCase):
         block_ip1 = u'192.168.2.111'
         params = {'block_ip': block_ip1}
         blocked_list = ippool.IpAddrPool().update(network, params)\
-            .get_blocked_set()
+            .get_blocked_set(as_int=False)
         self.assertEqual(
             blocked_list,
             blocked_list1 | {block_ip1}
@@ -207,7 +209,7 @@ class TestIpPool(DBTestCase):
         block_ip2 = u'192.168.2.112'
         params = {'block_ip': block_ip2}
         blocked_list = ippool.IpAddrPool().update(network, params)\
-            .get_blocked_set()
+            .get_blocked_set(as_int=False)
         self.assertEqual(
             blocked_list,
             blocked_list1 | {block_ip1, block_ip2}
@@ -216,7 +218,7 @@ class TestIpPool(DBTestCase):
         unblock_ip = block_ip1
         params = {'unblock_ip': unblock_ip}
         blocked_list = ippool.IpAddrPool().update(network, params)\
-            .get_blocked_set()
+            .get_blocked_set(as_int=False)
         self.assertEqual(
             blocked_list,
             blocked_list1 | {block_ip2}
@@ -227,7 +229,7 @@ class TestIpPool(DBTestCase):
         unbind_ip = '192.168.2.222'
         params = {'unbind_ip': unbind_ip}
         blocked_list = ippool.IpAddrPool().update(network, params)\
-            .get_blocked_set()
+            .get_blocked_set(as_int=False)
         self.assertEqual(
             blocked_list,
             blocked_list1 | {block_ip2}
@@ -432,6 +434,28 @@ class TestIpPool(DBTestCase):
                          {'blocks': expected_blocks,
                           'free_host_count': 0, 'id': 'aws', 'ipv6': False,
                           'network': None, 'node': None}
+                         )
+
+    @responses.activate
+    def test_get_network_ips_with_node_overlapped(self):
+        network = u'192.168.2.0/24'
+        self._create_network(network)
+
+        host = 'node1.kuberdock.local'
+        node = self.fixtures.node(host, u'192.168.2.0')
+        db.session.add(node)
+
+        res = ippool.IpAddrPool().get_network_ips(network)
+        self.assertEqual(res,
+                         {'node': self.node.hostname,
+                          'free_host_count': 255,
+                          'ipv6': False,
+                          'id': '192.168.2.0/24',
+                          'network': '192.168.2.0/24',
+                          'blocks': [
+                              (3232236032, 3232236032, 'cluster member', host),
+                              (3232236033, 3232236287, 'free'),
+                          ]}
                          )
 
 

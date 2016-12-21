@@ -397,8 +397,7 @@ class IpAddrPool(object):
 
             blocked_ips = ipPool.get_blocked_set(as_int=True)
 
-            allocated_ips = {pod.ip_address: pod.get_pod()
-                             for pod in PodIP.filter_by(network=net)}
+            allocated_ips = ipPool.get_pod_ips()
             for ip_address, pod in allocated_ips.iteritems():
                 state = 'busy'
                 if ip_address in blocked_ips:
@@ -406,7 +405,11 @@ class IpAddrPool(object):
                     blocked_ips.discard(ip_address)
                 blocks.append((ip_address, ip_address, state, pod))
 
-            busy_ips = allocated_ips.keys()
+            overlapped_ips = ipPool.get_cluster_overlapped()
+            for ip_address, host in overlapped_ips.iteritems():
+                blocks.append((ip_address, ip_address, 'cluster member', host))
+
+            busy_ips = allocated_ips.keys() + overlapped_ips.keys()
             network = ip_network(net)
 
             blocked_blocks = cls.ip_list_by_blocks(sorted(blocked_ips))

@@ -8,10 +8,12 @@ from flask import current_app
 from uuid import uuid4
 from kubedock.core import db
 from kubedock.users.models import User, UserActivity
+from kubedock.pods import models as pods_models
 from kubedock.pods.models import Pod
 from kubedock.billing.models import Package, PackageKube, Kube
 from kubedock.kapi import podcollection as kapi_podcollection
 from kubedock.kapi.podcollection import PodCollection
+
 from kubedock.pods.models import PodIP, IPPool
 from kubedock.validation import check_change_pod_data
 
@@ -19,6 +21,9 @@ from kubedock.validation import check_change_pod_data
 class UserCRUDTestCase(APITestCase):
     """Tests for /api/users/all endpoint"""
     url = '/users/all'
+
+    def setUp(self):
+        pods_models.MASTER_IP = '192.168.254.1'
 
     # @unittest.skip('')
     def test_get(self):

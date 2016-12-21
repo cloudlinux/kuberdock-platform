@@ -49,7 +49,7 @@ def get_kuberdock_logs_pod_name(node):
     return 'kuberdock-logs-{0}'.format(node)
 
 
-def create_node(ip, hostname, kube_id,
+def create_node(ip, hostname, kube_id, public_interface=None,
                 do_deploy=True, with_testing=False,
                 ls_devices=None, ebs_volume=None,
                 options=None):
@@ -58,6 +58,8 @@ def create_node(ip, hostname, kube_id,
     :param ip: optional IP address for the node. If it's not specified, then
         ip address will be retrieved by given hostname
     :param hostname: name of the node host
+    :param public_interface: Network interface name on which public IPs
+        will be bind
     :param kube_id: kube type identifier for the new node
     :param do_deploy: flag switches on deployment process on the node host
     :param with_testing: enables/disables testing repository for deployment
@@ -99,7 +101,8 @@ def create_node(ip, hostname, kube_id,
         raise APIError('Error reading Kubernetes Node auth token')
     _check_node_hostname(ip, hostname)
     node = Node(
-        ip=ip, hostname=hostname, kube_id=kube_id, state=NODE_STATUSES.pending
+        ip=ip, hostname=hostname, kube_id=kube_id,
+        public_interface=public_interface, state=NODE_STATUSES.pending
     )
 
     try:

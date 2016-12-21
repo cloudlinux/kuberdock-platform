@@ -45,6 +45,7 @@ def create_item():
     if kube is None:
         raise APIError('Unknown kube type')
     hostname = data['hostname']
+    public_interface = data.get('public_interface', None)
     devices = None
     ebs_volume = None
     if not CEPH:
@@ -53,10 +54,9 @@ def create_item():
         else:
             devices = data.get('lsdevices', [])
 
-    dbnode = kapi_nodes.create_node(None, hostname, kube.id,
-                                    ls_devices=devices,
-                                    ebs_volume=ebs_volume,
-                                    with_testing=WITH_TESTING)
+    dbnode = kapi_nodes.create_node(
+        None, hostname, kube.id, public_interface, ls_devices=devices,
+        ebs_volume=ebs_volume, with_testing=WITH_TESTING)
     data['id'] = dbnode.id
     return jsonify({'status': 'OK', 'data': data})
 

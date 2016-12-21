@@ -14,6 +14,7 @@ class Node(db.Model):
     ip = db.Column(db.String(40), unique=True)
     hostname = db.Column(db.String(HOSTNAME_LENGTH), unique=True)
     kube_id = db.Column(db.Integer, db.ForeignKey('kubes.id'))
+    public_interface = db.Column(db.String(15), nullable=True)
     state = db.Column(db.String(40))
     upgrade_status = db.Column(db.Text, default=UPDATE_STATUSES.applied)
 
@@ -35,6 +36,7 @@ class Node(db.Model):
             "ip": self.ip,
             "hostname": self.hostname,
             "kube_id": self.kube_id,
+            "public_interface": self.public_interface,
             "state": self.state,
             "upgrade_status": self.upgrade_status
         }

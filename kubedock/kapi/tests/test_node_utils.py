@@ -107,6 +107,7 @@ class TestNodeUtils(DBTestCase):
                 'hostname': node1.hostname,
                 'kube_type': node1.kube_id,
                 'status': NODE_STATUSES.running,
+                'public_interface': None,
                 'reason': '',
                 'install_log': '',
                 'resources': {}
@@ -177,6 +178,7 @@ class TestNodeUtils(DBTestCase):
                 'id': node1.id,
                 'ip': node1.ip,
                 'install_log': '',
+                'public_interface': None,
                 'reason': '',
                 'hostname': node1.hostname,
                 'kube_type': node1.kube_id,

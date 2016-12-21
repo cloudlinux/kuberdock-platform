@@ -588,7 +588,6 @@ fi
 # Get number of interfaces up
 IFACE_NUM=$(ip -o link show | awk -F: '$3 ~ /LOWER_UP/ {gsub(/ /, "", $2); if ($2 != "lo"){print $2;}}'|wc -l)
 
-MASTER_TOBIND_FLANNEL=""
 MASTER_IP=""
 
 if [ $IFACE_NUM -eq 0 ]; then    # no working interfaces found...
@@ -607,32 +606,15 @@ else
     # read user confirmation
     if [ "$ISAMAZON" = true ];then
         MASTER_IP=$FIRST_IP
-        MASTER_TOBIND_FLANNEL=$FIRST_IFACE
     else
         read -p "Enter master server IP address to communicate with the nodes (it should be an address of the cluster network) [$FIRST_IP]: " MASTER_IP
         if [ -z "$MASTER_IP" ]; then
             MASTER_IP=$FIRST_IP
-            MASTER_TOBIND_FLANNEL=$FIRST_IFACE
-        else
-            MASTER_TOBIND_FLANNEL=$(ip -o -4 address show| awk "{sub(/\/.*\$/, \"\", \$4); if(\$4==\"$MASTER_IP\"){print \$2;exit}}")
         fi
     fi
 fi
 
 echo "MASTER_IP has been set to $MASTER_IP" >> $DEPLOY_LOG_FILE
-
-# We question here for a node interface to bind external IPs to
-if [ "$ISAMAZON" = true ];then
-    NODE_TOBIND_EXTERNAL_IPS=$MASTER_TOBIND_FLANNEL
-else
-    read -p "Enter interface to bind public IP addresses on nodes [$MASTER_TOBIND_FLANNEL]: " NODE_TOBIND_EXTERNAL_IPS
-    if [ -z "$NODE_TOBIND_EXTERNAL_IPS" ]; then
-        NODE_TOBIND_EXTERNAL_IPS=$MASTER_TOBIND_FLANNEL
-    fi
-fi
-
-# Just a workaround for compatibility
-NODE_TOBIND_FLANNEL=$MASTER_TOBIND_FLANNEL
 
 # Do some preliminaries for aws/non-aws setups
 if [ -z "$PD_CUSTOM_NAMESPACE" ]; then
@@ -772,8 +754,6 @@ cp $KUBERDOCK_DIR/conf/nginx.conf /etc/nginx/nginx.conf
 
 #5 Write settings that hoster enter above (only after yum kuberdock.rpm)
 echo "MASTER_IP = $MASTER_IP" >> $KUBERDOCK_MAIN_CONFIG
-echo "MASTER_TOBIND_FLANNEL = $MASTER_TOBIND_FLANNEL" >> $KUBERDOCK_MAIN_CONFIG
-echo "NODE_TOBIND_EXTERNAL_IPS = $NODE_TOBIND_EXTERNAL_IPS" >> $KUBERDOCK_MAIN_CONFIG
 echo "PD_NAMESPACE = $PD_NAMESPACE" >> $KUBERDOCK_MAIN_CONFIG
 echo "CALICO_NETWORK = $CALICO_NETWORK" >> $KUBERDOCK_MAIN_CONFIG
 if [ "$ZFS" = yes ]; then

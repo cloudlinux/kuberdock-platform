@@ -1,13 +1,11 @@
 import json
 import os
-import re
 import socket
 import subprocess
 import time
 from collections import OrderedDict
 from datetime import datetime, timedelta
 
-import ipaddress
 import requests
 from flask import current_app
 from sqlalchemy import event
@@ -33,7 +31,7 @@ from .settings import (
     NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH,
     CEPH_POOL_NAME, CEPH_CLIENT_USER,
     KUBERDOCK_INTERNAL_USER, NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT,
-    CALICO, NODE_STORAGE_MANAGE_DIR, ZFS, NODE_TOBIND_EXTERNAL_IPS)
+    CALICO, NODE_STORAGE_MANAGE_DIR, ZFS)
 from .system_settings.models import SystemSettings
 from .users.models import SessionData
 from .utils import (
@@ -141,8 +139,8 @@ def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
     return res.text if not res.ok else False
 
 
-@celery.task(bind=True, base=AddNodeTask)
-def add_new_node(self, node_id, log_pod_ip, with_testing=False, redeploy=False,
+@celery.task(base=AddNodeTask)
+def add_new_node(node_id, log_pod_ip, with_testing=False, redeploy=False,
                  ls_devices=None, ebs_volume=None, deploy_options=None):
     db_node = Node.get_by_id(node_id)
     admin_rid = Role.query.filter_by(rolename="Admin").one().id
@@ -196,10 +194,6 @@ def add_new_node(self, node_id, log_pod_ip, with_testing=False, redeploy=False,
         if err:
             raise NodeInstallException(err)
 
-        i, o, e = ssh.exec_command('ip -o -4 address show',
-                                   timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
-
-        node_interface = get_node_interface(o.read(), db_node.ip)
         sftp = ssh.open_sftp()
         sftp.get_channel().settimeout(NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
         sftp.put('fslimit.py', '/fslimit.py')
@@ -266,7 +260,6 @@ def add_new_node(self, node_id, log_pod_ip, with_testing=False, redeploy=False,
             'AWS': AWS,
             'NODE_KUBERNETES': node_kubernetes_rpm,
             'MASTER_IP': MASTER_IP,
-            'FLANNEL_IFACE': node_interface,
             'TZ': timezone,
             'NODENAME': host,
             'CPU_MULTIPLIER': cpu_multiplier,
@@ -274,7 +267,7 @@ def add_new_node(self, node_id, log_pod_ip, with_testing=False, redeploy=False,
             'FIXED_IP_POOLS': current_app.config['FIXED_IP_POOLS'],
             'TOKEN': token,
             'LOG_POD_IP': log_pod_ip,
-            'NETWORK_INTERFACE': NODE_TOBIND_EXTERNAL_IPS,
+            'PUBLIC_INTERFACE': db_node.public_interface or ''
         }
         deploy_cmd = 'bash /node_install.sh'
 
@@ -420,18 +413,6 @@ def setup_node_storage(ssh, node_id, devices=None, ebs_volume=None,
 @celery.task()
 def send_stat():
     send(collect())
-
-
-def get_node_interface(data, node_ip):
-    ip = ipaddress.ip_address(unicode(node_ip))
-    patt = re.compile(r'(?P<iface>\w+)\s+inet\s+(?P<ip>[0-9\/\.]+)')
-    for line in data.splitlines():
-        m = patt.search(line)
-        if m is None:
-            continue
-        iface = ipaddress.ip_interface(unicode(m.group('ip')))
-        if ip == iface.ip:
-            return m.group('iface')
 
 
 @celery.task()

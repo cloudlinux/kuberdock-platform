@@ -847,6 +847,11 @@ predefined_app_schema = {
 node_schema = {
     'hostname': hostname_schema,
     'kube_type': kube_type_schema,
+    'public_interface': {'type': 'string',
+                         'required': False,
+                         'maxlength': 15,
+                         'nullable': True,
+                         'empty': True},
     'lsdevices': {'type': 'list',
                   'required': False,
                   'schema': {

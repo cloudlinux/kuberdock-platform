@@ -165,6 +165,7 @@ class NodeManager(Command):
     option_list = [
         Option('--hostname', dest='hostname', required=True),
         Option('--kube-type', dest='kube_type', required=False),
+        Option('--public-interface', dest='public_interface', required=False),
         Option('--do-deploy', dest='do_deploy', action='store_true'),
         Option('--wait', dest='wait', action='store_true'),
         Option('--timeout', dest='timeout', required=False, type=int),
@@ -177,8 +178,8 @@ class NodeManager(Command):
                action='store_true'),
     ]
 
-    def run(self, hostname, kube_type, do_deploy, wait, timeout, testing,
-            docker_options, ebs_volume, ls_device, verbose):
+    def run(self, hostname, kube_type, public_interface, do_deploy, wait,
+            timeout, testing, docker_options, ebs_volume, ls_device, verbose):
 
         if kube_type is None:
             kube_type_id = Kube.get_default_kube_type()
@@ -199,11 +200,15 @@ class NodeManager(Command):
                 'Kuberdock is in maintenance mode. Operation canceled'
             )
         try:
-            check_node_data({'hostname': hostname, 'kube_type': kube_type_id})
+            check_node_data({
+                'hostname': hostname,
+                'kube_type': kube_type_id,
+                'public_interface': public_interface,
+            })
             if not isinstance(ls_device, (tuple, list)):
                 ls_device = (ls_device,)
-            res = create_node(None, hostname, kube_type_id, do_deploy, testing,
-                              options=options,
+            res = create_node(None, hostname, kube_type_id, public_interface,
+                              do_deploy, testing, options=options,
                               ls_devices=ls_device, ebs_volume=ebs_volume)
             print(res.to_dict())
             if wait:

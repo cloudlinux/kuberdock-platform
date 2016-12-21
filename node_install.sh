@@ -32,6 +32,31 @@ NODE_STORAGE_MANAGE_DIR=node_storage_manage
 # ======================= // DEFINED VARS ===============================
 
 
+# check public interface and node ip
+if [ -z "$NODE_IP" ]; then
+    >&2 echo "NODE_IP is not set"
+    exit 1
+else
+    if [ -z "$(ip -o addr | grep $NODE_IP)" ]; then
+        >&2 echo "IP address $NODE_IP is not found"
+        exit 1
+    fi
+fi
+
+if [ -z "$PUBLIC_INTERFACE" ]; then
+    PUBLIC_INTERFACE="$(ip -o ad | grep $NODE_IP | awk '{ print $2 }')"
+    if [ -z "$PUBLIC_INTERFACE" ]; then
+        >&2 echo "Interface for IP $NODE_IP is not found"
+        exit 1;
+    fi
+else
+    if [ -z "$(ip -o addr | grep $PUBLIC_INTERFACE)" ]; then
+        >&2 echo "Interface $PUBLIC_INTERFACE not found"
+        exit 1
+    fi
+fi
+# // check public interface and node ip
+
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
@@ -692,7 +717,7 @@ cat <<EOF > "/var/lib/kuberdock/kuberdock.json"
 {"fixed_ip_pools": "$fixed_ip_pools",
 "master": "$MASTER_IP",
 "node": "$NODENAME",
-"network_interface": "$NETWORK_INTERFACE",
+"network_interface": "$PUBLIC_INTERFACE",
 "token": "$TOKEN"}
 EOF
 

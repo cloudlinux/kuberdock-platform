@@ -674,7 +674,7 @@ if [ "$ISAMAZON" = true ];then
         AWS_EBS_DEFAULT_SIZE=20
     fi
     AWS_DEFAULT_EBS_VOLUME_TYPE=${AWS_DEFAULT_EBS_VOLUME_TYPE:-standard}
-    AWS_DEFAULT_EBS_VOLUME_IOPS=${AWS_DEFAULT_EBS_VOLUME_IOPS:-2000}
+    AWS_DEFAULT_EBS_VOLUME_IOPS=${AWS_DEFAULT_EBS_VOLUME_IOPS:-1000}
 
     if [ -z "$ROUTE_TABLE_ID" ];then
         yum_wrapper install awscli -y   # only after epel is installed

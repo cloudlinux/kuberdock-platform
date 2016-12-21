@@ -267,7 +267,7 @@ AWS = False
 # Default EBS volume type for node storage on AWS.
 # Available types are: 'standard', 'io1', 'gp2'
 AWS_DEFAULT_EBS_VOLUME_TYPE = 'standard'
-AWS_DEFAULT_EBS_VOLUME_IOPS = 2000
+AWS_DEFAULT_EBS_VOLUME_IOPS = 1000
 # AWS EBS volume types which support provisioned iops
 AWS_IOPS_PROVISION_VOLUME_TYPES = ('io1',)
 

@@ -10,9 +10,12 @@ DEPLOY_LOG_FILE=/var/log/kuberdock_master_deploy.log
 EXIT_MESSAGE="Installation error. Install log saved to $DEPLOY_LOG_FILE"
 NGINX_SHARED_ETCD="/etc/nginx/conf.d/shared-etcd.conf"
 
-# Just to ensure HOSTNAME is not empty. Anyway it should be set to valid value
-# but we do not know here what value is valid.
-HOSTNAME=${HOSTNAME:-$(uname -n)}
+# Reset transient hostname (usually "short" hostname). Transient hostname have
+# higher priority in some cases, but it can be wrong (e.g. on AWS before reboot)
+# and it changed to "real" hostname after reboot causing an issue with Calico
+hostnamectl --transient set-hostname ""
+# Replace hostname environment variable in case if it was invalid
+HOSTNAME=$(hostnamectl --static)
 
 
 ELASTICSEARCH_PORT=9200
@@ -50,7 +53,7 @@ DATA_TEMPLATE='{'\
 '\"level\": \"error\", '\
 '\"extra\":{\"fullLog\":\"$logs\"}, '\
 '\"tags\":{\"uname\":\"$uname\", \"owner\":\"$KD_OWNER_EMAIL\"},'\
-' \"release\":\"$release\", \"server_name\":\"$hostname\($ip_address\)\"}'
+' \"release\":\"$release\", \"server_name\":\"$HOSTNAME\($ip_address\)\"}'
 
 KEY_BITS="${KEY_BITS:-4096}"
 
@@ -104,7 +107,6 @@ sentryWrapper() {
          logs=$(while read line; do echo -n "${line}\\n"; done < $DEPLOY_LOG_FILE)
          logs=$(echo "$logs" | tr -d '"')
          uname=$(uname -a)
-         hostname=$(cat /etc/hostname)
          ip_address=$(ip route get 8.8.8.8 | awk 'NR==1 {print $NF}')
          release=$(rpm -q --queryformat "%{VERSION}-%{RELEASE}" kuberdock)
          data=$(eval echo "$DATA_TEMPLATE")
@@ -791,13 +793,12 @@ do_and_log mv ca.crt /etc/pki/etcd/
 do_and_log rm -f ca.key.insecure
 
 # first instance of etcd cluster
-etcd1=$(uname -n)
-etcd-ca --depot-path /root/.etcd-ca new-cert --ip "$MASTER_IP,127.0.0.1" --passphrase "" --key-bits "$KEY_BITS" $etcd1
+etcd-ca --depot-path /root/.etcd-ca new-cert --ip "$MASTER_IP,127.0.0.1" --passphrase "" --key-bits "$KEY_BITS" $HOSTNAME
 #                                        this order ^^^^^^^^^^^^^^ is matter for calico, because calico see only first IP
-etcd-ca --depot-path /root/.etcd-ca sign --passphrase "" $etcd1
-etcd-ca --depot-path /root/.etcd-ca export $etcd1 --insecure --passphrase "" | tar -xf -
-do_and_log mv $etcd1.crt /etc/pki/etcd/
-do_and_log mv $etcd1.key.insecure /etc/pki/etcd/$etcd1.key
+etcd-ca --depot-path /root/.etcd-ca sign --passphrase "" $HOSTNAME
+etcd-ca --depot-path /root/.etcd-ca export $HOSTNAME --insecure --passphrase "" | tar -xf -
+do_and_log mv $HOSTNAME.crt /etc/pki/etcd/
+do_and_log mv $HOSTNAME.key.insecure /etc/pki/etcd/$HOSTNAME.key
 
 # generate dns-pod's certificate
 etcd-ca --depot-path /root/.etcd-ca new-cert --ip "10.254.0.10" --passphrase "" --key-bits "$KEY_BITS" etcd-dns
@@ -879,8 +880,8 @@ ETCD_ADVERTISE_CLIENT_URLS="https://$MASTER_IP:2379,http://127.0.0.1:4001"
 #
 #[security]
 ETCD_CA_FILE="/etc/pki/etcd/ca.crt"
-ETCD_CERT_FILE="/etc/pki/etcd/$etcd1.crt"
-ETCD_KEY_FILE="/etc/pki/etcd/$etcd1.key"
+ETCD_CERT_FILE="/etc/pki/etcd/$HOSTNAME.crt"
+ETCD_KEY_FILE="/etc/pki/etcd/$HOSTNAME.key"
 #ETCD_PEER_CA_FILE=""
 #ETCD_PEER_CERT_FILE=""
 #ETCD_PEER_KEY_FILE=""

@@ -38,8 +38,6 @@ from .settings import (
 from .users.models import SessionData
 
 
-HOSTNAME_ENV = "HOSTNAME"
-
 # Key in etcd to retrieve calico IP-in-IP tunnel address
 # See:
 #  https://github.com/projectcalico/calico-containers/blob/master/calicoctl/
@@ -1025,22 +1023,15 @@ class Etcd(object):
 
 def get_hostname():
     """
-    Taken from
-    https://github.com/projectcalico/libcalico/blob/master/
-        calico_containers/pycalico/util.py
-    This will be the hostname returned by socket.gethostname,
-    but can be overridden by passing in the $HOSTNAME environment variable.
-    Though most shells appear to have $HOSTNAME set, it is actually not
-    passed into subshells, so calicoctl will not see a set $HOSTNAME unless
-    the user has explicitly set it in their environment, thus defaulting
-    this function to return socket.gethostname.
+    Get Static Hostname
     :return: String representation of the hostname.
     """
     try:
-        return os.environ[HOSTNAME_ENV]
-    except KeyError:
-        # The user does not have a set $HOSTNAME. Since this is a common
-        # scenario, return socket.gethostname instead of just erroring.
+        hostname = subprocess.check_output(['hostnamectl', '--static'])
+        return hostname.strip()
+    except (OSError, subprocess.CalledProcessError):
+        # If something goes wrong
+        # return socket.gethostname instead of just erroring.
         return socket.gethostname()
 
 

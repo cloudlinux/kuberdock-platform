@@ -31,7 +31,8 @@ cp "$SOURCES_DIR/kuberdock.spec" /root/rpmbuild/SPECS/
 mv "/tmp/$NAME-$VERSION.tar.bz2" /root/rpmbuild/SOURCES/
 
 echo "########## Starting the RPM build ##########"
-rpmbuild --define="dist .el7" --quiet -bb /root/rpmbuild/SPECS/kuberdock.spec
+rpmbuild --define="dist .el7" --define="_js_build_mode ${JS_BUILD_MODE:-prod}" \
+    --quiet -bb /root/rpmbuild/SPECS/kuberdock.spec
 EXTRA_NAME=".noarch.rpm"
 cp -f "/root/rpmbuild/RPMS/noarch/$NAME-$VERSION-$BUILD_VER$EXTRA_NAME" "$DST/kuberdock.rpm"
 echo "########## Done RPM build. Find kuberdock.rpm ##########"

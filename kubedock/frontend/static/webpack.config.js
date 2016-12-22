@@ -95,13 +95,13 @@ var webpackConfig = {
             test: /\.tpl$/, exclude: /node_modules/, loader: 'ejs'
         }, {
             test: /\.less$/, loader: ExtractTextPlugin.extract('style',
-                conf.PROD ? 'css!less' : 'css?sourceMap!less?sourceMap'),
+                conf.SOURCE_MAPS ? 'css?sourceMap!less?sourceMap' : 'css!less'),
         }, {
             test: /\.css$/, loader: ExtractTextPlugin.extract('style',
-                conf.PROD ? 'css' : 'css?sourceMap'),
+                conf.SOURCE_MAPS ? 'css?sourceMap' : 'css'),
         }]
     },
-    devtool: conf.PROD ? undefined : '#source-map',
+    devtool: conf.SOURCE_MAPS ? '#source-map' : undefined,
     lessLoader: {
         lessPlugins: conf.PROD ? [new LessPluginCleanCSS({advanced: true})] : [],
     },

@@ -10,6 +10,7 @@ Source0: %{name}-%{version}.tar.bz2
 
 BuildRequires: python
 BuildRequires: nodejs >= 6.4.0
+BuildRequires: yarn >= 0.18.1-1
 
 Requires: nginx
 Requires: influxdb == 0:0.13.0
@@ -89,12 +90,14 @@ Kuberdock
 %build
 # Build frontend stuff
 cd kubedock/frontend/static/
-if command -v npm-cache; then
-    npm-cache install --cacheDirectory ~/.npm npm --no-optional
+yarn install --ignore-optional --no-progress --no-emoji --pure-lockfile --prefer-offline 2>&1
+if [ "%{_js_build_mode}" = "dev" ]; then
+    yarn run build -- --bail
+elif [ "%{_js_build_mode}" = "fast" ]; then
+    FAST_DEV_BUILD=true yarn run build -- --bail
 else
-    npm install --no-optional
+    PROD_ENV=true yarn run build -- --bail
 fi
-PROD_ENV=true npm run build
 rm -rf node_modules
 cd ../../../
 # Exclude dev-utils and tests

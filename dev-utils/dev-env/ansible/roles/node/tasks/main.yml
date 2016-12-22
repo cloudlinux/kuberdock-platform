@@ -5,7 +5,6 @@
   tags:
       - non_aws
 
-
 - name: Docker options
   set_fact:
       docker_options: --insecure-registry=192.168.115.165:5001 --registry-mirror=http://192.168.115.165:5001
@@ -41,6 +40,15 @@
 - include: deploy.yml
   tags:
     - node_deploy
+
+# TODO: Remove this task when  https://gerrit.cloudlinux.com/#/c/14865/ merged
+- name: Fix public interface for kubelet
+  lineinfile:
+    dest: /var/lib/kuberdock/kuberdock.json
+    regexp: '^"network_interface":'
+    line: '"network_interface": "{{ ansible_default_ipv4.interface }}",'
+  notify: restart kubelet
+
 
 - name: Restart master emperor when nodes are deployed.
   run_once: true

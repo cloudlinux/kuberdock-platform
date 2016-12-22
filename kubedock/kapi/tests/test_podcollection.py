@@ -573,7 +573,6 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
     @mock.patch.object(podcollection, 'db')
     @mock.patch.object(podcollection.PodCollection, 'update')
     @mock.patch.object(podcollection.utils, 'send_event_to_user')
-    @mock.patch.object(podcollection.helpers, 'replace_pod_config')
     @mock.patch.object(podcollection, '_try_to_update_existing_rc')
     @mock.patch.object(podcollection.ingress_resource, 'create_ingress')
     @mock.patch.object(podcollection.dns_management, 'delete_record')
@@ -585,7 +584,7 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
     def test_pod_prepare_and_run(
             self, has_public_ports_mock, post_mock, raise_if_failure_mock,
             run_service_mock, dbpod_mock, delete_record_mock,
-            create_ingress_mock, try_update_rc_mock, replace_pod_config_mock,
+            create_ingress_mock, try_update_rc_mock,
             send_event_to_user_mock, podcollection_update_mock, db_mock):
         """
         Test first _start_pod in usual case
@@ -615,8 +614,6 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
             [self.test_pod.kind], json.dumps(self.valid_config), rest=True,
             ns=self.test_pod.namespace)
         self.assertTrue(raise_if_failure_mock.called)
-        replace_pod_config_mock.assert_called_once_with(
-            self.test_pod, dbpod.get_dbconfig.return_value)
         self.test_pod.set_status.assert_called_with(
             POD_STATUSES.pending, send_update=True)
         delete_record_mock.assert_called_once_with(

@@ -23,6 +23,7 @@ from ..constants import (
     KUBERDOCK_INGRESS_CONFIG_MAP_NAME,
     KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE,
 )
+from ..core import db
 from ..exceptions import (
     APIError,
     DefaultBackendNotReady,
@@ -143,7 +144,7 @@ def _create_ingress_controller_pod():
     except handled_exceptions as e:
         raise IngressControllerNotReady(e.message)
 
-    public_address = _wait_for_pod_public_address(kd_user, pod_id)
+    public_address = _wait_for_pod_public_address(pod_id)
 
     if public_address:
         current_app.logger.debug(
@@ -153,7 +154,7 @@ def _create_ingress_controller_pod():
             'Failed to get public address of ingress controller pod')
 
 
-def _wait_for_pod_public_address(owner, pod_id):
+def _wait_for_pod_public_address(pod_id):
     tries = 30
     interval = 2
 
@@ -163,12 +164,15 @@ def _wait_for_pod_public_address(owner, pod_id):
         public_address_field = 'public_aws'
     else:
         public_address_field = 'public_ip'
-    none_values = (None, AWS_UNKNOWN_ADDRESS)
+
+    none_values = (None, 'true', '', AWS_UNKNOWN_ADDRESS)
+
+    pod = Pod.query.get(pod_id)
 
     for _ in range(tries):
-        pod = PodCollection(owner).get(pod_id, as_json=False)
-        public_address = pod[public_address_field]
+        public_address = pod.get_dbconfig(public_address_field)
         if public_address in none_values:
+            db.session.expire(pod)
             sleep(interval)
             continue
         else:

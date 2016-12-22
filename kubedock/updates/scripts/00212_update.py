@@ -223,13 +223,14 @@ def _upgrade_202(upd, with_testing, *args, **kwargs):
 def _downgrade_202(upd, with_testing, exception, *args, **kwargs):
     pass
 
+
 ##################### END   202 update script #################################
-####$################ BEGIN 206 update script #################################
+##################### BEGIN 206 update script #################################
 def _recreate_ingress_pod_if_needed():
     kd_user = User.get_internal()
     ingress_pod = Pod.filter_by(name=KUBERDOCK_INGRESS_POD_NAME,
                                 owner=kd_user).first()
-    if ingress_pod:
+    if ingress_pod or BaseDomain.query.first():
         PodCollection(kd_user).delete(ingress_pod.id, force=True)
         default_backend_pod = Pod.filter_by(name=KUBERDOCK_BACKEND_POD_NAME,
                                             owner=kd_user).first()
@@ -252,14 +253,11 @@ def _recreate_ingress_pod_if_needed():
 def _update_dns_records():
     record_type = 'CNAME' if settings.AWS else 'A'
 
-    ingress_pod_exists = bool(Pod.filter_by(name=KUBERDOCK_INGRESS_POD_NAME,
-                                            owner=User.get_internal()).first())
+    ingress_up = ingress.is_subsystem_up()
 
     for base_domain in BaseDomain.query.all():
-        if not ingress_pod_exists:
-            raise Exception(
-                'There is no ingress controller pod, but some base domains '
-                'found. Something wrong. Please contact support to get help.')
+        if not ingress_up:
+            ingress.prepare_ip_sharing()
         domain = '*.{}'.format(base_domain.name)
         ok, message = dns_management.create_or_update_record(
             domain, record_type)
@@ -280,8 +278,10 @@ def _update_dns_records():
 def _upgrade_node_206(upd, with_testing, env, *args, **kwargs):
     pass
 
+
 def _downgrade_node_206(upd, with_testing, env, *args, **kwargs):
     pass
+
 
 def _upgrade_206(upd, *args, **kwargs):
     upd.print_log('Recreate ingress pod if needed...')

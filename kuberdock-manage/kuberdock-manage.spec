@@ -4,7 +4,7 @@
 
 
 Name:       kuberdock-manage
-Version:    0.2.0
+Version:    0.2.1
 Release:    1%{?dist}
 Summary:    Kuberdock command line utilities
 Group:      System Environment/Libraries

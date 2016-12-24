@@ -135,7 +135,9 @@ install_calico() {
             do_and_log systemctl enable docker
             do_and_log systemctl start docker
         else
-            yum_wrapper -y install docker-io
+            # Explicitly enable EPEL repo in case if it already installed
+            # but disabled by administrator
+            yum_wrapper -y install --enablerepo=epel docker-io
             do_and_log chkconfig docker on
             do_and_log service docker start
         fi

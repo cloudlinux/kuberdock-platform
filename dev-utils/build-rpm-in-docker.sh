@@ -14,7 +14,7 @@ DST="./builds/"
 CONT=rpm-build_$(echo $RANDOM | tr '[0-9]' '[a-zA-Z]')
 workdir="/docker_rpmbuild"
 
-docker run --name "$CONT" -v "$PWD":"$workdir":ro -w "$workdir" \
+docker run --name "$CONT" -v "$PWD":"$workdir":ro,z -w "$workdir" \
     -e JS_BUILD_MODE="$JS_BUILD_MODE" "$IMG" \
     bash dev-utils/build-rpm.sh "$workdir" "/"
 docker cp "$CONT":/kuberdock.rpm "$DST"

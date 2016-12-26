@@ -1,14 +1,15 @@
 ---
 - name: Add npm repos
-  shell: curl --silent --location https://rpm.nodesource.com/setup_6.x | bash -
+  shell: >
+    curl --silent -o /etc/yum.repos.d/yarn.repo https://dl.yarnpkg.com/rpm/yarn.repo;
+    curl --silent --location https://rpm.nodesource.com/setup_6.x | bash -
 
 - name: Install additional rpm build packages
   yum: name={{ item }} state=latest
   with_items:
     - rpm-build
     - nodejs-6.4.0
-    - nodejs-less
-    - nodejs-clean-css
+    - yarn
     - gcc
 
 - name: Building KuberDock RPM from source

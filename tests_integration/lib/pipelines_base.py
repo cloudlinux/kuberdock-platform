@@ -202,7 +202,7 @@ class Pipeline(object):
         test_fqn = get_func_fqn(test)
         log_begin(test_fqn, self.name)
 
-        with log_timing_ctx("Pipeline {} set_up".format(self.name)):
+        with log_timing_ctx("Pipeline {} test set_up".format(self.name)):
             self.set_up()
         try:
             with log_timing_ctx("Test {}".format(test_fqn)):
@@ -212,7 +212,8 @@ class Pipeline(object):
             LOG.error("Test {} FAILED:\n{}".format(test_fqn, trace))
             raise
         finally:
-            with log_timing_ctx("Pipeline {} tear_down".format(self.name)):
+            with log_timing_ctx(
+                    "Pipeline {} test tear_down".format(self.name)):
                 self.tear_down()
             log_end(test_fqn, self.name)
 

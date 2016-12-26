@@ -169,9 +169,12 @@ class CephPipeline(Pipeline):
         'KD_PD_NAMESPACE': 'jenkins_pool'
     }
 
+    def set_up(self):
+        pass
+
     def tear_down(self):
         """
-        Remove all Ceph images
+        Remove all CEPH volumes (PVs) after each test
         """
         self.cleanup()
 

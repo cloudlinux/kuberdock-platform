@@ -83,6 +83,8 @@ class Pipeline(object):
 
             "ANSIBLE_CALLBACK_WHITELIST",
 
+            "KD_ADD_SHARED_PUB_KEYS",
+
             "KD_ONE_URL",
             "KD_ONE_USERNAME",
             "KD_ONE_PASSWORD",

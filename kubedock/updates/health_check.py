@@ -25,7 +25,7 @@ from kubedock.kapi import pstorage
 from kubedock.pods.models import Pod
 from kubedock.updates.helpers import setup_fabric
 from kubedock.settings import KUBERDOCK_INTERNAL_USER, ELASTICSEARCH_REST_PORT
-from kubedock.settings import CEPH, CEPH_POOL_NAME
+from kubedock.settings import CEPH, CEPH_POOL_NAME, NODE_LOCAL_STORAGE_PREFIX
 from kubedock.utils import POD_STATUSES
 
 
@@ -146,7 +146,8 @@ def get_disk_usage(local=True):
         rv = run("df --output=source,pcent,target", quiet=True,
                  timeout=SSH_TIMEOUT)
     lines = rv.splitlines()[1:]
-    r = re.compile('((?!tmpfs|cdrom|SEPID).)*$')
+    path = NODE_LOCAL_STORAGE_PREFIX + os.path.sep
+    r = re.compile('((?!tmpfs|cdrom|{}|SEPID).)*$'.format(path))
     lines = filter(r.match, lines)
     usage = [line.split()[:-1] for line in lines]
     return usage

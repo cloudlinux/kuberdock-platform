@@ -428,7 +428,7 @@ def do_backup(backup_dir, callback, skip_errors, **kwargs):
             logger.debug("Starting backup of {} resource".format(res.__name__))
             subresult = res.backup(backup_dst)
             if subresult:
-                logger.info("File(s) collected: {0}".format(subresult))
+                logger.info("File collected: {0}".format(subresult))
         except subprocess.CalledProcessError as err:
             logger.error("%s backup error: %s" % (res, err))
             if not skip_errors:

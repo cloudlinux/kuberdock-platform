@@ -99,9 +99,9 @@ def do_merge(backups, precision, dry_run, include_latest, skip_errors,
             next(helper)
         except StopIteration:
             if not include_latest:
-                logger.info("Folders `{0}` were excluded from merge because "
-                            "they can be not "
-                            "complete.".format(', '.join(group)))
+                logger.info("Folders `{0}` were skipped because "
+                            "they can be still in backup process "
+                            "and not consistant.".format(', '.join(group)))
                 continue
         logger.info("GROUP: {0}".format(group))
         if will_override(backups, group):

@@ -44,7 +44,7 @@ def print_msg(msg=u'', color=Fore.MAGENTA):
         sys.stdout.flush()
 
 
-def run_tests_in_a_pipeline(pipeline_name, tests, multilog,
+def run_tests_in_a_pipeline(pipeline_name, tests, seq_num, multilog,
                             cluster_debug=False):
     """
 
@@ -81,7 +81,7 @@ def run_tests_in_a_pipeline(pipeline_name, tests, multilog,
                  Fore.RED)
 
     try:
-        pipeline = Pipeline.from_name(pipeline_name)
+        pipeline = Pipeline.from_name(pipeline_name, seq_num)
     except Exception:
         pipe_log("Failed to run Pipeline.from_name({})".format(
             pipeline_name))
@@ -399,10 +399,12 @@ def main(paths, pipelines, pipelines_skip, pipeline_tags, infra_provider,
             print_msg(u'Estimated longest queue: {} pipelines'.format(q_len))
 
         with ThreadPoolExecutor(max_workers=slots) as executor:
+            seq = 0
             for pipe, tests in filtered.items():
                 full_name = u'{}_{}'.format(*pipe)
                 executor.submit(run_tests_in_a_pipeline,
-                                full_name, tests, multilog, cluster_debug)
+                                full_name, tests, seq, multilog, cluster_debug)
+                seq += 1
 
         _print_test_report(multilog, live_log)
 

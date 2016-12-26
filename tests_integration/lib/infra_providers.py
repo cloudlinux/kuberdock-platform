@@ -28,7 +28,6 @@ logging.getLogger('boto3').setLevel(logging.WARNING)
 logging.getLogger('botocore').setLevel(logging.WARNING)
 
 INTEGRATION_TESTS_VNET = 'vlan_kuberdock_ci'
-CLUSTER_CREATION_MAX_DELAY = 120
 
 
 class InstanceSize(object):
@@ -249,6 +248,7 @@ class OpenNebulaProvider(VagrantProvider):
         self._oca_cached = None
         self.routable_ip_count = provider_args['routable_ip_count']
         self.routable_ip_pool = NebulaIPPool(self._oca)
+        self.delay = self._calc_delay(provider_args['seq_num'])
 
     @property
     def _oca(self):
@@ -279,7 +279,7 @@ class OpenNebulaProvider(VagrantProvider):
         return self.env.get("KD_ONE_PRIVATE_KEY", def_key)
 
     def start(self):
-        self._rnd_sleep()
+        self._delay()
         self._reserve_ips()
         log_dict(self.env, "Cluster settings:")
 
@@ -306,11 +306,17 @@ class OpenNebulaProvider(VagrantProvider):
 
         self._save_reserved_ips()
 
-    def _rnd_sleep(self):
-        delay = random.randint(0, CLUSTER_CREATION_MAX_DELAY)
-        LOG.info(
-            "Sleep {}s to prevent Nebula from being flooded".format(delay))
-        time.sleep(delay)
+    def _calc_delay(self, seq_num):
+        # Avg time from VM created to running state.
+        time_to_create_vms = 45  # sec
+        # How much to wait before other pipelines get their VMs created
+        return seq_num * time_to_create_vms
+
+    def _delay(self):
+        if self.delay:
+            LOG.info("Waiting {}s to prevent Nebula from being "
+                     "flooded.".format(self.delay))
+            time.sleep(self.delay)
 
     def _reserve_ips(self):
         # Reserve Pod IPs in Nebula so that they are not taken by other

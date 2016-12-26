@@ -40,13 +40,21 @@ class Pipeline(object):
     skip_reason = ""
     tags = ["general"]
 
-    def __init__(self, name):
-        # type: (str) -> None
+    def __init__(self, name, seq_num):
+        """
+
+        :param name: name of this pipeline
+        :param seq_num: seq number of this pipeline in a whole batch (0-based)
+        """
+        # type: (str, int) -> None
         self.name = name
         self.env = self._get_pipeline_env()
         self.infra_provider = InfraProvider.from_name(
             self.INFRA_PROVIDER, self.env,
-            {"routable_ip_count": self.ROUTABLE_IP_COUNT}
+            provider_args = {
+                "routable_ip_count": self.ROUTABLE_IP_COUNT,
+                "seq_num": seq_num
+            }
         )
         self.cluster = KDIntegrationTestAPI(self.infra_provider)
 
@@ -273,13 +281,13 @@ class Pipeline(object):
         return available[pipe_name]
 
     @classmethod
-    def from_name(cls, name):
-        # type: (str) -> Pipeline
+    def from_name(cls, name, seq_num):
+        # type: (str, int) -> Pipeline
         """
         Fabric method for creating a specific pipeline class instance
         depending on a given pipe's full name (name_threadID)
         """
-        return cls.class_from_name(name)(name)
+        return cls.class_from_name(name)(name, seq_num)
 
 
 class UpgradedPipelineMixin(object):

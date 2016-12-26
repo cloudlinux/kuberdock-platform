@@ -97,18 +97,20 @@ class TestElasticsearchUtils(DBTestCase):
             '/namespaces/' + namespace1 + '/services/' + service1 + ':9200/'
         prefix2 = elasticsearch_utils.K8S_PROXY_PREFIX + \
             '/namespaces/' + namespace2 + '/services/' + service2 + ':9200/'
-        es_mock.assert_called_once_with([
-            {
-                'host': KUBE_API_HOST,
-                'port': KUBE_API_PORT,
-                'url_prefix': prefix1,
-            },
-            {
-                'host': KUBE_API_HOST,
-                'port': KUBE_API_PORT,
-                'url_prefix': prefix2,
-            },
-        ])
+        call_args, call_kwargs = es_mock.call_args
+        self.assertEqual(es_mock.call_count, 1)
+        es_query = call_args[0]
+        self.assertIn({
+            'host': KUBE_API_HOST,
+            'port': KUBE_API_PORT,
+            'url_prefix': prefix1,
+        }, es_query)
+        self.assertIn({
+            'host': KUBE_API_HOST,
+            'port': KUBE_API_PORT,
+            'url_prefix': prefix2,
+        }, es_query)
+
         search_mock.assert_called_once_with(
             index=index,
             body={'size': size}

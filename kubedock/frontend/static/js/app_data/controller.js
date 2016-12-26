@@ -876,8 +876,7 @@ define([
                 this.podWizardBase(options),
                 App.getSystemSettingsCollection(),
                 App.getDomainsCollection(),
-                App.getIppoolMode()
-            ).done(_.bind(function(base, settingsCollection, domainsCollection, ipMode){
+            ).done(_.bind(function(base, settingsCollection, domainsCollection){
                 var options = base[0], Views = base[1];
                 var containerModel = options.podModel.wizardState.container,
                     billingType = settingsCollection.byName('billing_type').get('value'),
@@ -887,7 +886,6 @@ define([
                         hasBilling: billingType.toLowerCase() !== 'no billing',
                         payg: payg,
                         domains: domainsCollection,
-                        ipMode: ipMode,
                     });
 
                 this.listenTo(view, 'step:envconf', this.podWizardStepEnv);
@@ -1068,25 +1066,20 @@ define([
             var that = this;
 
             require(['app_data/nodes/views'], function(Views){
-                var view,
-                    layoutView = new Views.NodesLayout(),
+                var layoutView = new Views.NodesLayout(),
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['nodes', 'create']});
 
-                App.getSetupInfo().done(function(setupInfo){
-                    that.listenTo(layoutView, 'show', function(){
-                        layoutView.breadcrumbs.show(breadcrumbsLayout);
-                        breadcrumbsLayout.nodes.show(
-                            new Breadcrumbs.Link({text: 'Nodes', href:'#nodes'}));
-                        breadcrumbsLayout.create.show(
-                            new Breadcrumbs.Text({text: 'Add node'}));
-                        view = new Views.NodeAddStep({
-                            model: new Model.NodeModel(),
-                            setupInfo: setupInfo
-                        });
-                        layoutView.main.show(view);
-                    });
-                    App.rootLayout.contents.show(layoutView);
+                that.listenTo(layoutView, 'show', function(){
+                    layoutView.breadcrumbs.show(breadcrumbsLayout);
+                    breadcrumbsLayout.nodes.show(
+                        new Breadcrumbs.Link({text: 'Nodes', href:'#nodes'}));
+                    breadcrumbsLayout.create.show(
+                        new Breadcrumbs.Text({text: 'Add node'}));
+                    layoutView.main.show(
+                        new Views.NodeAddStep({model: new Model.NodeModel()})
+                    );
                 });
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1511,45 +1504,44 @@ define([
                     breadcrumbsLayout = new Breadcrumbs.Layout({points: ['subnets']});
                 that.listenTo(layoutView, 'show', function(){
                     layoutView.breadcrumb.show(breadcrumbsLayout);
-                    $.when(App.getIppoolMode(), App.getIPPoolCollection())
-                        .done(function(ipPoolMode, ippoolCollection){
-                            var view, button, breadcrumbsControls;
-                            ippoolCollection.ipPoolMode = ipPoolMode;
-                            if (ipPoolMode === 'aws') {
-                                breadcrumbsControls = new Breadcrumbs.Controls(
-                                    {button: false});
-                                layoutView.breadcrumb.show(breadcrumbsLayout);
-                                breadcrumbsLayout.subnets.show(
-                                    new Breadcrumbs.Text({text: 'Access endpoints'}));
-                                breadcrumbsLayout.controls.show(breadcrumbsControls);
-                                var networkModel = new Model.NetworkModel({id: 'aws'});
-                                networkModel.fetch().fail(utils.notifyWindow)
-                                    .done(function () {
-                                        var collection = networkModel.getIPs().getFiltered(m => true);
-                                        view = new Views.SubnetIpsListView({
-                                            ipPoolMode:ipPoolMode,
-                                            model: networkModel,
-                                            collection: collection
-                                        });
-                                        layoutView.main.show(view);
-                                        layoutView.pager.show(new Pager.PaginatorView({view: view}));
-                                    });
-                            } else {
-                                button = {id: 'create_network',
-                                          href: '#ippool/create',
-                                          title: 'Add subnet'};
-                                breadcrumbsControls = new Breadcrumbs.Controls(
-                                    {button: button});
-                                layoutView.breadcrumb.show(breadcrumbsLayout);
-                                breadcrumbsLayout.subnets.show(
-                                    new Breadcrumbs.Text({text: 'IP Pool'}));
-                                breadcrumbsLayout.controls.show(breadcrumbsControls);
-                                view = new Views.SubnetsListView(
-                                    {collection: ippoolCollection});
+                    App.getIPPoolCollection().then(function(ippoolCollection){
+                        let view, button, breadcrumbsControls;
+
+                        if (App.setupInfo.AWS) {
+                            breadcrumbsControls = new Breadcrumbs.Controls(
+                                {button: false});
+                            layoutView.breadcrumb.show(breadcrumbsLayout);
+                            breadcrumbsLayout.subnets.show(
+                                new Breadcrumbs.Text({text: 'Access endpoints'}));
+                            breadcrumbsLayout.controls.show(breadcrumbsControls);
+                            var networkModel = new Model.NetworkModel({id: 'aws'});
+                            networkModel.fetch().fail(utils.notifyWindow).then(function(){
+                                var collection = networkModel.getIPs().getFiltered(m => true);
+                                view = new Views.SubnetIpsListView({
+                                    model: networkModel,
+                                    collection: collection
+                                });
                                 layoutView.main.show(view);
-                                layoutView.pager.show(new Pager.PaginatorView({view: view}));
-                            }
-                        });
+                                layoutView.pager.show(new Pager.PaginatorView({view}));
+                            });
+                        } else {
+                            button = {
+                                id: 'create_network',
+                                href: '#ippool/create',
+                                title: 'Add subnet',
+                            };
+                            breadcrumbsControls = new Breadcrumbs.Controls(
+                                {button: button});
+                            layoutView.breadcrumb.show(breadcrumbsLayout);
+                            breadcrumbsLayout.subnets.show(
+                                new Breadcrumbs.Text({text: 'IP Pool'}));
+                            breadcrumbsLayout.controls.show(breadcrumbsControls);
+                            view = new Views.SubnetsListView(
+                                {collection: ippoolCollection});
+                            layoutView.main.show(view);
+                            layoutView.pager.show(new Pager.PaginatorView({view: view}));
+                        }
+                    });
                 });
                 App.rootLayout.contents.show(layoutView);
             });
@@ -1568,14 +1560,11 @@ define([
                         new Breadcrumbs.Link({text: 'IP Pool', href:'#ippool'}));
                     breadcrumbsLayout.create.show(
                         new Breadcrumbs.Text({text: 'Add subnet'}));
-                    $.when(
-                        App.getIppoolMode(),
-                        App.getNodeCollection()
-                    ).done(function(ipPoolMode, nodeCollection){
-                        var nodelist = _.map(nodeCollection.fullCollection.models,
-                            function(model){ return model.get('hostname'); });
+                    App.getNodeCollection().then(function(nodeCollection){
+                        let nodelist = nodeCollection.fullCollection.map(
+                            model => model.get('hostname'));
                         layoutView.main.show(new Views.IppoolCreateSubnetworkView(
-                            {ipPoolMode : ipPoolMode, nodelist : nodelist}));
+                            {nodelist}));
                     });
                 });
                 App.rootLayout.contents.show(layoutView);
@@ -1585,40 +1574,33 @@ define([
         showSubnetIps: function(id){
             if (!this.checkPermissions(['Admin']))
                 return;
-            var that = this;
-            require(['app_data/ippool/views'], function(Views){
-                App.getIppoolMode()
-                    .done(function(ipPoolMode) {
-                        var layoutView = new Views.IppoolLayoutView(),
-                            breadcrumbsLayout = new Breadcrumbs.Layout(
-                                {points: ['subnets', 'subnetName']});
-                        that.listenTo(layoutView, 'show', function () {
-                            layoutView.breadcrumb.show(breadcrumbsLayout);
-                            breadcrumbsLayout.subnets.show(
-                                new Breadcrumbs.Link({
-                                    text: 'IP Pool',
-                                    href: '#ippool'
-                                }));
-                            breadcrumbsLayout.subnetName.show(new Breadcrumbs.Text({text: id}));
-                            var networkModel = new Model.NetworkModel({id: id});
-                            networkModel.fetch().fail(utils.notifyWindow)
-                                .done(function (response) {
-                                    var filteredIPs = networkModel.getIPs().getFiltered(function (model) {
-                                            return this.showExcluded || model.get('status') === 'free';
-                                        }),
-                                        view = new Views.SubnetIpsListView(
-                                            {
-                                                model: networkModel,
-                                                collection: filteredIPs,
-                                                ipPoolMode: ipPoolMode
-                                            });
-                                    layoutView.main.show(view);
+            require(['app_data/ippool/views'], (Views) => {
+                var layoutView = new Views.IppoolLayoutView(),
+                    breadcrumbsLayout = new Breadcrumbs.Layout(
+                        {points: ['subnets', 'subnetName']});
+                this.listenTo(layoutView, 'show', function () {
+                    layoutView.breadcrumb.show(breadcrumbsLayout);
+                    breadcrumbsLayout.subnets.show(
+                        new Breadcrumbs.Link({
+                            text: 'IP Pool',
+                            href: '#ippool'
+                        }));
+                    breadcrumbsLayout.subnetName.show(new Breadcrumbs.Text({text: id}));
+                    var networkModel = new Model.NetworkModel({id: id});
+                    networkModel.fetch().fail(utils.notifyWindow).then((response) => {
+                        var filteredIPs = networkModel.getIPs().getFiltered(function(model){
+                                return this.showExcluded || model.get('status') === 'free';
+                            }),
+                            view = new Views.SubnetIpsListView({
+                                model: networkModel,
+                                collection: filteredIPs,
+                            });
+                        layoutView.main.show(view);
 
-                                    layoutView.pager.show(new Pager.PaginatorView({view: view}));
-                                });
-                        });
-                        App.rootLayout.contents.show(layoutView);
+                        layoutView.pager.show(new Pager.PaginatorView({view: view}));
                     });
+                });
+                App.rootLayout.contents.show(layoutView);
             });
         },
 
@@ -1714,28 +1696,25 @@ define([
                     ),
                     ipCollection = new Model.UserAddressCollection();
 
-                App.getSetupInfo().done(function(setupInfo){
-                    that.listenTo(layoutView, 'show', function(){
-                        layoutView.breadcrumbs.show(breadcrumbsLayout);
-                        breadcrumbsLayout.name.show(
-                            new Breadcrumbs.Text(
-                                {text: setupInfo.AWS ? 'Access endpoints' : 'Public IPs'}
-                            ));
-                        ipCollection.fetch({
-                            wait: true,
-                            success: function(collection, resp, opts){
-                                layoutView.main.show(
-                                    new Views.PublicIPsView({collection: collection})
-                                );
-                            },
-                            error: function(model, response){
-                                utils.notifyWindow(response);
-                            },
-                        });
+                that.listenTo(layoutView, 'show', function(){
+                    layoutView.breadcrumbs.show(breadcrumbsLayout);
+                    breadcrumbsLayout.name.show(
+                        new Breadcrumbs.Text(
+                            {text: App.setupInfo.AWS ? 'Access endpoints' : 'Public IPs'}
+                        ));
+                    ipCollection.fetch({
+                        wait: true,
+                        success: function(collection, resp, opts){
+                            layoutView.main.show(
+                                new Views.PublicIPsView({collection: collection})
+                            );
+                        },
+                        error: function(model, response){
+                            utils.notifyWindow(response);
+                        },
                     });
-                    App.rootLayout.contents.show(layoutView);
                 });
-
+                App.rootLayout.contents.show(layoutView);
             });
         },
 

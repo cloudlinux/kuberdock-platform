@@ -33,7 +33,7 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
             if (!keepToken)
                 delete this.storage.authData;  // delete token
             _.each([  // delete all initial data
-                'menuCollection', 'currentUser', 'userPackage',
+                'menuCollection', 'currentUser', 'userPackage', 'setupInfo',
                 'packageCollection', 'kubeTypeCollection', 'packageKubeCollection'
             ], function(name){ delete this[name]; }, this);
             for (var resource in this._cache) delete this._cache[resource];
@@ -258,13 +258,15 @@ define(['backbone', 'marionette', 'app_data/utils'], function(Backbone, Marionet
             $.when(
                 App.getCurrentUser(),
                 App.getMenuCollection(),
+                App.getSetupInfo(),
                 App.getPackages()
-            ).done(function(user, menu, packages){
+            ).done(function(user, menu, setupInfo, packages){
                 // These resources must be fetched every time user logins in, and they
                 // are widely used immediately after start, so let's just save them as
                 // properties, so we won't need to go async every time we need them.
                 App.menuCollection = menu;
                 App.currentUser = user;
+                App.setupInfo = setupInfo;
                 App.userPackage = packages.get(user.get('package_id'));
                 // open SSE stream
                 App.eventHandler();

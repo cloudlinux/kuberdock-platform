@@ -36,11 +36,6 @@ export const SubnetsListItemView = Marionette.ItemView.extend({
         'click @ui.deleteNetwork' : 'deleteNetwork',
     },
 
-    initialize: function(){
-        this.isFloating = this.model.collection.ipPoolMode === 'floating';
-        this.isAWS = this.model.collection.ipPoolMode === 'aws';
-    },
-
     templateHelpers: function(){
         let forbidDeletionMsg,
             allocation = this.model.get('allocation'),
@@ -58,7 +53,7 @@ export const SubnetsListItemView = Marionette.ItemView.extend({
 
         return {
             forbidDeletionMsg: forbidDeletionMsg,
-            isFloating: this.isFloating
+            isFloating: !App.setupInfo.FIXED_IP_POOLS
         };
     },
 
@@ -109,7 +104,6 @@ export const SubnetIpsListItemView = Marionette.ItemView.extend({
         'click @ui.unblock_ip' : 'unblockIP'
     },
 
-    initialize: function(options){ this.isAWS = options.isAWS; },
     onDomRefresh: function(){ this.ui.tooltip.tooltip(); },
 
     commandIP: function(cmd, ip){
@@ -137,7 +131,7 @@ export const SubnetIpsListItemView = Marionette.ItemView.extend({
     },
 
     templateHelpers: function(){
-        return { isAWS: this.isAWS };
+        return {isAWS: App.setupInfo.AWS};
     }
 });
 
@@ -160,7 +154,6 @@ export const IppoolCreateSubnetworkView = Marionette.ItemView.extend({
     },
 
     initialize: function(options){
-        this.ipPoolMode = options.ipPoolMode === 'floating';
         this.nodelist = options.nodelist;
     },
 
@@ -173,7 +166,7 @@ export const IppoolCreateSubnetworkView = Marionette.ItemView.extend({
 
     templateHelpers: function(){
         return {
-            isFloating : this.ipPoolMode,
+            isFloating : !App.setupInfo.FIXED_IP_POOLS,
             nodelist : this.nodelist
         };
     },
@@ -280,10 +273,6 @@ export const SubnetsListView = Marionette.CompositeView.extend({
     emptyView : SubnetsListItemEmptyView,
     childViewContainer : "tbody",
 
-    initialize: function(){
-        this.isFloating = this.collection.ipPoolMode === 'floating';
-    },
-
     collectionEvents: { "remove": "render" },
 
     templateHelpers: function(){
@@ -292,7 +281,7 @@ export const SubnetsListView = Marionette.CompositeView.extend({
             function(sum, model){ return sum + model.get('free_host_count'); }, 0);
 
         return {
-            isFloating   : this.isFloating,
+            isFloating: !App.setupInfo.FIXED_IP_POOLS,
             totalFreeIps : totalFreeIps
         };
     }
@@ -306,7 +295,6 @@ export const SubnetIpsListView = Marionette.CompositeView.extend({
         {tagName: 'tr', template: subnetIpsEmptyTpl}),
 
     initialize: function(){
-        this.isAWS = this.options.ipPoolMode === 'aws';
         if (!this.collection.length){
             // if there is no free IPs, show all by default
             this.collection.showExcluded = !this.collection.showExcluded;
@@ -319,10 +307,9 @@ export const SubnetIpsListView = Marionette.CompositeView.extend({
     events: {
         'click @ui.visibility' : 'toggleVisibility'
     },
-    childViewOptions: function(){ return {isAWS: this.isAWS}; },
     templateHelpers: function(){
         return {
-            isAWS: this.isAWS,
+            isAWS: App.setupInfo.AWS,
             showExcluded: this.collection.showExcluded,
         };
     },

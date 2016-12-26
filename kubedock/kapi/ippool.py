@@ -22,13 +22,14 @@ from ..constants import KUBERDOCK_INGRESS_POD_NAME
 
 class IpAddrPool(object):
     @staticmethod
-    def get(net=None, page=None):
+    def get(net=None, page=None, free_only=False):
         """Returns list of networks or a single network.
         :param net: network ('x.x.x.x/x') optional. If it is not specified,
         then will be returned list of all networks. If it specified, then will
         be returned single network or None
         :param page: optional page to restrict list of hosts in each selected
             network
+        :param free_only: return only free addreses
         """
         if AWS:
             all_pods = Pod.query.filter(Pod.status != 'deleted').all()
@@ -48,9 +49,13 @@ class IpAddrPool(object):
                     'ipv6': False,
                     'node': None}
         if net is None:
+            if free_only:
+                return [ip for p in IPPool.all() for ip in p.free_hosts()]
             return [p.to_dict(page=page) for p in IPPool.all()]
         rv = IPPool.filter_by(network=net).first()
         if rv is not None:
+            if free_only:
+                return rv.free_hosts(page=page)
             return rv.to_dict(page=page)
 
     @staticmethod

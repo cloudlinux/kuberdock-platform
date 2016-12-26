@@ -384,7 +384,7 @@ define([
             // we don't need stuff like "status" there
             'kube_type', 'restartPolicy', 'volumes', 'containers', 'public_ip',
             'public_aws', 'kuberdock_resolve', 'domain', 'base_domain',
-             'public_access_type', 'custom_domain', 'certificate'
+            'public_access_type', 'custom_domain', 'certificate'
         ],
         isChanged: function(compareTo){
             if (!compareTo){
@@ -431,9 +431,11 @@ define([
                 getAfter = function(){
                     return before.get('edited_config') || before.deepClone();
                 },
-                diff = new data.DiffCollection(
-                    [], {modelType: data.Container, before: before.get('containers'),
-                         after: getAfter().get('containers')}),
+                diff = new data.DiffCollection([], {
+                    modelType: data.Container,
+                    before: before.get('containers'),
+                    after: getAfter().get('containers'),
+                }),
                 resetDiff = function(){
                     diff.after = getAfter().get('containers');
                     diff.recalc();
@@ -474,17 +476,19 @@ define([
             if (command === 'restore')
                 return _.contains(['paid_deleted'], status);
             if (command === 'redeploy')
-                return _.contains(['stopping', 'waiting', 'pending', 'running',
-                                   'failed', 'succeeded', 'preparing'], status);
+                return _.contains([
+                    'stopping', 'waiting', 'pending', 'running',
+                    'failed', 'succeeded', 'preparing'], status);
             if (command === 'stop' || command === 'restart')
-                return _.contains(['stopping', 'waiting', 'pending', 'running',
-                                   'failed', 'succeeded', 'preparing'], status);
+                return _.contains([
+                    'stopping', 'waiting', 'pending', 'running',
+                    'failed', 'succeeded', 'preparing'], status);
             if (command === 'pay-and-start')
                 return _.contains(['unpaid'], status);
             if (command === 'delete')
-                return _.contains(['unpaid', 'stopped', 'stopping', 'waiting',
-                                   'running', 'failed', 'succeeded'], status) &&
-                                    !isInternalUser;
+                return _.contains([
+                    'unpaid', 'stopped', 'stopping', 'waiting', 'running',
+                    'failed', 'succeeded'], status) && !isInternalUser;
             if (command === 'switch-package')
                 return !!(this.get('template_id') &&
                           this.get('template_plan_name') &&
@@ -1434,7 +1438,6 @@ define([
         }
     });
 
-    App.getIppoolMode = App.resourcePromiser('ippoolMode', '/api/ippool/mode');
     App.getIPPoolCollection = App.resourcePromiser('ippoolCollection', data.NetworkCollection);
 
     data.IPModel = Backbone.Model.extend({
@@ -1649,12 +1652,14 @@ define([
             if (App.packageKubeCollection == null)
                 App.packageKubeCollection = new data.PackageKubeCollection();
             App.packageCollection.add(this);
-            _.each(kubes, function(kube){
+            for (let kube of kubes) {
                 App.kubeTypeCollection.add(kube);
-                App.packageKubeCollection.add({package_id: this.id,
-                                               kube_id: kube.id,
-                                               kube_price: kube.price});
-            }, this);
+                App.packageKubeCollection.add({
+                    package_id: this.id,
+                    kube_id: kube.id,
+                    kube_price: kube.price,
+                });
+            }
         },
         getKubeTypes() {
             let kubes = _.chain(this.parents)

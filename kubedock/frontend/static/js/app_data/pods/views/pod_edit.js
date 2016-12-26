@@ -773,7 +773,7 @@ export const WizardPortsSubView = Backbone.Marionette.LayoutView.extend({
         this.payg = options.payg;
         this.hasBilling = options.hasBilling;
         this.domains = options.domains;
-        this.isAWS = options.ipMode === 'aws';
+        this.isAWS = App.setupInfo.AWS;
     },
 
     templateHelpers(){

@@ -156,7 +156,7 @@ export const UsersListView = Marionette.CompositeView.extend({
             this.collection.fullCollection.sort();
             this.counter = this.counter * (-1);
 
-            if (that.sortingType[targetClass] == 1){
+            if (that.sortingType[targetClass] === 1){
                 _.each(that.sortingType, function(item, index){
                     that.sortingType[index] = 1;
                 });

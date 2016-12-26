@@ -11,16 +11,17 @@ import {
 import {rewired} from 'app_data/tests/test_utils';
 
 describe('ippool.views.IppoolCreateSubnetworkView', function(){
+    let box, App, utils, resetRewired;
+
+    beforeEach(function(){
+        [{App, utils}, resetRewired] = rewired(ViewRewireAPI, 'App', 'utils');
+        box = sinon.sandbox.create();
+        box.stub(utils, 'notifyInline');
+        App.setupInfo = {FIXED_IP_POOLS: false};
+    });
+    afterEach(function(){ box.restore(); resetRewired(); });
+
     describe('validate', function(){
-
-        let box, utils, resetRewired;
-
-        beforeEach(function(){
-            [{utils}, resetRewired] = rewired(ViewRewireAPI, 'utils');
-            box = sinon.sandbox.create();
-            box.stub(utils, 'notifyInline');
-        });
-        afterEach(function(){ box.restore(); resetRewired(); });
 
         let view,
             badNetworks = [
@@ -50,7 +51,6 @@ describe('ippool.views.IppoolCreateSubnetworkView', function(){
                 };
 
                 view = new View();
-                view.ipPoolMode = true;
                 expect(view.validate(fakeData)).to.be.equal(false);
                 expect(utils.notifyInline).to.have.been.calledOnce;
             });
@@ -62,7 +62,6 @@ describe('ippool.views.IppoolCreateSubnetworkView', function(){
                 autoblock : '312312'
             };
 
-            view = new View();
             view.ipPoolMode = true;
             expect(view.validate(fakeData)).to.be.equal(false);
             expect(utils.notifyInline).to.have.been.calledOnce;
@@ -76,7 +75,6 @@ describe('ippool.views.IppoolCreateSubnetworkView', function(){
                 };
 
                 view = new View();
-                view.ipPoolMode = true;
                 expect(view.validate(fakeData)).to.be.equal(true);
             });
         }
@@ -88,7 +86,6 @@ describe('ippool.views.IppoolCreateSubnetworkView', function(){
             };
 
             view = new View();
-            view.ipPoolMode = true;
             expect(view.validate(fakeData)).to.be.equal(true);
         });
     });

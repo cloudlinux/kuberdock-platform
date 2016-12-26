@@ -4,7 +4,7 @@
 * ES2016 (+ [object-rest-spread](https://github.com/sebmarkbage/ecmascript-rest-spread) and [decorators](https://github.com/wycats/javascript-decorators/blob/master/README.md) proposals)
 * source maps for LESS and everything else
 * replace images and other stuff with dataURI
-* `npm run dev` -- serve static files directly from localhost/memory
+* `yarn run dev` or `npm run dev` -- serve static files directly from localhost/memory
 * smaller `prepared.js` and css
 
 
@@ -93,11 +93,13 @@ See `config.js` for more options/details.
 
 Find in on [npm](https://www.npmjs.com/).
 
-If you *did* find it, install: `npm install --save-dev some-new-lib`. That's it, you're awesome!
+If you *did* find it, install: `yarn add some-new-lib`. That's it, you're awesome!
 
 If you couldn't find it on npm:
 * first, try to find an alternative. 99.9% of fresh and/or popular libs can be found on npm. If you cannot find it there, it's a sign that this library might be a poor choice.
 * if you're still positive on using this library, just put it in `/js/libs/` and add an alias in `webpack.config.js`
+
+Don't forget to push updated `yarn.lock` along with `package.json`.
 
 
 # Additional resources

@@ -43,7 +43,7 @@ define([
                 + this.model.get('pod_name') + '"';
             } else if (linkedPods){
                 forbidDeletionMsg = 'Volume cannot be deleted, because it\'s linked to '
-                    + (linkedPods.length == 1
+                    + (linkedPods.length === 1
                         ? 'pod "' + linkedPods[0].name + '"'
                         : 'pods: "' + _.pluck(linkedPods, 'name').join('", "') + '"');
             }

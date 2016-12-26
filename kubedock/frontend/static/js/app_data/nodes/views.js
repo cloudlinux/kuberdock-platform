@@ -145,15 +145,14 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
     },
 
     initialize(options){
-        this.setupInfo = options.setupInfo;
-        if (this.setupInfo.ZFS && !this.setupInfo.AWS){
+        if (App.setupInfo.ZFS && !App.setupInfo.AWS){
             this.model.set('lsdevices', []);
         }
     },
 
     getLsdevices(){
         let nodename = this.ui.node_name.val().trim();
-        if (!this.setupInfo.AWS && this.setupInfo.ZFS && nodename){
+        if (!App.setupInfo.AWS && App.setupInfo.ZFS && nodename){
             utils.preloader.show();
             $.ajax({
                 authWrap: true,
@@ -180,7 +179,7 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
             kubeTypes: App.kubeTypeCollection.filter((kube) => {
                 return kube.id !== -1;  // "Internal service" kube-type
             }),
-            setupInfo: this.setupInfo,
+            setupInfo: App.setupInfo,
             findLsdevice: this.lsdevices
         };
     },
@@ -217,14 +216,12 @@ export const NodeAddStep = Backbone.Marionette.ItemView.extend({
 
     complete() {
         let data = [],
-            zfs = this.setupInfo.ZFS,
-            aws = this.setupInfo.AWS,
             hostname = this.ui.node_name.val();
 
         hostname = hostname.replace(/\s+/g, '');
         this.ui.node_name.val(hostname);
 
-        if (zfs && !aws) {
+        if (App.setupInfo.ZFS && !App.setupInfo.AWS) {
             data = {
                 hostname: hostname,
                 status: 'pending',

@@ -71,6 +71,21 @@ class TestIPPool(BaseTestIPPool):
         response = self.admin_open(self.item_url(self.ippool.network))
         self.assert200(response)  # TODO: check response format
 
+    def test_get_free_only(self):
+        response = self.admin_open('{}?free-only=true'.format(self.url))
+        self.assert200(response)
+        self.assertEqual(response.json, {
+            'data': ['192.168.1.0', '192.168.1.3'],
+            'status': 'OK'
+        })
+        response = self.admin_open(
+            '{}?free-only=true'.format(self.item_url(self.ippool.network)))
+        self.assert200(response)
+        self.assertEqual(response.json, {
+            'data': ['192.168.1.0', '192.168.1.3'],
+            'status': 'OK'
+        })
+
     @responses.activate
     def test_create(self):
         new_network = {

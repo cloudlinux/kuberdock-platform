@@ -8,7 +8,7 @@ from ..rbac import check_permission
 from ..utils import KubeUtils, register_api
 from ..users.utils import append_offset_to_timezone
 from ..kapi.notifications import read_role_events
-from ..settings import AWS, ZFS, CEPH
+from ..settings import AWS, CEPH, FIXED_IP_POOLS, ZFS
 from ..static_pages.models import MenuItem
 from ..system_settings.models import SystemSettings
 from ..validation import check_system_settings
@@ -63,6 +63,7 @@ def get_menu():
 def get_setup_info():
     return {
         'AWS': AWS,
+        'FIXED_IP_POOLS': FIXED_IP_POOLS,
         'ZFS': ZFS,
         'CEPH': CEPH,
     }

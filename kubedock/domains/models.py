@@ -50,7 +50,7 @@ class BaseDomain(BaseModelMixin, db.Model):
             'certificate': {
                 'key': self.certificate_key,
                 'cert': self.certificate_cert,
-            },
+            } if self.certificate_key and self.certificate_cert else None,
         }
 
 

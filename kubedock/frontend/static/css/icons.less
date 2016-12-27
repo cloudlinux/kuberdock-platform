@@ -444,6 +444,22 @@ label.custom{
             }
         }
     }
+    i, span {
+        display: inline-block;
+        vertical-align: middle;
+    }
+    span {
+        + i {
+            margin-left: 9px
+        }
+    }
+    i {
+        font-size: 13px;
+        font-style: normal;
+    }
+    + .custom{
+        margin-left: 10px;
+    }
 }
 .control-icons .info,
 #userGeneralTab .info,

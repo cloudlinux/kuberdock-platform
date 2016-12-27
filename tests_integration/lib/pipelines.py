@@ -326,6 +326,7 @@ class SSHPipeline(Pipeline):
         super(SSHPipeline, self).tear_down()
         self._delete_temp_files()
 
+    # TODO move this to @hooks(setup, teardown) !!!
     def _create_temp_files(self):
         local_src_file = self._create_file()
         # Need to make an extra subdirectory level to avoid conflicts during
@@ -537,7 +538,7 @@ class LoadTestingAwsPipeline(LoadTestingPipeline):
 
 # How many pipelines can be created at time when running on infra provider.
 infra_provider_slots = {
-    "opennebula": 25,
+    "opennebula": 35,
     "aws": 2
 }
 pipelines = defaultdict(list)

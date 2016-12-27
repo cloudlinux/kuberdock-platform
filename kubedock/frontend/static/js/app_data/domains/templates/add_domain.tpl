@@ -13,16 +13,30 @@
         </div>
         <div class="row">
             <div class="form-group col-sm-9 sol-xs-12">
-                <label for="certificate">SSL certificate</label>
-                <textarea name="certificate" id="certificate" placeholder="Paste a certificate to secure connection"><%= certificate ? certificate.cert : '' %></textarea>
+                <label class="radio-inline custom">
+                    <input type="radio" name="custom-certificate" value="false"
+                    <%- !certificate ?'checked':''%>><span></span><i>Automatically generated</i>
+                </label>
+                <label class="radio-inline custom">
+                    <input type="radio" name="custom-certificate" value="true"
+                    <%- certificate ?'checked':'' %>><span></span><i>Custom</i>
+                </label>
             </div>
         </div>
-        <div class="row">
-            <div class="form-group col-sm-9 sol-xs-12">
-                <label for="key">Certificate private key</label>
-                <textarea name="key" id="key" placeholder="Paste a private key for your certificate"><%= certificate ? certificate.key : '' %></textarea>
+        <% if (certificate) { %>
+            <div class="row">
+                <div class="form-group col-sm-9 sol-xs-12">
+                    <label for="certificate">SSL Certificate</label>
+                    <textarea name="certificate" id="certificate" placeholder="Paste a certificate to secure connection"><%= certificate ? certificate.cert : '' %></textarea>
+                </div>
             </div>
-        </div>
+            <div class="row">
+                <div class="form-group col-sm-9 sol-xs-12">
+                    <label for="key">Private Key for SSL Ceriticate</label>
+                    <textarea name="key" id="key" placeholder="Paste a private key for your certificate"><%= certificate ? certificate.key : '' %></textarea>
+                </div>
+            </div>
+        <% } %>
     </div>
     <div class="buttons pull-right">
         <a href="#domains" class="gray">Cancel</a>

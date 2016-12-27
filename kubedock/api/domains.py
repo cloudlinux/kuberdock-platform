@@ -124,9 +124,7 @@ class DomainsAPI(KubeUtils, MethodView):
             domain.name = name
             (tasks.delete_wildcard_dns_record.si(name)
              | tasks.create_wildcard_dns_record.si(name)).delay()
-        certificate = params.get('certificate')
-        if certificate:
-            domain.certificate = certificate
+        domain.certificate = params.get('certificate')
         return domain.to_dict()
 
     patch = put

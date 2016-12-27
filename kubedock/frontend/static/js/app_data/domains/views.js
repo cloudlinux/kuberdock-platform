@@ -69,7 +69,8 @@ export const DomainsAddDomainView = Marionette.ItemView.extend({
         'key'         : 'textarea#key',
         'domain'      : 'input#domain',
         'add_button'  : '#domain-add-btn',
-        'certificate' : 'textarea#certificate'
+        'certificate' : 'textarea#certificate',
+        'radioCertificate': '[name="custom-certificate"]',
     },
 
     events: {
@@ -78,8 +79,13 @@ export const DomainsAddDomainView = Marionette.ItemView.extend({
         'focus @ui.key'         : 'removeError',
         'focus @ui.certificate' : 'removeError',
         'keypress @ui.domain'   : 'onInputKeypress',
-    },
 
+        'change @ui.radioCertificate': 'customCertificateToggled',
+        'change @ui.domain':            'domainChanged',
+    },
+    initialize() {
+        this.checkEmptyCertificate = !this.model.get('certificate');
+    },
     onInputKeypress(evt){
         if (evt.which === utils.KEY_CODES.enter){
             evt.stopPropagation();
@@ -95,16 +101,29 @@ export const DomainsAddDomainView = Marionette.ItemView.extend({
 
     removeError(e){ utils.removeError($(e.target)); },
 
+    customCertificateToggled(e){
+        this.checkEmptyCertificate = e.target.value === 'true';
+        this.model.set('certificate',
+            this.checkEmptyCertificate ? {'cert': '', 'key': ''} : null
+        );
+        this.render();
+    },
+    domainChanged() {
+        this.model.set('name', this.ui.domain.val());
+        this.checkEmptyCertificate = true;
+    },
     onSave(){
-        var isNew = this.model.isNew(),
-            key = this.ui.key.val().trim(),
+        const validDomain = /^(?:[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.)+(?:[a-zA-Z]{2,})$/;
+        let isNew = this.model.isNew(),
+            key = this.ui.key.val(),
             domain = this.ui.domain.val().trim(),
-            cert = this.ui.certificate.val().trim(),
-            data = {
-                name: domain,
-                certificate: cert ? {cert, key} : null,
-            },
-            validDomain = /^(?:[a-zA-Z0-9][a-zA-Z0-9-]{0,61}[a-zA-Z0-9]\.)+(?:[a-zA-Z]{2,})$/;
+            cert = this.ui.certificate.val();
+        if (this.checkEmptyCertificate && this.model.get('certificate') &&
+            (!cert || !key)
+        ) {
+            utils.notifyWindow('Certificate and key must not be empty', 'error');
+            return;
+        }
 
         if (!validDomain.test(domain)){
             utils.scrollTo(this.ui.domain);
@@ -122,6 +141,10 @@ export const DomainsAddDomainView = Marionette.ItemView.extend({
             return;
         }
 
+        let data = {
+            'name': domain,
+            'certificate': cert ? {'cert': cert.trim(), 'key': key.trim()} : null,
+        };
         utils.preloader.show();
         this.model.save(data)
             .always(utils.preloader.hide)

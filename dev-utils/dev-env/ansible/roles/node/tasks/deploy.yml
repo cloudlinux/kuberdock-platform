@@ -62,3 +62,18 @@
 - name: Restart docker
   service: name=docker state=restarted
   when: docker_user.changed
+
+# TODO: Remove this task when  https://gerrit.cloudlinux.com/#/c/14865/ merged
+- name: Fix public interface for kubelet
+  lineinfile:
+    dest: /var/lib/kuberdock/kuberdock.json
+    regexp: '^"network_interface":'
+    line: '"network_interface": "{{ ansible_default_ipv4.interface }}",'
+  notify: restart kubelet
+
+- name: Restart master emperor when nodes are deployed.
+  run_once: true
+  service: name=emperor.uwsgi state=restarted
+  delegate_facts: True
+  delegate_to: "{{ groups['master'][0] }}"
+  when: hostvars[groups['master'][0]].restart_emperor|changed

@@ -11,17 +11,25 @@ import sys
 import tempfile
 
 from collections import namedtuple
+from itertools import chain
 from operator import attrgetter
 from PIL import Image
 
 
 COMMON_PREFIX = '/var/opt/kuberdock/kubedock/frontend'
-INDEX_PATH = os.path.join(COMMON_PREFIX, 'templates/index.html')
-LOGINPAGE_PATH = INDEX_PATH
-PREPARED_PATH = os.path.join(COMMON_PREFIX, 'static/prepared.js')
-GZIP_PREPARED_PATH = os.path.join(COMMON_PREFIX, 'static/prepared.js.gz')
-LOGO_FILE_PATH = os.path.join(COMMON_PREFIX,
-                              'static/js/app_data/menu/templates/list.tpl')
+TARGETS = [os.path.join(COMMON_PREFIX, i) for i in (
+    'static/errors/static_page404.html',
+    'static/js/app_data/menu/templates/list.tpl',
+    'static/js/app_data/pa/templates/header_for_anon.tpl',
+)]
+PREPARED_TARGETS = [os.path.join(COMMON_PREFIX, i) for i in (
+    'static/prepared-isv.bundle.js',
+    'static/prepared-full.bundle.js',
+    'static/prepared-init.js',
+    'static/prepared-full.css',
+    'static/prepared-isv.css',
+)]
+GZIP_PREPARED_TARGETS = [target + '.gz' for target in PREPARED_TARGETS]
 STYLES_PATH = os.path.join(COMMON_PREFIX, 'static/css')
 IMG_PATH = os.path.join(COMMON_PREFIX, 'static/img')
 WEB_SERVER_USER = 'nginx'
@@ -48,14 +56,14 @@ def add_style(styles):
     fmt = ("""{0}<link rel="stylesheet" type="text/css" """
            """href="{{{{ url_for('static', filename='css/{1}') }}}}">\n""")
     contents = []
-    target = INDEX_PATH
-    with open(target) as f:
-        for l in f:
-            if '</head>' in l:
-                pos = l.find('<')
-                s = fmt.format(' ' * (pos + 4), styles)
-                contents.append(s)
-            contents.append(l)
+    for target in TARGETS:
+        with open(target) as f:
+            for l in f:
+                if '</head>' in l:
+                    pos = l.find('<')
+                    s = fmt.format(' ' * (pos + 4), styles)
+                    contents.append(s)
+                contents.append(l)
     return contents
 
 
@@ -65,13 +73,14 @@ def change_login_logo(logo):
         """background: url({{{{ url_for('static', filename='img/{1}') }}}})"""
         """center center no-repeat !important;}}</style>\n""")
     contents = []
-    with open(LOGINPAGE_PATH) as f:
-        for l in f:
-            if '</head>' in l:
-                pos = l.find('<')
-                s = fmt.format(' ' * (pos + 4), logo)
-                contents.append(s)
-            contents.append(l)
+    for target in TARGETS:
+        with open(target) as f:
+            for l in f:
+                if '</head>' in l:
+                    pos = l.find('<')
+                    s = fmt.format(' ' * (pos + 4), logo)
+                    contents.append(s)
+                contents.append(l)
     return contents
 
 
@@ -101,12 +110,16 @@ def process_logo(logo, user, reapply=False):
     fullpath = os.path.join(IMG_PATH, os.path.basename(logo))
     shutil.copyfile(logo, fullpath)
 
-    save(change_logo(os.path.basename(logo), PREPARED_PATH), PREPARED_PATH)
-    save(change_logo(os.path.basename(logo), LOGO_FILE_PATH), LOGO_FILE_PATH)
-    save(change_logo(os.path.basename(logo), GZIP_PREPARED_PATH, gz=True),
-         GZIP_PREPARED_PATH, gz=True)
+    for target in TARGETS:
+        save(change_logo(os.path.basename(logo), target), target)
+    for target in PREPARED_TARGETS:
+        save(change_logo(os.path.basename(logo), target), target)
+    for target in GZIP_PREPARED_TARGETS:
+        save(change_logo(os.path.basename(logo), target, gz=True),
+             target, gz=True)
 
-    for path in fullpath, PREPARED_PATH, LOGO_FILE_PATH, GZIP_PREPARED_PATH:
+    for path in chain([fullpath], TARGETS, PREPARED_TARGETS,
+                      GZIP_PREPARED_TARGETS):
         os.chown(path, user.uid, user.gid)
     if not reapply:
         save_assets(logo, 'logo')
@@ -127,10 +140,11 @@ def process_login_logo(logo, user, reapply=False):
     fullpath = os.path.join(IMG_PATH, os.path.basename(logo))
     shutil.copyfile(logo, fullpath)
 
-    save(change_login_logo(os.path.basename(logo)), LOGINPAGE_PATH)
+    os.chown(fullpath, user.uid, user.gid)
+    for target in TARGETS:
+        save(change_login_logo(os.path.basename(logo)), target)
+        os.chown(target, user.uid, user.gid)
 
-    for path in fullpath, LOGINPAGE_PATH:
-        os.chown(path, user.uid, user.gid)
     if not reapply:
         save_assets(logo, 'login_logo')
 
@@ -148,10 +162,12 @@ def process_styles(styles, user, reapply=False):
     check_filepath(styles)
     fullpath = os.path.join(STYLES_PATH, os.path.basename(styles))
     shutil.copyfile(styles, fullpath)
-    target = INDEX_PATH
-    save(add_style(os.path.basename(styles)), target)
-    for path in fullpath, target:
-        os.chown(path, user.uid, user.gid)
+
+    os.chown(fullpath, user.uid, user.gid)
+    for target in TARGETS:
+        save(add_style(os.path.basename(styles)), target)
+        os.chown(target, user.uid, user.gid)
+
     if not reapply:
         save_assets(styles, 'styles')
 
@@ -250,7 +266,7 @@ def reapply(user):
         asset_path = os.path.join(ASSETS_PATH, assets[asset])
         if not os.path.exists(asset_path):
             continue
-        globals()['process_'+asset](asset_path, user, reapply=True)
+        globals()['process_' + asset](asset_path, user, reapply=True)
 
 
 if __name__ == '__main__':

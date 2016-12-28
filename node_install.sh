@@ -47,7 +47,10 @@ echo "Set time zone to $TZ"
 timedatectl set-timezone "$TZ"
 echo "Deploy started: $(date)"
 
-
+# This should be as early as possible because outdated metadata (one that was
+# before sync time with ntpd) could cause troubles with https metalink for
+# repos like EPEL.
+yum clean metadata
 
 # ======================== JUST COMMON HELPERS ================================
 # SHOULD BE DEFINED FIRST, AND BEFORE USE
@@ -140,6 +143,11 @@ clean_node(){
     echo "=== Node clean up started ==="
     echo "ALL PACKAGES, CONFIGS AND DATA RELATED TO KUBERDOCK AND PODS WILL BE DELETED"
 
+    # Delete this before stopping docker because we use 10min timeout for docker service stop/restart
+    # and don't need to wait it during cleanup
+    del_existed /etc/systemd/system/docker.service.d/*
+    systemctl daemon-reload
+
     echo "Stop and disable services..."
     for i in kubelet docker kube-proxy kuberdock-watcher ntpd; do
         systemctl disable $i &> /dev/null
@@ -208,8 +216,9 @@ clean_node(){
     del_existed $KD_KERNEL_VARS
 
     del_existed /etc/sysconfig/docker*
-    del_existed /etc/systemd/system/docker.service.d/*
     del_existed /etc/systemd/system/docker.service*
+    del_existed /etc/systemd/system/kube-proxy.service*
+    del_existed /etc/systemd/system/ntpd.service*
 
     del_existed /var/lib/docker
     del_existed /var/lib/kubelet
@@ -252,7 +261,7 @@ clean_node  # actual clean up
 
 
 # =============== Various KD requirements checking (after cleanup!) ===========
-RELEASE="CentOS Linux release 7.2"
+RELEASE="CentOS Linux release 7.[2-3]"
 ARCH="x86_64"
 MIN_RAM_KB=1572864
 MIN_DISK_SIZE=10
@@ -263,7 +272,7 @@ WARNS=""
 
 check_release()
 {
-    cat /etc/redhat-release | grep "$RELEASE" > /dev/null
+    cat /etc/redhat-release | grep -P "$RELEASE" > /dev/null
     if [ $? -ne 0 ] || [ `uname -m` != $ARCH ];then
         ERRORS="$ERRORS Inappropriate OS version\n"
     fi
@@ -340,9 +349,6 @@ if [[ $WARNS ]]; then
     printf "$WARNS"
     printf "For details refer Requirements section of KuberDock Documentation, http://docs.kuberdock.com/index.html?requirements.htm\n"
 fi
-# ================= // Various KD requirements checking ====================
-
-
 
 setup_ntpd ()
 {
@@ -350,7 +356,12 @@ setup_ntpd ()
     # AC-3199 Remove chrony which prevents ntpd service to start after boot
     yum -d 1 erase -y chrony
     check_status
-    yum -d 1 install -y ntp
+    if rpm -q epel-release >> /dev/null; then
+      # prevent EPEL metadata update before time sync
+      yum -d 1 install -y ntp --disablerepo=epel
+    else
+      yum -d 1 install -y ntp
+    fi
     check_status
 
     _sync_time() {
@@ -449,6 +460,41 @@ EOF
 
 }
 
+
+enable_epel()
+{
+  rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+  rpm -q epel-release &> /dev/null || yum_wrapper -y install epel-release
+  check_status
+
+  # Clean metadata once again if it's outdated after time sync with ntpd
+  yum -d 1 --disablerepo=* --enablerepo=epel clean metadata
+
+  # sometimes certificates can be outdated and this could cause
+  # EPEL https metalink problems
+  yum_wrapper -y --disablerepo=epel upgrade ca-certificates
+  check_status
+  yum_wrapper -y --disablerepo=epel install yum-utils
+  check_status
+  yum-config-manager --save --setopt timeout=60.0
+  yum-config-manager --save --setopt retries=30
+  check_status
+
+  _get_epel_metadata() {
+    # download metadata only for EPEL repo
+    yum -d 1 --disablerepo=* --enablerepo=epel clean metadata
+    yum -d 1 --disablerepo=* --enablerepo=epel makecache fast
+  }
+
+  for _retry in $(seq 5); do
+    echo "Attempt $_retry to get metadata for EPEL repo ..."
+    _get_epel_metadata && return || sleep 10
+  done
+  _get_epel_metadata
+  check_status
+}
+
+
 # Workaround for CentOS 7 minimal CD bug.
 # https://github.com/GoogleCloudPlatform/kubernetes/issues/5243#issuecomment-78080787
 SWITCH=`cat /etc/nsswitch.conf | grep "^hosts:"`
@@ -500,14 +546,51 @@ yum --enablerepo=kube,kube-testing clean metadata
 
 
 # Should be done at the very beginning to ensure yum https works correctly
+# for example EPEL https metalink will not work if time is incorrect
 setup_ntpd
+
+enable_epel
+
+# Check kernel
+current_kernel=$(uname -r)
+check_kernel=$(chk_ver "$current_kernel" "3.10.0-327.4.4")
+
+if [ "$check_kernel" == "True" ]
+then
+    if [ "$ZFS" = yes ]; then
+        echo "================================================================================"
+        echo "Your kernel is too old, please upgrade it first, reboot the machine and readd the node to KuberDock to " \
+             "continue installation"
+        exit 1
+    fi
+
+    # If ZFS was not needed it is safe to upgrade the kernel
+    echo "Current kernel is $current_kernel, upgrading..."
+    yum_wrapper -y install kernel
+    yum_wrapper -y install kernel-tools
+    yum_wrapper -y install kernel-tools-libs
+    yum_wrapper -y install kernel-headers
+    yum_wrapper -y install kernel-devel
+
+elif [ "$ZFS" = yes ]; then
+   yum info --enablerepo=kube,kube-testing $(rpm --quiet -q epel-release && echo '--disablerepo=epel') -q kernel-devel-$current_kernel
+   if [ $? -ne 0 ]; then
+       echo "================================================================================"
+       echo "kernel-devel-$current_kernel is not available. Please install it manually or upgrade kernel and " \
+            "readd the node to KuberDock to continue installation"
+       exit 1
+   fi
+fi
+# ================= // Various KD requirements checking ====================
+
+
 
 # 2. install components
 echo "Installing kubernetes..."
 yum_wrapper -y install ${NODE_KUBERNETES}
 echo "Installing docker..."
-yum_wrapper -y install docker-selinux-1.12.1-4.el7
-yum_wrapper -y install docker-1.12.1-4.el7
+yum_wrapper -y install docker-selinux-1.12.1-5.el7
+yum_wrapper -y install docker-1.12.1-5.el7
 # TODO maybe not needed, make as dependency for kuberdock-node package
 yum_wrapper -y install python-requests
 yum_wrapper -y install python-ipaddress
@@ -518,9 +601,6 @@ yum_wrapper -y install tuned
 # kdtools - statically linked binaries to provide ssh access into containers
 yum_wrapper -y install kdtools
 
-rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-yum_wrapper -y install epel-release
-check_status
 # TODO AC-4871: move to kube-proxy dependencies
 yum_wrapper -y install conntrack-tools
 
@@ -629,9 +709,9 @@ check_status
 
 sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/kubelet
 if [ "$AWS" = True ];then
-    sed -i '/^KUBELET_ARGS/ {s|""|"--cloud-provider=aws --kubeconfig=/etc/kubernetes/configfile --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}'"|}' $KUBERNETES_CONF_DIR/kubelet
+    sed -i '/^KUBELET_ARGS/ {s|""|"--cloud-provider=aws --kubeconfig=/etc/kubernetes/configfile --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}' --node-ip='${NODE_IP}'"|}' $KUBERNETES_CONF_DIR/kubelet
 else
-    sed -i '/^KUBELET_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}'"|}' $KUBERNETES_CONF_DIR/kubelet
+    sed -i '/^KUBELET_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}' --node-ip='${NODE_IP}'"|}' $KUBERNETES_CONF_DIR/kubelet
 fi
 sed -i '/^KUBE_PROXY_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --proxy-mode iptables"|}' $KUBERNETES_CONF_DIR/proxy
 check_status
@@ -787,6 +867,16 @@ echo "Enabling services..."
 systemctl daemon-reload
 systemctl reenable kubelet
 check_status
+
+mkdir -p /etc/systemd/system/kube-proxy.service.d
+echo -e "[Unit]
+After=network-online.target
+
+[Service]
+Restart=always
+RestartSec=5s" > /etc/systemd/system/kube-proxy.service.d/restart.conf
+systemctl daemon-reload
+
 systemctl reenable kube-proxy
 check_status
 
@@ -810,27 +900,15 @@ Restart=always
 RestartSec=1s" > /etc/systemd/system/ntpd.service.d/restart.conf
 systemctl daemon-reload
 
-# 13. Check kernel
-current_kernel=$(uname -r)
-check_kernel=$(chk_ver "$current_kernel" "3.10.0-327.4.4")
-
-if [ "$check_kernel" == "True" ]
-then
-    echo "Current kernel is $current_kernel, upgrading..."
-    yum_wrapper -y install --disablerepo=kube kernel
-    yum_wrapper -y install --disablerepo=kube kernel-tools
-    yum_wrapper -y install --disablerepo=kube kernel-tools-libs
-    yum_wrapper -y install --disablerepo=kube kernel-headers
-    yum_wrapper -y install --disablerepo=kube kernel-devel
-fi
-
-# 14. Install and configure CEPH client if CEPH config is defined in envvar
+# 13. Install and configure CEPH client if CEPH config is defined in envvar
 #     Or packages for local storage backend
 if [ ! -z "$CEPH_CONF" ]; then
 
     install_ceph_client
 
-    cp $CEPH_CONF/* /etc/ceph/
+    chmod 600 $CEPH_CONF/*
+    chmod 644 $CEPH_CONF/ceph.conf
+    mv $CEPH_CONF/* /etc/ceph/
     check_status
 
 else
@@ -838,8 +916,8 @@ else
         yum_wrapper -y install --nogpgcheck http://download.zfsonlinux.org/epel/zfs-release$(rpm -E %dist).noarch.rpm
         # Use exact version of kernel-headers as current kernel.
         # If it differs, then installation of spl-dkms, zfs-dkms will fail
-        yum_wrapper -y install kernel-devel-$current_kernel zfs
-
+        yum_wrapper -y install kernel-devel-$current_kernel
+        yum_wrapper -y install zfs
         # Zfs could mount pools automatically at boot time even without
         # fstab records, but this is disabled by default in most
         # cases (e.g. AWS case) so enable this:
@@ -876,7 +954,7 @@ else
 fi
 
 
-# 15. Set valid performance profile.
+# 14. Set valid performance profile.
 # We need maximum performance to valid work of cpu limits and multipliers.
 # All CPUfreq drivers are built in as part of the kernel-tools package.
 systemctl reenable tuned
@@ -895,7 +973,7 @@ else
 fi
 
 
-# 16. Run Docker and Calico node
+# 15. Run Docker and Calico node
 echo "Starting Calico node..."
 systemctl restart docker
 yum_wrapper -y install calicoctl-0.22.0-3.el7
@@ -913,7 +991,7 @@ echo "Starting Calico node..."
 ETCD_AUTHORITY="$MASTER_IP:2379" ETCD_SCHEME=https ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key HOSTNAME="$NODENAME" /opt/bin/calicoctl node --ip="$NODE_IP" --node-image="$CALICO_NODE_IMAGE"
 check_status
 
-# 17. Reboot will be executed in python function
+# 16. Reboot will be executed in python function
 echo "Node deploy script finished: $(date)"
 
 exit 0

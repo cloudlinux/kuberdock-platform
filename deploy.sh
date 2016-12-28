@@ -162,14 +162,14 @@ fi
 
 trap catchExit EXIT
 
-RELEASE="CentOS Linux release 7.2"
+RELEASE="CentOS Linux release 7.[2-3]"
 ARCH="x86_64"
 MIN_RAM_KB=1572864
 MIN_DISK_SIZE=10
 
 check_release()
 {
-    cat /etc/redhat-release | grep "$RELEASE" > /dev/null
+    cat /etc/redhat-release | grep -P "$RELEASE" > /dev/null
     if [ $? -ne 0 ] || [ `uname -m` != $ARCH ];then
         ERRORS="$ERRORS Inappropriate OS version\n"
     fi
@@ -289,6 +289,12 @@ fi
 
 install_repos()
 {
+
+# This should be done as early as possible because outdated metadata (one that
+# was before sync time with ntpd) could cause troubles with https metalink for
+# repos like EPEL.
+yum clean metadata
+
 #1 Add kubernetes repo
 cat > /etc/yum.repos.d/kube-cloudlinux.repo << EOF
 [kube]
@@ -312,9 +318,39 @@ EOF
 
 #2 Import some keys
 do_and_log rpm --import http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-do_and_log rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-yum_wrapper -y install epel-release
+
+enable_epel
 }
+
+
+enable_epel()
+{
+  rpm --import https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+  rpm -q epel-release &> /dev/null || yum_wrapper -y install epel-release
+
+  # Clean metadata once again if it's outdated after time sync with ntpd
+  log_it yum -d 1 --disablerepo=* --enablerepo=epel clean metadata
+
+  # sometimes certificates can be outdated and this could cause
+  # EPEL https metalink problems
+  do_and_log yum -y --disablerepo=epel upgrade ca-certificates
+  do_and_log yum -y --disablerepo=epel install yum-utils
+  yum-config-manager --save --setopt timeout=60.0
+  yum-config-manager --save --setopt retries=30
+
+  _get_epel_metadata() {
+    # download metadata only for EPEL repo
+    yum -d 1 --disablerepo=* --enablerepo=epel clean metadata
+    yum -d 1 --disablerepo=* --enablerepo=epel makecache fast
+  }
+
+  for _retry in $(seq 5); do
+    echo "Attempt $_retry to get metadata for EPEL repo ..."
+    _get_epel_metadata && return || sleep 10
+  done
+  do_and_log _get_epel_metadata
+}
+
 
 do_and_log()
 # Log all output to LOG-file and screen, and stop script on error
@@ -435,7 +471,12 @@ setup_ntpd ()
 {
     # AC-3318 Remove chrony which prevents ntpd service to start after boot
     yum erase -y chrony
-    yum install -y ntp
+    if rpm -q epel-release >> /dev/null; then
+      # prevent EPEL metadata update before time sync
+      yum install -y ntp --disablerepo=epel
+    else
+      yum install -y ntp
+    fi
 
     _sync_time() {
         grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -u
@@ -458,9 +499,7 @@ setup_ntpd ()
 
     log_it echo "Enabling restart for ntpd.service"
     do_and_log mkdir -p /etc/systemd/system/ntpd.service.d
-    do_and_log echo -e "[Service]
-    Restart=always
-    RestartSec=1s" > /etc/systemd/system/ntpd.service.d/restart.conf
+    do_and_log echo -e "[Service]\nRestart=always\nRestartSec=10s" > /etc/systemd/system/ntpd.service.d/restart.conf
     do_and_log systemctl daemon-reload
     do_and_log systemctl restart ntpd
     do_and_log systemctl reenable ntpd
@@ -606,9 +645,13 @@ else
   PD_NAMESPACE="$PD_CUSTOM_NAMESPACE"
 fi
 
-# Should be done at the very beginning to ensure yum https works correctly
+# =============================================================================
+# This should be done as early as possible because outdated metadata (one that
+# was before sync time with ntpd) could cause troubles with https metalink for
+# repos like EPEL.
 setup_ntpd
 install_repos
+# =============================================================================
 
 if [ "$ISAMAZON" = true ];then
     AVAILABILITY_ZONE=$(curl -s connect-timeout 1 http://169.254.169.254/latest/meta-data/placement/availability-zone)
@@ -630,6 +673,8 @@ if [ "$ISAMAZON" = true ];then
     if [ -z "$AWS_EBS_DEFAULT_SIZE" ];then
         AWS_EBS_DEFAULT_SIZE=20
     fi
+    AWS_DEFAULT_EBS_VOLUME_TYPE=${AWS_DEFAULT_EBS_VOLUME_TYPE:-standard}
+    AWS_DEFAULT_EBS_VOLUME_IOPS=${AWS_DEFAULT_EBS_VOLUME_IOPS:-1000}
 
     if [ -z "$ROUTE_TABLE_ID" ];then
         yum_wrapper install awscli -y   # only after epel is installed
@@ -695,6 +740,13 @@ if [ ! -z $PACKAGE ];then
     yum_wrapper -y install $PACKAGE
 else
     yum_wrapper -y install kuberdock
+fi
+
+if [ "$HAS_CEPH" = yes ]; then
+    # Ensure nginx user has access to ceph config.
+    # Do it after kuberdock because we need existing nginx user
+    # (nginx installed)
+    chown -R $WEBAPP_USER $CEPH_CONF_DIR
 fi
 
 # TODO AC-4871: move to kube-proxy dependencies
@@ -837,9 +889,10 @@ EOF
 
 #7 Start as early as possible, because Flannel/Calico need it
 systemctl daemon-reload
-log_it echo 'Starting etcd...'
 do_and_log systemctl reenable etcd
+log_it echo 'Starting etcd...'
 log_it systemctl restart etcd
+log_it echo 'Waiting for healthy etcd...'
 waitAndCatchFailure 3 10 etcdctl cluster-health > /dev/null
 
 
@@ -961,14 +1014,26 @@ ETCD_AUTHORITY=127.0.0.1:4001 do_and_log /opt/bin/calicoctl pool add "$CALICO_NE
 
 do_and_log systemctl disable docker-storage-setup
 do_and_log systemctl mask docker-storage-setup
-mkdir /etc/systemd/system/docker.service.d/
+
+mkdir -p /etc/systemd/system/kube-proxy.service.d
+echo -e "[Unit]
+After=network-online.target
+
+[Service]
+Restart=always
+RestartSec=5s" > /etc/systemd/system/kube-proxy.service.d/restart.conf
+
+mkdir -p /etc/systemd/system/docker.service.d/
 echo -e "[Service]\nTimeoutSec=600" > /etc/systemd/system/docker.service.d/timeouts.conf
+
 sed -i 's/^DOCKER_STORAGE_OPTIONS=/DOCKER_STORAGE_OPTIONS="--storage-driver=overlay"/' /etc/sysconfig/docker-storage
 systemctl daemon-reload
 do_and_log systemctl reenable docker
 log_it systemctl restart docker
+
 do_and_log systemctl reenable kube-proxy
 log_it systemctl restart kube-proxy
+
 waitAndCatchFailure 3 10 docker info > /dev/null
 
 
@@ -1253,6 +1318,8 @@ AVAILABILITY_ZONE = $AVAILABILITY_ZONE
 AWS_ACCESS_KEY_ID = $AWS_ACCESS_KEY_ID
 AWS_SECRET_ACCESS_KEY = $AWS_SECRET_ACCESS_KEY
 AWS_EBS_DEFAULT_SIZE = $AWS_EBS_DEFAULT_SIZE
+AWS_DEFAULT_EBS_VOLUME_TYPE = $AWS_DEFAULT_EBS_VOLUME_TYPE
+AWS_DEFAULT_EBS_VOLUME_IOPS = $AWS_DEFAULT_EBS_VOLUME_IOPS
 EOF
 fi
 
@@ -1430,9 +1497,11 @@ do_cleanup()
     for i in /var/run/kubernetes /etc/kubernetes /etc/pki/kube-apiserver/ /root/.etcd-ca \
              /var/opt/kuberdock /var/lib/kuberdock /etc/sysconfig/kuberdock /etc/pki/etcd \
              /etc/etcd/etcd.conf /var/lib/etcd /var/lib/docker \
+             /etc/systemd/system/kube-proxy.service.d /etc/systemd/system/docker.service.d/ \
+             /etc/systemd/system/ntpd.service.d/ \
              /var/log/calico /var/run/calico /opt/bin/calicoctl /opt/bin/policy \
              "$NGINX_SHARED_ETCD"; do
-        rm -rf $i
+        rm -rf "$i"
     done
 
 }

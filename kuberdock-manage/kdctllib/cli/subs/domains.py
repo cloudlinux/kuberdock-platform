@@ -39,7 +39,7 @@ class Get(SimpleCommandWithIdNameArgs):
 
 
 @domains.command(available_for=(ADMIN,))
-@kdclick.option('--name', help='Name of new domain')
+@kdclick.data_argument('data')
 @kdclick.pass_obj
 class Create(SimpleCommand):
     """Create new domain"""
@@ -48,7 +48,7 @@ class Create(SimpleCommand):
 
 @domains.command(available_for=(ADMIN,))
 @id_decorator
-@kdclick.option('--new-name', help='New name of domain')
+@kdclick.data_argument('data')
 @kdclick.pass_obj
 class Update(SimpleCommandWithIdNameArgs):
     """Update existing domain"""

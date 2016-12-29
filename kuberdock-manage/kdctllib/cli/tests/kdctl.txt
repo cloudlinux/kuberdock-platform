@@ -9,9 +9,12 @@ allowed-ports close 80 tcp
 domains list
 domains get --id 1
 domains get --name foo
-domains create --name foo
-domains update --id 1 --new-name bar
-domains update --name foo --new-name bar
+domains create {some_json}
+domains create -f {some_json_file}
+domains update --id 1 {some_json}
+domains update --id 1 -f {some_json_file}
+domains update --name foo {some_json}
+domains update --name foo -f {some_json_file}
 domains delete --id 1
 domains delete --name foo
 

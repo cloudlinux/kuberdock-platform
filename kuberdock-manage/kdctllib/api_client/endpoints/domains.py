@@ -14,15 +14,13 @@ class DomainsClient(ClientBase):
             self._url(id),
         )
 
-    def create(self, name):
-        data = {'name': name}
+    def create(self, data):
         return self.transport.post(
             self._url(),
             json=data
         )
 
-    def update(self, id, new_name):
-        data = {'name': new_name}
+    def update(self, id, data):
         return self.transport.put(
             self._url(id),
             json=data

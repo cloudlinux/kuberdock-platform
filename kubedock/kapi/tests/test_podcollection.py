@@ -20,12 +20,12 @@ from .. import pod as kapi_pod
 from .. import podcollection
 from ..images import Image
 from ..pod import Pod
-from ..podcollection import settings
-from ...exceptions import APIError, NoSuitableNode
+from ..podcollection import settings, CHANGE_IP_MESSAGE
+from ...exceptions import APIError, NoSuitableNode, NoFreeIPs
 from ...rbac.models import Role
 from ...users.models import User
 from ...utils import POD_STATUSES, NODE_STATUSES
-from ...pods.models import Pod as DBPod
+from ...pods.models import Pod as DBPod, IPPool
 
 global_patchers = [
     mock.patch.object(podcollection, 'licensing'),
@@ -644,15 +644,12 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         )
         self.assertTrue(send_event_to_user_mock.called)
 
-    @mock.patch.object(kapi_pod, 'DBPod')
-    @mock.patch.object(podcollection, 'DBPod')
-    @mock.patch.object(podcollection.helpers, 'set_pod_status')
     @mock.patch.object(podcollection, 'prepare_and_run_pod_task')
     @mock.patch.object(podcollection.PodCollection, '_make_namespace')
     @mock.patch.object(podcollection.PodCollection, '_node_available_for_pod')
-    def test_pod_start(
-            self, node_available_mock, mk_ns, run_pod_mock, set_pod_status,
-            db_pod_mock, DBPod):
+    @mock.patch.object(podcollection.utils, 'send_event_to_user')
+    def test_pod_start(self, send_event_to_user, node_available_mock, mk_ns,
+                       run_pod_mock):
         """
         Test first _start_pod for pod without ports
         :type post_: mock.Mock
@@ -671,10 +668,11 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
             }]
         )
 
-        db_pod = mock.Mock(id=pod.id, status=POD_STATUSES.stopped)
-        db_pod_mock.query.get.return_value = db_pod
-        db_config = {}
-        db_pod.get_dbconfig.return_value = db_config
+        db_pod = self.fixtures.pod(
+            id=pod.id,
+            status=POD_STATUSES.stopped
+        )
+        db_config = db_pod.get_dbconfig()
 
         # Actual call
         self.pod_collection._start_pod(pod)
@@ -684,6 +682,102 @@ class TestPodCollectionStartPod(DBTestCase, TestCaseMixin):
         run_pod_mock.delay.assert_called_once_with(
             pod, db_pod.id, db_config, lock=False)
         self.assertEqual(pod.status, POD_STATUSES.preparing)
+        send_event_to_user.assert_called_once_with(
+            'pod:change', {'id': pod.id}, db_pod.owner_id)
+
+    @mock.patch.object(podcollection, 'prepare_and_run_pod_task')
+    @mock.patch.object(podcollection.PodCollection, '_make_namespace')
+    @mock.patch.object(podcollection.PodCollection, '_node_available_for_pod')
+    @mock.patch.object(podcollection.utils, 'send_event_to_user')
+    def test_pod_start_public_ip(self, send_event_to_user,
+                                 node_available_mock, mk_ns, run_pod_mock):
+        """
+        Test first _start_pod for pod with public_ip
+        :type post_: mock.Mock
+        """
+        pod = fake_pod(
+            use_parents=(Pod,),
+            name='unnamed-1',
+            is_deleted=False,
+            status=POD_STATUSES.stopped,
+            kind='replicationcontrollers',
+            namespace="user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094",
+            public_ip='true',
+            containers=[{
+                'ports': [],
+                'name': '2dbgdc',
+                'state': POD_STATUSES.stopped,
+            }]
+        )
+
+        db_pod = self.fixtures.pod(
+            id=pod.id,
+            status=POD_STATUSES.stopped
+        )
+
+        db_config = db_pod.get_dbconfig()
+        db_config['public_ip'] = '192.168.43.0'
+
+        # Actual call
+        self.pod_collection._start_pod(pod)
+
+        node_available_mock.assert_called_once_with(pod)
+        mk_ns.assert_called_once_with(pod.namespace)
+        run_pod_mock.delay.assert_called_once_with(
+            pod, db_pod.id, db_config, lock=False)
+        self.assertEqual(pod.status, POD_STATUSES.preparing)
+        send_event_to_user.assert_called_once_with(
+            'pod:change', {'id': pod.id}, db_pod.owner_id)
+
+    @mock.patch.object(podcollection, 'prepare_and_run_pod_task')
+    @mock.patch.object(podcollection.PodCollection, '_make_namespace')
+    @mock.patch.object(podcollection.PodCollection, '_node_available_for_pod')
+    @mock.patch.object(podcollection.utils, 'send_event_to_user')
+    def test_pod_start_error_ip(self, send_event_to_user,
+                                node_available_mock, mk_ns, run_pod_mock):
+        """
+        Test first _start_pod for pod with public_ip
+        :type post_: mock.Mock
+        """
+        pod = fake_pod(
+            use_parents=(Pod,),
+            name='unnamed-1',
+            is_deleted=False,
+            status=POD_STATUSES.stopped,
+            kind='replicationcontrollers',
+            namespace="user-unnamed-1-82cf712fd0bea4ac37ab9e12a2ee3094",
+            public_ip=u'192.168.42.0',
+            containers=[{
+                'ports': [],
+                'name': '2dbgdc',
+                'state': POD_STATUSES.stopped,
+            }]
+        )
+
+        db_pod = self.fixtures.pod(
+            id=pod.id,
+            status=POD_STATUSES.stopped
+        )
+        db_config = db_pod.get_dbconfig()
+        db_config['public_ip'] = '192.168.43.0'
+
+        # Actual call
+        self.pod_collection._start_pod(pod)
+
+        node_available_mock.assert_called_once_with(pod)
+        mk_ns.assert_called_once_with(pod.namespace)
+        run_pod_mock.delay.assert_called_once_with(
+            pod, db_pod.id, db_config, lock=False)
+        self.assertEqual(pod.status, POD_STATUSES.preparing)
+        self.assertEqual(send_event_to_user.call_count, 2)
+        send_event_to_user.assert_has_calls([
+            mock.call('pod:change', {'id': pod.id}, db_pod.owner_id),
+            mock.call(
+                data={'message': CHANGE_IP_MESSAGE.format(
+                    pod_name=pod.name, old_ip='192.168.42.0',
+                    new_ip='192.168.43.0')}, event_name='notify:warning',
+                user_id=pod.owner.id),
+        ])
 
     @mock.patch.object(podcollection, 'DBPod')
     @mock.patch.object(podcollection.PodCollection, '_node_available_for_pod')
@@ -2042,8 +2136,17 @@ class TestPodCollectionEdit(DBTestCase, TestCaseMixin):
 
         self.user, _ = self.fixtures.user_fixtures()
         self.db_pod = self.fixtures.pod(owner=self.user, kube_id=0, config={
-            'containers': [{'name': 'wj5cw1y4', 'image': 'wncm/my-img',
-                            'kubes': 1}],
+            'containers': [{'name': 'wj5cw1y4',
+                            'image': 'wncm/my-img',
+                            'kubes': 1,
+                            'ports': [
+                                {
+                                    "isPublic": False,
+                                    "protocol": "tcp",
+                                    "containerPort": 6379,
+                                    "hostPort": 6379
+                                }
+                            ]}],
             'namespace': 'a99e70fe-f2e9-42dd-8e2b-94d277553250',
             'restartPolicy': 'Always',
             'secrets': [self.secret_name],
@@ -2061,6 +2164,14 @@ class TestPodCollectionEdit(DBTestCase, TestCaseMixin):
                 'secret': {'username': self.old_secret[0],
                            'password': self.old_secret[1]},
                 'kubes': 2,
+                'ports': [
+                    {
+                        "isPublic": False,
+                        "protocol": "tcp",
+                        "containerPort": 6379,
+                        "hostPort": 6379
+                    }
+                ],
             }, {  # added container
                 'name': 'woeufh29',
                 'image': '45.55.52.203:5000/my-img',
@@ -2136,6 +2247,38 @@ class TestPodCollectionEdit(DBTestCase, TestCaseMixin):
             'containers']))
         self.assertEqual(new_config['containers'][0]['kubes'],
                          self.edited['containers'][0]['kubes'])
+
+    @mock.patch.object(podcollection.Image, 'check_containers',
+                       mock.Mock(return_value=None))
+    @mock.patch.object(podcollection, 'update_service',
+                       mock.Mock())
+    def test_apply_edit_add_public_ip(self):
+        self.maxDiff = None
+        edited = copy.deepcopy(self.edited)
+        edited['namespace'] = '024ab4aa-8457-478d-8d4a-5007d70a2ff9'
+        edited['containers'][0]['ports'][0]['isPublic'] = True
+
+        config = dict(
+            self.db_pod.get_dbconfig(), id=self.db_pod.id,
+            name=self.db_pod.name, owner=self.db_pod.owner,
+            kube_type=self.db_pod.kube_id, edited_config=edited,
+            namespace='024ab4aa-8457-478d-8d4a-5007d70a2ff9'
+        )
+
+        orig_pod = podcollection.Pod(config)
+        orig_pod.status = 'stopped'
+        self.db_pod.set_dbconfig(config)
+        with self.assertRaises(NoFreeIPs):
+            self.podcollection._apply_edit(orig_pod, self.db_pod, config)
+
+        IPPool(network='192.168.1.1/32').save()
+        (pod, _) = self.podcollection._apply_edit(orig_pod, self.db_pod,
+                                                  config)
+        new_config = self.db_pod.get_dbconfig()
+        self.assertEqual(len(new_config['containers']), len(self.edited[
+            'containers']))
+        self.assertTrue(pod.public_ip)
+
 
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stderr)

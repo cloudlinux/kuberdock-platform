@@ -67,7 +67,8 @@ from .pod_locks import (
 # will be copied to each node at deploy stage
 DIRECT_SSH_USERNAME_LEN = 30
 DIRECT_SSH_ERROR = "Error retrieving ssh access, please contact administrator"
-
+CHANGE_IP_MESSAGE = ('Please, take into account that IP address of pod '
+'{pod_name} was changed from {old_ip} to {new_ip}')
 
 def _check_license():
     if not licensing.is_valid():
@@ -1198,7 +1199,7 @@ class PodCollection(object):
             self._remove_public_ip(pod.id)
             pod.public_ip = None
         elif has_public_ports and not had_public_ports:
-            pod.public_ip = True
+            pod.public_ip = 'true'
 
     def _update_public_aws(self, pod, old_config, new_config):
         has_public_ports = self.has_public_ports(new_config)
@@ -1338,9 +1339,9 @@ class PodCollection(object):
 
                 if notify_on_change and ip_address != utils.ip2int(desired_ip):
                     # send event 'IP changed'
-                    msg = ('Please, take into account that IP address of pod '
-                           '{pod_name} was changed from {old_ip} to {new_ip}'
-                           .format(pod_name=pod.name, old_ip=desired_ip,
+                    msg = (
+                        CHANGE_IP_MESSAGE.format(pod_name=pod.name,
+                                                 old_ip=desired_ip,
                                    new_ip=utils.int2ip(ip_address)))
                     utils.send_event_to_user(
                         event_name='notify:warning', data={'message': msg},

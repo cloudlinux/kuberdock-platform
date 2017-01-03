@@ -67,31 +67,14 @@ def add_style(styles):
     return contents
 
 
-def change_login_logo(logo):
-    fmt = (
-        """{0}<style type="text/css">.login-page .container .logo{{"""
-        """background: url({{{{ url_for('static', filename='img/{1}') }}}})"""
-        """center center no-repeat !important;}}</style>\n""")
-    contents = []
-    for target in TARGETS:
-        with open(target) as f:
-            for l in f:
-                if '</head>' in l:
-                    pos = l.find('<')
-                    s = fmt.format(' ' * (pos + 4), logo)
-                    contents.append(s)
-                contents.append(l)
-    return contents
-
-
-def change_logo(logo, target, gz=False):
+def change_image(logo, target, name='logo.png', gz=False):
     if not os.path.exists(target):
         return
     contents = []
     op = gzip.open if gz else open
     with op(target) as f:
         for l in f:
-            contents.append(l.replace('/logo.png', '/{0}'.format(logo)))
+            contents.append(l.replace('/{}'.format(name), '/{}'.format(logo)))
     return contents
 
 
@@ -111,11 +94,11 @@ def process_logo(logo, user, reapply=False):
     shutil.copyfile(logo, fullpath)
 
     for target in TARGETS:
-        save(change_logo(os.path.basename(logo), target), target)
+        save(change_image(os.path.basename(logo), target), target)
     for target in PREPARED_TARGETS:
-        save(change_logo(os.path.basename(logo), target), target)
+        save(change_image(os.path.basename(logo), target), target)
     for target in GZIP_PREPARED_TARGETS:
-        save(change_logo(os.path.basename(logo), target, gz=True),
+        save(change_image(os.path.basename(logo), target, gz=True),
              target, gz=True)
 
     for path in chain([fullpath], TARGETS, PREPARED_TARGETS,
@@ -139,11 +122,19 @@ def process_login_logo(logo, user, reapply=False):
     check_image_size(logo, LOGIN_LOGO_SIZE)
     fullpath = os.path.join(IMG_PATH, os.path.basename(logo))
     shutil.copyfile(logo, fullpath)
+    name = 'logo-login.png'
 
-    os.chown(fullpath, user.uid, user.gid)
     for target in TARGETS:
-        save(change_login_logo(os.path.basename(logo)), target)
-        os.chown(target, user.uid, user.gid)
+        save(change_image(os.path.basename(logo), target, name), target)
+    for target in PREPARED_TARGETS:
+        save(change_image(os.path.basename(logo), target, name), target)
+    for target in GZIP_PREPARED_TARGETS:
+        save(change_image(os.path.basename(logo), target, name, gz=True),
+             target, gz=True)
+
+    for path in chain([fullpath], TARGETS, PREPARED_TARGETS,
+                      GZIP_PREPARED_TARGETS):
+        os.chown(path, user.uid, user.gid)
 
     if not reapply:
         save_assets(logo, 'login_logo')

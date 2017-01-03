@@ -27,26 +27,6 @@ from kubedock.users.models import User, db
 from kubedock.utils import NODE_STATUSES
 
 
-###############################################################################
-####$################ BEGIN 193 update script #################################
-def _upgrade_node_193(upd, with_testing, env, *args, **kwargs):
-    pass
-
-
-def _downgrade_node_193(upd, with_testing, env, *args, **kwargs):
-    pass
-
-
-def _upgrade_193(upd, with_testing, *args, **kwargs):
-    upd.print_log('Upgrading db...')
-    helpers.upgrade_db()
-
-
-def _downgrade_193(upd, with_testing, exception, *args, **kwargs):
-    upd.print_log('Downgrading db...')
-    helpers.downgrade_db()
-
-##################### END   193 update script #################################
 ####$################ BEGIN 194 update script #################################
 """Upgrade permissions for yaml_pods"""
 
@@ -76,22 +56,22 @@ def _downgrade_194(upd, *args, **kwargs):
 
 ##################### END   193 update script #################################
 ####$################ BEGIN 195 update script #################################
-# def _upgrade_node_195(upd, with_testing, env, *args, **kwargs):
-#     pass
-#
-#
-# def _downgrade_node_195(upd, with_testing, env, *args, **kwargs):
-#    pass
-#
-#
-# def _upgrade_195(upd, with_testing, *args, **kwargs):
-#     upd.print_log('Upgrading db...')
-#     helpers.upgrade_db(revision='3e7a44cbe1e2')
-#
-#
-# def _downgrade_195(upd, with_testing, exception, *args, **kwargs):
-#     upd.print_log('Downgrading db...')
-#     helpers.downgrade_db()
+def _upgrade_node_195(upd, with_testing, env, *args, **kwargs):
+    pass
+
+
+def _downgrade_node_195(upd, with_testing, env, *args, **kwargs):
+   pass
+
+
+def _upgrade_195(upd, with_testing, *args, **kwargs):
+    upd.print_log('Upgrading db...')
+    helpers.upgrade_db(revision='3e7a44cbe1e2')
+
+
+def _downgrade_195(upd, with_testing, exception, *args, **kwargs):
+    upd.print_log('Downgrading db...')
+    helpers.downgrade_db()
 
 ##################### END   193 update script #################################
 ####$################ BEGIN 197 update script #################################
@@ -419,8 +399,9 @@ def _downgrade_220(upd, with_testing, exception, *args, **kwargs):
 ##################### END   220 update script #################################
 
 updates = [
-    193,
+    195,
     194,
+    197,
     199,
     202,
     206,

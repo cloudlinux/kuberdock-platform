@@ -73,21 +73,32 @@ var webpackConfig = {
         }, {
 
             // @import and url() in less/css
-            test: /\.(?:png|gif|svg|ttf|woff2?|eot)$/, include: /node_modules/,
+            // leave logos as is
+            test: /logo(?:-login)?\.png$/,
+            exclude: /node_modules/,
+            loader: 'file',
+            query: {name: '[path][name].[ext]', emitFile: false},
+        }, {
             // files less then 16kb will be converted to the dataURI
             // the others will be moved to /static/
-            loader: 'url', query: {limit: 16384, name: `${conf.BUILD_PREFIX}-[name]-[hash].[ext]`},
+            test: /\.(?:png|gif|svg|ttf|woff2?|eot)$/,
+            include: /node_modules/,
+            loader: 'url',
+            query: {limit: 16384, name: `${conf.BUILD_PREFIX}-[name]-[hash].[ext]`},
         }, {
             // same, but only for our files: no emit required
-            test: /\.(?:png|gif|svg|ttf|woff2?|eot)$/, exclude: /node_modules/,
-            loader: 'url', query: {limit: 16384, name: '[path][name].[ext]', emitFile: false},
+            test: /\.(?:png|gif|svg|ttf|woff2?|eot)$/,
+            exclude: /node_modules/,
+            loader: 'url',
+            query: {limit: 16384, name: '[path][name].[ext]', emitFile: false},
         }, {
             test: /\.js$/, include: /\/js\/(?:app_data|isv)\//, loader: 'babel',
-            query: {cacheDirectory: !conf.PROD,  // do not use cache in prod
-                    plugins: [
-                        'transform-decorators',
-                        ...(conf.TEST ? ['rewire'] : []),
-                    ]},
+            query: {
+                cacheDirectory: !conf.PROD,  // do not use cache in prod
+                plugins: [
+                    'transform-decorators',
+                    ...(conf.TEST ? ['rewire'] : []),
+                ]},
         }, {
             test: /\.json$/, loader: 'json',
         }, {

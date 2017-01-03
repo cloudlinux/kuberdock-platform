@@ -22,7 +22,7 @@ from ..domains.models import BaseDomain
 from ..exceptions import APIError
 from ..kd_celery import celery
 from ..nodes.models import Node, NodeFlag, NodeFlagNames
-from ..pods.models import Pod
+from ..pods.models import Pod, PodIP
 from ..settings import (
     MASTER_IP, KUBERDOCK_SETTINGS_FILE, KUBERDOCK_INTERNAL_USER,
     ELASTICSEARCH_REST_PORT, NODE_INSTALL_LOG_FILE, NODE_INSTALL_TASK_ID,
@@ -36,6 +36,7 @@ from ..utils import (
     retry,
     NODE_STATUSES,
     get_node_token,
+    ip2int,
 )
 from ..validation import check_internal_pod_data
 
@@ -89,6 +90,10 @@ def create_node(ip, hostname, kube_id,
         raise APIError('Looks like you are trying to add MASTER as NODE, '
                        'this kind of setup is not supported at this '
                        'moment')
+    pod_ip = PodIP.query.filter_by(ip_address=ip2int(unicode(ip))).first()
+    if pod_ip:
+        raise APIError('Node IP ({0}) already assigned '
+                       'to the Pod: "{1}"'.format(ip, pod_ip.pod.name))
     token = get_node_token()
     if token is None:
         raise APIError('Error reading Kubernetes Node auth token')

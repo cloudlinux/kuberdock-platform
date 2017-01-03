@@ -51,6 +51,7 @@ class TestNodes(DBTestCase):
         shutil.rmtree(self.tempdir)
         settings.NODE_INSTALL_LOG_FILE = self.original_install_log_dir
 
+    @mock.patch.object(nodes, 'PodIP')
     @mock.patch.object(nodes, 'create_logs_pod')
     @mock.patch.object(nodes, 'Etcd')
     @mock.patch.object(nodes, 'get_node_token')
@@ -63,7 +64,8 @@ class TestNodes(DBTestCase):
                          check_node_hostname_mock,
                          get_node_token_mock,
                          etcd_mock,
-                         create_logs_pod_mock):
+                         create_logs_pod_mock,
+                         pod_ip_mock):
         """Test for kapi.nodes.create_node function."""
         ip = '192.168.1.2'
         hostname = 'testhost1'
@@ -77,6 +79,19 @@ class TestNodes(DBTestCase):
         create_logs_pod_mock.return_value = {'podIP': log_pod_ip}
 
         nodes.CALICO = True
+
+        # add a Node with Pod IP
+        pod_ip = mock.Mock()
+        pod_ip.ip_address = 3232235778  # '192.168.1.2'
+        pod_ip.pod.name = 'pod'
+        pod_ip_mock.query.filter_by.return_value.first.return_value = pod_ip
+        with self.assertRaises(APIError):
+            nodes.create_node(None, hostname, kube_id)
+
+        pod_ip_mock.query.filter_by.return_value.first.return_value = None
+        gethostbyname_mock.reset_mock()
+
+        # add a Node
         res = nodes.create_node(None, hostname, kube_id)
         self.assertEqual(res.ip, ip)
         self.assertEqual(res.hostname, hostname)

@@ -4,7 +4,8 @@ import logging
 from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.infra_providers import InstanceSize
 from tests_integration.lib.exceptions import StatusWaitException
-from tests_integration.lib.utils import log_debug, log_info, assert_eq
+from tests_integration.lib.utils import log_debug, log_info, assert_eq, \
+    wait_pods_status
 
 
 LOG = logging.getLogger(__name__)
@@ -23,35 +24,13 @@ def test_fill_node_and_resize(cluster):
     log_debug(node1.info)
     node1.resize(InstanceSize.Large)
     log_info(node1.info)
-    _wait_pods_status(pods, status='running')
+    wait_pods_status(pods, status='running')
     pods2 = _try_fill_node(cluster, 'nginx', prefix="after_resize_")
     log_info("Created {} pods".format(len(pods2)))
-    _wait_pods_status(pods2, status='running')
+    wait_pods_status(pods2, status='running')
     log_debug("Pods before resize - {}".format([p.name for p in pods]))
     log_debug("Pods after resize - {}".format([p.name for p in pods2]))
     assert_eq(len(pods2) >= len(pods), True)
-
-
-def _wait_pods_status(pods, status, timeout=300, interval=5, delay=0):
-    _pods = pods[:]
-    time.sleep(delay)
-    end = time.time() + timeout
-    while time.time() < end:
-        for obj in _pods:
-            st = obj.status
-            log_debug(
-                "Status: '{}', waiting for status: '{}'".format(
-                    st, status), LOG)
-
-            if st == status:
-                _pods.remove(obj)
-                log_debug("Pods '{}' still are not in {} state".format(
-                    sorted([p.name for p in _pods]), status))
-            time.sleep(interval)
-        if len(_pods) == 0:
-            return True
-    raise StatusWaitException(expected=status, actual=st,
-                              timeout=delay + timeout)
 
 
 def _try_fill_node(cluster, name, prefix=None, max_pods=500):

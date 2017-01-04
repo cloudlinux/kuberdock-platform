@@ -1,7 +1,7 @@
 - include: ../../../facts.yml
 
 - set_fact:
-    wait_node_timeout: 600
+    wait_node_timeout: 1200 # FIXME: Get from environment
   tags:
       - non_aws
 

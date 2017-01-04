@@ -556,6 +556,31 @@ def wait_for_status_not_equal(obj, status, tries=50, interval=5, delay=0):
                               timeout=delay + (interval * _))
 
 
+def wait_pods_status(pods, status, timeout=300, interval=5, delay=0):
+    _pods = pods[:]
+    time.sleep(delay)
+    end = time.time() + timeout
+    while time.time() < end:
+        for obj in _pods:
+            st = obj.status
+            log_debug(
+                "Status: '{}', waiting for status: '{}'".format(
+                    st, status), LOG)
+
+            if st == status:
+                _pods.remove(obj)
+
+        log_debug("Pods '{}' still are not in {} state".format(
+            sorted([p.name for p in _pods]), status))
+        
+        time.sleep(interval)
+        
+        if len(_pods) == 0:
+            return True
+    raise StatusWaitException(expected=status, actual=st,
+                              timeout=delay + timeout)
+
+
 def log_debug(msg, logger=LOG, color=Fore.CYAN):
     logger.debug('{}{}{}'.format(color, msg, Style.RESET_ALL))
 

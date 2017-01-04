@@ -547,6 +547,27 @@ class LoadTestingAwsPipeline(LoadTestingPipeline):
     }
 
 
+class HugeClusterUpgradePipeline(Pipeline):
+    NAME = 'huge_cluster_upgrade'
+    tags = ['load']
+    ENV = {
+        'KD_INSTALL_TYPE': 'release',
+        'KD_NODES_COUNT': '15',  # Increase to 50 after test
+        'KD_NODE_TYPES': ','.join(
+            ["node{}=Tiny".format(n) for n in range(1, 16)]),  # Increase to 50 after test
+        'KD_NODE_CPUS': '1',
+        'KD_NODE_MEMORY': '2048',
+    }
+
+
+class HugeClusterUpgradeAwsPipeline(HugeClusterUpgradePipeline):
+    NAME = 'huge_cluster_upgrade_aws'
+    INFRA_PROVIDER = 'aws'
+    ENV = {
+        'NODE_SIZE': 't2.micro'  # https://aws.amazon.com/ec2/instance-types/
+    }
+
+
 # How many pipelines can be created at time when running on infra provider.
 infra_provider_slots = {
     "opennebula": 35,

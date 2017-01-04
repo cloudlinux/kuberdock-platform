@@ -51,6 +51,7 @@ class TestNodes(DBTestCase):
         shutil.rmtree(self.tempdir)
         settings.NODE_INSTALL_LOG_FILE = self.original_install_log_dir
 
+    @mock.patch.object(nodes, '_check_node_ip')
     @mock.patch.object(nodes, 'PodIP')
     @mock.patch.object(nodes, 'create_logs_pod')
     @mock.patch.object(nodes, 'Etcd')
@@ -65,7 +66,8 @@ class TestNodes(DBTestCase):
                          get_node_token_mock,
                          etcd_mock,
                          create_logs_pod_mock,
-                         pod_ip_mock):
+                         pod_ip_mock,
+                         check_node_ip_mock):
         """Test for kapi.nodes.create_node function."""
         ip = '192.168.1.2'
         hostname = 'testhost1'
@@ -106,6 +108,7 @@ class TestNodes(DBTestCase):
         self.assertEqual(node.ip, ip)
         self.assertEqual(node.kube_id, default_kube_type)
         check_node_hostname_mock.assert_called_once_with(node.ip, hostname)
+        check_node_ip_mock.assert_called_once_with(node.ip, hostname)
         get_node_token_mock.assert_called_once_with()
         # one call for dns pod
         self.assertEqual(etcd_mock.call_count, 1)

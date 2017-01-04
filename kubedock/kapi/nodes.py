@@ -100,6 +100,7 @@ def create_node(ip, hostname, kube_id, public_interface=None,
     if token is None:
         raise APIError('Error reading Kubernetes Node auth token')
     _check_node_hostname(ip, hostname)
+    _check_node_ip(ip, hostname)
     node = Node(
         ip=ip, hostname=hostname, kube_id=kube_id,
         public_interface=public_interface, state=NODE_STATUSES.pending
@@ -397,6 +398,20 @@ def _check_node_hostname(ip, hostname):
     if uname_hostname != hostname:
         raise APIError('Wrong node name. {} resolves itself by name {}'.format(
             hostname, uname_hostname))
+
+
+def _check_node_ip(ip, hostname):
+    status, message = run_ssh_command(ip, 'ip -o -4 address show')
+    if status:
+        raise APIError('Error while trying to get node IP address: '
+                       '{0}'.format(message))
+    node_interface = tasks.get_node_interface(message, ip)
+    if node_interface is None:
+        raise APIError(
+            'Node hostname "{0}" is resolved to "{1}" '
+            'and the Node is accessible by this IP '
+            'but there is no such IP address '
+            'on any Node network interface'.format(hostname, ip))
 
 
 def _deploy_node(dbnode, log_pod_ip, do_deploy, with_testing,

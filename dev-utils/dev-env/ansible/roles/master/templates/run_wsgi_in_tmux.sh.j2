@@ -1,0 +1,3 @@
+tmux has-session -t '{{ tmux_session_name }}'  || tmux new-session -d -s '{{ tmux_session_name }}'
+
+tmux new-window -t '{{ tmux_session_name }}' -n wsgi/celery \; send-keys "uwsgi --ini /etc/uwsgi/vassals/kuberdock.ini  --uid nginx --gid nginx --worker-reload-mercy 0 --python-autoreload 1 --chdir {{ master_kd_src_path }} --pythonpath {{ master_kd_src_path }}" C-m chdir="{{ master_kd_src_path }}"

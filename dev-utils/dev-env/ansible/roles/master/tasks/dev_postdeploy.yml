@@ -1,15 +1,18 @@
 ---
 
 - name: Disable stuff
-  service: name=emperor.uwsgi state=stopped
+  service: name=emperor.uwsgi state=stopped enabled=no
 
-- name: Create tmux session
-  shell: tmux has-session -t '{{ tmux_session_name }}'  || tmux new-session -d -s '{{ tmux_session_name }}'
+- name: Create tmux session runnign script
+  template:
+      src: templates/run_wsgi_in_tmux.sh.j2
+      dest: "{{ ansible_env.HOME }}/run_wsgi_in_tmux.sh"
+      mode: u+rwx
   tags:
       - tmux
 
 - name: Up wsgi
-  command: tmux new-window -t '{{ tmux_session_name }}' -n wsgi/celery \; send-keys "uwsgi --ini /etc/uwsgi/vassals/kuberdock.ini  --uid nginx --gid nginx --worker-reload-mercy 0 --python-autoreload 1 --chdir {{ master_kd_src_path }} --pythonpath {{ master_kd_src_path }}" C-m chdir="{{ master_kd_src_path }}"
+  command: "bash {{ ansible_env.HOME }}/run_wsgi_in_tmux.sh"
   when: not no_wsgi
   tags:
       - tmux

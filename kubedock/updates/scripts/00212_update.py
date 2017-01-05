@@ -2,7 +2,9 @@ import os
 from StringIO import StringIO
 from time import sleep
 
+import etcd
 from fabric.api import local, run
+from fabric.context_managers import shell_env
 from fabric.operations import put, run
 
 from kubedock import dns_management, settings
@@ -17,6 +19,7 @@ from kubedock.kapi.configmap import ConfigMapClient, ConfigMapNotFound
 from kubedock.kapi.helpers import KubeQuery
 from kubedock.kapi.nodes import KUBERDOCK_DNS_POD_NAME, create_dns_pod
 from kubedock.kapi.podcollection import PodCollection
+from kubedock.network_policies_utils import create_network_policies
 from kubedock.nodes.models import Node
 from kubedock.pods.models import Pod
 from kubedock.rbac import fixtures as rbac_fixtures
@@ -24,7 +27,7 @@ from kubedock.system_settings import keys
 from kubedock.system_settings.models import SystemSettings
 from kubedock.updates import helpers
 from kubedock.users.models import User, db
-from kubedock.utils import NODE_STATUSES
+from kubedock.utils import NODE_STATUSES, get_hostname
 
 
 ####$################ BEGIN 194 update script #################################
@@ -370,6 +373,77 @@ def _upgrade_213(upd, with_testing, *args, **kwargs):
 def _downgrade_213(upd, with_testing, exception, *args, **kwargs):
     pass
 ##################### END   213 update script #################################
+####$################ BEGIN 214 update script #################################
+"""AC-5571: Update Master hostname in Calico if it is wrong (short)"""
+
+CALICO_NODE_IMAGE = 'kuberdock/calico-node:0.22.0-kd2'
+MAX_RETRIES = 10
+RETRY_PAUSE = 3
+
+
+class _EtcdClient(object):
+    CALICO_HOST_PATH = '/calico/ipam/v2/host/'
+
+    def __init__(self, host, port):
+        self._client = etcd.Client(host=host, port=port)
+
+    def check_calico_host(self, host):
+        try:
+            self._client.read(self.CALICO_HOST_PATH + host)
+        except etcd.EtcdKeyNotFound:
+            return False
+        return True
+
+
+def _calicoctl_node(action, exc_message=None, upd=None, **env_vars):
+    cmd = '/opt/bin/calicoctl node ' + action
+    with shell_env(**dict(ETCD_AUTHORITY=settings.ETCD_AUTHORITY, **env_vars)):
+        return helpers.fabric_retry(helpers.local, cmd,
+                                    RETRY_PAUSE, MAX_RETRIES,
+                                    exc_message=exc_message, upd=upd)
+
+
+def _upgrade_214(upd, with_testing, *args, **kwargs):
+    full_hostname = get_hostname()
+    short_hostname = full_hostname.split('.')[0]
+
+    client = _EtcdClient(host=settings.ETCD_HOST, port=settings.ETCD_PORT)
+
+    if client.check_calico_host(short_hostname):
+        upd.print_log(
+            'Remove wrongly registered Master from Calico: ' + short_hostname
+        )
+        _calicoctl_node('stop --force', upd=upd)
+        _calicoctl_node(
+            'remove --hostname={0} --remove-endpoints'.format(short_hostname),
+            upd=upd,
+        )
+
+    if not client.check_calico_host(full_hostname):
+        upd.print_log('Register Master in Calico: ' + full_hostname)
+        _calicoctl_node(
+            '--ip={0} --node-image={1}'.format(settings.MASTER_IP,
+                                               CALICO_NODE_IMAGE),
+            exc_message='Starting Calico node failed with: {out}',
+            upd=upd,
+            HOSTNAME=full_hostname,
+        )
+
+    upd.print_log('Updating network policies...')
+    create_network_policies()
+
+
+def _downgrade_214(upd, with_testing, exception, *args, **kwargs):
+    pass
+
+
+def _upgrade_node_214(upd, with_testing, env, *args, **kwargs):
+    pass
+
+
+def _downgrade_node_214(upd, with_testing, env, exception, *args, **kwargs):
+    pass
+##################### END   214 update script #################################
 ####$################ BEGIN 220 update script #################################
 """AC-5288 Update some node storage scripts"""
 
@@ -408,6 +482,7 @@ updates = [
     210,
     212,
     213,
+    214,
     220,
 ]
 

@@ -1,5 +1,4 @@
 import json
-import socket
 
 import etcd
 
@@ -29,13 +28,14 @@ from .settings import (
     ETCD_PORT,
 )
 from .users.models import User
+from .utils import get_hostname
 
 
 def create_network_policies():
     client = etcd.Client(host=ETCD_HOST, port=ETCD_PORT)
 
     # master endpoint
-    master_hostname = socket.gethostname()
+    master_hostname = get_hostname()
     master_endpoint_key = '/'.join([ETCD_CALICO_V_PATH,
                                     'host', master_hostname,
                                     'endpoint', master_hostname])

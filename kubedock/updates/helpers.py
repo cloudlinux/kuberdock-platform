@@ -6,6 +6,7 @@ scripts.
 import os
 import re
 import subprocess
+import time
 
 from fabric.api import run, env, output, local as fabric_local
 
@@ -244,3 +245,27 @@ def reboot_node(db_upd):
     """
     db_upd.print_log("Rebooting node")
     run('(sleep 2; reboot) &', pty=False)
+
+
+def fabric_retry(f, cmd, retry_pause, max_retries, exc_message=None, upd=None,
+                 *f_args, **f_kwargs):
+    """
+    Retries the given function call until it succeed
+
+    :param f: a function to retry, e.g. local or run
+    :param cmd: command to execute
+    :param retry_pause: pause between retries (seconds)
+    :param max_retries: max retries num.
+    :param exc_message: exception message template
+    :param upd: db record of current update script
+    :return: result of the cmd's stdout
+    """
+    for _ in range(max_retries):
+        out = f(cmd, *f_args, **f_kwargs)
+        if out.succeeded:
+            return out
+        if upd:
+            upd.print_log('Retrying: {cmd}'.format(cmd=cmd))
+        time.sleep(retry_pause)
+    if exc_message:
+        raise UpgradeError(exc_message.format(out=out), code=out.return_code)

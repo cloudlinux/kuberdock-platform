@@ -622,7 +622,8 @@ class AwsProvider(InfraProvider):
         # FIXME local_exec_live does not work
         utils.local_exec(['bash', 'aws-kd-deploy/cluster/aws-kd-down.sh'],
                          env=self.env)
-        os.remove(self._inventory)
+        if self._inventory:
+            os.remove(self._inventory)
 
     def power_off(self, host):
         LOG.debug("VM Power Off: '{}'".format(host))

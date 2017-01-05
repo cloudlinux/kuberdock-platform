@@ -1,17 +1,12 @@
 import logging
-import random
-from threading import current_thread, Thread
 from time import sleep
-
-from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
 
 from tests_integration.lib.cluster_utils import add_pa_from_url, \
     set_kubelet_multipliers
+from tests_integration.lib.load_testing_utils import gen_workload
 from tests_integration.lib.integration_test_api import KDIntegrationTestAPI
 from tests_integration.lib.pipelines import pipeline
-from tests_integration.lib.utils import (
-    assert_in, POD_STATUSES)
+from tests_integration.lib.utils import assert_in, POD_STATUSES
 
 LOG = logging.getLogger(__name__)
 
@@ -50,13 +45,13 @@ def test_change_pod_kube_quantity_on_loaded_cluster(cluster):
         cluster.ssh_exec('node1', 'top -bn3 | head -20')
 
     # Selecting control pod from the middle of the batch.
-    wp_pod = pods[len(pods) / 2]
+    wp_pod = pods[len(pods) // 2]
     custom_cont = "Testing pod content after resize"
     custom_post_path = wp_pod.publish_post(content=custom_cont)
     LOG.debug("Pod '{}' is a Control WP pod with a custom content.".format(
         wp_pod.pod_id))
 
-    with _gen_workload(pods, loaded_pods_num, req_per_sec):
+    with gen_workload(pods, loaded_pods_num, req_per_sec):
         LOG.debug("Waiting 5 min to get pods loaded enough.")
         sleep(5 * 60)
         cluster.ssh_exec('node1', 'top -bn3 | head -20')
@@ -71,41 +66,3 @@ def test_change_pod_kube_quantity_on_loaded_cluster(cluster):
         assert_in(custom_cont, wp_pod.do_GET(path=custom_post_path))
 
     LOG.debug("Pod '{}' has been resized successfully.".format(wp_pod.pod_id))
-
-
-def _gen_one_request(delay, _pod):
-    current_thread().name = "load_testing_pods_workload"
-    sleep(delay)
-    try:
-        _pod.do_GET(exp_retcodes=[200], fetch_subres=True, verbose=False)
-    except Exception as e:
-        LOG.debug("Pod '{}' GET error: {}".format(_pod.pod_id, repr(e)))
-
-
-@contextmanager
-def _gen_workload(pods, loaded_pods_num, req_per_sec):
-    # can be optimized through subprocess.Popen load.py + gevent inside
-    executor = ThreadPoolExecutor(max_workers=50)
-
-    def _gen_requests():
-        while True:
-            # Choose N random pods to be loaded this second.
-            pods_to_load = [random.choice(pods)
-                            for _ in range(loaded_pods_num)]
-            # Schedule this second requests. Each of them starts at random
-            # point of this second.
-            for pod in pods_to_load:
-                for _ in range(req_per_sec):
-                    try:
-                        executor.submit(_gen_one_request,
-                                        random.uniform(0, 1.0), pod)
-                    except RuntimeError:
-                        return  # shutdown
-            # Wait for the next second
-            sleep(1)
-
-    Thread(target=_gen_requests).start()
-    try:
-        yield
-    finally:
-        executor.shutdown()

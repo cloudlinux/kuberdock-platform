@@ -276,7 +276,8 @@ NODE_CEPH_AWARE_KUBERDOCK_LABEL = 'kuberdock-ceph-enabled'
 
 ETCD_HOST = '127.0.0.1'
 ETCD_PORT = 4001
-ETCD_BASE_URL = 'http://{0}:{1}/v2/keys'.format(ETCD_HOST, ETCD_PORT)
+ETCD_AUTHORITY = '{0}:{1}'.format(ETCD_HOST, ETCD_PORT)
+ETCD_BASE_URL = 'http://{0}/v2/keys'.format(ETCD_AUTHORITY)
 
 # Some calico config paths, see
 # 'https://github.com/projectcalico/libcalico/blob/master/calico_containers/

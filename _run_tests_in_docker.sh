@@ -15,6 +15,7 @@ $compose run --rm appcloud /bin/bash -c \
  py.test -v \
     --cov-config .coveragerc \
     --cov-report xml:/artifacts/cov.xml \
+    --cov-report html:/artifacts/htmlcov \
     --cov-report term \
     --cov=kubedock \
     --cov=kuberdock-cli \

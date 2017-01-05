@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from time import sleep
 
 from tests_integration.lib.pipelines import pipeline
@@ -366,3 +367,189 @@ def assert_zfs_mount_points(
     _, out, _ = cluster.ssh_exec(
         node, 'zfs get mountpoint {}'.format(pool_path), sudo=True)
     assertion(volume_mp, out)
+
+
+@pipeline('main')
+@pipeline('main_upgraded')
+@pipeline('zfs')
+@pipeline('zfs_upgraded')
+@pipeline('zfs_aws')
+def test_resize_pv_of_custom_docker_hub_pod(cluster):
+    NGINX_IMAGE = 'nginx'
+    pv_name = utils.get_rnd_string(prefix='custom_pod_resizable_pv_')
+    pv_mpath = '/nginxpv'
+    pv = cluster.pvs.add('dummy', pv_name, pv_mpath, size=1)
+    pod = cluster.pods.create(
+        NGINX_IMAGE, 'test_pod_for_resizable_pvs', pvs=[pv], start=True,
+        wait_for_status='running')
+
+    pv_id = pv.info()['id']
+
+    _test_resize_pv(cluster, pod, NGINX_IMAGE, pv_mpath, pv_id)
+
+
+@pipeline('main')
+@pipeline('main_upgraded')
+@pipeline('zfs')
+@pipeline('zfs_upgraded')
+@pipeline('zfs_aws')
+def test_resize_pv_of_pa(cluster):
+    WP_IMAGE = 'kuberdock/wordpress:4.6.1-1'  # FIXME: Update me, when wordpress image changes.  # noqa
+    wp_pa = cluster.pods.create_pa(
+        'wordpress.yaml', wait_for_status='running', wait_ports=True,
+        plan_id=1)
+
+    # Retrieve PV mount path
+    pa_spec = wp_pa.get_spec()
+    container_spec = next(c for c in pa_spec['containers']
+                          if c['image'] == WP_IMAGE)
+    vol_mounts = container_spec['volumeMounts']
+    pv_inner_name = vol_mounts[0]['name']
+    pv_mpath = vol_mounts[0]['mountPath']
+
+    pv_name = next(v['persistentDisk']['pdName'] for v in pa_spec['volumes']
+                   if v['name'] == pv_inner_name)
+
+    _, out, _ = cluster.kcli2('pstorage get --name {}'.format(pv_name),
+                              out_as_dict=True)
+    pv_id = out['data']['id']
+
+    _test_resize_pv(cluster, wp_pa, WP_IMAGE, pv_mpath, pv_id,
+                    initial_disk_usage=28)
+
+
+def _test_resize_pv(cluster, pod, container_image, mountpath, pv_id,
+                    initial_disk_usage=0):
+    """
+    Perform writes and resizes on pod Persistent volume
+    :param cluster:
+    :param pod: KDPod
+    :param container_image: If pod has several containers, then we need to
+        know which container to use in this test
+    :param pv_name: Persistent volume name as it appears in UI
+    :param mountpath: Path to FS mount point
+    :param pv_id: Persistent volume id inside KD db
+    :param initial_disk_usage: Some containers have default data written to
+        mounted PVs, so we need to know approximate size in MBs, so that
+        we can calculate the disk usage properly
+    """
+    # Sizes are in GBs
+    INITIAL_PV_SIZE = 1
+    INCREASED_PV_SIZE = 3
+    DECREASED_PV_SIZE1 = 2
+    DECREASED_PV_SIZE2 = 1
+
+    total_write_amount = initial_disk_usage  # in MBs
+
+    file1_name = utils.get_rnd_string(prefix='file_')
+    file2_name = utils.get_rnd_string(prefix='file_')
+    file3_name = utils.get_rnd_string(prefix='file_')
+
+    utils.log_debug('Check that back-end supports PV resize', LOG)
+
+    _, out, _ = cluster.manage('persistent-volume is-resizable')
+    utils.assert_eq('True', out)
+
+    # The default size of PV is 1GB
+    c_id = pod.get_container_id(container_image=container_image)
+
+    # Check PV used space
+    _assert_disk_usage(pod, c_id, mountpath, total_write_amount,
+                       INITIAL_PV_SIZE * 1024)
+
+    # Write to PV here until it's full
+    # 512MB
+    _write_dummy_file_to_pv(pod, container_image, mountpath, file1_name, bs=64,
+                            count=8)
+    total_write_amount += 512
+    _assert_disk_usage(pod, c_id, mountpath, total_write_amount,
+                       INITIAL_PV_SIZE * 1024)
+
+    with utils.assert_raises(NonZeroRetCodeException,
+                             DISK_QUOTA_EXCEEDED_MSGS):
+        # Try writing 640MB into ~500MB available disk space
+        # Only (512 - initial_disk_usage)MB will be written
+        _write_dummy_file_to_pv(pod, container_image, mountpath, file2_name,
+                                bs=64, count=10)
+
+    # We filled PV in the previous step, now its used size should be equal
+    # to PV size
+    total_write_amount = INITIAL_PV_SIZE * 1024
+    _assert_disk_usage(pod, c_id, mountpath, total_write_amount,
+                       INITIAL_PV_SIZE * 1024)
+
+    # Resize PV
+    cluster.manage(
+        'persistent-volume resize --pv-id {id} --new-size {size}'.format(
+            id=pv_id, size=INCREASED_PV_SIZE))
+
+    _assert_disk_usage(pod, c_id, mountpath, total_write_amount,
+                       INCREASED_PV_SIZE * 1024)
+    # Write again to make sure that size was increased
+    # 640MB
+    _write_dummy_file_to_pv(pod, container_image, mountpath, file2_name,
+                            count=10)
+    # One file was overwritten
+    total_write_amount += 640 - (512 - initial_disk_usage)
+
+    # 512MB
+    _write_dummy_file_to_pv(pod, container_image, mountpath, file3_name,
+                            count=8)
+    # New file was created
+    total_write_amount += 512
+
+    _assert_disk_usage(pod, c_id, mountpath, total_write_amount,
+                       INCREASED_PV_SIZE * 1024)
+    utils.log_debug(
+        'Current PV size: {}GB used space: ~{} new size: {}GB'.format(
+            INCREASED_PV_SIZE, '1.6GB', DECREASED_PV_SIZE1), LOG)
+    cluster.manage(
+        'persistent-volume resize --pv-id {id} --new-size {size}'.format(
+            id=pv_id, size=DECREASED_PV_SIZE1))
+
+    # Check PV used space
+    _assert_disk_usage(pod, c_id, mountpath, total_write_amount,
+                       DECREASED_PV_SIZE1 * 1024)
+
+    # Decrease PV size
+    utils.log_debug(
+        'Current PV size: {}GB used space: ~{} new size: {}GB'.format(
+            DECREASED_PV_SIZE1, '1.6GB', DECREASED_PV_SIZE2), LOG)
+    FAILED_TO_RESIZE_MSG = (
+        'Failed to resize PV: Volume can not be reduced to {}.00G. Already '
+        'used'.format(DECREASED_PV_SIZE2))
+    with utils.assert_raises(NonZeroRetCodeException, FAILED_TO_RESIZE_MSG):
+        cluster.manage(
+            'persistent-volume resize --pv-id {id} --new-size {size}'.format(
+                id=pv_id, size=DECREASED_PV_SIZE2))
+
+    _assert_disk_usage(pod, c_id, mountpath, total_write_amount,
+                       DECREASED_PV_SIZE1 * 1024)
+
+
+def _write_dummy_file_to_pv(pod, container_image, mountpath, filename,
+                            bs=64, count=8):
+    """
+    Create a dummy file inside pod's container with image 'container_image' at
+    path 'mountpath' and size 'size'MB
+    :param pod: KDPod
+    :param container_image: Container image of 'pod'
+    :param mountpath: PV mountpath where to create a file
+    :param size: How many bytes to write
+    :param count: Number of records to make
+    """
+    utils.log_debug('Attempting to write {}MB on PV'.format(bs * count))
+    c_id = pod.get_container_id(container_image=container_image)
+    cmd = 'dd if=/dev/zero of={mountpath}/{filename} bs={bs}M ' \
+          'count={count}'.format(mountpath=mountpath, filename=filename, bs=bs,
+                                 count=count)
+    pod.docker_exec(c_id, cmd)
+
+
+def _assert_disk_usage(pod, c_id, pv_path, write_size, disk_size):
+    _, out, _ = pod.docker_exec(c_id, 'df {}'.format(pv_path))
+    use_percentage = int(1. * write_size / disk_size * 100)
+    expected = '({}%|{}%|{}%)'.format(use_percentage - 1, use_percentage,
+                                      use_percentage + 1)
+    utils.log_debug('Expected sizes: {}'.format(expected), LOG)
+    utils.assert_not_eq(re.search(expected, out), None)

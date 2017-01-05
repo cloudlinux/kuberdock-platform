@@ -23,7 +23,8 @@ class MainPipeline(Pipeline):
     ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
-        'KD_TIMEZONE': 'Europe/Moscow'
+        'KD_TIMEZONE': 'Europe/Moscow',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch'
     }
 
     def set_up(self):
@@ -33,9 +34,8 @@ class MainPipeline(Pipeline):
         # it is running before executing any tests
         nodes = self.cluster.node_names
         for node in nodes:
-            node_obj = self.cluster.nodes.get_node(node)
-            wait_for_status(node_obj, NODE_STATUSES.running, tries=24,
-                            interval=10)
+            self.cluster.nodes.get_node(node).wait_for_status(
+                NODE_STATUSES.running)
 
     def post_create_hook(self):
         super(MainPipeline, self).post_create_hook()
@@ -431,6 +431,7 @@ class ZFSStoragePipeline(Pipeline):
     ENV = {
         'KD_NODES_COUNT': '1',
         'KD_USE_ZFS': '1',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
     }
 
     def post_create_hook(self):

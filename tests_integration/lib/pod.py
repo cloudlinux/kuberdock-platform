@@ -16,9 +16,6 @@ from requests.exceptions import ConnectionError, Timeout
 
 from tests_integration.lib import exceptions
 from tests_integration.lib import utils
-from tests_integration.lib.exceptions import NoSpaceLeftOnPersistentVolume,\
-    NonZeroRetCodeException, PodResizeError
-from tests_integration.lib.utils import assert_eq, assert_in
 
 DEFAULT_WAIT_PORTS_TIMEOUT = 6 * 60
 
@@ -54,7 +51,7 @@ class RESTMixin(object):
             LOG.debug(u"Response:\n{0}".format(body))
 
         if exp_retcodes:
-            assert_in(code, exp_retcodes)
+            utils.assert_in(code, exp_retcodes)
 
         if fetch_subres:
             self._fetch_subresources(body, urlparse(url).netloc)
@@ -105,7 +102,7 @@ class RESTMixin(object):
             LOG.debug(u"Response:\n{0}".format(resp))
 
         if exp_retcodes:
-            assert_in(code, exp_retcodes)
+            utils.assert_in(code, exp_retcodes)
 
         return resp
 
@@ -119,7 +116,7 @@ class RESTMixin(object):
 
         def check(*args, **kwargs):
             with closing(urllib2.urlopen(url, timeout=timeout)) as req:
-                assert_eq(req.code, code)
+                utils.assert_eq(req.code, code)
 
         utils.retry(check, tries=tries, interval=interval)
 
@@ -626,9 +623,9 @@ class KDPod(RESTMixin):
         cmd = "dd if=/dev/zero of={} bs=1M count={}".format(path, size)
         try:
             self.docker_exec(container_id, cmd)
-        except NonZeroRetCodeException as e:
+        except exceptions.NonZeroRetCodeException as e:
             if "No space left on device" in e.stderr:
-                raise NoSpaceLeftOnPersistentVolume
+                raise exceptions.NoSpaceLeftOnPersistentVolume()
             else:
                 raise e
 
@@ -695,7 +692,7 @@ class KDPod(RESTMixin):
                              if predicate(c))
             container['kubes'] = kubes
         except StopIteration:
-            raise PodResizeError(
+            raise exceptions.PodResizeError(
                 "Pod '{}' does not have container with {}".format(
                     self.name,
                     "name '{}'".format(container_name) if container_name else

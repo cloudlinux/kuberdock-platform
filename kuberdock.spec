@@ -77,6 +77,7 @@ Requires: python-cloudflare
 Requires: python-etcd
 Requires: pyOpenSSL
 Requires: python2-pyasn1
+Requires: python-netifaces
 
 # AutoReq: 0
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)

@@ -55,3 +55,4 @@ cloudflare==1.1.5
 python-etcd==0.4.3
 pyopenssl==16.2.0
 pyasn1==0.1.9
+netifaces==0.10.4

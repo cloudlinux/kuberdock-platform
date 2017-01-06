@@ -37,6 +37,7 @@ from ..utils import (
     NODE_STATUSES,
     get_node_token,
     ip2int,
+    get_current_host_ips,
 )
 from ..validation import check_internal_pod_data
 
@@ -76,29 +77,36 @@ def create_node(ip, hostname, kube_id, public_interface=None,
     if Node.get_by_name(hostname) is not None:
         raise APIError('Conflict, Node with hostname "{0}" already exists'
                        .format(hostname), status_code=409)
+
     if not MASTER_IP:
         raise APIError('There is no MASTER_IP specified in {0}.'
                        'Check that file has not been renamed by package '
                        'manager to .rpmsave or similar'
                        .format(KUBERDOCK_SETTINGS_FILE))
+
     if ZFS and not (AWS or ls_devices):
         raise APIError(
             'Kuberdock configured with ZFS backend, there must be at least '
             'one device specified during node creation.'
         )
+
     if ip is None:
         ip = socket.gethostbyname(hostname)
-    if ip == MASTER_IP:
+    all_master_ips = get_current_host_ips()
+    if ip in all_master_ips:
         raise APIError('Looks like you are trying to add MASTER as NODE, '
                        'this kind of setup is not supported at this '
                        'moment')
+
     pod_ip = PodIP.query.filter_by(ip_address=ip2int(unicode(ip))).first()
     if pod_ip:
         raise APIError('Node IP ({0}) already assigned '
                        'to the Pod: "{1}"'.format(ip, pod_ip.pod.name))
+
     token = get_node_token()
     if token is None:
         raise APIError('Error reading Kubernetes Node auth token')
+
     _check_node_hostname(ip, hostname)
     _check_node_ip(ip, hostname)
     node = Node(

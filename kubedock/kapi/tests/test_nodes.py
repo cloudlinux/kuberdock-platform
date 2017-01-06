@@ -51,6 +51,7 @@ class TestNodes(DBTestCase):
         shutil.rmtree(self.tempdir)
         settings.NODE_INSTALL_LOG_FILE = self.original_install_log_dir
 
+    @mock.patch.object(nodes, 'get_current_host_ips')
     @mock.patch.object(nodes, '_check_node_ip')
     @mock.patch.object(nodes, 'PodIP')
     @mock.patch.object(nodes, 'create_logs_pod')
@@ -67,14 +68,17 @@ class TestNodes(DBTestCase):
                          etcd_mock,
                          create_logs_pod_mock,
                          pod_ip_mock,
-                         check_node_ip_mock):
+                         check_node_ip_mock,
+                         get_current_host_ips_mock):
         """Test for kapi.nodes.create_node function."""
+        fake_master_ips = ('127.0.0.1', nodes.MASTER_IP,)
         ip = '192.168.1.2'
         hostname = 'testhost1'
         default_kube_type = Kube.get_default_kube_type()
         kube_id = default_kube_type
 
         gethostbyname_mock.return_value = ip
+        get_current_host_ips_mock.return_value = fake_master_ips
         podcollection_mock.return_value.add.return_value = {'id': 1}
         get_node_token_mock.return_value = 'some-token'
         log_pod_ip = '123.123.123.123'

@@ -7,4 +7,6 @@ vcrpy-unittest==0.1.5
 pytest==3.0.1
 pytest-mock==1.1
 pytest-cov==2.3.1
+tox==2.5.0
+docker-compose==1.9.0
 importlib

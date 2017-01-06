@@ -19,6 +19,7 @@ from urlparse import urlsplit, urlunsplit, urljoin
 
 import bitmath
 import ipaddress
+import netifaces
 import requests
 import yaml
 from flask import (current_app, request, jsonify, g, has_app_context, Response,
@@ -1033,6 +1034,19 @@ def get_hostname():
         # If something goes wrong
         # return socket.gethostname instead of just erroring.
         return socket.gethostname()
+
+
+def get_current_host_ips():
+    """
+    :return: list of all IPv4 addresses on this host including loopback
+    """
+    all_ips = []
+    for ifaceName in netifaces.interfaces():
+        for addr_rec in netifaces.ifaddresses(ifaceName).setdefault(
+                netifaces.AF_INET, [None]):
+            if addr_rec is not None and 'addr' in addr_rec:
+                all_ips.append(addr_rec['addr'])
+    return all_ips
 
 
 def get_calico_ip_tunnel_address(hostname=None):

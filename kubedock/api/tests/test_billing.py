@@ -1,3 +1,5 @@
+import json
+
 from mock import mock
 
 from kubedock.pods import models as pods_models
@@ -61,3 +63,60 @@ class TestBilling(APITestCase):
             pkgid=app()._get_package().id,
             yaml=app().get_filled_template_for_plan(),
             referer=None)
+
+    @mock.patch('kubedock.system_settings.models.SystemSettings.get_by_name',
+                mock.Mock(return_value='WHMCS'))
+    @mock.patch('kubedock.billing.resolver.BillingFactory.get_billing')
+    @mock.patch('kubedock.kapi.podcollection.PodCollection._get_by_id')
+    def test_edit_no_free_ips(self, mock_get_by_id, get_billing):
+        billing = mock.Mock()
+        get_billing.return_value = billing
+
+        billing.orderpodedit.return_value = {}
+        url = '/'.join([self.url, 'orderPodEdit'])
+        data = {
+            'pod': {
+                "id": "ba9385d7-10e7-4ce5-918a-7582381da4f2",
+                "containers": [
+                    {
+                        'image': 'nginx',
+                        "ports": [
+                            {
+                                "isPublic": False,
+                            }
+                        ],
+                    }
+                ],
+                'edited_config': {
+                    "containers": [
+                        {
+                            'image': 'nginx',
+                            "ports": [
+                                {
+                                    "isPublic": True,
+                                }
+                            ],
+                        }
+                    ]
+                }
+            }
+        }
+        mock_get_by_id.return_value = type('Pod', (), dict(
+            config=data,
+            get_secrets=mock.Mock(return_value={})
+        ))
+        resonse = self.open(url, 'POST', data, auth=self.userauth)
+        self.assertAPIError(resonse, 400, 'APIError')
+        self.assertEqual(resonse.json['data'], 'There is a problem with a '
+                                               'package you trying to buy. '
+                                               'Please, try again or contact'
+                                               ' support team.')
+
+        # add free ip
+        IPPool(network='192.168.122.60/30').save()
+
+        resonse = self.open(url, 'POST', data, auth=self.userauth)
+        self.assert200(resonse)
+        billing.orderpodedit.assert_called_once_with(
+            referer='',
+            pod=json.dumps(data['pod']))

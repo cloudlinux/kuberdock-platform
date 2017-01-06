@@ -168,7 +168,7 @@ class PodCollection(object):
         # ...
 
         # check public adresses before create
-        self._check_public_address_available(params)
+        self._check_public_address_available(params, original_pod=original_pod)
 
         if self.owner is not None:
             params['name'] = DBPod.check_name(params.get('name'),
@@ -381,6 +381,8 @@ class PodCollection(object):
 
             reject_replica_with_pv(new_pod_data, key='volumes')
 
+            self._preprocess_public_access(new_pod_data)
+
             data, secrets = self._preprocess_new_pod(
                 new_pod_data, original_pod=original_pod, skip_check=skip_check)
 
@@ -490,7 +492,12 @@ class PodCollection(object):
         ]
 
     @staticmethod
-    def _check_public_address_available(config):
+    def _check_public_address_available(config, original_pod=None):
+        """
+        :param config: pod config
+        :param original_pod: kapi-Pod object. Provide this if you need to check
+            edit, not creation.
+        """
         if not PodCollection.has_public_ports(config):
             return
 
@@ -498,8 +505,14 @@ class PodCollection(object):
                                  PublicAccessType.PUBLIC_IP)
 
         if access_type == PublicAccessType.PUBLIC_IP:
-            if not config.get('public_ip', None):
-                IPPool.get_free_host(as_int=True)
+            if original_pod:
+                public_ip = getattr(original_pod, 'public_ip', None)
+            else:
+                public_ip = config.get('public_ip', None)
+            if not public_ip:
+                node = original_pod.node if original_pod and \
+                                            settings.FIXED_IP_POOLS else None
+                IPPool.get_free_host(as_int=True, node=node)
         elif access_type == PublicAccessType.DOMAIN:
             domain = (config.get('domain', None) or config.get('base_domain'))
 
@@ -1856,7 +1869,8 @@ def finish_redeploy(pod_id, data, start=True):
     pod_collection = PodCollection(db_pod.owner)
     pod = pod_collection._get_by_id(pod_id)
     try:
-        pod_collection._stop_pod(pod, block=True, raise_=False, lock=False)
+        with utils.atomic(nested=False):
+            pod_collection._stop_pod(pod, block=True, raise_=False, lock=False)
     except APIError as e:
         utils.send_event_to_user('notify:error', {'message': e.message},
                                  db_pod.owner_id)

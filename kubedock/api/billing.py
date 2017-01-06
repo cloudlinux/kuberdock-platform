@@ -1,3 +1,4 @@
+import copy
 from functools import wraps
 
 from flask import Blueprint, current_app, request
@@ -91,6 +92,22 @@ def order_product(billing_driver):
 @with_billing()
 def order_edit(billing_driver):
     data = KubeUtils._get_params()
+
+    owner = KubeUtils.get_current_user()
+    pod_collection = PodCollection(owner)
+    pod = data['pod']
+    pod_id = pod['id']
+    old_pod = pod_collection._get_by_id(pod_id)
+    new_config = copy.deepcopy(pod.get('edited_config'))
+    try:
+        pod_collection._preprocess_public_access(new_config)
+        pod_collection._preprocess_new_pod(new_config, original_pod=old_pod)
+    except NoFreeIPs:
+        raise NoFreeIPsAdminNotification(
+            response_message='There is a problem with a package you trying '
+                             'to buy. Please, try again or contact support '
+                             'team.')
+
     data['pod'] = json.dumps(data['pod'])
     data['referer'] = data['referer'] if 'referer' in data else ''
     response = billing_driver.orderpodedit(**data)

@@ -444,7 +444,7 @@ function create_k8s_certs {
   rm -rf ${K8S_TEMP}
   mkdir ${K8S_TEMP}
 
-  sans="IP:${primary_cn},IP:10.254.0.1,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:$(hostname)"
+  sans="IP:${primary_cn},IP:10.254.0.1,DNS:kubernetes,DNS:kubernetes.default,DNS:kubernetes.default.svc,DNS:$HOSTNAME"
 
   local -r cert_create_debug_output=$(mktemp "${K8S_TEMP}/cert_create_debug_output.XXX")
   (set -x
@@ -454,7 +454,7 @@ function create_k8s_certs {
     cd easy-rsa-master/easyrsa3
     ./easyrsa --keysize="$KEY_BITS" init-pki
     ./easyrsa --keysize="$KEY_BITS" --batch "--req-cn=${primary_cn}@$(date +%s)" build-ca nopass
-    ./easyrsa --keysize="$KEY_BITS" --subject-alt-name="${sans}" build-server-full "$(hostname)" nopass
+    ./easyrsa --keysize="$KEY_BITS" --subject-alt-name="${sans}" build-server-full "$HOSTNAME" nopass
     ) &>${cert_create_debug_output} || {
         cat "${cert_create_debug_output}" >&2
         echo "=== Failed to generate certificates: Aborting ===" >&2

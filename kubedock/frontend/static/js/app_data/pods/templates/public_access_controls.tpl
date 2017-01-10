@@ -17,7 +17,7 @@
     <div class="col-md-5 col-xs-12 select-domain-wrapper no-padding">
         <label class="normal margin-bottom-2">Select domain:</label>
         <div class="select-wrapper">
-            <span class="info-icon" data-toggle="tooltip" data-placement="right" title="Support only ports 80 and 443 at pod port"></span>
+            <span class="info-icon" data-toggle="tooltip" data-placement="right" title="Only 80 and 443 ports are allowed"></span>
             <select class="choose-domain-select">
                 <%  domains.each(function(domain){ %>
                     <option value="<%= domain.get('name') %>"><%= domain.get('name') %></option>

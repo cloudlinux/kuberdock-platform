@@ -878,7 +878,7 @@ export const WizardPortsSubView = Backbone.Marionette.LayoutView.extend({
 
         if (this.pod.wizardState.flow === 'CREATE_POD'){
             if (this.pod.get('domain') && !this.pod.publicPortsShouldContain(80, 443)){
-                utils.notifyWindow('Support only ports 80 and 443 at pod port');
+                utils.notifyWindow('Only 80 and 443 ports are allowed');
                 return false;
             }
         }

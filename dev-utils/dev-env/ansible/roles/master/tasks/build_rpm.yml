@@ -16,6 +16,7 @@
   command: bash "{{ master_kd_src_path }}/dev-utils/build-rpm.sh" "{{ master_kd_src_path }}" "{{ master_rpms_dir }}"
   environment:
     KD_GIT_REF: "{{ git_ref | default('') }}"
+    JS_BUILD_MODE: dev
 
 - name: Building KCLI RPM from source
   command: bash "{{ master_kd_src_path }}/dev-utils/build-kdcli-rpm.sh" "{{ master_kd_src_path }}/kuberdock-cli" "{{ master_rpms_dir }}"

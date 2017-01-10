@@ -1,4 +1,5 @@
 import os
+import re
 from StringIO import StringIO
 from time import sleep
 
@@ -403,30 +404,45 @@ def _calicoctl_node(action, exc_message=None, upd=None, **env_vars):
                                     exc_message=exc_message, upd=upd)
 
 
+def _old_hostname():
+    old_hostname_pattern = re.compile(
+        'KUBE_API_ARGS.+?\s--tls-cert-file.+?/([^/]+?)\.crt\s'
+    )
+    with open('/etc/kubernetes/apiserver') as f:
+        conf = f.read()
+    match = old_hostname_pattern.search(conf)
+    if match:
+        return match.group(1)
+    raise Exception("Old Master's hostname can't be determined")
+
+
 def _upgrade_214(upd, with_testing, *args, **kwargs):
-    full_hostname = get_hostname()
-    short_hostname = full_hostname.split('.')[0]
+    new_hostname = get_hostname()
+    old_hostname = _old_hostname()
+
+    if new_hostname == old_hostname:
+        return
 
     client = _EtcdClient(host=settings.ETCD_HOST, port=settings.ETCD_PORT)
 
-    if client.check_calico_host(short_hostname):
+    if client.check_calico_host(old_hostname):
         upd.print_log(
-            'Remove wrongly registered Master from Calico: ' + short_hostname
+            'Remove previously registered Master from Calico: ' + old_hostname
         )
         _calicoctl_node('stop --force', upd=upd)
         _calicoctl_node(
-            'remove --hostname={0} --remove-endpoints'.format(short_hostname),
+            'remove --hostname={0} --remove-endpoints'.format(old_hostname),
             upd=upd,
         )
 
-    if not client.check_calico_host(full_hostname):
-        upd.print_log('Register Master in Calico: ' + full_hostname)
+    if not client.check_calico_host(new_hostname):
+        upd.print_log('Register Master in Calico: ' + new_hostname)
         _calicoctl_node(
             '--ip={0} --node-image={1}'.format(settings.MASTER_IP,
                                                CALICO_NODE_IMAGE),
             exc_message='Starting Calico node failed with: {out}',
             upd=upd,
-            HOSTNAME=full_hostname,
+            HOSTNAME=new_hostname,
         )
 
     upd.print_log('Updating network policies...')

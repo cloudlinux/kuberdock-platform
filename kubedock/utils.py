@@ -1203,3 +1203,15 @@ class check_api_version(object):
         if not self:
             raise InvalidAPIVersion(
                 acceptableVersions=self.acceptable_versions)
+
+
+def get_node_interface(data, node_ip):
+    ip = ipaddress.ip_address(unicode(node_ip))
+    patt = re.compile(r'(?P<iface>\w+)\s+inet\s+(?P<ip>[0-9\/\.]+)')
+    for line in data.splitlines():
+        m = patt.search(line)
+        if m is None:
+            continue
+        iface = ipaddress.ip_interface(unicode(m.group('ip')))
+        if ip == iface.ip:
+            return m.group('iface')

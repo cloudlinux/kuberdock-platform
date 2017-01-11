@@ -38,6 +38,7 @@ from ..utils import (
     get_node_token,
     ip2int,
     get_current_host_ips,
+    get_node_interface,
 )
 from ..validation import check_internal_pod_data
 
@@ -413,7 +414,7 @@ def _check_node_ip(ip, hostname):
     if status:
         raise APIError('Error while trying to get node IP address: '
                        '{0}'.format(message))
-    node_interface = tasks.get_node_interface(message, ip)
+    node_interface = get_node_interface(message, ip)
     if node_interface is None:
         raise APIError(
             'Node hostname "{0}" is resolved to "{1}" '

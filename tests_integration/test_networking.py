@@ -1,7 +1,7 @@
 
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.utils import NO_FREE_IPS_ERR_MSG, assert_raises, \
-    assert_eq, POD_STATUSES
+    assert_eq, POD_STATUSES, log_debug
 from tests_integration.lib.pipelines import pipeline
 
 
@@ -33,6 +33,10 @@ def test_create_delete_ippool(cluster):
                                  open_all_ports=True, start=True,
                                  healthcheck=True, wait_ports=True,
                                  wait_for_status=POD_STATUSES.running)
+    nginx2 = cluster.pods.create("nginx", "test_nginx_pod_2",
+                                 open_all_ports=True, start=True,
+                                 healthcheck=True, wait_ports=True,
+                                 wait_for_status=POD_STATUSES.running)
 
     with assert_raises(NonZeroRetCodeException,
                        text='.*You cannot delete this network.*',
@@ -40,5 +44,13 @@ def test_create_delete_ippool(cluster):
         cluster.ip_pools.clear()
 
     nginx1.healthcheck()
+    nginx2.healthcheck()
     nginx1.delete()
+    nginx2.delete()
     cluster.ip_pools.clear()
+    cluster.ip_pools.add('192.168.0.0/24',
+                         excludes='192.168.0.0-192.168.0.214,'
+                                  '192.168.0.218-192.168.0.255')
+    pool = cluster.ip_pools.get('192.168.0.0/24')
+    log_debug(pool)
+    assert_eq(len(pool['free_hosts']), 3)

@@ -595,6 +595,23 @@ class HugeClusterUpgradeAwsPipeline(HugeClusterUpgradePipeline):
     }
 
 
+class ScalabilityNodePipeline(Pipeline):
+    NAME = 'scalability_node'
+    ROUTABLE_IP_COUNT = 50
+    ENV = {
+        'KD_NODES_COUNT': '2',
+        'KD_NODE_CPUS': '2',
+        'KD_NODE_MEMORY': '4096',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
+        'KD_NODE_TYPES': 'node1=standard'
+    }
+
+
+class ScalabilityNodeAwsPipeline(ScalabilityNodePipeline):
+    NAME = 'scalability_node_aws'
+    INFRA_PROVIDER = 'aws'
+
+
 # How many pipelines can be created at time when running on infra provider.
 infra_provider_slots = {
     "opennebula": 35,

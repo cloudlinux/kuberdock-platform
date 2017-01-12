@@ -1575,6 +1575,15 @@ class LocalStorage(PersistentStorage):
     def drive_can_be_deleted(cls, persistent_disk_id):
         """Local Storage disk can not be deleted if there is any not deleted
         pod linked to the disk.
+        It is caused by the following reason. If we stop a pod with locastorage
+        PV and delete this PV, then we can create a new pod with the same
+        (deleted) PV. When it will be started, it may be set up on any node,
+        as long as deleted PV is not pinned to any node.
+        But existing stopped pods are still pinned to a node where the PV was
+        located before deletion.
+        So we can get a bad situation: one pod with PV is running on one node,
+        another stopped pods are pinned to another node. To prevent this we
+        just forbid deletion of PV if there are pods linked to the PV.
         """
         pd = PersistentDisk.query.filter(
             PersistentDisk.id == persistent_disk_id

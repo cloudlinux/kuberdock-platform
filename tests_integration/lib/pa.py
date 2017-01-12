@@ -294,7 +294,7 @@ class _WordpressPaPod(KDPAPod):
             'language': 'en_GB'
         }
         self.do_POST(path='/wp-admin/install.php?step=2', body=body,
-                     timeout=15, verbose=False)
+                     timeout=30, verbose=False)
         self._installed = True
 
     def get_wp_opener(self):

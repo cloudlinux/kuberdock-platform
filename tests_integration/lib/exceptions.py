@@ -131,3 +131,7 @@ class KDIsNotSane(Exception):
     For example, if pods list gathering API not responding for 2 sec.
     """
     pass
+
+
+class NoSpaceLeftOnPersistentVolume(Exception):
+    pass

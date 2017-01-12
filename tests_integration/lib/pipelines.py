@@ -563,6 +563,16 @@ class LoadTestingAwsPipeline(LoadTestingPipeline):
     }
 
 
+class LoadTestingPipeline2(LoadTestingPipeline):
+    # TODO: remove this pipeline once AC-5648 is implemented
+    NAME = 'load_testing_2'
+
+
+class LoadTestingAwsPipeline2(LoadTestingAwsPipeline):
+    # TODO: remove this pipeline once AC-5648 is implemented
+    NAME = 'load_testing_aws_2'
+
+
 class HugeClusterUpgradePipeline(Pipeline):
     NAME = 'huge_cluster_upgrade'
     tags = ['load']

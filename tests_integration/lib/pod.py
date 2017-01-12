@@ -8,6 +8,7 @@ import sys
 import urllib
 import urllib2
 from contextlib import closing
+from itertools import product
 from urlparse import urlparse
 
 import requests
@@ -15,8 +16,8 @@ from requests.exceptions import ConnectionError, Timeout
 
 from tests_integration.lib import exceptions
 from tests_integration.lib import utils
-from tests_integration.lib.exceptions import \
-    PodResizeError
+from tests_integration.lib.exceptions import NoSpaceLeftOnPersistentVolume,\
+    NonZeroRetCodeException, PodResizeError
 from tests_integration.lib.utils import assert_eq, assert_in
 
 DEFAULT_WAIT_PORTS_TIMEOUT = 6 * 60
@@ -568,6 +569,28 @@ class KDPod(RESTMixin):
         utils.wait_for(lambda: container['containerID'] is not None)
         return container['containerID']
 
+    def get_persistent_volumes(self):
+        """Return list of PV objects, representing persistent volumes of
+        the pod
+        """
+        spec = self.get_spec()
+        containers = spec.get('containers', [])
+        volumes = spec.get('volumes', [])
+        mounts = itertools.chain.from_iterable([c['volumeMounts']
+                                                for c in containers
+                                                if 'volumeMounts' in c])
+
+        def _crete_pv_instance((mount, volume)):
+            return self.cluster.pvs.add('dummy',
+                                        volume['persistentDisk']['pdName'],
+                                        mount['mountPath'],
+                                        volume['persistentDisk']['pdSize'])
+
+        persistent_volumes = map(_crete_pv_instance,
+                                 filter(lambda x: x[0]['name'] == x[1]['name'],
+                                        product(mounts, volumes)))
+        return persistent_volumes
+
     def get_spec(self):
         cmd = u"pods get --name {} --owner {}".\
               format(self.escaped_name, self.owner)
@@ -589,6 +612,25 @@ class KDPod(RESTMixin):
         docker_cmd = u'exec {} {} bash -c {}'.format(
             args, container_id, pipes.quote(command))
         return self.cluster.docker(docker_cmd, node_name)
+
+    def fill_volume_space(self, path, size, container_name=None,
+                          container_image=None):
+        """
+        Create file with specified size in the container
+
+        :param path: path to the file on the container
+        :param size: size of file to be created, MBs
+        :return: True if no more space left on the disk, False otherwise
+        """
+        container_id = self.get_container_id(container_name, container_image)
+        cmd = "dd if=/dev/zero of={} bs=1M count={}".format(path, size)
+        try:
+            self.docker_exec(container_id, cmd)
+        except NonZeroRetCodeException as e:
+            if "No space left on device" in e.stderr:
+                raise NoSpaceLeftOnPersistentVolume
+            else:
+                raise e
 
     def healthcheck(self):
         LOG.warning(

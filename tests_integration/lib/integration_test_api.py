@@ -726,58 +726,43 @@ class DomainList(object):
 
 
 class PV(object):
-    def __init__(self, cluster, kind, name, mount_path, size, owner=None):
+    def __init__(self, cluster, kind, name, mount_path, size=None, owner=None):
         self.cluster = cluster
         self.name = name
         self.owner = owner
         self.mount_path = mount_path
         self.volume_name = utils.get_rnd_low_string(length=11)
+        self.id_ = None
+        self.size = size
         inits = {
             "new": self._create_new,
-            "existing": self._load_existing,
             "dummy": self._create_dummy
         }
         try:
-            inits[kind](size)
+            inits[kind]()
         except KeyError:
             raise AssertionError("Integration test API PV type not in {}"
                                  .format(inits.keys()))
 
-    def _create_new(self, size):
+    def _create_new(self):
         """Create new PV in Kuberdock.
 
         Create Python object which models PV in Kuberdock
         and also create new PV in the Kuberdock.
 
         """
-        self.size = size
         self.cluster.kcli(u"drives add --size {} {}".format(
             self.size, self.name), self.owner)
+        self._retrieve_id_from_kuberdock()
 
-    def _create_dummy(self, size):
+    def _create_dummy(self):
         """Create Python object, which models PV.
 
         Don't create PV in the Kuberdock. This object will be used
-        for creation of new PV in Kuberdock together with pod.
-
+        for creation of new PV in Kuberdock together with pod or for storing
+        information about PV which already exists in the Kuberdock.
         """
-        self.size = size
-
-    def _load_existing(self, size):
-        """Find PV in Kuberdock.
-
-        Create Python obejct which models PV and link it to PV which
-        already exist in Kuberdock.
-
-        """
-        # TODO: Currently this method is never used. May be it will be
-        # TODO: in use, when we start testing PAs. If it will not
-        # TODO: it can be removed together with exception
-        pv = self._get_by_name(self.name)
-        if not pv:
-            raise exceptions.DiskNotFound(
-                u"Disk {0} doesn't exist".format(self.name))
-        self.size = pv['size']
+        self._retrieve_id_from_kuberdock()
 
     def _get_by_name(self, name):
         _, pvs, _ = self.cluster.kcli(
@@ -789,14 +774,24 @@ class PV(object):
     def _make_kcli2_cmd(self, command, **params):
         LOG.debug('{}'.format(params))
         if not params:
-            return 'pstorage {} --name {}'.format(command, self.name)
+            return u'pstorage {} --name {}'.format(command, self.name)
 
         if not ('id' in params) ^ ('name' in params):
             raise ValueError("You must specify either 'id' or 'name'")
 
-        return 'pstorage {} {}'.format(
+        return u'pstorage {} {}'.format(
             command,
             ' '.join('--{}={}'.format(k, v) for k, v in params.items()))
+
+    def _retrieve_id_from_kuberdock(self):
+        try:
+            self.id_ = self.info()['id']
+        except exceptions.NonZeroRetCodeException as e:
+            if "Error: Unknown name" in e.stderr:
+                # This exception is risen if PV is not created in the KD yet
+                self.id_ = None
+            else:
+                raise e
 
     def delete(self, **kwargs):
         cmd = self._make_kcli2_cmd('delete', **kwargs)
@@ -829,3 +824,12 @@ class PV(object):
         cmd = self._make_kcli2_cmd('get', **kwargs)
         _, out, _ = self.cluster.kcli2(cmd, out_as_dict=True, user=self.owner)
         return out['data']
+
+    def change_size(self, new_size):
+        # TODO: use kdctl when AC-5630 is fixed
+        self.cluster.manage('persistent-volume resize --pv-id {} --new-size {}'
+                            .format(self.id_, new_size))
+        self.size = self.info()['size']
+        utils.assert_eq(self.size, new_size)
+
+

@@ -2,6 +2,7 @@ import subprocess
 import unittest
 from collections import namedtuple
 from datetime import datetime
+from hashlib import md5
 
 import mock
 
@@ -24,6 +25,7 @@ from ..utils import (
     get_version,
     nested_dict_utils,
     domainize,
+    get_throttle_pending_key,
 )
 
 
@@ -518,6 +520,24 @@ class TestUtilsFromSiunit(unittest.TestCase):
     def test_from_siunit(self):
         self.assertEquals(from_siunit('4'), 4.0)
         self.assertEquals(from_siunit('2200m'), 2.2)
+
+
+class TestGetThrottleKey(unittest.TestCase):
+    fake_pod_id = '8553019d-1e50-4487-b390-ee60385b079c'
+    fake_evt = 'Some Event about Pod'
+    fake_evt_md5 = md5(fake_evt).hexdigest()
+
+    def test_get_throttle_key(self):
+        self.assertEquals(
+            get_throttle_pending_key(self.fake_pod_id, self.fake_evt),
+            'schedule_{}_{}'.format(self.fake_pod_id, self.fake_evt_md5)
+        )
+
+    def test_get_throttle_key_for_mask(self):
+        self.assertEquals(
+            get_throttle_pending_key(self.fake_pod_id),
+            'schedule_{}_'.format(self.fake_pod_id)
+        )
 
 
 class TestGetVersion(unittest.TestCase):

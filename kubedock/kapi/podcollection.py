@@ -41,8 +41,8 @@ from .. import billing
 from .. import certificate_utils
 from .. import dns_management
 from .. import utils
-from ..constants import AWS_UNKNOWN_ADDRESS
-from ..core import ExclusiveLockContextManager, db
+from ..constants import AWS_UNKNOWN_ADDRESS, REDIS_KEYS
+from ..core import ExclusiveLockContextManager, db, ConnectionPool
 from ..domains.models import PodDomain, BaseDomain
 from ..exceptions import (
     APIError,
@@ -58,8 +58,13 @@ from ..pods.models import (
 from ..system_settings import keys as settings_keys
 from ..system_settings.models import SystemSettings
 from ..usage.models import IpState
-from ..utils import POD_STATUSES, NODE_STATUSES, nested_dict_utils, \
-    send_event_to_user
+from ..utils import (
+    POD_STATUSES,
+    NODE_STATUSES,
+    nested_dict_utils,
+    get_throttle_pending_key,
+    send_event_to_user,
+)
 
 UNKNOWN_ADDRESS = 'Unknown'
 
@@ -901,6 +906,7 @@ class PodCollection(object):
             pod.set_status(POD_STATUSES.deleting, send_update=True, force=True)
 
             PersistentDisk.free(pod.id)
+            _clean_throttle_evts(pod.id)
             # we remove service also manually
             service_name = helpers.get_pod_config(pod.id, 'service')
             if service_name:
@@ -1581,6 +1587,10 @@ class PodCollection(object):
             # PD's were not released, then it will free them. If PD's already
             # free, then this call will do nothing.
             PersistentDisk.free(pod.id)
+
+            # Because each Pod restart should produce new events again:
+            _clean_throttle_evts(pod.id)
+
             if (pod.status in (POD_STATUSES.stopping, POD_STATUSES.preparing,)
                     and pod.k8s_status is None):
                 pod.set_status(POD_STATUSES.stopped, send_update=True)
@@ -2028,7 +2038,16 @@ def scale_replicationcontroller(self, pod_id, namespace, sid, size=0,
     rc = KubeQuery().patch(['replicationcontrollers', sid], data, ns=namespace)
     podutils.raise_if_failure(rc, "Couldn't set replicas to {}".format(size))
 
-    if rc['status']['replicas'] != size:
+    # For now, the only case when we want to wait rescaling is when we stop the
+    # Pod, because we don't want to delete only RC and leave orphaned Pods
+    # which among other things can hold mounted RBDs etc.
+    # More over, if we wait for rescale from 0 to 1+ we could end up with
+    # "max retries exceeded" because cluster could have not enough resources to
+    # start new pods(any kind of Scheduling failures incl. node kube-types) and
+    # we never get desired Pods count.
+    # FIXME: Unfortunately, even with this size == 0 check we still have random
+    # failures for unknown reasons, but with less frequency.
+    if size == 0 and rc['status']['replicas'] != size:
         wait_for_rescaling.delay(namespace, sid, size).get()
 
 
@@ -2682,3 +2701,18 @@ def validate_and_preprocess_domains(pod_config):
 
     pod_config['base_domain'] = base_domain
     pod_config['domain'] = pod_domain
+
+
+def _clean_throttle_evts(kd_pod_id):
+    """
+    Deletes all throttle-markers associated with Pod by iterating on them
+    using composed from kd_pod_id prefix
+    """
+    redis = ConnectionPool.get_connection()
+    # Use iterator because there can be more then one events of slightly
+    # different types but for the same KD Pod
+    mask = '{}{}*'.format(
+        REDIS_KEYS.THROTTLE_PREFIX,
+        get_throttle_pending_key(kd_pod_id))
+    for key_ in redis.scan_iter(mask):
+        redis.delete(key_)

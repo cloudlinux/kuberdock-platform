@@ -16,6 +16,7 @@ from functools import wraps
 from itertools import chain
 from json import JSONEncoder
 from urlparse import urlsplit, urlunsplit, urljoin
+from hashlib import md5
 
 import bitmath
 import ipaddress
@@ -37,6 +38,7 @@ from .settings import (
     ETCD_CALICO_HOST_KEY_PATH_TEMPLATE, ETCD_CALICO_URL
 )
 from .users.models import SessionData
+from .constants import REDIS_KEYS
 
 
 # Key in etcd to retrieve calico IP-in-IP tunnel address
@@ -143,6 +145,42 @@ def get_channel_key(conn, key, size=100):
         for k in keys[:-(size - 1)]:
             conn.hdel(key, k)
     return int(keys[-1]) + 1
+
+
+def get_throttle_pending_key(kd_pod_id, evt_str=None):
+    """
+    Generates part of redis key to use for throttling events
+    :param kd_pod_id: KD pod id
+    :param evt_str: string to hash that represent some unique event
+    :return: generated key
+    :rtype: str
+    """
+    res = 'schedule_{}_'.format(kd_pod_id)
+    if evt_str:
+        res += md5(evt_str).hexdigest()
+    return res
+
+
+def throttle_evt(key, seconds, redis=None):
+    """
+    Redis-based throttler.
+    Use as follows:
+            if not throttle_evt(key, 100):
+                do_something()
+    :param key: Pre-Composed key for redis
+    :param seconds: seconds to throttle_evt - will be a redis key TTL
+    :param redis: optional redis connection to use
+    :return: flag whether execution should be skipped or no
+    :rtype: bool
+    """
+    key = REDIS_KEYS.THROTTLE_PREFIX + key
+    if redis is None:
+        redis = ConnectionPool.get_connection()
+    if redis.exists(key):
+        return True
+    else:
+        redis.set(key, str(datetime.datetime.now()), ex=seconds)
+        return False
 
 
 def send_event_to_user(event_name, data, user_id, to_file=None,

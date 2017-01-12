@@ -20,7 +20,7 @@ from .utils import (get_api_url, unregistered_pod_warning,
                     send_event_to_role, send_event_to_user,
                     pod_without_id_warning, k8s_json_object_hook,
                     send_pod_status_update, POD_STATUSES, nested_dict_utils,
-                    session_scope)
+                    session_scope, throttle_evt, get_throttle_pending_key)
 from .kapi.usage import update_states
 from .kapi.podcollection import PodCollection, set_public_address
 from .kapi.lbpoll import LoadBalanceService
@@ -28,6 +28,7 @@ from .kapi.pstorage import (
     get_storage_class_by_volume_info, LocalStorage, STORAGE_CLASS)
 from .kapi import helpers
 from . import tasks
+from .constants import REDIS_KEYS, POD_FAILED_SCHEDULING_THROTTLING_TTL
 
 
 MAX_ETCD_VERSIONS = 1000
@@ -281,12 +282,11 @@ def mark_restore_as_finished(pod_id):
 
 
 def process_events_event(data, app):
-    """Process events from 'events' endpoint. At now only looks for
-    involved object 'Pod' and reason 'failedScheduling' - we have to detect
-    situation when scheduler can't find a node for a pod. It may be occurred,
-    for example, when there no nodes with enough resources.
-    We will stop that pod and send notification for a user.
-
+    """Process various events from 'events' endpoint.
+    For involved object 'Pod' and reason 'failedScheduling'
+        - we have to detect situation when scheduler can't find a node for
+            a pod. It may be occurred, for example, when there no nodes with
+            enough resources.
     """
     event_type = data['type']
     # Ignore all types except 'ADDED'. For some (unknown?) reason kubernetes
@@ -298,20 +298,20 @@ def process_events_event(data, app):
     if obj.get('kind') != 'Pod':
         return
     reason = event['reason']
-    pod_id = obj.get('namespace')
+    kd_pod_id = obj.get('namespace')
 
     with app.app_context():
         pod = None
         try:
-            pod = Pod.query.get(pod_id)
+            pod = Pod.query.get(kd_pod_id)
         except DataError:
             current_app.logger.warning("Error while get pod from db",
                                        exc_info=True)
         if pod is None:
-            unregistered_pod_warning(pod_id)
+            unregistered_pod_warning(kd_pod_id)
             return
         if reason == 'Started':
-            mark_restore_as_finished(pod_id)
+            mark_restore_as_finished(kd_pod_id)
             return
         if reason == 'FailedMount':
             # TODO: must be removed after Attach/Detach Controller
@@ -323,7 +323,8 @@ def process_events_event(data, app):
             pod_name = pod.name
             user = User.query.filter(User.id == pod.owner_id).first()
             if user is None:
-                current_app.logger.warning('Unknown user for pod %s', pod_id)
+                current_app.logger.warning('Unknown user for pod %s',
+                                           kd_pod_id)
                 return
 
             if user.username == KUBERDOCK_INTERNAL_USER:
@@ -353,29 +354,24 @@ def process_events_event(data, app):
             else:
                 return
 
-            # personalized user message
-            message = 'Failed to run pod "{0}", reason: {1}'.format(
-                pod_name, reason
-            )
-            send_event_to_user('notify:error', {'message': message}, user.id)
-
-            # message for admins
-            message = 'Failed to run pod "{0}", user "{1}", reason: {2}'
-            message = message.format(pod_name, user.username, reason)
-
-            if node is not None:
-                message += ' (pinned to node "{0}")'.format(node)
-
-            send_event_to_role('notify:error', {'message': message}, 'Admin')
-            try:
-                pods = PodCollection(user)
-                params = {'command': 'stop'}
-                pods.update(pod_id, params)
-            except:
-                current_app.logger.exception(
-                    'Failed to stop pod %s, %s',
-                    pod_id, pod_name
+            key_ = get_throttle_pending_key(kd_pod_id, reason)
+            if not throttle_evt(key_, POD_FAILED_SCHEDULING_THROTTLING_TTL):
+                # personalized user message
+                message = 'Failed to run pod "{0}", reason: {1}'.format(
+                    pod_name, reason
                 )
+                send_event_to_user('notify:error', {'message': message},
+                                   user.id)
+
+                # message for admins
+                message = 'Failed to run pod "{0}", user "{1}", reason: {2}'
+                message = message.format(pod_name, user.username, reason)
+
+                if node is not None:
+                    message += ' (pinned to node "{0}")'.format(node)
+
+                send_event_to_role('notify:error', {'message': message},
+                                   'Admin')
 
 
 def has_local_storage(volumes):

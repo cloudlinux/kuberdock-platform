@@ -11,3 +11,13 @@ KUBERDOCK_INGRESS_CONFIG_MAP_NAMESPACE = 'default'
 DOMAINNAME_LENGTH = 255
 
 AWS_UNKNOWN_ADDRESS = 'Unknown'
+
+# If pod scheduling failed due to lack of resources/nodes on cluster we
+# send messages to admin and user, but we don't want to sent it too often
+# so we throttle them to once per this ttl:
+POD_FAILED_SCHEDULING_THROTTLING_TTL = 1 * 60 * 60   # 1 hour
+
+
+class REDIS_KEYS:
+    # used by utils.throttle():
+    THROTTLE_PREFIX = 'throttled_evt_'

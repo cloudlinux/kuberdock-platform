@@ -187,6 +187,7 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         mock_free_pd.assert_called_once_with(pod.id)
         delete_record_mock.assert_called_once_with(pod.domain, 'A')
 
+    @mock.patch.object(podcollection, '_clean_throttle_evts')
     @mock.patch.object(podcollection.dns_management, 'delete_record')
     @mock.patch.object(podcollection.PodCollection, '_drop_network_policies')
     @mock.patch.object(podcollection.PodCollection, '_remove_public_ip')
@@ -202,6 +203,7 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
                         remove_ip_mock,
                         _drop_network_policies,
                         delete_record_mock,
+                        clean_throttle_evts_mock,
                         *args, **kwargs):
         """
         Check if an attempt to call mark_pod_as_deleted has been made.
@@ -227,6 +229,7 @@ class TestPodCollectionDelete(DBTestCase, TestCaseMixin):
         _drop_network_policies.assert_called_once_with(
             pod.namespace, force=False)
         mock_free_pd.assert_called_once_with(pod.id)
+        clean_throttle_evts_mock.assert_called_once_with(pod.id)
         pc_drop_namespace_mock.assert_called_once_with(pod.namespace,
                                                        force=False)
         remove_ip_mock.assert_called_once_with(pod_id=pod.id, force=False)
@@ -986,9 +989,11 @@ class TestPodCollectionStopPod(TestCase, TestCaseMixin):
         self.pod_collection = podcollection.PodCollection(U())
 
     @responses.activate
+    @mock.patch.object(podcollection, '_clean_throttle_evts')
     @mock.patch.object(podcollection.PersistentDisk, 'free')
     @mock.patch.object(podcollection.scale_replicationcontroller, 'delay')
-    def test_pod_normal_stop(self, mk_scale_rc, free_pd_mock):
+    def test_pod_normal_stop(self, mk_scale_rc, free_pd_mock,
+                             clean_throttle_evts_mock):
         """
         Test _stop_pod in usual case
         :type del_: mock.Mock
@@ -1017,6 +1022,7 @@ class TestPodCollectionStopPod(TestCase, TestCaseMixin):
                                             serialized_lock=None)
 
         free_pd_mock.assert_called_once_with(pod.id)
+        clean_throttle_evts_mock.assert_called_once_with(pod.id)
 
         # pod is not "stopped" yet, only "stopping",
         # so containers are still "running"

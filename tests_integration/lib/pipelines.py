@@ -10,8 +10,8 @@ from tests_integration.lib.cluster_utils import enable_beta_repos, \
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
-from tests_integration.lib.utils import get_rnd_string
-from tests_integration.lib.utils import log_debug, assert_eq, assert_in
+from tests_integration.lib.utils import (log_debug, assert_eq, assert_in,
+                                         wait_for_status, get_rnd_string)
 
 LOG = logging.getLogger(__name__)
 LOG.setLevel(logging.DEBUG)

@@ -191,6 +191,7 @@ KUBE_NP_BASE_URL = 'apis'
 
 # If None, defaults will be used
 SSH_KEY_FILENAME = '/var/lib/nginx/.ssh/id_rsa'
+SSH_PUB_FILENAME = '/var/lib/nginx/.ssh/id_rsa.pub'
 
 INFLUXDB_HOST = os.environ.get('INFLUXDB_HOST', '127.0.0.1')
 INFLUXDB_PORT = 8086
@@ -284,12 +285,15 @@ ASSETS_PATH = '/var/opt/kuberdock/kubedock/assets'
 ZFS = False
 
 AWS = False
+AWS_ACCESS_KEY_ID = AWS_SECRET_ACCESS_KEY = REGION = ''
 # Default EBS volume type for node storage on AWS.
 # Available types are: 'standard', 'io1', 'gp2'
 AWS_DEFAULT_EBS_VOLUME_TYPE = 'standard'
 AWS_DEFAULT_EBS_VOLUME_IOPS = 1000
 # AWS EBS volume types which support provisioned iops
 AWS_IOPS_PROVISION_VOLUME_TYPES = ('io1',)
+AWS_INSTANCE_RUNNING_INTERVAL = 3
+AWS_INSTANCE_RUNNING_MAX_ATTEMTPS = 30
 
 MASTER_IP = ''
 MASTER_TOBIND_FLANNEL = 'enp0s5'

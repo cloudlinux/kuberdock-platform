@@ -23,6 +23,7 @@ import requests
 import json
 import uuid
 import re
+import os
 
 from flask import current_app
 
@@ -38,8 +39,11 @@ from ..settings import (
     NODE_INSTALL_LOG_FILE, AWS, CEPH, PD_NAMESPACE, PD_NS_SEPARATOR,
     NODE_STORAGE_MANAGE_CMD, ZFS, ETCD_CALICO_HOST_ENDPOINT_KEY_PATH_TEMPLATE,
     ETCD_CALICO_HOST_CONFIG_KEY_PATH_TEMPLATE, ETCD_NETWORK_POLICY_NODES,
-    KD_NODE_HOST_ENDPOINT_ROLE)
+    KD_NODE_HOST_ENDPOINT_ROLE, NODE_CEPH_AWARE_KUBERDOCK_LABEL,
+    NODE_INSTALL_TASK_ID)
+from ..kd_celery import celery
 from .network_policies import get_node_host_endpoint_policy
+from .node import Node as K8SNode
 
 
 def get_nodes_collection(kube_type=None):
@@ -759,3 +763,200 @@ def cleanup_node_network_policies(node_hostname):
         Etcd(ETCD_NETWORK_POLICY_NODES).delete(
             '{}-{}'.format(i, node_hostname)
         )
+
+
+def stop_node_k8_services(ssh):
+    """Tries to stop docker daemon and kubelet service on the node
+    :param ssh: ssh connection to the node
+    """
+    services = ('kubelet', 'kube-proxy', 'docker')
+    cmd = 'systemctl stop '
+    for service in services:
+        _, o, e = ssh.exec_command(cmd + service)
+        if o.channel.recv_exit_status():
+            current_app.logger.warning(
+                u"Failed to stop service '{}' on a failed node: {}".format(
+                    service, e.read())
+            )
+
+
+def stop_aws_storage(ssh):
+    """Stops aws storage (zpool or lvm export),
+    detaches ebs volumes of the storage.
+    """
+    cmd = NODE_STORAGE_MANAGE_CMD + ' export-storage'
+    from kubedock.settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+    cmd += ' --detach-ebs '\
+        '--aws-access-key-id {0} --aws-secret-access-key {1}'.format(
+            AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
+    _, o, e = ssh.exec_command(cmd)
+    if o.channel.recv_exit_status():
+        current_app.logger.error(
+            'Failed to stop zpool on AWS node: {0}'.format(e.read())
+        )
+        return False
+    result = o.read()
+    try:
+        data = json.loads(result)
+    except (ValueError, TypeError):
+        current_app.logger.error(
+            'Unknown answer format from remote script: {0}\n'
+            '==================\nSTDERR:\n{1}'.format(result, e.read())
+        )
+        return False
+    if data['status'] != 'OK':
+        current_app.logger.error(
+            'Failed to stop storage: {0}'.format(
+                data.get('data', {}).get('message')
+            )
+        )
+        return False
+    return True
+
+
+def import_aws_storage(ssh, volumes, force_detach=False):
+    """Imports aws storage to node given by ssh
+    """
+    cmd = NODE_STORAGE_MANAGE_CMD + ' import-aws-storage'
+    from kubedock.settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+    cmd += ' --aws-access-key-id {0} --aws-secret-access-key {1}'.format(
+        AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+    )
+    if force_detach:
+        cmd += ' --force-detach'
+    cmd += ' --ebs-volumes {0}'.format(' '.join(volumes))
+    current_app.logger.debug('Executing command: {}'.format(cmd))
+    _, o, e = ssh.exec_command(cmd)
+    if o.channel.recv_exit_status():
+        current_app.logger.error(
+            u"Failed to import zpool on AWS node: {}".format(e.read())
+        )
+        return False
+    result = o.read()
+    try:
+        data = json.loads(result)
+    except (ValueError, TypeError):
+        current_app.logger.error(
+            'Unknown answer format from remote script: {0}\n'
+            '==================\nSTDERR:\n{1}'.format(result, e.read())
+        )
+        return False
+    if data['status'] != 'OK':
+        current_app.logger.error(
+            'Failed to import storage: {0}'.format(
+                data.get('data', {}).get('message')
+            )
+        )
+        return False
+    current_app.logger.debug(
+        'Result of importing storage: {0}'.format(o.read())
+    )
+    return True
+
+
+def move_aws_node_storage(from_node_ssh, to_node_ssh,
+                          from_node, to_node):
+    """Moves EBS volumes with KD zpool from one node to another on AWS setup.
+    """
+    # Flag show should we force detach volumes before attaching it to new
+    # instance. It will be set in case if ssh to source node is unavailable,
+    # so we can't detach volumes on that node.
+    force_detach = False
+    if from_node_ssh:
+        # If we can get ssh to the old node, then try to do some preparations
+        # before moving volumes:
+        # * export zpool (also should unmount volumes)
+        # * detach EBS volumes
+        current_app.logger.debug(
+            "Stopping node '{0}' storage".format(from_node.hostname)
+        )
+        if not stop_aws_storage(from_node_ssh):
+            force_detach = True
+    else:
+        current_app.logger.debug(
+            'Failed node is inaccessible. EBS volumes will be force detached'
+        )
+        force_detach = True
+
+    ls_devices = db.session.query(LocalStorageDevices).filter(
+        LocalStorageDevices.node_id == from_node.id
+    ).all()
+    volumes = [item.volume_name for item in ls_devices]
+    current_app.logger.debug(
+        "Importing on node '{0}' volumes: {1}".format(to_node.hostname,
+                                                      volumes)
+    )
+    if not import_aws_storage(to_node_ssh, volumes, force_detach=force_detach):
+        return False
+    for dev in ls_devices:
+        dev.node_id = to_node.id
+    return True
+
+
+def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
+    """
+    :param host: Node hostname
+    :param kube_type: Kuberdock kube type (integer id)
+    :return: Error text if error else False
+    """
+    # TODO handle connection errors except requests.RequestException
+    data = {
+        'metadata': {
+            'name': host,
+            'labels': {
+                'kuberdock-node-hostname': host,
+                'kuberdock-kube-type': 'type_' + str(kube_type)
+            },
+            'annotations': {
+                K8SNode.FREE_PUBLIC_IP_COUNTER_FIELD: '0'
+            }
+        },
+        'spec': {
+            'externalID': host,
+        }
+    }
+    if is_ceph_installed:
+        data['metadata']['labels'][NODE_CEPH_AWARE_KUBERDOCK_LABEL] = 'True'
+    res = requests.post(get_api_url('nodes', namespace=False),
+                        json=data)
+    return res.text if not res.ok else False
+
+
+def set_node_schedulable_flag(node_hostname, schedulable):
+    """Marks given node as schedulable or unschedulable depending of
+    'schedulable' flag value.
+    :param node_hostname: name of the node in kubernetes
+    :param schedulable: bool flag, if it is True, then node will be marked as
+        schedulable, if Flase - unschedulable
+    """
+    url = get_api_url('nodes', node_hostname, namespace=False)
+    try_times = 100
+    for _ in range(try_times):
+        try:
+            node = requests.get(url).json()
+            node['spec']['unschedulable'] = not schedulable
+            res = requests.put(url, data=json.dumps(node))
+        except (requests.RequestException, ValueError, KeyError):
+            continue
+        if res.ok:
+            return True
+    return False
+
+
+def remove_node_from_k8s(host):
+    r = requests.delete(get_api_url('nodes', host, namespace=False))
+    return r.json()
+
+
+def remove_node_install_log(hostname):
+    try:
+        os.remove(NODE_INSTALL_LOG_FILE.format(hostname))
+    except OSError:
+        pass
+
+
+def revoke_celery_node_install_task(node):
+    celery.control.revoke(
+        task_id=NODE_INSTALL_TASK_ID.format(node.hostname, node.id),
+        terminate=True,
+    )

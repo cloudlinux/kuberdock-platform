@@ -33,7 +33,7 @@ from kubedock.core import db
 from kubedock.settings import KUBE_API_HOST, KUBE_API_PORT
 from kubedock.billing.models import Kube
 from kubedock.nodes.models import Node
-from kubedock.kapi.nodes import get_kuberdock_logs_pod_name
+from kubedock.kapi.service_pods import get_kuberdock_logs_pod_name
 
 
 class TestElasticsearchUtils(DBTestCase):

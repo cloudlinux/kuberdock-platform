@@ -172,10 +172,64 @@ def do_remove_storage(_):
     return readable statuses of performed operation.
 
     """
+    return _perform_zpool_stop_operation('destroy')
+
+
+def do_export_storage(_):
+    """Prepares storage to be used in another host.
+    Runs 'zpool export' command.
+    Returns success flag and list of devices used in zpool, or error message
+    in case of an error.
+    """
+    return _perform_zpool_stop_operation('export')
+
+
+def do_import_storage(_):
+    """Prepares imports a storage detached from another node.
+    Executes 'zpool import' operation.
+    """
+    try:
+        all_names = _list_zpools()
+    except:
+        return False, ('Unable to list ZFS pools. Maybe ZFS is not properly '
+                       'installed yet, '
+                       'skip this if this is during node cleanup process')
+    if KD_ZPOOL_NAME in all_names:
+        return False, 'Zpool {} already exists.'.format(KD_ZPOOL_NAME)
+    try:
+        silent_call(['zpool', 'import', '-f', KD_ZPOOL_NAME])
+    except:
+        return False, 'Failed to import zpool'
+
+    try:
+        silent_call(['zfs', 'mount', '-a'])
+    except:
+        return False, 'Failed to mount zfs volumes'
+
+    try:
+        devices = get_device_list(KD_ZPOOL_NAME)
+    except:
+        return (
+            False,
+            'Failed to get device list in zpool "{}"'.format(KD_ZPOOL_NAME)
+        )
+    return True, devices
+
+
+def _perform_zpool_stop_operation(operation):
+    """Performs one of operations on existing zpool:
+    ('destroy', 'export'). Returns list of device names which was used by the
+    zpool.
+    """
+    allowed_operations = ('destroy', 'export')
+    if operation not in allowed_operations:
+        return False, u'Invalid operation name: {}'.format(operation)
+
     try:
         all_names = _list_zpools()
     except Exception:
-        return False, ('Unable to list ZFS pools. Maybe ZFS is not properly installed yet, '
+        return False, ('Unable to list ZFS pools. Maybe ZFS is not properly '
+                       'installed yet, '
                        'skip this if this is during node cleanup process')
     if KD_ZPOOL_NAME not in all_names:
         return True, []
@@ -187,10 +241,10 @@ def do_remove_storage(_):
             'Failed to get device list in zpool "{}"'.format(KD_ZPOOL_NAME)
         )
     try:
-        silent_call(['zpool', 'destroy', '-f', KD_ZPOOL_NAME])
+        silent_call(['zpool', operation, '-f', KD_ZPOOL_NAME])
         return True, devices
     except:
-        return False, 'Failed to delete zpool {}'.format(KD_ZPOOL_NAME)
+        return False, 'Failed to {} zpool {}'.format(operation, KD_ZPOOL_NAME)
 
 
 def add_devices_to_localstorage(devices):

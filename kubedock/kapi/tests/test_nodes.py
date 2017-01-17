@@ -32,9 +32,8 @@ from kubedock import settings
 from kubedock.billing.models import Kube
 from kubedock.core import db
 from kubedock.exceptions import APIError
-from kubedock.kapi import nodes, network_policies
+from kubedock.kapi import nodes
 from kubedock.nodes.models import Node
-from kubedock.users.models import User
 from kubedock.pods.models import IPPool
 from kubedock.testutils.testcases import DBTestCase
 from kubedock.utils import NODE_STATUSES
@@ -74,19 +73,20 @@ class TestNodes(DBTestCase):
     @mock.patch.object(nodes, 'get_current_host_ips')
     @mock.patch.object(nodes, '_check_node_ip')
     @mock.patch.object(nodes, 'PodIP')
+    @mock.patch.object(nodes, 'create_policy_pod')
     @mock.patch.object(nodes, 'create_logs_pod')
-    @mock.patch.object(nodes, 'Etcd')
+    @mock.patch.object(nodes, 'create_dns_pod')
     @mock.patch.object(nodes, 'get_node_token')
     @mock.patch.object(nodes, '_check_node_hostname')
     @mock.patch.object(nodes, '_deploy_node')
-    @mock.patch.object(nodes, 'PodCollection')
     @mock.patch.object(nodes.socket, 'gethostbyname')
-    def test_create_node(self, gethostbyname_mock, podcollection_mock,
+    def test_create_node(self, gethostbyname_mock,
                          deploy_node_mock,
                          check_node_hostname_mock,
                          get_node_token_mock,
-                         etcd_mock,
+                         create_dns_pod_mock,
                          create_logs_pod_mock,
+                         create_policy_pod_mock,
                          pod_ip_mock,
                          check_node_ip_mock,
                          get_current_host_ips_mock):
@@ -99,12 +99,9 @@ class TestNodes(DBTestCase):
 
         gethostbyname_mock.return_value = ip
         get_current_host_ips_mock.return_value = fake_master_ips
-        podcollection_mock.return_value.add.return_value = {'id': 1}
         get_node_token_mock.return_value = 'some-token'
         log_pod_ip = '123.123.123.123'
         create_logs_pod_mock.return_value = {'podIP': log_pod_ip}
-
-        nodes.CALICO = True
 
         # add a Node with Pod IP
         pod_ip = mock.Mock()
@@ -135,7 +132,9 @@ class TestNodes(DBTestCase):
         check_node_ip_mock.assert_called_once_with(node.ip, hostname)
         get_node_token_mock.assert_called_once_with()
         # one call for dns pod
-        self.assertEqual(etcd_mock.call_count, 1)
+        self.assertEqual(create_dns_pod_mock.call_count, 1)
+        # one call for policy pod
+        self.assertEqual(create_policy_pod_mock.call_count, 1)
 
         # add a node with the same IP
         with self.assertRaises(APIError):
@@ -147,30 +146,9 @@ class TestNodes(DBTestCase):
         with self.assertRaises(APIError):
             nodes.create_node(None, 'anotherhost', kube_id)
 
-    @mock.patch.object(network_policies, 'get_calico_ip_tunnel_address')
-    @mock.patch.object(nodes, 'Etcd')
-    @mock.patch.object(nodes, 'PodCollection')
-    def test_create_logs_pod(self, podcollection_mock, etcd_mock,
-                             get_calico_ip_mock):
-        hostname = 'qwerty'
-        test_result = 3131313
-        pod_id = '424242'
-        podcollection_mock.return_value.add.return_value = {'id': pod_id}
-        podcollection_mock.return_value.get.return_value = test_result
-        get_calico_ip_mock.return_value = '12.12.12.12'
-        nodes.CALICO = True
-        owner = User.get_internal()
-        res = nodes.create_logs_pod(hostname, owner)
-        self.assertEqual(res, test_result)
-        self.assertEqual(etcd_mock.call_count, 1)
-        get_calico_ip_mock.assert_called_once_with()
-        podcollection_mock.return_value.update.assert_called_once_with(
-            pod_id, {'command': 'synchronous_start'}
-        )
-
     @mock.patch.object(nodes, 'remove_ls_storage')
-    @mock.patch.object(nodes.tasks, 'remove_node_by_host')
-    def test_delete_node(self, remove_by_host_mock, remove_ls_storage_mock):
+    @mock.patch.object(nodes, 'remove_node_from_k8s')
+    def test_delete_node(self, remove_node_mock, remove_ls_storage_mock):
         """Test for kapi.nodes.delete_node function."""
         node1, node2 = self.add_two_nodes()
         id1 = node1.id
@@ -179,7 +157,7 @@ class TestNodes(DBTestCase):
 
         nodes.delete_node(id1)
         nodes_ = Node.get_all()
-        remove_by_host_mock.assert_called_once_with(node1.hostname)
+        remove_node_mock.assert_called_once_with(node1.hostname)
         remove_ls_storage_mock.assert_called_once_with(
             node1.hostname, raise_on_error=False)
         self.assertEqual(nodes_, [node2])
@@ -188,9 +166,9 @@ class TestNodes(DBTestCase):
             nodes.delete_node(id1)
 
     @mock.patch.object(nodes, 'remove_ls_storage')
-    @mock.patch.object(nodes.tasks, 'remove_node_by_host')
+    @mock.patch.object(nodes, 'remove_node_from_k8s')
     def test_node_cant_be_deleted_in_fixed_ip_pools_mode_with_active_ip_pools(
-            self, remove_by_host_mock, remove_ls_storage_mock):
+            self, remove_node_mock, remove_ls_storage_mock):
         remove_ls_storage_mock.return_value = ''
         current_app.config['FIXED_IP_POOLS'] = True
 

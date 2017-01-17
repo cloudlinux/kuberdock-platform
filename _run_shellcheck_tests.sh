@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with KuberDock; if not, see <http://www.gnu.org/licenses/>.
 #
-ERRORS_TRESHOLD=950
+ERRORS_TRESHOLD=960
 
 tmpfile=$(mktemp /tmp/shellcheck-parse.XXXXXX)
 find -iname '*.sh' | xargs shellcheck -s bash | tee $tmpfile

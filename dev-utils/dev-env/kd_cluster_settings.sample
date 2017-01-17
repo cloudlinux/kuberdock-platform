@@ -52,6 +52,9 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # default: "192.168.33.200,192.168.33.201,192.168.33.202"
 #export KD_ONE_PUB_IPS="192.168.33.200,192.168.33.201,192.168.33.202"
 
+# Network for k8s pod IPs
+# default: nothing
+#export KD_POD_IP_NETWORK="10.130.0.0/16"
 
 # Custom OpenNebula template ID for registered hosts
 # default: 0 - non-valid value. Must be set when KD_RHOSTS_COUNT>0.
@@ -144,3 +147,4 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # WHMCS's domain name.
 # default: example.com
 #export KD_WHMCS_DOMAIN_NAME=some.host.name.com
+

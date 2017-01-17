@@ -617,6 +617,19 @@ infra_provider_slots = {
     "opennebula": 35,
     "aws": 2
 }
+
+
+class PodIPNetworkPipeline(Pipeline):
+    from tests_integration.lib.constants import POD_IP_NETWORK
+    NAME = 'pod_ip_network'
+    ROUTABLE_IP_COUNT = 3
+    ENV = {
+        'KD_POD_IP_NETWORK': POD_IP_NETWORK,
+        'KD_NODE_TYPES': 'node1=Standard',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
+    }
+
+
 pipelines = defaultdict(list)
 
 

@@ -525,6 +525,10 @@ class KDPod(RESTMixin):
     def ssh_credentials(self):
         return utils.retry(self._get_creds, tries=10, interval=1)
 
+    @property
+    def k8s_pod_ip(self):
+        return self.get_k8s_spec()['items'][0]['status']['podIP']
+
     def _get_creds(self):
         direct_access = self.get_spec()['direct_access']
         links = [v.split('@') for v in direct_access['links'].values()]
@@ -593,6 +597,11 @@ class KDPod(RESTMixin):
               format(self.escaped_name, self.owner)
         _, out, _ = self.cluster.kdctl(cmd, out_as_dict=True)
         return out["data"]
+
+    def get_k8s_spec(self):
+        cmd = "get pods --namespace {}".format(self.pod_id)
+        _, out, _ = self.cluster.true_kubectl(cmd, out_as_dict=True)
+        return out
 
     def get_dump(self):
         cmd = u"pods dump {pod_id}".format(pod_id=self.pod_id)

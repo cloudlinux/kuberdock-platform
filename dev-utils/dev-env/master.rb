@@ -60,6 +60,7 @@ def config_ansible(ansible, nodesCount, rhostsCount)
         "testing_repo" => true, #ENV['KD_TESTING_REPO'],
         "public_ips" => ENV['KD_ONE_PUB_IPS'],
         "fixed_ip_pools" => ENV['KD_FIXED_IP_POOLS'],
+        "pod_ip_network" => ENV['KD_POD_IP_NETWORK'],
 
         "use_ceph" => ENV['KD_CEPH'],
         "ceph_user" => ENV['KD_CEPH_USER'],

@@ -18,6 +18,7 @@ from functools import wraps
 from itertools import count, islice
 
 from colorama import Fore, Style
+from netaddr import IPAddress, IPNetwork
 from paramiko import SSHClient, AutoAddPolicy
 from paramiko.ssh_exception import AuthenticationException
 from pygments import highlight
@@ -243,11 +244,14 @@ def kube_type_to_str(kube_type):
     return INT_TO_KUBE_TYPE[kube_type]
 
 
-def assert_eq(actual, expected):
+def assert_eq(actual, expected, custom_message=None):
     if actual != expected:
-        raise AssertionError(u"Values are not equal\n"
-                             "Expected: {0}\n"
-                             "Actual  : {1}".format(expected, actual))
+        if custom_message:
+            raise AssertionError(custom_message)
+        else:
+            raise AssertionError(u"Values are not equal\n"
+                                 "Expected: {0}\n"
+                                 "Actual  : {1}".format(expected, actual))
 
 
 def assert_not_eq(actual, not_expected):
@@ -634,3 +638,7 @@ def loglevel(level):
 def log_workload(cluster, vm_name):
     _, result_raw, _ = cluster.ssh_exec(vm_name, "top -bn3 | head -20")
     return result_raw
+
+
+def ip_belongs_to_network(ip, network):
+    return IPAddress(ip) in IPNetwork(network)

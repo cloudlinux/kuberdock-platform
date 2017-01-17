@@ -607,9 +607,9 @@ def wait_pods_status(pods, status, timeout=300, interval=5, delay=0):
 
         log_debug("Pods '{}' still are not in {} state".format(
             sorted([p.name for p in _pods]), status))
-        
+
         time.sleep(interval)
-        
+
         if len(_pods) == 0:
             return True
     raise StatusWaitException(expected=status, actual=st,

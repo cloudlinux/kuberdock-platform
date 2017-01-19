@@ -316,10 +316,7 @@ class PodCollection(object):
         pod_data['public_access_type'] = t
 
         if t == PublicAccessType.DOMAIN:
-            if 'base_domain' not in pod_data:
-                pod_data['base_domain'] = pod_data.pop('domain')
-            pod_data.setdefault('domain', None)
-            validate_domains(pod_data)
+            validate_and_preprocess_domains(pod_data)
 
         elif t == PublicAccessType.PUBLIC_AWS:
             pod_data.setdefault('public_aws', None)
@@ -1359,7 +1356,8 @@ class PodCollection(object):
         had_public_ports = self.has_public_ports(old_config)
         has_public_ports = self.has_public_ports(new_config)
 
-        if had_public_ports and not has_public_ports:
+        if (had_public_ports and not has_public_ports
+                or new_config.get('public_ip') in (None, 'true')):
             self._remove_public_ip(pod_id)
             new_config['public_ip'] = None
 
@@ -2628,39 +2626,59 @@ def reject_replica_with_pv(config, key='volumes_public'):
         raise APIError("We don't support replications for pods with PV yet")
 
 
-def validate_domains(pod_config):
+def validate_and_preprocess_domains(pod_config):
     if pod_config.get('public_access_type') != PublicAccessType.DOMAIN:
         return
 
-    pod_domain = pod_config.get('domain')  # type: str
+    domain = pod_config.get('domain')  # type: str
     base_domain = pod_config.get('base_domain')  # type: str
 
-    if not base_domain:
-        raise ValidationError(
-            details={'base_domain': 'Base domain cannot be empty when '
-                                    'public access type is "domain"'})
+    if base_domain:
+        pod_domain = domain
+        db_base_domain = BaseDomain.filter_by(name=base_domain).first()
+        if not db_base_domain:
+            raise ValidationError(
+                details={'base_domain': 'Base domain "{}" not found'
+                                        .format(base_domain)})
+    else:
+        if not domain:
+            details = {'base_domain': '"base_domain" or "domain" must be set '
+                                      'when public access type is "domain"'}
+            raise ValidationError(details)
 
-    db_base_domain = BaseDomain.filter_by(name=base_domain).first()
-    if not db_base_domain:
-        raise ValidationError(
-            details={'base_domain': 'Base domain "{}" not found'
-                                    .format(base_domain)})
+        # try extract base_domain and pod_domain from domain
+        db_base_domain = BaseDomain.filter_by(name=domain).first()
+        if db_base_domain:
+            base_domain = domain
+            pod_domain = None
+        else:
+            try:
+                base_domain_candidate = domain.split('.', 1)[1]
+            except IndexError:
+                raise ValidationError(details={'domain': 'Bad value'})
+            else:
+                db_base_domain = BaseDomain.filter_by(
+                    name=base_domain_candidate).first()
+                if db_base_domain:
+                    base_domain = base_domain_candidate
+                    pod_domain = domain
+                else:
+                    details = {'domain': 'No base domain found for domain "{}"'
+                                         .format(domain)}
+                    raise ValidationError(details)
 
     if pod_domain:
-        errors = []
         try:
             sub_domain_part, base_domain_part = pod_domain.split('.', 1)
         except ValueError:
-            errors.append({'domain': 'Domain "{}" is not subdomain of "{}"'
-                                     .format(pod_domain, base_domain)})
+            raise ValidationError(
+                details={'domain': 'Domain "{}" is not subdomain of "{}"'
+                                   .format(pod_domain, base_domain)})
         else:
             if base_domain_part != base_domain:
-                errors.append({'domain': 'Domain "{}" is not subdomain of "{}"'
-                                         .format(pod_domain, base_domain)})
-            if PodDomain.filter_by(
-                    name=sub_domain_part, base_domain=db_base_domain).first():
-                errors.append({'domain': 'Pod domain "{}" already exists'
-                                         .format(pod_domain)})
+                raise ValidationError(
+                    details={'domain': 'Domain "{}" is not subdomain of "{}"'
+                                       .format(pod_domain, base_domain)})
 
-        if errors:
-            raise ValidationError(details=errors)
+    pod_config['base_domain'] = base_domain
+    pod_config['domain'] = pod_domain

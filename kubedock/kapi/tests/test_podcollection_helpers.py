@@ -50,6 +50,12 @@ public_access_parameters_valid = 'is_aws, conf_in, exp_conf_out', [
      {'base_domain': 'a.com', 'domain': 'b.a.com'},
      {'public_access_type': 'domain', 'base_domain': 'a.com',
       'domain': 'b.a.com'}),
+
+    # check base_domain extracting
+    (False,
+     {'domain': 'b.a.com'},
+     {'public_access_type': 'domain', 'base_domain': 'a.com',
+      'domain': 'b.a.com'}),
 ]
 
 public_access_parameters_inconsistent = 'is_aws, conf_in', [
@@ -59,12 +65,12 @@ public_access_parameters_inconsistent = 'is_aws, conf_in', [
     # no domain specified, failed
     (False, {'public_access_type': 'domain'}),
 
+    # base domain not found for specified domain
+    (False, {'domain': 'foo.bar.com'}),
+
     # pod domain is not sub-domain of base domain
     (False, {'base_domain': 'a.com', 'domain': 'bla-bla'}),
     (False, {'base_domain': 'a.com', 'domain': 'b.b.com'}),
-
-    # pod domain conflict
-    (False, {'base_domain': 'a.com', 'domain': 'existed.a.com'}),
 
     # specified both domain and public ip
     (False, {'public_ip': '1.2.3.4', 'domain': 'a.com'}),
@@ -101,15 +107,7 @@ def base_domain(session):
     return rv
 
 
-@pytest.fixture()
-def pod_domain(session, base_domain):
-    rv = PodDomain.create(name='existed', base_domain=base_domain)
-    session.add(rv)
-    session.flush()
-    return rv
-
-
-@pytest.mark.usefixtures('base_domain', 'pod_domain')
+@pytest.mark.usefixtures('base_domain')
 @pytest.mark.parametrize(*public_access_parameters_valid)
 def test_preprocess_public_access_valid(is_aws, conf_in, exp_conf_out, app):
     app.config['AWS'] = is_aws
@@ -124,7 +122,7 @@ def test_preprocess_public_access_valid(is_aws, conf_in, exp_conf_out, app):
     assert sum(conditions) == 1
 
 
-@pytest.mark.usefixtures('base_domain', 'pod_domain')
+@pytest.mark.usefixtures('base_domain')
 @pytest.mark.parametrize(*public_access_parameters_inconsistent)
 def test_preprocess_public_access_inconsistent(is_aws, conf_in, app):
     app.config['AWS'] = is_aws

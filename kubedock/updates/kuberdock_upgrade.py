@@ -141,10 +141,11 @@ def load_update(upd):
     db.session.add(in_db_update)
     db.session.commit()
 
-    if hasattr(module, 'upgrade') and callable(module.upgrade) and \
-       hasattr(module, 'downgrade') and callable(module.downgrade):
+    if hasattr(module, 'upgrade') and callable(module.upgrade):
+        # Deprecated. Will be totally removed in AC-5692
+        # and hasattr(module, 'downgrade') and callable(module.downgrade):
         upgrade_func = module.upgrade
-        downgrade_func = module.downgrade
+        downgrade_func = None
     else:
         in_db_update.print_log(
             'Error. No upgrade/downgrade functions found in script.')
@@ -153,13 +154,14 @@ def load_update(upd):
     downgrade_node_func = None
     if hasattr(module, 'upgrade_node') and callable(module.upgrade_node):
         upgrade_node_func = module.upgrade_node
-        if (hasattr(module, 'downgrade_node') and
-                callable(module.downgrade_node)):
-            downgrade_node_func = module.downgrade_node
-        else:
-            in_db_update.print_log(
-                'Error: No downgrade_node function found in script.')
-            return None, None, None, None, None, None
+        # Deprecated. Will be totally removed in AC-5692
+        # if (hasattr(module, 'downgrade_node') and
+        #         callable(module.downgrade_node)):
+        #     downgrade_node_func = module.downgrade_node
+        # else:
+        #     in_db_update.print_log(
+        #         'Error: No downgrade_node function found in script.')
+        #     return None, None, None, None, None, None
     else:
         upgrade_node_func = None
 
@@ -225,7 +227,9 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
                 'upgrade node {0}'.format(node.hostname)
             )
             try:
-                downgrade_node(db_upd, with_testing, env, e)
+                # Deprecated. Will be totally removed in AC-5692
+                # downgrade_node(db_upd, with_testing, env, e)
+                pass
             except Exception as e:
                 node.upgrade_status = UPDATE_STATUSES.failed_downgrade
                 db_upd.capture_traceback(
@@ -235,8 +239,10 @@ def upgrade_nodes(upgrade_node, downgrade_node, db_upd, with_testing,
             else:
                 # Check here if new master is compatible with old nodes
                 # set_schedulable(node.hostname, True, db_upd)
-                db_upd.print_log('Node {0} successfully downgraded'
-                                 .format(node.hostname))
+                pass
+                # Deprecated. Will be totally removed in AC-5692
+                # db_upd.print_log('Node {0} successfully downgraded'
+                #                  .format(node.hostname))
         else:
             set_schedulable(node.hostname, True, db_upd)
             node.upgrade_status = UPDATE_STATUSES.applied
@@ -267,19 +273,23 @@ def upgrade_master(upgrade_func, downgrade_func, db_upd, with_testing):
         db.session.rollback()
         db_upd.status = UPDATE_STATUSES.failed
         db_upd.capture_traceback(
-            'Error in update script {0}'.format(db_upd.fname),
-            'Starting downgrade...'
+            'Error in update script {0}'.format(db_upd.fname)
         )
         try:
-            downgrade_func(db_upd, with_testing, e)
+            # Deprecated. Will be totally removed in AC-5692
+            # downgrade_func(db_upd, with_testing, e)
+            pass
         except Exception as e:
             db_upd.status = UPDATE_STATUSES.failed_downgrade
             db_upd.capture_traceback(
                 'Error downgrading script {0}'.format(db_upd.fname)
             )
-        else:   # TODO don't sure about restart in this case
-            helpers.restart_service(settings.KUBERDOCK_SERVICE)
-            db_upd.print_log(SUCCESSFUL_DOWNGRADE_MESSAGE)
+        else:
+            # Deprecated. Will be totally removed in AC-5692
+            pass
+            # TODO don't sure about restart in this case
+            # helpers.restart_service(settings.KUBERDOCK_SERVICE)
+            # db_upd.print_log(SUCCESSFUL_DOWNGRADE_MESSAGE)
         return False
     db_upd.status = UPDATE_STATUSES.master_applied
     return True
@@ -409,10 +419,10 @@ def health_check(post_upgrade_check=False):
                 print >> sys.stderr, "Some of them could be temporary due " \
                                      "restarts of various KuberDock " \
                                      "services/pods/nodes during upgrade " \
-                                     "process and will gone in few minutes.\n" \
+                                     "process and will gone in few minutes.\n"\
                                      "It's strongly recommended to re-run " \
-                                     "health check later soon to ensure this " \
-                                     "problems are gone and fix them if they " \
+                                     "health check later soon to ensure this "\
+                                     "problems are gone and fix them if they "\
                                      "still remains."
             else:
                 print >> sys.stderr, "Please, solve problems or use key " \
@@ -496,24 +506,27 @@ def get_kuberdocks_toinstall(testing=False):
 def parse_cmdline():
     root_parser = argparse.ArgumentParser(
         description='Kuberdock update management utility. '
-                    'Should be run from root.')
+                    'Should be run from root. '
+                    'Some commands and options are for development cases only')
 
     root_parser.add_argument('-t', '--use-testing',
                              action='store_true',
-                             help='Enable testing repo during upgrade')
+                             help='Enable testing repo during upgrade. '
+                                  'Please, never use for production')
     root_parser.add_argument(
         '--local',
         help="Filename of local package to install for upgrade. Don't "
              "use it on non-latest KuberDock release unless you know what you "
-             "are doing")
+             "are doing (it's for development or some troubleshooting cases)")
     root_parser.add_argument(
         '--skip-health-check',
         action='store_true',
-        help='Skip health check of cluster')
+        help='Skip health check of cluster [not recommended]')
     root_parser.add_argument(
         '-r', '--reinstall',
         action='store_true',
-        help='Try "reinstall" instead of "install" for upgrading package')
+        help='Try "reinstall" instead of "install" for upgrading package '
+             "(it's for development or some troubleshooting cases)")
 
     subparsers = root_parser.add_subparsers(dest='command', help='Commands')
 
@@ -536,7 +549,8 @@ def parse_cmdline():
 
     maintenance_cmd = subparsers.add_parser(
         CLI_COMMANDS.set_maintenance,
-        help='Used to manually enable or disable cluster maintenance mode')
+        help='Used to manually enable or disable cluster maintenance mode. '
+             "For now, it's not recommended to use it directly")
     maintenance_cmd.add_argument(
         dest='maintenance',
         choices=('on', '1', 'off', '0'),
@@ -555,7 +569,8 @@ def parse_cmdline():
 
     apply_one_cmd = subparsers.add_parser(
         CLI_COMMANDS.apply_one,
-        help='Used to manually run specified upgrade script')
+        help='Used to manually run specified upgrade script'
+             "(it's for development or some troubleshooting cases)")
     apply_one_cmd.add_argument(
         dest='script_file',
         help='Update script file name (without path)')
@@ -567,7 +582,7 @@ def parse_cmdline():
         '--new_update',
         dest='new_update',
         nargs='?',
-        help='Name of new update file (without path)')
+        help='Name of new update file (without path) [only for developers]')
     concat_updates_cmd.add_argument(
         '--first_update',
         dest='first_update',
@@ -597,7 +612,9 @@ def concat_updates(first_update=None, last_update=None, new_update=None):
         new_update = "%05d_update.py" % (int(updates[-1][:5]) + 1)
     new_update_file = os.path.join(settings.UPDATES_PATH, new_update)
     with open(new_update_file, 'w') as newf:
-        sb = updates[updates.index(first_update):updates.index(last_update) + 1]
+        sb = updates[
+             updates.index(first_update):updates.index(last_update) + 1
+        ]
         for update in sb:
             update_file = os.path.join(settings.UPDATES_PATH, update)
             with open(update_file) as f:
@@ -732,4 +749,5 @@ if __name__ == '__main__':
             sys.exit(0)
 
         if args.command == CLI_COMMANDS.concat_updates:
-            concat_updates(args.first_update, args.last_update, args.new_update)
+            concat_updates(args.first_update, args.last_update,
+                           args.new_update)

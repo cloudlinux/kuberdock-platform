@@ -84,6 +84,12 @@ class _RedisPaPod(KDPAPod):
         r.set('foo', 'bar')
         assert_eq(r.get('foo'), 'bar')
 
+    def redis_set(self, key, value):
+        redis.StrictRedis(host=self.host, port=6379, db=0).set(key, value)
+
+    def redis_get(self, key):
+        return redis.StrictRedis(host=self.host, port=6379, db=0).get(key)
+
 
 class _RedisCustomPaPod(_RedisPaPod):
     SRC = 'custom_redis.yaml'
@@ -326,6 +332,11 @@ class _WordpressPaPod(KDPAPod):
         post_url = re.search(
             'Post published. <a href="([^"]*)"', resp).group(1)
         return urlparse(post_url).path
+
+    def redeploy(self, *args, **kwargs):
+        super(_WordpressPaPod, self).redeploy(*args, **kwargs)
+        if kwargs.get('wipeOut'):
+            self._installed = False
 
 
 class _PhpMyAdminPaPod(KDPAPod):

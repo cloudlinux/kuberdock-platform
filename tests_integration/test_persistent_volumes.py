@@ -3,9 +3,10 @@ import os
 import re
 from time import sleep
 
-from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib import utils
+from tests_integration.lib.cluster_utils import add_pa_from_url
 from tests_integration.lib.exceptions import NonZeroRetCodeException
+from tests_integration.lib.pipelines import pipeline
 from tests_integration.lib.pod import Port
 
 LOG = logging.getLogger(__name__)
@@ -416,6 +417,49 @@ def test_resize_pv_of_pa(cluster):
 
     _test_resize_pv(cluster, wp_pa, WP_IMAGE, pv_mpath, pv_id,
                     initial_disk_usage=28)
+
+
+@pipeline('main')
+@pipeline('main_upgraded')
+@pipeline('zfs')
+@pipeline('zfs_upgraded')
+@pipeline('zfs_aws')
+@pipeline('ceph')
+@pipeline('ceph_upgraded')
+def test_wipe_out_persistent_data(cluster):
+    """
+    1. Create Redis pod
+    2. Add records to Redis
+    3. Make sure that records are preserved after restarting pod without wiping
+    4. Restart the pod with wipe out
+    5. MAke sure that record has been removed from Redis
+    """
+    key = "test_key"
+    value = "test_value"
+
+    utils.log_debug("Creating and preparing Redis pod", LOG)
+    pa_url = "https://raw.githubusercontent.com/cloudlinux/" \
+             "kuberdock_predefined_apps/master/redis.yaml"
+    name = add_pa_from_url(cluster, pa_url)
+    redis_pod = cluster.pods.create_pa(name,
+                                 wait_for_status="running",
+                                 healthcheck=True)
+
+    utils.log_debug("Updating the pod by inserting custom key-value pair", LOG)
+    redis_pod.redis_set(key, value)
+    utils.log_debug("Check that pod has been updated", LOG)
+    utils.assert_eq(redis_pod.redis_get(key), value)
+
+    utils.log_debug("Restarting the pod without wiping out", LOG)
+    redis_pod.redeploy(wipeOut=False, wait_for_running=True)
+    utils.log_debug("Check that pod still contains user data", LOG)
+    utils.assert_eq(redis_pod.redis_get(key), value)
+
+    utils.log_debug("Redeploying and wiping out the pod", LOG)
+    redis_pod.redeploy(wipeOut=True, wait_for_running=True)
+    redis_pod.healthcheck()
+    utils.log_debug("Check that pod has been defaulted", LOG)
+    utils.assert_eq(redis_pod.redis_get(key), None)
 
 
 def _test_resize_pv(cluster, pod, container_image, mountpath, pv_id,

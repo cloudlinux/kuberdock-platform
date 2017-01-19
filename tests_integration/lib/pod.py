@@ -418,7 +418,7 @@ class KDPod(RESTMixin):
             u"pods delete --name {}".format(self.escaped_name),
             user=self.owner)
 
-    def redeploy(self, wipeOut=False, applyEdit=False):
+    def redeploy(self, wipeOut=False, applyEdit=False, wait_for_running=False):
         commands = {}
         if wipeOut is True:
             commands['wipeOut'] = wipeOut
@@ -428,9 +428,19 @@ class KDPod(RESTMixin):
         data = {
             'command': 'redeploy', 'commandOptions': commands
         }
+        if wait_for_running:
+            cont_name = self.get_spec()['containers'][0]['name']
+            orig_cont_id = self.get_container_id(container_name=cont_name)
         self.cluster.kcli2(
             u"pods update --name {} '{}'".format(
                 self.escaped_name, json.dumps(data), user=self.owner))
+        if wait_for_running:
+            LOG.debug("Waiting till pod is rebooted")
+            utils.wait_for(lambda: orig_cont_id !=
+                           self.get_container_id(container_name=cont_name),
+                           tries=5, interval=3)
+            LOG.debug("Waiting till pod is running")
+            self.wait_for_status(utils.POD_STATUSES.running)
 
     def wait_for_ports(self, ports=None, timeout=None):
         # NOTE: we still don't know if this is in a routable network, so
@@ -438,8 +448,8 @@ class KDPod(RESTMixin):
         # But for sure it does not make sense to wait if no ports open.
         timeout = timeout or self.WAIT_PORTS_TIMEOUT
         if not (self.open_all_ports or self.ports):
-            raise Exception("Cannot wait for ports on a pod with no"
-                            " ports open")
+            raise Exception("Cannot wait for ports on a pod with no "
+                            "ports open")
         ports = ports or self.ports
         self._wait_for_ports(ports, timeout)
 

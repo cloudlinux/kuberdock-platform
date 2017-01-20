@@ -1,7 +1,7 @@
 Version: 1.5.1
 Name: kuberdock
 Summary: KuberDock
-Release: 8%{?dist}.cloudlinux
+Release: 9%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
 License: CloudLinux Commercial License
@@ -212,8 +212,11 @@ fi
 %{_bindir}/kdcustomize
 
 %changelog
+* Mon Jan 20 2017 Stanislav Sergiienko <ssergiienko@cloudlinux.com> 1.5.1-9
+- Disable downgrades in kuberdock-upgrade
+
 * Mon Jan 16 2017 Aleksandr Skorodumov <askorodumov@cloudlinux.com> 1.5.1-8
-- The changelog is available at https://www.cloudlinux.com/kuberdock-docker-blog/entry/kuberdock-1-5-1-released 
+- The changelog is available at https://www.cloudlinux.com/kuberdock-docker-blog/entry/kuberdock-1-5-1-released
 
 * Wed Apr 13 2016 Igor Savenko <bliss@cloudlinux.com> 1.2-1
 - Raised tag to comply with bugfix release

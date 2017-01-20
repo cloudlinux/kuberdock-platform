@@ -683,9 +683,14 @@ class KDPod(RESTMixin):
                 "kube_type": pod_spec["kube_type"],
                 "node": None,
                 "status": 'stopped',
+                "public_access_type": pod_spec['public_access_type'],
                 "containers": pod_spec['containers'],
             }
         }
+        if pod_spec.get('domain'):
+            edit_data['edited_config']['domain'] = pod_spec['domain']
+        if pod_spec.get('base_domain'):
+            edit_data['edited_config']['base_domain'] = pod_spec['base_domain']
         return edit_data
 
     def change_kubes(self, kubes=None, kube_type=None,

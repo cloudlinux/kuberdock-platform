@@ -71,9 +71,7 @@ def test_pod_with_domain_name(cluster):
     pod.wait_for_ports([80])
     pod.healthcheck()
 
-    # TODO: uncomment following block when fix for AC-5545 is merged
-    """
-    log_debug("Close public ports ports", LOG)
+    utils.log_debug("Close public ports", LOG)
     ports = [Port(80, public=False),
              Port(443, public=False)]
     pod.change_pod_ports(ports)
@@ -82,10 +80,10 @@ def test_pod_with_domain_name(cluster):
     except StatusWaitException:
         pass
     pod.wait_for_status(utils.POD_STATUSES.running)
-    with assert_raises(HTTPError, "Not Found"):
+    with utils.assert_raises(HTTPError, "Not Found"):
         pod.do_GET()
 
-    log_debug("Open public ports ports", LOG)
+    utils.log_debug("Open public ports", LOG)
     ports = [Port(80, public=True),
              Port(443, public=True)]
     pod.change_pod_ports(ports)
@@ -96,9 +94,8 @@ def test_pod_with_domain_name(cluster):
     pod.wait_for_status(utils.POD_STATUSES.running)
     pod.wait_for_ports([80])
     pod.healthcheck()
-    """
 
-    utils.log_debug("Cahnge kube type (and moving pod to another node)", LOG)
+    utils.log_debug("Change kube type (and moving pod to another node)", LOG)
     pod.change_kubetype(kube_type=utils.kube_type_to_int('High memory'))
     try:
         pod.wait_for_status(utils.POD_STATUSES.pending, tries=12)

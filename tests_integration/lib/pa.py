@@ -1,22 +1,19 @@
 import json
 import logging
+import re
 import sys
 import time
-import re
 from urlparse import urlparse
 
 import memcache
 import pymongo
 import redis
-
-
 from pg import DB
 
 from tests_integration.lib.exceptions import WrongCLICommand
-from tests_integration.lib.pod import KDPod
 from tests_integration.lib.pod import DEFAULT_WAIT_PORTS_TIMEOUT
-from tests_integration.lib.utils import \
-    assert_eq, assert_in, kube_type_to_int, \
+from tests_integration.lib.pod import KDPod
+from tests_integration.lib.utils import assert_eq, assert_in, \
     kube_type_to_str, get_rnd_string
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -74,13 +71,6 @@ class KDPAPod(KDPod):
         this_pod_class = cls._get_pod_class(template_name)
         return this_pod_class(cluster, pod_name, plan_id, kube_type,
                               restart_policy, owner)
-
-    def _generic_healthcheck(self):
-        spec = self.get_spec()
-        assert_eq(spec['kube_type'], kube_type_to_int(self.kube_type))
-        assert_eq(spec['restartPolicy'], self.restart_policy)
-        assert_eq(spec['status'], "running")
-        return spec
 
 
 class _RedisPaPod(KDPAPod):

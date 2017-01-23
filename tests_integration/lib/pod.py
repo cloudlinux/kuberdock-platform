@@ -147,13 +147,12 @@ class KDPod(RESTMixin):
     SRC = None
     WAIT_PORTS_TIMEOUT = DEFAULT_WAIT_PORTS_TIMEOUT
 
-    def __init__(self, cluster, image, name, kube_type, kubes,
-                 open_all_ports, restart_policy, pvs, owner):
+    def __init__(self, cluster, image, name, kube_type, open_all_ports,
+                 restart_policy, pvs, owner):
         self.cluster = cluster
         self.name = name
         self.image = image
         self.kube_type = kube_type
-        self.kubes = kubes
         self.restart_policy = restart_policy
         self.owner = owner
         self.pvs = pvs
@@ -284,8 +283,8 @@ class KDPod(RESTMixin):
                                   user=owner,
                                   password=(password or owner))
         this_pod_class = cls._get_pod_class(image)
-        return this_pod_class(cluster, image, name, kube_type, kubes,
-                              open_all_ports, restart_policy, pvs, owner)
+        return this_pod_class(cluster, image, name, kube_type, open_all_ports,
+                              restart_policy, pvs, owner)
 
     def change_pod_ports(self, ports):
         edit_data = self.__get_edit_data()
@@ -375,10 +374,9 @@ class KDPod(RESTMixin):
         data = pod_description['data']
         name = data['name']
         kube_type = utils.kube_type_to_str(data['kube_type'])
-        kubes = data['containers'][0]['kubes']
         restart_policy = data['restartPolicy']
         this_pod_class = cls._get_pod_class(image)
-        return this_pod_class(cluster, "", name, kube_type, kubes, True,
+        return this_pod_class(cluster, "", name, kube_type, True,
                               restart_policy, "", owner)
 
     @classmethod
@@ -394,7 +392,7 @@ class KDPod(RESTMixin):
               format(escaped_pod_name)
         _, out, _ = cluster.kdctl(cmd, out_as_dict=True)
         spec = out["data"]
-        return KDPod(cluster, None, pod_name, None, None, False,
+        return KDPod(cluster, None, pod_name, None, False,
                      spec["restartPolicy"], [], "kuberdock-internal")
 
     @classmethod
@@ -648,11 +646,19 @@ class KDPod(RESTMixin):
         spec = self.get_spec()
         utils.assert_eq(spec['kube_type'],
                         utils.kube_type_to_int(self.kube_type))
-        for container in spec['containers']:
-            utils.assert_eq(container['kubes'], self.kubes)
         utils.assert_eq(spec['restartPolicy'], self.restart_policy)
         utils.assert_eq(spec['status'], "running")
+        self._direct_access_healthcheck()
         return spec
+
+    def _direct_access_healthcheck(self):
+        if self.public_ip:
+            sc = self.ssh_credentials
+            users, hosts, password = sc['users'], sc['hosts'], sc['password']
+            with utils.get_ssh(hosts[0], users[0], password) as conn:
+                rc, out, err = utils.ssh_exec(conn, "echo OK",
+                                              check_retcode=False)
+                utils.assert_eq(rc, 0)
 
     def __get_edit_data(self):
         pod_spec = self.get_spec()
@@ -715,7 +721,6 @@ class KDPod(RESTMixin):
         LOG.debug("Pod {} updated".format(out))
         if redeploy:
             self.redeploy(applyEdit=True)
-        self.kubes = kubes
 
     def change_kubetype(self, kube_type):
         edit_data = self.__get_edit_data()

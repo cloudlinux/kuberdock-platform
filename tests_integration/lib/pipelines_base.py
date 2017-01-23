@@ -180,18 +180,14 @@ class Pipeline(object):
                 "cluster, or make sure you do not pass BUILD_CLUSTER env "
                 "variable if you want run tests on the existing one.")
 
-        try:
-            log_begin("Provision", self.name)
-            self.infra_provider.start()
-            log_end("Provision", self.name)
+        log_begin("Provision", self.name)
+        self.infra_provider.start()
+        log_end("Provision", self.name)
 
-            log_begin("Pipeline post create hook", self.name)
-            with log_timing_ctx("'{}' post_create_hook".format(self.name)):
-                self.post_create_hook()
-            log_end("Pipeline post create hook", self.name)
-        except:
-            self.destroy()
-            raise
+        log_begin("Pipeline post create hook", self.name)
+        with log_timing_ctx("'{}' post_create_hook".format(self.name)):
+            self.post_create_hook()
+        log_end("Pipeline post create hook", self.name)
 
     def post_create_hook(self):
         """

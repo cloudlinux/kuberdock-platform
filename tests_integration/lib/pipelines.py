@@ -597,6 +597,7 @@ class HugeClusterUpgradeAwsPipeline(HugeClusterUpgradePipeline):
 
 class ScalabilityNodePipeline(Pipeline):
     NAME = 'scalability_node'
+    tags = ['load']
     ROUTABLE_IP_COUNT = 50
     ENV = {
         'KD_NODES_COUNT': '2',
@@ -627,6 +628,27 @@ class PodIPNetworkPipeline(Pipeline):
         'KD_POD_IP_NETWORK': POD_IP_NETWORK,
         'KD_NODE_TYPES': 'node1=Standard',
         'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
+    }
+
+
+class DensityPipeline(Pipeline):
+    NAME = 'density'
+    tags = ['load']
+    ROUTABLE_IP_COUNT = 70
+    ENV = {
+        'KD_NODES_COUNT': '1',
+        'KD_NODE_CPUS': '4',
+        'KD_NODE_MEMORY': '8192',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
+        'KD_NODE_TYPES': 'node1=standard'
+    }
+
+
+class DensityPipelineAWS(DensityPipeline):
+    INFRA_PROVIDER = 'aws'
+    NAME = 'density_aws'
+    ENV = {
+        'NODE_SIZE': 't2.large'
     }
 
 
@@ -666,23 +688,3 @@ def pipeline(name, thread=1, skip_reason=""):
         return f
 
     return decorator
-
-
-class DensityPipeline(Pipeline):
-    NAME = 'density'
-    ROUTABLE_IP_COUNT = 70
-    ENV = {
-        'KD_NODES_COUNT': '1',
-        'KD_NODE_CPUS': '4',
-        'KD_NODE_MEMORY': '8192',
-        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
-        'KD_NODE_TYPES': 'node1=standard'
-    }
-
-
-class DensityPipelineAWS(DensityPipeline):
-    INFRA_PROVIDER = 'aws'
-    NAME = 'density_aws'
-    ENV = {
-        'NODE_SIZE': 't2.large'
-    }

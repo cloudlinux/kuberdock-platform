@@ -14,6 +14,7 @@ import requests
 from colorama import Fore
 
 from tests_integration.lib import multilogger
+from tests_integration.lib.exceptions import ClusterAlreadyCreated
 from tests_integration.lib.test_runner import \
     TestResultCollection, discover_integration_tests, write_junit_xml
 from tests_integration.lib.utils import get_func_fqn, center_text_message, \
@@ -27,7 +28,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
 
 INTEGRATION_TESTS_PATH = 'tests_integration/'
-JENKINS_GC_TIME_INTERVAL = 2  # hours
+JENKINS_GC_ALLOWED_AGE = 2  # hours
 # Lock is needed for printing info thread-safely and it's done by two
 # separate print calls
 print_lock = threading.Lock()
@@ -60,6 +61,13 @@ def run_tests_in_a_pipeline(pipeline_name, tests, seq_num, multilog,
     def pipe_log(msg, color=Fore.MAGENTA):
         msg = force_unicode(msg)
         print_msg(u'{} -> {}\n'.format(pipeline_name, msg), color)
+
+    def fail_pipeline(error):
+        test_results.register_pipeline_error(pipeline_name, tests, error)
+        pipe_log(
+            u'CLUSTER CREATION FAILED ({})\n{}\nDETAILED LOG: {}'.format(
+                cluster_time, error, _get_thread_log(multilog, pipeline_name)),
+            Fore.RED)
 
     def pass_test(t):
         test_name = get_func_fqn(t)
@@ -107,15 +115,17 @@ def run_tests_in_a_pipeline(pipeline_name, tests, seq_num, multilog,
     try:
         with timing_ctx() as cluster_time:
             pipeline.create()
-        pipe_log('CLUSTER CREATED ({})'.format(cluster_time), Fore.GREEN)
+    except ClusterAlreadyCreated:
+        raise
     except Exception as e:
-        err = prettify_exception(e)
-        test_results.register_pipeline_error(pipeline_name, tests, err)
-        pipe_log(
-            u'CLUSTER CREATION FAILED ({})\n{}\nDETAILED LOG: {}'.format(
-                cluster_time, err, _get_thread_log(multilog, pipeline_name)),
-            Fore.RED)
+        fail_pipeline(prettify_exception(e))
+        if cluster_debug:
+            add_debug_info(pipeline)
+        else:
+            pipeline.destroy()
         return
+
+    pipe_log('CLUSTER CREATED ({})'.format(cluster_time), Fore.GREEN)
 
     with timing_ctx() as all_tests_time:
         for test in tests:
@@ -154,10 +164,10 @@ def add_debug_info(pipeline):
     if not pipeline.build_cluster:
         return
     master_ip = pipeline.cluster.get_host_ip('master')
-    msg = u'Pipeline {} has failed tests, it remains alive until about ' \
+    msg = u'Pipeline {} failed, it remains alive until about ' \
           u'{} so that you can debug it. Master IP: {}'
     destroy_time = pipeline.cluster.created_at + timedelta(
-        hours=JENKINS_GC_TIME_INTERVAL)
+        hours=JENKINS_GC_ALLOWED_AGE)
     debug_messages.append(
         msg.format(pipeline.name, destroy_time.isoformat(' '), master_ip))
 

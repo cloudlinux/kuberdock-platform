@@ -290,37 +290,13 @@ class UpgradedPipelineMixin(object):
     ENV = {
         'KD_INSTALL_TYPE': 'release',
         'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch,route',
+        # Needed because patching disappears after upgrade
         'KD_LICENSE': '../../../../../../tests_integration/assets/fake_license.json',  # noqa
     }
 
     def post_create_hook(self):
-        self._add_beta_repos()  # TODO remove when 1.5.0 is released
         self.cluster.upgrade('/tmp/prebuilt_rpms/kuberdock.rpm',
                              use_testing=True, skip_healthcheck=True)
         self.cluster.upgrade_rhosts('/tmp/git-kcli-deploy.sh',
                                     use_testing=True)
         super(UpgradedPipelineMixin, self).post_create_hook()
-
-    def _add_beta_repos(self):
-        all_hosts = ['master']
-        all_hosts.extend(self.cluster.node_names)
-        all_hosts.extend(self.cluster.rhost_names)
-        for host in all_hosts:
-            cmd = """cat > /etc/yum.repos.d/kube-cloudlinux-beta6.repo << EOF
-[kube-beta6]
-name=kube-beta-6
-baseurl=http://repo.cloudlinux.com/kuberdock-beta/6/x86_64/
-enabled=1
-gpgcheck=1
-gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-EOF"""
-            self.cluster.ssh_exec(host, cmd)
-            cmd = """cat > /etc/yum.repos.d/kube-cloudlinux-beta7.repo << EOF
-[kube-beta7]
-name=kube-beta-7
-baseurl=http://repo.cloudlinux.com/kuberdock-beta/7/x86_64/
-enabled=1
-gpgcheck=1
-gpgkey=http://repo.cloudlinux.com/cloudlinux/security/RPM-GPG-KEY-CloudLinux
-EOF"""
-            self.cluster.ssh_exec(host, cmd)

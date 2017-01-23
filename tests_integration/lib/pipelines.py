@@ -273,15 +273,16 @@ class MasterRestorePipeline(Pipeline):
 
 class ReleaseUpdatePipeline(Pipeline):
     NAME = 'release_update'
-    ROUTABLE_IP_COUNT = 3
+    ROUTABLE_IP_COUNT = 6
     ENV = {
         'KD_NODES_COUNT': '1',
-        'KD_DEPLOY_SKIP': 'predefined_apps,cleanup,ui_patch',
+        'KD_DEPLOY_SKIP': 'cleanup',
         'KD_INSTALL_TYPE': 'release',
+        # Needed because patching disappears after upgrade
+        'KD_LICENSE': '../../../../../../tests_integration/assets/fake_license.json',  # noqa
     }
 
     def post_create_hook(self):
-        enable_beta_repos(self.cluster)  # TODO remove when 1.5.0 is released
         # Upgrade itself is done later, in the mid of test
         super(ReleaseUpdatePipeline, self).post_create_hook()
 

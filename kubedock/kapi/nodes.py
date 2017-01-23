@@ -7,6 +7,7 @@ import socket
 from flask import current_app
 from sqlalchemy.exc import IntegrityError
 
+from kubedock.exceptions import InternalPodsCreationError
 from . import ingress
 from . import pstorage
 from .network_policies import get_dns_policy_config, get_logs_policy_config
@@ -17,7 +18,7 @@ from .podcollection import PodCollection
 from .. import tasks
 from ..billing import kubes_to_limits
 from ..billing.models import Kube
-from ..core import db
+from ..core import db, ExclusiveLockContextManager
 from ..domains.models import BaseDomain
 from ..exceptions import APIError
 from ..kd_celery import celery
@@ -123,19 +124,28 @@ def create_node(ip, hostname, kube_id, public_interface=None,
 
     node = add_node_to_db(node)
 
-    ku = User.get_internal()
-
-    log_pod = create_logs_pod(hostname, ku)
-    current_app.logger.debug('Created log pod: {}'.format(log_pod))
-    create_dns_pod(hostname, ku)
-    create_policy_pod(hostname, ku, token)
-    if BaseDomain.query.first() and not ingress.is_subsystem_up():
-        ingress.prepare_ip_sharing()
+    log_pod = _create_internal_pods(hostname, token)
     _deploy_node(node, log_pod['podIP'], do_deploy, with_testing,
                  ls_devices=ls_devices, ebs_volume=ebs_volume, options=options)
 
     node.kube.send_event('change')
     return node
+
+
+def _create_internal_pods(hostname, token):
+    ku = User.get_internal()
+
+    with ExclusiveLockContextManager('Nodes._create_internal_pods',
+                                     blocking=True, ttl=3600) as lock:
+        if not lock:
+            raise InternalPodsCreationError(details={'node': hostname})
+        log_pod = create_logs_pod(hostname, ku)
+        current_app.logger.debug('Created log pod: {}'.format(log_pod))
+        create_dns_pod(hostname, ku)
+        create_policy_pod(hostname, ku, token)
+        if BaseDomain.query.first() and not ingress.is_subsystem_up():
+            ingress.prepare_ip_sharing()
+        return log_pod
 
 
 def create_logs_pod(hostname, owner):
@@ -317,8 +327,8 @@ def delete_node(node_id=None, node=None, force=False, verbose=True):
     try:
         cleanup_node_network_policies(hostname)
     except:
-        error_message = "Failed to cleanup network policies for the node: {}".format(
-            hostname)
+        error_message = ("Failed to cleanup network policies "
+                         "for the node: {}".format(hostname))
         current_app.logger.exception(error_message)
         send_event_to_role('notify:error',
                            {'message': error_message}, 'Admin')

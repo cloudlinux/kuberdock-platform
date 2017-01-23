@@ -160,6 +160,10 @@ class PublicAccessAssigningError(APIError):
     message_template = 'Error public access assigning: {message}'
 
 
+class InternalPodsCreationError(APIError):
+    message_template = 'Unable to create internal Pods for Node {node}'
+
+
 class NoSuitableNode(APIError):
     message_template = ('There are no suitable nodes for the pod. Please try '
                         'again later or contact KuberDock administrator')

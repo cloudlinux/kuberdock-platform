@@ -389,8 +389,15 @@ setup_ntpd ()
     fi
     check_status
 
+    local ntp_config="/etc/ntp.conf"
+
+    # Backup ntp.conf before any modifications
+    backup_ntp_config="${ntp_config}.kd.backup.$(date --iso-8601=ns --utc)"
+    echo "Save current $ntp_config to $backup_ntp_config"
+    cp "$ntp_config" "$backup_ntp_config"
+
     _sync_time() {
-        grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -u
+        grep '^server' "$ntp_config" | awk '{print $2}' | xargs ntpdate -u
     }
 
     # We use setup like this
@@ -404,11 +411,11 @@ setup_ntpd ()
     _sync_time
     check_status
 
-    sed -i "/^server /d; /^tinker /d" /etc/ntp.conf
+    sed -i "/^server /d; /^tinker /d" "$ntp_config"
     # NTP on master server should work at least a few minutes before ntp
     # clients start trusting him. Thus we postpone the sync with it
-    echo "server ${MASTER_IP} iburst minpoll 3 maxpoll 4" >> /etc/ntp.conf
-    echo "tinker panic 0" >> /etc/ntp.conf
+    echo "server ${MASTER_IP} iburst minpoll 3 maxpoll 4" >> "$ntp_config"
+    echo "tinker panic 0" >> "$ntp_config"
 
     systemctl daemon-reload
     systemctl restart ntpd

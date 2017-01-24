@@ -480,8 +480,15 @@ setup_ntpd ()
       yum install -y ntp
     fi
 
+    local ntp_config="/etc/ntp.conf"
+
+    # Backup ntp.conf before any modifications
+    backup_ntp_config="${ntp_config}.kd.backup.$(date --iso-8601=ns --utc)"
+    log_it echo "Save current $ntp_config to $backup_ntp_config"
+    do_and_log cp "$ntp_config" "$backup_ntp_config"
+
     _sync_time() {
-        grep '^server' /etc/ntp.conf | awk '{print $2}' | xargs ntpdate -u
+        grep '^server' "$ntp_config" | awk '{print $2}' | xargs ntpdate -u
     }
 
     for _retry in $(seq 3); do
@@ -496,8 +503,8 @@ setup_ntpd ()
     fi
 
     # To prevent ntpd from exit on large time offsets
-    sed -i "/^tinker /d" /etc/ntp.conf
-    echo "tinker panic 0" >> /etc/ntp.conf
+    sed -i "/^tinker /d" "$ntp_config"
+    echo "tinker panic 0" >> "$ntp_config"
 
     log_it echo "Enabling restart for ntpd.service"
     do_and_log mkdir -p /etc/systemd/system/ntpd.service.d
@@ -524,7 +531,7 @@ do_deploy()
 check_amazon
 
 NETS=`ip -o -4 addr | grep -vP '\slo\s' | awk '{print $4}'`
-CALICO_NETWORK=`python - << EOF
+CALICO_NETWORK=$(python << EOF
 from itertools import chain
 import socket
 import sys
@@ -577,7 +584,9 @@ else:
     else:
         print "Can't find suitable network for pods"
         sys.exit(1)
-EOF`
+EOF
+)
+# ^ yes, parenthesis should be on separate line
 
 if [ $? -ne 0 ];then
     log_it echo $CALICO_NETWORK

@@ -1,0 +1,7 @@
+FROM lobur/centos7-test-base:v8
+
+# This intermediate image is needed to avoid readonly 
+# mount which cause problems in KD core unittests
+
+COPY . /appcloud
+WORKDIR /appcloud

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 build_number=${BUILD_NUMBER:-local_$(echo $RANDOM | tr '[0-9]' '[a-zA-Z]')}
 project="appcloudunittest${build_number}"
-compose="docker-compose -f unittest-compose.yml -p ${project}"
+compose="docker-compose -f tests27-compose.yml -p ${project}"
 
 $compose build
 $compose run --rm appcloud /bin/bash -c \

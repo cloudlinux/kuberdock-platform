@@ -1,4 +1,0 @@
-FROM sysradium/centos7-test-base:v7
-
-COPY . /appcloud
-WORKDIR /appcloud

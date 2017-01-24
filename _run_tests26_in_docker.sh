@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-IMAGE='tyzhnenko/centos6-test-base:v1'
+IMAGE='lobur/centos6-test-base:v2'
 
 docker run -v $(pwd):/appcloud:ro -w /appcloud $IMAGE /bin/bash -c \
 "set -e;

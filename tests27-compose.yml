@@ -3,7 +3,7 @@ services:
   appcloud:
     build:
       context: .
-      dockerfile: Dockerfile.test
+      dockerfile: Dockerfile.centos7-test
     links:
       - redis
       - postgres

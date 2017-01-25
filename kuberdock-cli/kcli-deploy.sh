@@ -108,8 +108,10 @@ remove_flannel() {
 
 
 register_host() {
+    echo "Running 'kcli kubectl register'..."
     REGISTER_INFO=$(kcli kubectl register 2>&1)
     if [ $? -ne 0 ];then
+        echo $REGISTER_INFO
         echo $REGISTER_INFO | grep -iq "already registered"
         if [ $? -ne 0 ];then
             echo "Could not register host in KuberDock. Check hostname, username and password and try again. Quitting."

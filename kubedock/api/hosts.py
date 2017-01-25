@@ -43,6 +43,7 @@ def register_host(ip):
         # First registration
         host = RegisteredHost(host=ip, time_stamp=datetime.now())
         db.session.add(host)
+        db.session.flush()
         update_nginx_proxy_restriction()
         return {'ip': ip}
 

@@ -5,13 +5,12 @@ from functools import wraps
 from shutil import rmtree
 from tempfile import NamedTemporaryFile, mkdtemp
 
-from tests_integration.lib.cluster_utils import enable_beta_repos, \
-    set_eviction_timeout
+from tests_integration.lib.cluster_utils import set_eviction_timeout
 from tests_integration.lib.exceptions import NonZeroRetCodeException
 from tests_integration.lib.pipelines_base import Pipeline, \
     UpgradedPipelineMixin
 from tests_integration.lib.utils import (
-    log_debug, assert_eq, assert_in, wait_for_status, get_rnd_string,
+    log_debug, assert_eq, assert_in, get_rnd_string,
     NODE_STATUSES)
 
 LOG = logging.getLogger(__name__)
@@ -20,6 +19,7 @@ LOG.setLevel(logging.DEBUG)
 
 class MainPipeline(Pipeline):
     NAME = 'main'
+    tags = ['review', 'nightly']
     ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
@@ -48,20 +48,24 @@ class MainPipeline(Pipeline):
 
 class MainUpgradedPipeline(UpgradedPipelineMixin, MainPipeline):
     NAME = 'main_upgraded'
+    tags = ['review', 'nightly']
 
 
 class MainAwsPipeline(MainPipeline):
     INFRA_PROVIDER = 'aws'
     NAME = 'main_aws'
+    tags = ['general']
 
 
 class MainAwsUpgradedPipeline(UpgradedPipelineMixin, MainAwsPipeline):
     INFRA_PROVIDER = 'aws'
     NAME = 'main_aws_upgraded'
+    tags = ['general']
 
 
 class NetworkingPipeline(Pipeline):
     NAME = 'networking'
+    tags = ['review', 'nightly']
     ROUTABLE_IP_COUNT = 2
     TCP_PORT_TO_OPEN = 8002
     UDP_PORT_TO_OPEN = 8003
@@ -121,10 +125,12 @@ class NetworkingPipeline(Pipeline):
 class NetworkingPipelineAWS(NetworkingPipeline):
     INFRA_PROVIDER = 'aws'
     NAME = 'networking_aws'
+    tags = ['general']
 
 
 class NetworkingUpgradedPipeline(UpgradedPipelineMixin, NetworkingPipeline):
     NAME = 'networking_upgraded'
+    tags = ['review', 'nightly']
     ENV = {
         # NOTE: PAs are used as a workaround for AC-4925.
         # Once AC-4448 is complete, this can be removed and test reworked.
@@ -134,6 +140,7 @@ class NetworkingUpgradedPipeline(UpgradedPipelineMixin, NetworkingPipeline):
 
 class NetworkingRhostCent6Pipeline(NetworkingPipeline):
     NAME = 'networking_rhost_cent6'
+    tags = ['nightly']
     ENV = {
         # KD_NEBULA_RHOST_TEMPLATE_ID set in kuberdock-ci-env points to cent6
         'KD_NEBULA_RHOST_TEMPLATE_ID':
@@ -143,6 +150,7 @@ class NetworkingRhostCent6Pipeline(NetworkingPipeline):
 
 class FixedIPPoolsPipeline(Pipeline):
     NAME = 'fixed_ip_pools'
+    tags = ['review', 'nightly']
     ROUTABLE_IP_COUNT = 3
     ENV = {
         'KD_FIXED_IP_POOLS': 'true',
@@ -161,6 +169,7 @@ class FixedIPPoolsPipeline(Pipeline):
 
 class CephPipeline(Pipeline):
     NAME = 'ceph'
+    tags = ['review', 'nightly']
     ROUTABLE_IP_COUNT = 2
     root = os.path.abspath(os.path.join(
         __file__, '../../../dev-utils/dev-env/ansible/ceph_configs'))
@@ -189,10 +198,12 @@ class CephPipeline(Pipeline):
 
 class CephUpgradedPipeline(UpgradedPipelineMixin, CephPipeline):
     NAME = 'ceph_upgraded'
+    tags = ['nightly']
 
 
 class CephFixedIPPoolsPipeline(CephPipeline):
     NAME = 'ceph_fixed_ip_pools'
+    tags = ['nightly']
     ENV = {
         'KD_FIXED_IP_POOLS': 'true',
     }
@@ -204,6 +215,7 @@ class CephFixedIPPoolsPipeline(CephPipeline):
 
 class KubeTypePipeline(Pipeline):
     NAME = 'kubetype'
+    tags = ['nightly']
     ROUTABLE_IP_COUNT = 3
     ENV = {
         'KD_NODES_COUNT': '3',
@@ -222,6 +234,7 @@ class KubeTypePipeline(Pipeline):
 
 class MovePodsPipeline(Pipeline):
     NAME = 'move_pods'
+    tags = ['nightly']
     ROUTABLE_IP_COUNT = 2
     ENV = {
         'KD_NODES_COUNT': '2',
@@ -236,10 +249,12 @@ class MovePodsPipeline(Pipeline):
 class MovePodsPipelineAWS(MovePodsPipeline):
     INFRA_PROVIDER = 'aws'
     NAME = 'move_pods_aws'
+    tags = ['general']
 
 
 class FailConditionsPipeline(Pipeline):
     NAME = 'fail_conditions'
+    tags = ['nightly']
     ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
@@ -248,6 +263,7 @@ class FailConditionsPipeline(Pipeline):
 
 class PodRestorePipeline(Pipeline):
     NAME = 'pod_restore'
+    tags = ['review', 'nightly']
     ROUTABLE_IP_COUNT = 2
     ENV = {
         'KD_NODES_COUNT': '1',
@@ -257,10 +273,12 @@ class PodRestorePipeline(Pipeline):
 class PodRestorePipelineAWS(PodRestorePipeline):
     INFRA_PROVIDER = 'aws'
     NAME = 'pod_restore_aws'
+    tags = ['general']
 
 
-class MasterRestorePipeline(Pipeline):
+class MasterBackupRestorePipeline(Pipeline):
     NAME = 'master_backup_restore'
+    tags = ['nightly']
     ROUTABLE_IP_COUNT = 3
     ENV = {
         'KD_NODES_COUNT': '1',
@@ -273,6 +291,7 @@ class MasterRestorePipeline(Pipeline):
 
 class ReleaseUpdatePipeline(Pipeline):
     NAME = 'release_update'
+    tags = ['review', 'nightly']
     ROUTABLE_IP_COUNT = 6
     ENV = {
         'KD_NODES_COUNT': '1',
@@ -290,10 +309,12 @@ class ReleaseUpdatePipeline(Pipeline):
 class ReleaseUpdatePipelineAWS(ReleaseUpdatePipeline):
     INFRA_PROVIDER = 'aws'
     NAME = 'release_update_aws'
+    tags = ['general']
 
 
 class ReleaseUpdateNoNodesPipeline(ReleaseUpdatePipeline):
     NAME = 'release_update_no_nodes'
+    tags = ['review', 'nightly']
     ENV = {
         'KD_NODES_COUNT': '0',
     }
@@ -301,6 +322,7 @@ class ReleaseUpdateNoNodesPipeline(ReleaseUpdatePipeline):
 
 class WebUIPipeline(Pipeline):
     NAME = 'web_ui'
+    tags = ['review', 'nightly']
     ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
@@ -313,6 +335,7 @@ class WebUIPipeline(Pipeline):
 
 class PredefinedApps(Pipeline):
     NAME = 'predefined_apps'
+    tags = ['nightly']
     ROUTABLE_IP_COUNT = 2
     ENV = {
         'KD_NODES_COUNT': '1',
@@ -326,11 +349,13 @@ class PredefinedApps(Pipeline):
 
 class PredefinedAppsAWS(PredefinedApps):
     NAME = 'predefined_apps_aws'
+    tags = ['general']
     INFRA_PROVIDER = 'aws'
 
 
 class SSHPipeline(Pipeline):
     NAME = 'ssh_feature'
+    tags = ['nightly']
     ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1'
@@ -406,11 +431,13 @@ class SSHPipeline(Pipeline):
 
 class SSHPipelineAWS(SSHPipeline):
     NAME = 'ssh_feature_aws'
+    tags = ['general']
     INFRA_PROVIDER = 'aws'
 
 
 class PACatalogPipeline(Pipeline):
     NAME = 'PA_catalog'
+    tags = ['nightly']
     ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
@@ -420,6 +447,7 @@ class PACatalogPipeline(Pipeline):
 
 class DeleteNodePipeline(Pipeline):
     NAME = 'delete_node'
+    tags = ['nightly']
     ENV = {
         'KD_NODES_COUNT': '2',
         'KD_NODE_TYPES': 'node1=Standard,node2=Tiny',
@@ -428,6 +456,7 @@ class DeleteNodePipeline(Pipeline):
 
 class ZFSStoragePipeline(Pipeline):
     NAME = 'zfs'
+    tags = ['review', 'nightly']
     ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '1',
@@ -471,20 +500,24 @@ class ZFSStoragePipeline(Pipeline):
 
 class ZFSStorageUpgradedPipeline(UpgradedPipelineMixin, ZFSStoragePipeline):
     NAME = 'zfs_upgraded'
+    tags = ['nightly']
 
 
 class ZFSStorageAWSPipeline(ZFSStoragePipeline):
     INFRA_PROVIDER = 'aws'
     NAME = 'zfs_aws'
+    tags = ['general']
 
 
 class ZFSStorageAWSUpgradedPipeline(UpgradedPipelineMixin, ZFSStoragePipeline):
     INFRA_PROVIDER = 'aws'
     NAME = 'zfs_aws_upgraded'
+    tags = ['general']
 
 
 class SharedIPPipeline(Pipeline):
     NAME = 'shared_ip'
+    tags = ['review', 'nightly']
     ROUTABLE_IP_COUNT = 1
     ENV = {
         'KD_NODES_COUNT': '2',
@@ -496,10 +529,24 @@ class SharedIPPipeline(Pipeline):
 class SharedIPPipelineAWS(SharedIPPipeline):
     INFRA_PROVIDER = 'aws'
     NAME = 'shared_ip_aws'
+    tags = ['general']
+
+
+class PodIPNetworkPipeline(Pipeline):
+    from tests_integration.lib.constants import POD_IP_NETWORK
+    NAME = 'pod_ip_network'
+    tags = ['nightly']
+    ROUTABLE_IP_COUNT = 3
+    ENV = {
+        'KD_POD_IP_NETWORK': POD_IP_NETWORK,
+        'KD_NODE_TYPES': 'node1=Standard',
+        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
+    }
 
 
 class VerticalScalabilityPipeline(Pipeline):
     NAME = 'vertical_scalability'
+    tags = ['nightly']
     ROUTABLE_IP_COUNT = 3
     ENV = {
         'KD_NODES_COUNT': '1',
@@ -522,6 +569,7 @@ class LoadTestingNodeResizePipeline(Pipeline):
 
 class LoadTestingNodeResizePipelineAWS(LoadTestingNodeResizePipeline):
     NAME = 'load_testing_node_resize_aws'
+    tags = ['load']
     INFRA_PROVIDER = 'aws'
     ENV = {
         'NODE_SIZE': 't2.medium'
@@ -530,6 +578,7 @@ class LoadTestingNodeResizePipelineAWS(LoadTestingNodeResizePipeline):
 
 class StressTestingPipeline(Pipeline):
     NAME = 'stress_testing'
+    tags = ['load']
     ROUTABLE_IP_COUNT = 10
     ENV = {
         'KD_NODES_COUNT': '10',
@@ -538,7 +587,6 @@ class StressTestingPipeline(Pipeline):
                           'node5=Tiny,node6=Tiny,node7=Tiny,node8=Tiny,'
                           'node9=Tiny,node10=Tiny'),
     }
-    tags = ['load']
 
     def post_create_hook(self):
         super(StressTestingPipeline, self).post_create_hook()
@@ -547,8 +595,8 @@ class StressTestingPipeline(Pipeline):
 
 class LoadTestingPipeline(Pipeline):
     NAME = 'load_testing'
-    ROUTABLE_IP_COUNT = 50
     tags = ['load']
+    ROUTABLE_IP_COUNT = 50
     ENV = {
         'KD_NODES_COUNT': '1',
         'KD_NODE_CPUS': '4',
@@ -558,6 +606,7 @@ class LoadTestingPipeline(Pipeline):
 
 class LoadTestingAwsPipeline(LoadTestingPipeline):
     NAME = 'load_testing_aws'
+    tags = ['load']
     INFRA_PROVIDER = 'aws'
     ENV = {
         'KD_NODES_COUNT': '1',
@@ -568,11 +617,13 @@ class LoadTestingAwsPipeline(LoadTestingPipeline):
 class LoadTestingPipeline2(LoadTestingPipeline):
     # TODO: remove this pipeline once AC-5648 is implemented
     NAME = 'load_testing_2'
+    tags = ['load']
 
 
 class LoadTestingAwsPipeline2(LoadTestingAwsPipeline):
     # TODO: remove this pipeline once AC-5648 is implemented
     NAME = 'load_testing_aws_2'
+    tags = ['load']
 
 
 class HugeClusterUpgradePipeline(Pipeline):
@@ -590,6 +641,7 @@ class HugeClusterUpgradePipeline(Pipeline):
 
 class HugeClusterUpgradeAwsPipeline(HugeClusterUpgradePipeline):
     NAME = 'huge_cluster_upgrade_aws'
+    tags = ['load']
     INFRA_PROVIDER = 'aws'
     ENV = {
         'NODE_SIZE': 't2.micro'  # https://aws.amazon.com/ec2/instance-types/
@@ -611,25 +663,8 @@ class ScalabilityNodePipeline(Pipeline):
 
 class ScalabilityNodeAwsPipeline(ScalabilityNodePipeline):
     NAME = 'scalability_node_aws'
+    tags = ['load']
     INFRA_PROVIDER = 'aws'
-
-
-# How many pipelines can be created at time when running on infra provider.
-infra_provider_slots = {
-    "opennebula": 35,
-    "aws": 2
-}
-
-
-class PodIPNetworkPipeline(Pipeline):
-    from tests_integration.lib.constants import POD_IP_NETWORK
-    NAME = 'pod_ip_network'
-    ROUTABLE_IP_COUNT = 3
-    ENV = {
-        'KD_POD_IP_NETWORK': POD_IP_NETWORK,
-        'KD_NODE_TYPES': 'node1=Standard',
-        'KD_DEPLOY_SKIP': 'cleanup,ui_patch',
-    }
 
 
 class DensityPipeline(Pipeline):
@@ -648,9 +683,17 @@ class DensityPipeline(Pipeline):
 class DensityPipelineAWS(DensityPipeline):
     INFRA_PROVIDER = 'aws'
     NAME = 'density_aws'
+    tags = ['load']
     ENV = {
         'NODE_SIZE': 't2.large'
     }
+
+
+# How many pipelines can be created at time when running on infra provider.
+infra_provider_slots = {
+    "opennebula": 20,  # approx 50 VMs
+    "aws": 2
+}
 
 
 pipelines = defaultdict(list)

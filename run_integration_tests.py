@@ -274,6 +274,9 @@ def _filter_by_pipeline_tags(pipelines, tags):
     :param tags: list of str - requested tags
     :return: dictionary of pipelines
     """
+    if not tags:
+        # no tags filter - run all pipelines
+        return pipelines
     tags = set(tags)
     return {
         k: v
@@ -350,7 +353,7 @@ def _comma_sep_str_to_list(ctx, param, items):
 @click.option('--pipeline-tags', callback=_comma_sep_str_to_list,
               help='Comma separated pipeline tags to run. Takes effect only '
                    'if pipelines are not specified explicitly via --pipelines',
-              default='general')
+              default='')
 @click.option('--infra-provider', type=str, default='opennebula',
               help='Which infra provider to use. Options are: '
                    '"opennebula" (default); "aws"')
@@ -360,7 +363,8 @@ def _comma_sep_str_to_list(ctx, param, items):
 @click.option('--cluster-debug', is_flag=True, default=False,
               help='Enable debug mode. Currently this does not destroy a '
                    'cluster if any of its tests failed.')
-@click.option('--junit-xml', type=click.File(mode='w'))
+@click.option('--junit-xml', type=click.File(mode='w'),
+              default='testreport.xml')
 @click.option('--test', type=str, help='A name of a test to run')
 def main(paths, pipelines, pipelines_skip, pipeline_tags, infra_provider,
          live_log, all_tests, cluster_debug, junit_xml, test):

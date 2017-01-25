@@ -199,13 +199,12 @@ def _get_thread_log(multilog, thread_name):
 
         with PastebinClient(url, user, password) as paste:
             res = paste.post(thread_log)
-    except Exception as e:
+    except Exception:
         # Fallback if pastebin isn't accessible
         res = u'Cannot upload thread logs to pastebin, posting full log ' \
               u'here. Reason:\n{}\n\n{}'.format(
-                    u''.join(traceback.format_exception(*sys.exc_info())),
-                    thread_log,
-                )
+                  u''.join(traceback.format_exception(*sys.exc_info())),
+                  thread_log)
     res = res.encode('utf-8')
     thread_logs[thread_name] = res
     return res
@@ -263,8 +262,7 @@ def _filter_by_infra_provider(pipelines, infra_provider):
         k: v
         for k, v in pipelines.items() if
         Pipeline.class_from_name("{}_{}".format(*k)
-                                 ).INFRA_PROVIDER == infra_provider
-        }
+                                 ).INFRA_PROVIDER == infra_provider}
 
 
 def _filter_by_pipeline_tags(pipelines, tags):
@@ -280,8 +278,7 @@ def _filter_by_pipeline_tags(pipelines, tags):
     return {
         k: v
         for k, v in pipelines.items() if
-        set(Pipeline.class_from_name("{}_{}".format(*k)).tags) & tags
-        }
+        set(Pipeline.class_from_name("{}_{}".format(*k)).tags) & tags}
 
 
 def _filter_by_include_exclude(pipelines, include, exclude):

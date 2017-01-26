@@ -662,13 +662,12 @@ class KDPod(RESTMixin):
         return spec
 
     def _direct_access_healthcheck(self):
-        if self.public_ip:
-            sc = self.ssh_credentials
-            users, hosts, password = sc['users'], sc['hosts'], sc['password']
-            with utils.get_ssh(hosts[0], users[0], password) as conn:
-                rc, out, err = utils.ssh_exec(conn, "echo OK",
-                                              check_retcode=False)
-                utils.assert_eq(rc, 0)
+        sc = self.ssh_credentials
+        users, hosts, password = sc['users'], sc['hosts'], sc['password']
+        with utils.get_ssh(hosts[0], users[0], password) as conn:
+            rc, out, err = utils.ssh_exec(conn, "echo OK",
+                                          check_retcode=False)
+            utils.assert_eq(rc, 0)
 
     def __get_edit_data(self):
         pod_spec = self.get_spec()

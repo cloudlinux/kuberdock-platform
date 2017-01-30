@@ -1,3 +1,23 @@
+
+# KuberDock - is a platform that allows users to run applications using Docker
+# container images and create SaaS / PaaS based on these applications.
+# Copyright (C) 2017 Cloud Linux INC
+#
+# This file is part of KuberDock.
+#
+# KuberDock is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License
+# as published by the Free Software Foundation; either version 2
+# of the License, or (at your option) any later version.
+#
+# KuberDock is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with KuberDock; if not, see <http://www.gnu.org/licenses/>.
+
 """change settings schema and add initial values
 
 Revision ID: 56ab56a9ac5
@@ -36,7 +56,7 @@ def upgrade():
     op.add_column('system_settings', sa.Column('label', sa.Text, nullable=True))
     op.add_column('system_settings', sa.Column('description', sa.Text, nullable=True))
     op.add_column('system_settings', sa.Column('placeholder', sa.String, nullable=True))
-    
+
     billing_link = session.query(SystemSettings).filter_by(name='billing_apps_link').order_by(SystemSettings.id.desc()).first()
     if billing_link is not None:
         last = billing_link.id
@@ -72,4 +92,3 @@ def downgrade():
     op.drop_column('system_settings', 'description')
     op.drop_column('system_settings', 'placeholder')
     op.drop_constraint('uq_system_settings_name', 'system_settings')
-

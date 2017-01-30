@@ -17,7 +17,7 @@
                             <a href="/#settings/general">General</a>
                         </li>
                         <li class="license">
-                            <a href="/#settings/license">License</a>
+                            <a href="/#settings/usage">Usage info</a>
                         </li>
                         <li class="domain">
                             <a href="/#settings/domain">DNS provider</a>

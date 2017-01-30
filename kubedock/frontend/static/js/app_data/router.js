@@ -32,7 +32,7 @@ define(['marionette'], function(Marionette){
             'predefined-apps/:id/edit'        : 'showPredefinedAppUploadForm',
             'settings'                        : 'showSettings',
             'settings/general'                : 'showGeneralSettings',
-            'settings/license'                : 'showLicense',
+            'settings/usage'                  : 'showLicense',
             'settings/domain'                 : 'showDomainSettings',
             'settings/billing'                : 'showBillingSettings',
             'settings/profile'                : 'editProfileSettings',

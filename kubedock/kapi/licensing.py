@@ -114,8 +114,7 @@ def is_timestamp_ok(lic):
 
 
 def is_valid():
-    lic = get_license_info()
-    return is_timestamp_ok(lic)
+    return True
 
 
 def _load_license():

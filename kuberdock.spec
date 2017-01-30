@@ -4,7 +4,7 @@ Summary: KuberDock
 Release: 1%{?dist}.cloudlinux
 Group: Applications/System
 BuildArch: noarch
-License: CloudLinux Commercial License
+License: GPLv2
 URL: http://www.cloudlinux.com
 Source0: %{name}-%{version}.tar.bz2
 

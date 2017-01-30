@@ -1,14 +1,9 @@
 <div id="item-controls" class="licenseTab">
     <div class="status-line">
-        <span class="icon <%= status %>"><span>License status: <span class="text-capitalize"><%= status ? status : 'unknown'%></span></span></span>
-        <span class="award"><span>License type:<span class="text-capitalize"><% if (type){ %> <%= type %> <% } else { %>unknown<% }%></span></span></span>
     </div>
     <div class="row">
         <div class="col-md-10 col-md-offset-1 control-icons">
             <div class="col-md-6 col-sm-12 info">
-                <div class="editGroup">
-                    <b>Installation ID:</b> <span class="edit-field peditable"> <%= installationID %></span>
-                </div>
                 <div><b>Platform:</b> <%= platform %></div>
                 <div><b>Storage:</b> <%= storage %></div>
             </div>
@@ -18,7 +13,6 @@
                 <% if (version.docker !== 'unknown'){ %>
                     <div><b>Docker version:</b> <%= version.docker %></div>
                 <% } %>
-                <div><b>Support:</b> <a href="mailto:helpdesk@kuberdock.com">helpdesk@kuberdock.com</a></div>
             </div>
         </div>
     </div>
@@ -27,7 +21,7 @@
     <table id="license-table" class="table">
         <thead>
             <tr>
-                <th><b>License Usage</b></th>
+                <th><b>Usage</b></th>
                 <th>Nodes</th>
                 <th>Cores</th>
                 <th>Memory (GB)</th>
@@ -39,17 +33,6 @@
             </tr>
         </thead>
         <tbody>
-            <tr>
-                <td><b>License limits</b></td>
-                <td><%= data.nodes[0] %></td>
-                <td><%= data.cores[0] %></td>
-                <td><%= data.memory[0] %></td>
-                <td><%= data.containers[0] %></td>
-                <td><%= data.pods[0] %></td>
-                <td><%= data.apps[0] %></td>
-                <td><%= data.persistentVolume[0] %></td>
-                <td></td>
-            </tr>
             <tr <%= attention ? 'class="attention"' : '' %>>
                 <td><b>Current state</b></td>
                 <% if(data.nodes[3]) {%>

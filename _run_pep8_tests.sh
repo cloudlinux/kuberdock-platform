@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-ERRORS_THRESHOLD=159
+ERRORS_THRESHOLD=180
 
 tmpfile=$(mktemp /tmp/flake8-parse.XXXXXX)
 flake8 kubedock kuberdock-cli | tee $tmpfile

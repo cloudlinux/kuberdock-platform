@@ -46,7 +46,8 @@ application = DispatcherMiddleware(
     front_app,
     {'/api': back_app}
 )
-if SENTRY_ENABLE:
+# if SENTRY_ENABLE:
+if False:
     import socket
     from kubedock.settings import MASTER_IP
     from kubedock.settings import SENTRY_DSN, SENTRY_PROCESSORS

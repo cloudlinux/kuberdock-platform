@@ -419,7 +419,8 @@ def setup_node_storage(ssh, node_id, devices=None, ebs_volume=None,
 
 @celery.task()
 def send_stat():
-    send(collect())
+    pass
+    # send(collect())
 
 
 def get_node_interface(data, node_ip):

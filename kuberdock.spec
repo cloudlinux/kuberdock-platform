@@ -1,4 +1,4 @@
-Version: 1.5.2
+Version: 1.5.3
 Name: kuberdock
 Summary: KuberDock
 Release: 1%{?dist}.cloudlinux

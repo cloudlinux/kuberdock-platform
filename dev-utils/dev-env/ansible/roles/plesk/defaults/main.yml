@@ -18,6 +18,10 @@
 # You should have received a copy of the GNU General Public License
 # along with KuberDock; if not, see <http://www.gnu.org/licenses/>.
 #
+
+# Please set valid IPs/credentials/data for you infrastructure. Otherwise
+# many things will not work (incl. deploy, unittests, integration tests etc.)
+
 ---
 
 password: some_password
@@ -33,10 +37,10 @@ plesk_license: 0
 
 customer_user: JDoe
 customer_name: "John Doe"
-customer_password: some_password
+customer_password: some_password2
 
 domain: example.com
 domain_login: jdoe_domain
-domain_password: some_password
+domain_password: some_password3
 
 plesk_license_param: ""

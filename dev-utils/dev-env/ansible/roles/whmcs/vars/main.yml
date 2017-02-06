@@ -18,12 +18,16 @@
 # You should have received a copy of the GNU General Public License
 # along with KuberDock; if not, see <http://www.gnu.org/licenses/>.
 #
-whmcs_installed_url: http://192.168.33.94/share/whmcs/whmcs_installed.zip
+
+# Please set valid IPs/credentials/data for you infrastructure. Otherwise
+# many things will not work (incl. deploy, unittests, integration tests etc.)
+
+whmcs_installed_url: http://192.168.33.100/share/whmcs/whmcs_installed.zip
 whmcs_installed_dst: /tmp/whmcs_installed.zip
-deploy_script_url: http://192.168.33.94/share/whmcs/deploy.php
+deploy_script_url: http://192.168.33.100/share/whmcs/deploy.php
 deploy_script_dst: /home/whmcs/public_html/
 config_path: /home/whmcs/public_html/configuration.php
-whmcs_dump: http://192.168.33.94/share/whmcs/whmcs.sql.gz
+whmcs_dump: http://192.168.33.100/share/whmcs/whmcs.sql.gz
 whmcs_dump_dst: /tmp/dump.sql.gz
 cpanel_config_file: /opt/cpanel/ea-php56/root/etc/php.ini
 whmcs_static_files: /home/whmcs/public_html

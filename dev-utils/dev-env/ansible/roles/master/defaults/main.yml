@@ -18,11 +18,16 @@
 # You should have received a copy of the GNU General Public License
 # along with KuberDock; if not, see <http://www.gnu.org/licenses/>.
 #
+
+
+# Please set valid IPs/credentials/data for you infrastructure. Otherwise
+# many things will not work (incl. deploy, unittests, integration tests etc.)
+
 ---
 
 add_ssh_pub_keys: False
 no_wsgi: false
 git_ref: ""
-public_ips: "192.168.33.200,192.168.33.201,192.168.33.202"
+public_ips: "192.168.33.200,192.168.33.201"
 fixed_ip_pools: False
 add_timestamps: False

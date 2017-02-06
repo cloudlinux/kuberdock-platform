@@ -5,7 +5,7 @@ Version: 1.1
 Release: 1%{?dist}.cloudlinux
 Summary: Libraries and executables for kuberdock command-line interface
 Group: System Environment/Libraries
-License: CloudLinux Commercial License
+License: GPLv2
 URL: http://www.cloudlinux.com
 #BuildArch: noarch
 Source0: %{name}-%{version}.tar.bz2

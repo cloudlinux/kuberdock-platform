@@ -315,9 +315,7 @@ class NebulaVMTemplate(object):
 
 def update(template_id):
     vm_template = NebulaVMTemplate.factory(
-        os.environ.get(
-            'KD_ONE_URL',
-            'https://some.nebula.host.com:2633/RPC2'),
+        os.environ['KD_ONE_URL'],
         os.environ['KD_ONE_USERNAME'],
         os.environ['KD_ONE_PASSWORD'],
         os.environ.get(

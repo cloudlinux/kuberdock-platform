@@ -1,6 +1,6 @@
 # ====== VM Group ======
 #
-# Allow running vagrant cmd from repo root. By default you need to move inside 
+# Allow running vagrant cmd from repo root. By default you need to move inside
 # `dev-utils/dev-env` before working with vagrant
 # default: nothing
 export VAGRANT_CWD=dev-utils/dev-env/
@@ -39,18 +39,17 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # Uncomment to excpicitly define kube type for each mode
 # default: nothing
 #export KD_NODE_TYPES='node1=standard,node2=tiny'
- 
+
 # Path to private key for vagrant autentication in the OpenNebula
 # default: "~/.ssh/id_rsa"
 #export KD_ONE_PRIVATE_KEY=~/.ssh/your_other_private_key
 
 # Comma-separated list of IPs reserved to you in OpenNebula Public Network. These IPs will
 # be unblocked in KD IP pool and used as Pods public IPs.
-# Default value are team shared IPs. If you use them, you may intersect with others, thus
-# it's recommended to set this variable. Reserve your IPs in the doc below before changing:
-# ***REMOVED***
-# default: "192.168.33.200,192.168.33.201,192.168.33.202"
-#export KD_ONE_PUB_IPS="192.168.33.200,192.168.33.201,192.168.33.202"
+# Default value are team shared IPs.
+# Please set valid IPs/credentials/data for you infrastructure. Otherwise
+# many things will not work (incl. deploy, unittests, integration tests etc.)
+export KD_ONE_PUB_IPS="192.168.33.200,192.168.33.201"
 
 # Network for k8s pod IPs
 # default: nothing
@@ -105,8 +104,8 @@ export VAGRANT_CWD=dev-utils/dev-env/
 
 # running KuberDock deploy script with CEPH support
 #export KD_CEPH=1
-#export KD_CEPH_USER=your_ceph_user 
-#export KD_CEPH_CONFIG=/path/to/ceph.conf 
+#export KD_CEPH_USER=your_ceph_user
+#export KD_CEPH_CONFIG=/path/to/ceph.conf
 #export KD_CEPH_USER_KEYRING=/path/to/client.your_ceph_user.keyring
 #export KD_PD_NAMESPACE=your_namespace
 
@@ -122,12 +121,12 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # default: from host
 #export KD_TIMEZONE=Asia/Shanghai
 
-# Install plesk to rhost 
+# Install plesk to rhost
 # default: False
 #export KD_INSTALL_PLESK=1
 
 # Plesk's license. It can be string key or license file
-# default: 0 
+# default: 0
 #export KD_PLESK_LICENSE=ACB123
 # or
 #export KD_PLESK_LICENSE=/path/to/your/license.xml
@@ -147,4 +146,3 @@ export VAGRANT_CWD=dev-utils/dev-env/
 # WHMCS's domain name.
 # default: example.com
 #export KD_WHMCS_DOMAIN_NAME=some.host.name.com
-

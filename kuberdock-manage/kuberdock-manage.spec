@@ -8,7 +8,7 @@ Version:    0.2.1
 Release:    1%{?dist}
 Summary:    Kuberdock command line utilities
 Group:      System Environment/Libraries
-License:    CloudLinux Commercial License
+License:    GPLv2
 URL:        http://www.cloudlinux.com
 Source0:    %{name}-%{version}.tar.bz2
 BuildRoot:  %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)

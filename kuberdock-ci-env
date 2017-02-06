@@ -22,19 +22,24 @@
 # client will be installed to node automatically, during node adding to KD
 # cluster.
 
+# Please set valid IPs/credentials/data for you infrastructure. Otherwise
+# many things will not work (incl. deploy, unittests, integration tests etc.)
+
 export PATH=dev-utils:$PATH # enables docker-based vagrant
 export VAGRANT_CWD=dev-utils/dev-env/
 export VAGRANT_NO_PARALLEL=1
 export ANSIBLE_CALLBACK_WHITELIST=profile_tasks
 export KD_LICENSE=patch
 export BUILD_CLUSTER=1
-export KD_ONE_URL=https://some.nebula.host.com:2633/RPC2
+export KD_ONE_URL=https://some-nebula.host.com:2633/RPC2
 export KD_ADD_SHARED_PUB_KEYS=1
 export KD_ADD_TIMESTAMPS=1
 
 # Bump templates explicitly (yum update), before making each new release branch.
 export KD_NEBULA_TEMPLATE_ID=641
 export KD_NEBULA_RHOST_TEMPLATE_ID=644 # cent6 template
+
+# In CL infrastructure it's behind VPN, but could be anywhere
 export KD_PASTEBIN_URL=http://192.168.113.77/paste
 export KD_PASTEBIN_USER=kuberdock
 export KD_PASTEBIN_PASS=SOMESECRET

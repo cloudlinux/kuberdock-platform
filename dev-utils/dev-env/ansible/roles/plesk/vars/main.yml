@@ -18,6 +18,9 @@
 # You should have received a copy of the GNU General Public License
 # along with KuberDock; if not, see <http://www.gnu.org/licenses/>.
 #
+
+# Please set valid IPs/credentials/data for you infrastructure. Otherwise
+# many things will not work (incl. deploy, unittests, integration tests etc.)
 ---
 
 plesk_deploy_script_url: http://autoinstall.plesk.com/one-click-installer

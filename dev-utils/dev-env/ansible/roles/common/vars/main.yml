@@ -23,5 +23,5 @@
 # many things will not work (incl. deploy, unittests, integration tests etc.)
 
 rpm_proxies:
-    export ETH0_NETWORK="192.168.33.100": "http://192.168.33.100:3128/"
-    export ETH0_NETWORK="192.168.33.101": "http://192.168.33.101:3128/"
+    export ETH0_NETWORK="192.168.33.0": "http://192.168.33.88:3128/"
+    export ETH0_NETWORK="192.168.35.0": "http://192.168.33.254:3128/"

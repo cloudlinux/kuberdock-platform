@@ -52,15 +52,29 @@ KuberDock hides all complexity of underlying technologies from end-users and adm
 - Python2, Flask, Gevent, 70+ libs
 - WebPack, Backbone, etc.
 
-
-# Deploy production cluster
-Please, follow "Master installation guide" and "Install KuberDock at Amazon Web Services" in [docs folder](docs/kd_doc.md) and use [deploy.sh](deploy.sh) from appropriate Github branch
-
+------
 
 # How the project is run
 KuberDock now is a free OSS and have no commercial support from CloudLinux right now.
 
 However, rpm repositories will be hosted by CloudLinux for minimal reasonable time, till the project completely moved to GitHub with all dependencies and CI.
+
+
+# Deploy production cluster
+_Note: You may use this software in production only at your own risk_
+
+To install KuberDock package that is already in Cloudlinux stable repositories you can just follow _"Master installation guide"_ or _"Install KuberDock at Amazon Web Services"_ from [docs folder](docs/kd_doc.md).
+
+To install custom build, you have to use [deploy.sh](deploy.sh) from the **same** commit as your KuberDock package, and run it in the same folder where you put the rpm package. Deploy script will pick up that package instead of any existing in repositories.
+Something like this:
+```bash
+[root@your-kd-master-host] ls
+deploy.sh
+kuberdock-1.5.2-1.el7.noarch.rpm
+[root@your-kd-master-host] bash ./deploy.sh --some-needed-options
+```
+
+_Note: This process might be simplified and reworked in future to remove any dependencies from CloudLinux repos and build things in place or download from elsewhere automatically_
 
 
 # Contributing to KubeDock
@@ -73,13 +87,13 @@ If you gonna hack on KuberDock, you should know few things:
 ## Deploy cluster for development
 KuberDock has scripts that automatically provision KD cluster and doing preliminary configuration.
 
-_NOTE: Current rpm package repositories is still hosted by CloudLinux, but this support will be eventually discontinued, so appropriate PRs are welcome;)_
+_Note: Current rpm package repositories is still hosted by CloudLinux, but this support will be eventually discontinued, so appropriate PRs are welcome;)_
 
 
 #### Requirements:
 KuberDock development cluster could be created in VMs with Vagrant either in VirtualBox or OpenNebula.
 
-_NOTE: If you need to work on more than 1 cluster at time you have to make a separate repo clone because vagrant doesn't support switching clusters in place.
+_Note: If you need to work on more than 1 cluster at time you have to make a separate repo clone because vagrant doesn't support switching clusters in place.
 Another way to do this you can destroy your previous cluster (vagrant destroy -f) and create new one._
 
 If you are going to use OpenNebula, make sure you have configured password-less ssh-key in it.
@@ -195,6 +209,7 @@ To make tests work we need to fix at least this files to use correct values from
     dev-utils/dev-env/ansible/roles/common/tasks/ceph.yml
     kuberdock-ci-env
 
+--------
 
 # Licensing
 KuberDock code itself is licensed under the GPL License, Version 2.0 (see

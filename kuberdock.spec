@@ -97,12 +97,13 @@ fi
 PROD_ENV=true npm run build
 rm -rf node_modules
 cd ../../../
-# Exclude dev-utils and tests
+# Exclude dev-utils, tests and docs
 rm -rf dev-utils
 rm -rf builds
 rm -rf tests_integration
 rm -rf kubedock/tests
 rm -rf kubedock/vcrpy_test_cassettes
+rm -rf docs
 
 %install
 rm -rf %{buildroot}

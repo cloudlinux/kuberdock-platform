@@ -54,7 +54,7 @@ KuberDock hides all complexity of underlying technologies from end-users and adm
 
 
 # Deploy production cluster
-See "Master installation guide" and "Install KuberDock at Amazon Web Services" in [docs folder](docs/kd_doc.md)
+Please, follow "Master installation guide" and "Install KuberDock at Amazon Web Services" in [docs folder](docs/kd_doc.md) and use [deploy.sh](deploy.sh) from appropriate Github branch
 
 
 # How the project is run

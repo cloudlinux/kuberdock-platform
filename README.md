@@ -89,6 +89,14 @@ KuberDock has scripts that automatically provision KD cluster and doing prelimin
 
 _Note: Current rpm package repositories is still hosted by CloudLinux, but this support will be eventually discontinued, so appropriate PRs are welcome;)_
 
+Release branches (like `1.5.2`) are intended to be production ready and should recieve only bug fixes.
+
+`Master` branch should be stable enough to use for development and testing purposes but may contain some new features with bugs.
+
+`Development` branch is experimental and could be unstable.
+
+See [versioning policy](docs/versioning.md) also.
+
 
 #### Requirements:
 KuberDock development cluster could be created in VMs with Vagrant either in VirtualBox or OpenNebula.

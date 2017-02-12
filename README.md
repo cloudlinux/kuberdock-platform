@@ -50,7 +50,7 @@ KuberDock hides all complexity of underlying technologies from end-users and adm
 - Redis
 - PostgreSQL
 - Python2, Flask, Gevent, 70+ libs
-- WebPack, Backbone, etc.
+- WebPack, Backbone, Marionette, npm, yarn, etc.
 
 ------
 
@@ -170,6 +170,9 @@ Best way is to run them in docker:
     (venv)Appcloud bash ./_run_tests_in_docker.sh
 ```
 
+### Front-end stuff
+see this [README.md](./kubedock/frontend/static/README.md)
+
 ### Integration tests
 Integration tests have been strongly integrated with CloudLinux infrastructure, so after moving project to Github and quick code changes they, of course, will not work out of the box anymore. This is a "number one TODO" to rework them. However, it's not easy and requires big infrastructure(OpenNebula cloud, Ceph cluster, some AWS if needed, etc.) and/or rework.
 
@@ -219,4 +222,3 @@ KuberDock code itself is licensed under the GPL License, Version 2.0 (see
 - fonts - Apache 2.0
 - mocha-phantomjs - MIT
 - paramiko-expect - MIT
-- requirejs - MIT

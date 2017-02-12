@@ -1,7 +1,7 @@
 # Ex. team's contributors
 
 ### Scrum Team1 - UI, Billing and Panels integration, PAs, some kcli
-- Sergey Gruntovsky <sgruntovsky@cloudlinux.com>
+- Sergey Gruntovsky <sergey.gruntovsky@gmail.com> https://github.com/wncm
 - Oleg Bednarskiy
 - Igor Savenko <bliss@cloudlinux.com>
 - Ruslan Rakhmanberdiev <rrakhmanberdiev@cloudlinux.com>

@@ -34,7 +34,7 @@ see https://nodejs.org/en/download/package-manager/
 ### Install all requirements:
 ```
 $ cd kubedock/frontend/static/
-$ npm install  # will install all dependencies from package.json
+$ yarn install  # will install all dependencies from package.json
 ```
 
 

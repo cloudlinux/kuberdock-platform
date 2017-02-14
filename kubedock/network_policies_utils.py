@@ -32,7 +32,7 @@ from .kapi.network_policies import (
     get_tiers,
 )
 from .kapi.node_utils import complete_calico_node_config
-from .kapi.nodes import (
+from .kapi.service_pods import (
     KUBERDOCK_DNS_POD_NAME,
     get_kuberdock_logs_pod_name,
 )

@@ -1224,7 +1224,7 @@ function deploy-master(){
     fi
 
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" mkdir /home/${SSH_USER}/kuberdock-files  2>"$LOG"
-    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" cp /var/opt/kuberdock/{node_install.sh,pd.sh} /etc/pki/etcd/ca.crt /etc/pki/etcd/etcd-client.crt /etc/pki/etcd/etcd-client.key /home/${SSH_USER}/kuberdock-files 2>"$LOG"
+    ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" cp /var/opt/kuberdock/node_install.sh /var/opt/kuberdock/node_install_common.sh /var/opt/kuberdock/pd.sh /etc/pki/etcd/ca.crt /etc/pki/etcd/etcd-client.crt /etc/pki/etcd/etcd-client.key /home/${SSH_USER}/kuberdock-files 2>"$LOG"
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "sudo cp /var/lib/nginx/.ssh/id_rsa.pub /home/${SSH_USER}/kuberdock-files" 2>"$LOG"
     ssh -oStrictHostKeyChecking=no -i "${AWS_SSH_KEY}" -tt "${SSH_USER}@${KUBE_MASTER_IP}" "sudo chown ${SSH_USER} /home/${SSH_USER}/kuberdock-files/*" < <(cat) 2>"$LOG"
 

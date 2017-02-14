@@ -98,7 +98,8 @@ from .common import OK, ERROR, CmdError, volume_can_be_resized_to
 
 from .storage import (
     do_get_info, do_add_volume, do_remove_storage, VOLUME_MANAGE_NAME,
-    do_create_volume, do_remove_volume, do_resize_volume
+    do_create_volume, do_remove_volume, do_resize_volume,
+    do_export_storage, do_import_storage,
 )
 
 
@@ -114,15 +115,55 @@ def _do_remove_storage(call_args):
     # we expect device list in result in case of successful storage removing
     devices = result
     if result and call_args.detach_ebs:
+        if not aws.detach_ebs(call_args.aws_access_key_id,
+                              call_args.aws_secret_access_key,
+                              devices):
+            return ERROR, {'message': 'Failed to detach EBS volumes'}
+    return OK, {
+        'message': 'Localstorage ({}) has been deleted'
+                   .format(VOLUME_MANAGE_NAME)
+    }
+
+
+def _do_export_storage(call_args):
+    """Prepare storage to be exported to another host.
+    Now supported only by ZFS storage backend.
+    TODO: implement for LVM.
+    """
+    ok, result = do_export_storage(call_args)
+    if not ok:
+        return ERROR, {
+            'message': u'Export storage failed: {}'.format(result)}
+    # we expect device list in result in case of successful storage export
+    devices = result
+    if result and call_args.detach_ebs:
         aws.detach_ebs(
             call_args.aws_access_key_id,
             call_args.aws_secret_access_key,
             devices
         )
     return OK, {
-        'message': 'Localstorage ({}) has been deleted'
+        'message': 'Localstorage ({}) has been exported'
                    .format(VOLUME_MANAGE_NAME)
     }
+
+
+def _do_import_aws_storage(call_args):
+    """Imports storage on AWS.
+    """
+    ok, result = aws.attach_existing_volumes(call_args)
+    if not ok:
+        return ERROR, {
+            'message': u'Failed to attach EBS volumes: {}'.format(result)
+        }
+    ok, import_result = do_import_storage(result)
+    if not ok:
+        return ERROR, {
+            'message': u'Failed to import storage: {}'.format(
+                import_result)
+        }
+    return OK, result
+
 
 def _do_resize_volume(call_args):
     """Calls do_resize_volume of current storage.
@@ -146,9 +187,11 @@ COMMANDS = {
     'add-volume': do_add_volume,
     'get-info': do_get_info,
     'remove-storage': _do_remove_storage,
+    'export-storage': _do_export_storage,
     'create-volume': do_create_volume,
     'remove-volume': do_remove_volume,
     'resize-volume': _do_resize_volume,
+    'import-aws-storage': _do_import_aws_storage,
 }
 
 
@@ -232,6 +275,27 @@ def process_args():
         dest='aws_secret_access_key', required=False,
         help='AWS secret access key'
     )
+
+    export_storage = subparsers.add_parser(
+        'export-storage',
+        help='Unmount and export localstorage volume group from node.'
+    )
+    export_storage.add_argument(
+        '--detach-ebs', dest='detach_ebs',
+        default=False, action='store_true',
+        help='Detach EBS volumes that were in LS volume group'
+    )
+    export_storage.add_argument(
+        '--aws-access-key-id',
+        dest='aws_access_key_id', required=False,
+        help='AWS access key ID'
+    )
+    export_storage.add_argument(
+        '--aws-secret-access-key',
+        dest='aws_secret_access_key', required=False,
+        help='AWS secret access key'
+    )
+
     create_volume = subparsers.add_parser(
         'create-volume',
         help='Create persistent volume with current localstorage backend'
@@ -262,6 +326,37 @@ def process_args():
     resize_volume.add_argument(
         '--new-quota', dest='new_quota', required=True, type=int,
         help='New size quota (GB) of the volume'
+    )
+
+    import_aws_storage = subparsers.add_parser(
+        'import-aws-storage',
+        help='Imports storage to the AWS node'
+    )
+    import_aws_storage.add_argument(
+        '--aws-access-key-id',
+        dest='aws_access_key_id',
+        required=True,
+        help='AWS access key ID'
+    )
+    import_aws_storage.add_argument(
+        '--aws-secret-access-key',
+        dest='aws_secret_access_key',
+        required=True,
+        help='AWS secret access key'
+    )
+    import_aws_storage.add_argument(
+        '--force-detach',
+        dest='force_detach',
+        required=False, default=False,
+        help='Try to force detach volumes before attaching',
+        action='store_true'
+    )
+    import_aws_storage.add_argument(
+        '--ebs-volumes',
+        dest='ebs_volumes',
+        nargs='+',
+        required=True,
+        help='List of EBS volume names which contains importing storage'
     )
 
     return parser.parse_args()

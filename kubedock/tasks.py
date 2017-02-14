@@ -32,10 +32,12 @@ from sqlalchemy import event
 
 from . import dns_management
 from .core import db, ssh_connect
+from .kapi import migrate_pod_utils, node_utils_aws
 from .kapi.collect import collect, send
 from .kapi.helpers import KubeQuery, raise_if_failure
 from .kapi.node import Node as K8SNode
 from .kapi.node_utils import (
+    add_node_to_k8s, remove_node_from_k8s,
     setup_storage_to_aws_node, add_volume_to_node_ls,
     complete_calico_node_config)
 from .kapi.pstorage import (
@@ -48,15 +50,16 @@ from .nodes.models import Node, NodeAction, NodeFlag, NodeFlagNames
 from .rbac.models import Role
 from .settings import (
     NODE_INSTALL_LOG_FILE, MASTER_IP, AWS, NODE_INSTALL_TIMEOUT_SEC,
-    NODE_CEPH_AWARE_KUBERDOCK_LABEL, CEPH, CEPH_KEYRING_PATH,
+    CEPH, CEPH_KEYRING_PATH,
     CEPH_POOL_NAME, CEPH_CLIENT_USER,
     KUBERDOCK_INTERNAL_USER, NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT,
-    CALICO, NODE_STORAGE_MANAGE_DIR, ZFS)
+    CALICO, NODE_STORAGE_MANAGE_DIR, ZFS, WITH_TESTING)
 from .system_settings.models import SystemSettings
+from .updates.helpers import get_maintenance
 from .users.models import SessionData
 from .utils import (
     update_dict, get_api_url, send_event, send_event_to_role, send_logs,
-    k8s_json_object_hook, get_timezone, NODE_STATUSES, POD_STATUSES
+    k8s_json_object_hook, get_timezone, NODE_STATUSES, POD_STATUSES,
 )
 
 
@@ -125,43 +128,18 @@ def delete_service_nodelay(item, namespace=None):
     return r.json()
 
 
-def remove_node_by_host(host):
-    r = requests.delete(get_api_url('nodes', host, namespace=False))
-    return r.json()
-
-
-def add_node_to_k8s(host, kube_type, is_ceph_installed=False):
-    """
-    :param host: Node hostname
-    :param kube_type: Kuberdock kube type (integer id)
-    :return: Error text if error else False
-    """
-    # TODO handle connection errors except requests.RequestException
-    data = {
-        'metadata': {
-            'name': host,
-            'labels': {
-                'kuberdock-node-hostname': host,
-                'kuberdock-kube-type': 'type_' + str(kube_type)
-            },
-            'annotations': {
-                K8SNode.FREE_PUBLIC_IP_COUNTER_FIELD: '0'
-            }
-        },
-        'spec': {
-            'externalID': host,
-        }
-    }
-    if is_ceph_installed:
-        data['metadata']['labels'][NODE_CEPH_AWARE_KUBERDOCK_LABEL] = 'True'
-    res = requests.post(get_api_url('nodes', namespace=False),
-                        json=data)
-    return res.text if not res.ok else False
+def deploy_node(fast, node_id, log_pod_ip):
+    if fast:
+        return node_utils_aws.deploy_node(node_id, log_pod_ip)
+    else:
+        return add_new_node(node_id, log_pod_ip, with_testing=WITH_TESTING,
+                            skip_storate=True)
 
 
 @celery.task(base=AddNodeTask)
 def add_new_node(node_id, log_pod_ip, with_testing=False, redeploy=False,
-                 ls_devices=None, ebs_volume=None, deploy_options=None):
+                 ls_devices=None, ebs_volume=None, deploy_options=None,
+                 skip_storate=False):
     db_node = Node.get_by_id(node_id)
     admin_rid = Role.query.filter_by(rolename="Admin").one().id
     channels = [i.id for i in SessionData.query.filter_by(role_id=admin_rid)]
@@ -194,7 +172,7 @@ def add_new_node(node_id, log_pod_ip, with_testing=False, redeploy=False,
             send_logs(node_id, 'Redeploy.', log_file, channels)
             send_logs(node_id, 'Remove node {0} from kubernetes...'.format(
                 host), log_file, channels)
-            result = remove_node_by_host(host)
+            result = remove_node_from_k8s(host)
             send_logs(node_id, json.dumps(result, indent=2), log_file,
                       channels)
 
@@ -219,6 +197,7 @@ def add_new_node(node_id, log_pod_ip, with_testing=False, redeploy=False,
         sftp.put('fslimit.py', '/fslimit.py')
         sftp.put('make_elastic_config.py', '/make_elastic_config.py')
         sftp.put('node_install.sh', '/node_install.sh')
+        sftp.put('node_install_common.sh', '/node_install_common.sh')
         if not CALICO:
             sftp.put('node_network_plugin.sh', '/node_network_plugin.sh')
             sftp.put('node_network_plugin.py', '/node_network_plugin.py')
@@ -345,6 +324,8 @@ def add_new_node(node_id, log_pod_ip, with_testing=False, redeploy=False,
 
         ssh.exec_command('rm /node_install.sh',
                          timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
+        ssh.exec_command('rm /node_install_common.sh',
+                         timeout=NODE_SSH_COMMAND_SHORT_EXEC_TIMEOUT)
 
         if CEPH:
             NodeFlag.save_flag(
@@ -363,10 +344,14 @@ def add_new_node(node_id, log_pod_ip, with_testing=False, redeploy=False,
                 send_logs(node_id, err_message, log_file, channels)
                 raise NodeInstallException(err_message)
         else:
-            send_logs(node_id, 'Setup persistent storage...', log_file,
-                      channels)
-            setup_node_storage(ssh, node_id, ls_devices, ebs_volume,
-                               channels)
+            if skip_storate:
+                send_logs(node_id, 'Skip storage setup, node is reserving...',
+                          log_file, channels)
+            else:
+                send_logs(node_id, 'Setup persistent storage...', log_file,
+                          channels)
+                setup_node_storage(ssh, node_id, ls_devices, ebs_volume,
+                                   channels)
 
         complete_calico_node_config(host, db_node.ip)
 
@@ -547,23 +532,37 @@ def clean_drives_for_deleted_users():
 
 @celery.task(ignore_result=True)
 def check_if_node_down(hostname):
-    # In some cases kubelet doesn't post it's status, and restart may help
-    # to make it alive. It's a workaround for kubelet bug.
-    # TODO: research the bug and remove the workaround
+    """ In some cases kubelet doesn't post it's status, and restart may help
+    to make it alive. It's a workaround for kubelet bug.
+    TODO: research the bug and remove the workaround
+    """
+    # Do not try to recover if maintenance mode is on
+    if get_maintenance():
+        current_app.warning(
+            "Skip recover kubelet on '{}', because of maintenance mode is on"
+            .format(hostname)
+        )
+        return
+    node_is_failed = False
     ssh, error_message = ssh_connect(hostname, timeout=3)
     if error_message:
         current_app.logger.debug(
             'Failed connect to node %s: %s',
             hostname, error_message
         )
-        return
-    i, o, e = ssh.exec_command('systemctl restart kubelet')
-    exit_status = o.channel.recv_exit_status()
-    if exit_status != 0:
-        current_app.logger.debug(
-            'Failed to restart kubelet on node: %s, exit status: %s',
-            hostname, exit_status
-        )
+        node_is_failed = True
+        ssh = None
+    else:
+        i, o, e = ssh.exec_command('systemctl restart kubelet')
+        exit_status = o.channel.recv_exit_status()
+        if exit_status != 0:
+            node_is_failed = True
+            current_app.logger.debug(
+                'Failed to restart kubelet on node: %s, exit status: %s',
+                hostname, exit_status
+            )
+    if node_is_failed:
+        migrate_pod_utils.manage_failed_node(hostname, ssh, deploy_node)
 
 
 @celery.task()

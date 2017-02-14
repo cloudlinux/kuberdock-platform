@@ -24,34 +24,15 @@
 # IMPORTANT: each package must be installed with separate command because of
 # yum incorrect error handling!
 
-# ========================= DEFINED VARS ===============================
-AWS=${AWS}
-KUBERNETES_CONF_DIR='/etc/kubernetes'
-EXIT_MESSAGE="Installation error."
-KUBE_REPO='/etc/yum.repos.d/kube-cloudlinux.repo'
-KUBE_TEST_REPO='/etc/yum.repos.d/kube-cloudlinux-testing.repo'
-PLUGIN_DIR_BASE='/usr/libexec/kubernetes'
-KD_WATCHER_SERVICE='/etc/systemd/system/kuberdock-watcher.service'
-KD_KERNEL_VARS='/etc/sysctl.d/75-kuberdock.conf'
-KD_RSYSLOG_CONF='/etc/rsyslog.d/kuberdock.conf'
-KD_ELASTIC_LOGS='/var/lib/elasticsearch'
-FSTAB_BACKUP="/var/lib/kuberdock/backups/fstab.pre-swapoff"
-CEPH_VERSION=hammer
-CEPH_BASE='/etc/yum.repos.d/ceph-base'
-CEPH_REPO='/etc/yum.repos.d/ceph.repo'
+source "$(dirname "${BASH_SOURCE}")/node_install_common.sh"
 
-KD_SSH_GC_PATH="/var/lib/kuberdock/scripts/kd-ssh-gc"
-KD_SSH_GC_LOCK="/var/run/kuberdock-ssh-gc.lock"
-KD_SSH_GC_CMD="flock -n $KD_SSH_GC_LOCK -c '$KD_SSH_GC_PATH;rm $KD_SSH_GC_LOCK'"
-KD_SSH_GC_CRON="@hourly  $KD_SSH_GC_CMD >/dev/null 2>&1"
+ami()
+{
+    [ -n "${AMI}" ]
+}
 
-ZFS_MODULES_LOAD_CONF="/etc/modules-load.d/kuberdock-zfs.conf"
-ZFS_POOLS_LOAD_CONF="/etc/modprobe.d/kuberdock-zfs.conf"
-
-NODE_STORAGE_MANAGE_DIR=node_storage_manage
-# ======================= // DEFINED VARS ===============================
-
-
+check_iface_and_ip()
+{
 # check public interface and node ip
 if [ -z "$NODE_IP" ]; then
     >&2 echo "NODE_IP is not set"
@@ -76,11 +57,13 @@ else
     fi
 fi
 # // check public interface and node ip
+}
 
+ami || check_iface_and_ip
 
 echo "Set locale to en_US.UTF-8"
 export LANG=en_US.UTF-8
-echo "Using MASTER_IP=${MASTER_IP}"
+ami || echo "Using MASTER_IP=${MASTER_IP}"
 if [ "$ZFS" = yes ]; then
     echo "Using ZFS as storage backend"
 elif [ ! -z "$CEPH_CONF" ]; then
@@ -88,8 +71,7 @@ elif [ ! -z "$CEPH_CONF" ]; then
 else
     echo "Using LVM as storage backend"
 fi
-echo "Set time zone to $TZ"
-timedatectl set-timezone "$TZ"
+ami || set_timezone
 echo "Deploy started: $(date)"
 
 # This should be as early as possible because outdated metadata (one that was
@@ -100,16 +82,6 @@ yum clean metadata
 # ======================== JUST COMMON HELPERS ================================
 # SHOULD BE DEFINED FIRST, AND BEFORE USE
 # Most common helpers are defined first.
-check_status()
-{
-    local temp=$?
-    if [ $temp -ne 0 ];then
-        echo $EXIT_MESSAGE
-        exit $temp
-    fi
-}
-
-
 yum_wrapper()
 {
     if [ -z "$WITH_TESTING" ];then
@@ -363,7 +335,7 @@ check_xfs()
 }
 
 check_release
-check_mem
+ami || check_mem
 check_selinux
 check_xfs "/var/lib/docker/overlay"
 
@@ -378,7 +350,7 @@ if [[ $ERRORS ]]; then
     exit 3
 fi
 
-check_disk
+ami || check_disk
 
 if [[ $ERRORS ]]; then
     printf "Following noncompliances of KD cluster requirements have been detected:\n"
@@ -387,7 +359,7 @@ if [[ $ERRORS ]]; then
     exit 3
 fi
 
-check_disk_for_production
+ami || check_disk_for_production
 
 if [[ $WARNS ]]; then
     printf "Warning:\n"
@@ -411,11 +383,6 @@ setup_ntpd ()
 
     local ntp_config="/etc/ntp.conf"
 
-    # Backup ntp.conf before any modifications
-    backup_ntp_config="${ntp_config}.kd.backup.$(date --iso-8601=ns --utc)"
-    echo "Save current $ntp_config to $backup_ntp_config"
-    cp "$ntp_config" "$backup_ntp_config"
-
     _sync_time() {
         grep '^server' "$ntp_config" | awk '{print $2}' | xargs ntpdate -u
     }
@@ -431,11 +398,7 @@ setup_ntpd ()
     _sync_time
     check_status
 
-    sed -i "/^server /d; /^tinker /d" "$ntp_config"
-    # NTP on master server should work at least a few minutes before ntp
-    # clients start trusting him. Thus we postpone the sync with it
-    echo "server ${MASTER_IP} iburst minpoll 3 maxpoll 4" >> "$ntp_config"
-    echo "tinker panic 0" >> "$ntp_config"
+    ami || configure_ntpd
 
     systemctl daemon-reload
     systemctl restart ntpd
@@ -667,9 +630,10 @@ fi
 
 
 # 4 copy kubelet auth token and etcd certs
+copy_kubelet_auth_and_etcd_certs()
+{
 echo "Copy certificates and tokens..."
 mv /configfile $KUBERNETES_CONF_DIR/configfile
-mkdir -p /etc/pki/etcd
 check_status
 mv /ca.crt /etc/pki/etcd/
 mv /etcd-client.crt /etc/pki/etcd/
@@ -677,6 +641,10 @@ mv /etcd-client.key /etc/pki/etcd/
 mv /etcd-dns.crt /etc/pki/etcd/
 mv /etcd-dns.key /etc/pki/etcd/
 check_status
+}
+
+mkdir -p /etc/pki/etcd
+ami || copy_kubelet_auth_and_etcd_certs
 
 # 4.1 create and populate scripts directory
 # TODO refactor this staff to kdnode package or copy folder ones
@@ -734,72 +702,17 @@ setup_cron
 
 mv /${NODE_STORAGE_MANAGE_DIR} /var/lib/kuberdock/scripts/
 
-
-if [ "$FIXED_IP_POOLS" = True ]; then
-    fixed_ip_pools="yes"
-else
-    fixed_ip_pools="no"
-fi
-cat <<EOF > "/var/lib/kuberdock/kuberdock.json"
-{"fixed_ip_pools": "$fixed_ip_pools",
-"master": "$MASTER_IP",
-"node": "$NODENAME",
-"network_interface": "$PUBLIC_INTERFACE",
-"token": "$TOKEN"}
-EOF
+ami || kuberdock_json
 
 # 5. configure Node config
-echo "Configuring kubernetes..."
-sed -i "/^KUBE_MASTER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/config
-sed -i '/^KUBELET_HOSTNAME/s/^/#/' $KUBERNETES_CONF_DIR/kubelet
-
-# Kubelet's 10255 port (built-in cadvisor) should be accessible from master,
-# because heapster.service use it to gather data for our "usage statistics"
-# feature. Master-only access is ensured by our cluster-wide firewall
-sed -i "/^KUBELET_ADDRESS/ {s|127.0.0.1|0.0.0.0|}" $KUBERNETES_CONF_DIR/kubelet
-check_status
-
-sed -i "/^KUBELET_API_SERVER/ {s|http://127.0.0.1:8080|https://${MASTER_IP}:6443|}" $KUBERNETES_CONF_DIR/kubelet
-if [ "$AWS" = True ];then
-    sed -i '/^KUBELET_ARGS/ {s|""|"--cloud-provider=aws --kubeconfig=/etc/kubernetes/configfile --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}' --node-ip='${NODE_IP}'"|}' $KUBERNETES_CONF_DIR/kubelet
-else
-    sed -i '/^KUBELET_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --cluster_dns=10.254.0.10 --cluster_domain=kuberdock --register-node=false --network-plugin=kuberdock --maximum-dead-containers=1 --maximum-dead-containers-per-container=1 --minimum-container-ttl-duration=10s --cpu-cfs-quota=true --cpu-multiplier='${CPU_MULTIPLIER}' --memory-multiplier='${MEMORY_MULTIPLIER}' --node-ip='${NODE_IP}'"|}' $KUBERNETES_CONF_DIR/kubelet
-fi
-sed -i '/^KUBE_PROXY_ARGS/ {s|""|"--kubeconfig=/etc/kubernetes/configfile --proxy-mode iptables"|}' $KUBERNETES_CONF_DIR/proxy
-check_status
-
+ami || configure_kubelet
 
 
 # 6a. configure Calico CNI plugin
 echo "Enabling Calico CNI plugin ..."
 yum_wrapper -y install calico-cni-1.3.1-3.el7
 
-echo >> $KUBERNETES_CONF_DIR/config
-echo "# Calico etcd authority" >> $KUBERNETES_CONF_DIR/config
-echo ETCD_AUTHORITY="$MASTER_IP:2379" >> $KUBERNETES_CONF_DIR/config
-echo ETCD_SCHEME="https" >> $KUBERNETES_CONF_DIR/config
-echo ETCD_CA_CERT_FILE="/etc/pki/etcd/ca.crt" >> $KUBERNETES_CONF_DIR/config
-echo ETCD_CERT_FILE="/etc/pki/etcd/etcd-client.crt" >> $KUBERNETES_CONF_DIR/config
-echo ETCD_KEY_FILE="/etc/pki/etcd/etcd-client.key" >> $KUBERNETES_CONF_DIR/config
-
-TOKEN=$(grep token /etc/kubernetes/configfile | grep -oP '[a-zA-Z0-9]+$')
-
-mkdir -p /etc/cni/net.d
-cat > /etc/cni/net.d/10-calico.conf << EOF
-{
-    "name": "calico-k8s-network",
-    "type": "calico",
-    "log_level": "info",
-    "ipam": {
-        "type": "calico-ipam"
-    },
-    "policy": {
-        "type": "k8s",
-        "k8s_api_root": "https://$MASTER_IP:6443/api/v1/",
-        "k8s_auth_token": "$TOKEN"
-    }
-}
-EOF
+ami || configure_cni
 
 pushd /var/lib/kuberdock/scripts
 python kubelet_args.py --network-plugin=
@@ -829,13 +742,7 @@ EOF
 
 
 # 8. setup rsyslog forwarding
-echo "Reconfiguring rsyslog..."
-cat > $KD_RSYSLOG_CONF << EOF
-\$LocalHostName $NODENAME
-\$template LongTagForwardFormat,"<%PRI%>%TIMESTAMP:::date-rfc3339% %HOSTNAME% %syslogtag%%msg:::sp-if-no-1st-sp%%msg%"
-*.* @${LOG_POD_IP}:5140;LongTagForwardFormat
-EOF
-
+ami || configure_rsyslog
 
 
 echo 'Configuring docker...'
@@ -917,7 +824,7 @@ prjquota_enable "/var/lib/kuberdock/storage"
 # 10. enable services
 echo "Enabling services..."
 systemctl daemon-reload
-systemctl reenable kubelet
+ami || systemctl reenable kubelet
 check_status
 
 mkdir -p /etc/systemd/system/kube-proxy.service.d
@@ -929,7 +836,7 @@ Restart=always
 RestartSec=5s" > /etc/systemd/system/kube-proxy.service.d/restart.conf
 systemctl daemon-reload
 
-systemctl reenable kube-proxy
+ami || systemctl reenable kube-proxy
 check_status
 
 # 11. disable swap for best performance
@@ -1039,9 +946,7 @@ docker pull "$CALICO_NODE_IMAGE" > /dev/null
 time sync
 #sleep 10   # even harder workaround
 
-echo "Starting Calico node..."
-ETCD_AUTHORITY="$MASTER_IP:2379" ETCD_SCHEME=https ETCD_CA_CERT_FILE=/etc/pki/etcd/ca.crt ETCD_CERT_FILE=/etc/pki/etcd/etcd-client.crt ETCD_KEY_FILE=/etc/pki/etcd/etcd-client.key HOSTNAME="$NODENAME" /opt/bin/calicoctl node --ip="$NODE_IP" --node-image="$CALICO_NODE_IMAGE"
-check_status
+ami || start_calico_node
 
 # 16. Reboot will be executed in python function
 echo "Node deploy script finished: $(date)"

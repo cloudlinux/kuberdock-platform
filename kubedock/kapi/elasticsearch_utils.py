@@ -26,7 +26,7 @@ from flask import current_app
 from ..nodes.models import Node
 from ..pods.models import Pod
 from ..users.models import User
-from .nodes import get_kuberdock_logs_pod_name
+from .service_pods import get_kuberdock_logs_pod_name
 from ..settings import (
     ELASTICSEARCH_REST_PORT, KUBE_API_PORT, KUBE_API_HOST, KUBE_API_VERSION)
 

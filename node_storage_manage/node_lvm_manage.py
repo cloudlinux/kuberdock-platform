@@ -108,6 +108,20 @@ def do_remove_storage(_):
         vg.close()
 
 
+def do_export_storage(_):
+    """Prepares storage to be used in another host.
+    Not implemented for LVM.
+    """
+    return False, u'The operation is not implemented for LVM'
+
+
+def do_import_storage(_):
+    """Prepares imports a storage detached from another node.
+    Not implemented for LVM.
+    """
+    return False, u'The operation is not implemented for LVM'
+
+
 def remove_ls_mount():
     save_file = '/etc/fstab.kdsave'
     fstab = '/etc/fstab'

@@ -39,6 +39,7 @@ ALL_EBS_TYPES = (VOL_TYPE_ST, VOL_TYPE_IO, VOL_TYPE_GP)
 
 
 def get_aws_instance_meta(utils):
+    """Returns some metadata for the instance."""
     identity = utils.get_instance_identity()
     meta = utils.get_instance_metadata()
     return {
@@ -49,6 +50,14 @@ def get_aws_instance_meta(utils):
 
 
 def get_aws_block_device_mapping(connection, instance_id):
+    """Returns dict of {
+        <device name>: <block device type>
+    }
+    where device name is string in form of '/dev/xvdX'
+    block device type is an object of class
+        boto.ec2.blockdevicemapping.BlockDeviceType
+        (we need only volume_id from it)
+    """
     return connection.get_instance_attribute(
         instance_id=instance_id,
         attribute='blockDeviceMapping'
@@ -56,6 +65,11 @@ def get_aws_block_device_mapping(connection, instance_id):
 
 
 def detach_ebs(aws_access_key_id, aws_secret_access_key, devices):
+    """Detaches volumes for given devices if they are attached to the instance.
+    Will wait some time until all detached volumes become 'detached'.
+    Returns true if all devices was successfully detached.
+    False - otherwise.
+    """
     import boto
     import boto.ec2
     meta = get_aws_instance_meta(boto.utils)
@@ -67,9 +81,99 @@ def detach_ebs(aws_access_key_id, aws_secret_access_key, devices):
     bd_mapping = get_aws_block_device_mapping(
         connection, meta['instance-id']
     )
-    for key, bd in bd_mapping.iteritems():
-        if key in devices:
-            connection.detach_volume(bd.volume_id)
+    volume_ids = [bd.volume_id for key, bd in bd_mapping.iteritems()
+                  if key in devices]
+    return _detach_ebs_volumes(connection, volume_ids, force=False)
+
+
+def _detach_ebs_volumes(connection, volume_ids, force=False):
+    for volume_id in volume_ids:
+        connection.detach_volume(volume_id, force=force)
+    if not wait_for_detached_state(connection, volume_ids):
+        return False
+    return True
+
+
+def _volumes_are_available(connection, volume_ids):
+    volumes = connection.get_all_volumes(volume_ids)
+    # In AWS documentation there are the following states:
+    # (attaching | attached | detaching | detached)
+    # But actually boto returns None for detached volume, so check it
+    # both here.
+    return all(
+        (
+            item.attachment_state() == 'detached' or
+            item.attachment_state() is None
+        ) and
+        item.status == 'available' for item in volumes
+    )
+
+
+def wait_for_detached_state(connection, volume_ids):
+    """Will wait until volumes with given ids become detached.
+    It will check volumes states 180 times with 1 second pause, so max
+    wait time will be approximately 3 minutes.
+    Returns True if all volumes become detached. False if one or more volumes
+    will not become detached.
+    """
+    retry_count = 60 * 3
+    pause = 1
+    for _ in xrange(retry_count):
+        if _volumes_are_available(connection, volume_ids):
+            return True
+        time.sleep(pause)
+    return False
+
+
+def attach_existing_volumes(call_args):
+    """Attaches volumes to the instance. Volumes names must be passed via
+    call_args.ebs_volumes list.
+    Returns tuple of success flag and list of dicts described attached volumes.
+    Each element of this list will include fields:
+            'name': <volume 'Name' tag value>,
+            'instance_id': <ec2 instance identifier>,
+            'device': <name of device in form of /dev/xvdX>
+    """
+    import boto
+    import boto.ec2
+    meta = get_aws_instance_meta(boto.utils)
+    region = meta['region']
+    instance_id = meta['instance-id']
+    connection = boto.ec2.connect_to_region(
+        region,
+        aws_access_key_id=call_args.aws_access_key_id,
+        aws_secret_access_key=call_args.aws_secret_access_key
+    )
+    names_to_attach = call_args.ebs_volumes
+    force_detach = call_args.force_detach
+
+    existing_volumes = connection.get_all_volumes()
+    volumes = []
+    for item in existing_volumes:
+        if item.tags.get('Name', 'Nameless') in names_to_attach:
+            volumes.append(item)
+            break
+    if len(volumes) != len(names_to_attach):
+        return False, 'Not all EBS volumes were found'
+
+    volume_ids = [vol.id for vol in volumes]
+    if not _volumes_are_available(connection, volume_ids):
+        if force_detach:
+            _detach_ebs_volumes(connection, volume_ids, force=True)
+        # update volumes, because it's state may be changed
+        volumes = connection.get_all_volumes(volume_ids)
+
+    dev_list = []
+    for volume in volumes:
+        try:
+            ok, result = attach_ebs_volume(connection, instance_id, volume)
+            if ok != OK:
+                return False, result
+            dev_list.append(result)
+        except (boto.exception.BotoClientError,
+                boto.exception.BotoServerError) as err:
+            return False, 'Failed to attach volume: {}'.format(err)
+    return True, dev_list
 
 
 def do_ebs_attach(call_args):

@@ -39,7 +39,7 @@ from kubedock.api import create_app
 from kubedock.users.models import User
 from kubedock.kapi.node_utils import get_nodes_collection
 from kubedock.kapi.podcollection import PodCollection
-from kubedock.kapi.nodes import get_kuberdock_logs_pod_name
+from kubedock.kapi.service_pods import get_kuberdock_logs_pod_name
 from kubedock.kapi.helpers import LocalService
 from kubedock.kapi import pstorage
 from kubedock.pods.models import Pod

@@ -25,8 +25,8 @@ from datetime import datetime, timedelta
 from dateutil.parser import parse as parse_dt
 
 from .elasticsearch_utils import execute_es_query, LogsError
-from .nodes import get_kuberdock_logs_pod_name
 from .podcollection import PodCollection, POD_STATUSES
+from .service_pods import get_kuberdock_logs_pod_name
 from ..core import ConnectionPool
 from ..exceptions import APIError
 from ..nodes.models import Node

@@ -429,7 +429,8 @@ class IpAddrPool(object):
             busy_ips = allocated_ips.keys()
             network = ip_network(net)
 
-            blocked_blocks = cls.ip_list_by_blocks(sorted(blocked_ips))
+            blocked_blocks = cls.ip_list_by_blocks(
+                sorted(blocked_ips - set(busy_ips)))
             busy_blocks = cls.ip_list_by_blocks(sorted(busy_ips))
             non_free_blocks = sorted(set(blocked_blocks) | set(busy_blocks))
             free_blocks = cls.get_missed_intervals(non_free_blocks,

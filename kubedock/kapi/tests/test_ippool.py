@@ -454,6 +454,30 @@ class TestIpPool(DBTestCase):
                           'network': None, 'node': None}
                          )
 
+    @responses.activate
+    def test_get_network_ips_with_node_overlapped_blocked(self):
+        network = u'192.168.2.0/24'
+        self._create_network(network, autoblock='192.168.2.0-192.168.2.10')
+
+        host = 'node1.kuberdock.local'
+        node = self.fixtures.node(host, u'192.168.2.3')
+        db.session.add(node)
+
+        res = ippool.IpAddrPool().get_network_ips(network)
+        self.assertEqual(res,
+                         {'node': self.node.hostname,
+                          'free_host_count': 245,
+                          'ipv6': False,
+                          'id': '192.168.2.0/24',
+                          'network': '192.168.2.0/24',
+                          'blocks': [
+                              (3232236032, 3232236034, 'blocked'),
+                              (3232236035, 3232236035, 'cluster member', host),
+                              (3232236036, 3232236042, 'blocked'),
+                              (3232236043, 3232236287, 'free'),
+                          ]}
+                         )
+
 
 if __name__ == '__main__':
     unittest.main()

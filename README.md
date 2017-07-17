@@ -77,7 +77,7 @@ kuberdock-1.5.2-1.el7.noarch.rpm
 _Note: This process might be simplified and reworked in future to remove any dependencies from CloudLinux repos and build things in place or download from elsewhere automatically_
 
 
-# Contributing to KubeDock
+# Contributing to KuberDock
 If you gonna hack on KuberDock, you should know few things:
 1. This is an Awesome Idea! :)
 2. We are opened to discussions and PRs. Feel free to open Github issues.

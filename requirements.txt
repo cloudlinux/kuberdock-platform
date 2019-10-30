@@ -16,7 +16,7 @@ Jinja2==2.7.3
 MarkupSafe==0.23
 SQLAlchemy==0.9.7
 Unidecode==0.04.17
-Werkzeug==0.9.6
+Werkzeug==0.15.3
 alembic==0.7.6
 amqp==1.4.9
 anyjson==0.3.3

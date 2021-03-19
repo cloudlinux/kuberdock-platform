@@ -12,7 +12,7 @@ Flask-Mail==0.9.1
 Flask-Migrate==1.4.0
 Flask-Script==2.0.5
 Flask-SQLAlchemy==2.0
-Jinja2==2.7.3
+Jinja2==2.11.3
 MarkupSafe==0.23
 SQLAlchemy==0.9.7
 Unidecode==0.04.17

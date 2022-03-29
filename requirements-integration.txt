@@ -1,6 +1,6 @@
 # Packages used in kubedock/tests_integration
 ipaddress==1.0.7
-paramiko==1.15.2 # keep in sync with KD requirements.txt for convenience
+paramiko==2.10.1 # keep in sync with KD requirements.txt for convenience
 PyYAML==3.12
 python-vagrant==0.5.11
 netaddr==0.7.18
